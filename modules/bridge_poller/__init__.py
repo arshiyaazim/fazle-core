@@ -11,7 +11,16 @@ Design choices:
 - Dedup table `processed_bridge_messages` as safety net (handles cursor edge cases)
 - On fresh start (no cursor): begins from NOW() — avoids replying to historical messages
 - SQLite queries run in thread pool (sync) so asyncio loop is never blocked
-- Personal chats only: skips @g.us groups, @newsletter, status@broadcast
+
+Ingest policy (v1.0.2 — locked):
+- DMs (@s.whatsapp.net): ALWAYS persisted to wbom_whatsapp_messages before
+  any router/draft logic. No early return drops a real DM silently.
+- Groups (@g.us), newsletters (@newsletter), status@broadcast: SKIPPED ENTIRELY
+  at SQL level — not persisted, no draft, no reply. Group chats are out of
+  scope for this engine by owner directive (2026-04-27).
+- LID-unresolved DMs are persisted with phone='unresolved:<lid>' so no real
+  inbound is lost; counted via observability for alerting.
+- Auto-reply remains gated by AUTO_REPLY_ENABLED + DRAFT_QUALITY_GATE.
 """
 
 import asyncio
@@ -183,6 +192,35 @@ def _fetch_new_messages(
             """,
             {"since": ts_iso},
         ).fetchall()
+
+        # v1.0.2: visibility on what we filter out (groups/newsletters/status)
+        try:
+            skipped_row = con.execute(
+                """
+                SELECT
+                  SUM(CASE WHEN chat_jid LIKE '%@g.us' THEN 1 ELSE 0 END) AS groups,
+                  SUM(CASE WHEN chat_jid LIKE '%@newsletter' THEN 1 ELSE 0 END) AS newsletters,
+                  SUM(CASE WHEN chat_jid = 'status@broadcast' THEN 1 ELSE 0 END) AS status
+                FROM messages
+                WHERE is_from_me = 0
+                  AND datetime(timestamp) > datetime(:since)
+                """,
+                {"since": ts_iso},
+            ).fetchone()
+            if skipped_row:
+                from modules import observability as _obs
+                bn = messages_db  # bridge identifier (full path is unique)
+                if skipped_row["groups"]:
+                    _obs.inc("messages_skipped_total", value=float(skipped_row["groups"]),
+                             labels={"reason": "group", "db": bn})
+                if skipped_row["newsletters"]:
+                    _obs.inc("messages_skipped_total", value=float(skipped_row["newsletters"]),
+                             labels={"reason": "newsletter", "db": bn})
+                if skipped_row["status"]:
+                    _obs.inc("messages_skipped_total", value=float(skipped_row["status"]),
+                             labels={"reason": "status", "db": bn})
+        except Exception as _sk_err:
+            log.debug(f"skipped-count query failed: {_sk_err}")
         con.close()
 
         lid_map = _load_lid_map(whatsapp_db)
@@ -200,8 +238,15 @@ def _fetch_new_messages(
                 if chat_jid.endswith("@s.whatsapp.net"):
                     phone = chat_jid.replace("@s.whatsapp.net", "")
                 else:
-                    log.debug(f"Cannot resolve phone for LID={sender_lid}, jid={chat_jid} — skipping")
-                    continue
+                    # v1.0.2: do NOT silently drop. Tag and let downstream persist.
+                    phone = f"unresolved:{sender_lid}" if sender_lid else "unresolved:unknown"
+                    try:
+                        from modules import observability as _obs
+                        _obs.inc("messages_lid_unresolved_total",
+                                 labels={"db": messages_db})
+                    except Exception:
+                        pass
+                    log.warning(f"LID unresolved → tagging phone={phone} jid={chat_jid}")
 
             # Text: prefer content, fallback to processed_text (STT/OCR)
             text = (msg.get("content") or msg.get("processed_text") or "").strip()
@@ -292,6 +337,17 @@ async def _poll_bridge(config: dict):
                 # Save inbound with identity metadata
                 await _save_message(bridge_name, phone, text, "inbound",
                                     identity_role=id_role, identity_confidence=id_conf)
+                try:
+                    from modules import observability as _obs
+                    _obs.inc("dm_messages_ingested_total",
+                             labels={"bridge": bridge_name})
+                except Exception:
+                    pass
+
+                # v1.0.2: never run router/draft/reply on unresolved-LID messages
+                # (we still kept them in DB above for audit).
+                if phone.startswith("unresolved:"):
+                    continue
 
                 # Cooldown check — don't spam the same person
                 if not _can_reply(phone):
