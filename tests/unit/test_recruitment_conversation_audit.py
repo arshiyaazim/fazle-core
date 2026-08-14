@@ -89,6 +89,75 @@ async def test_audit_rows_remain_scoped_to_the_supplied_candidate():
     assert fetch_val_mock.await_args_list[1].args[1] == 22
 
 
+# ── 2026-08-14 fix: "name" step had no plausibility check ──────────────────────
+# (+8801322982195 incident, message 4). Unlike age/job_preference, the "name"
+# step accepted any text verbatim, so a repeated job-request sentence became
+# full_name and the funnel silently advanced past it. Re-prompt instead of
+# accepting, reusing the existing is_recruitment_trigger() check.
+
+async def test_job_request_sentence_is_rejected_as_a_name_and_re_prompted():
+    from modules.recruitment_flow import intake_message, STEP_QUESTIONS
+
+    session = {
+        "id": 28,
+        "phone": "8801322982195",
+        "candidate_id": 5,
+        "collection_step": "name",
+        "funnel_stage": "collecting",
+    }
+    audit_mock = AsyncMock(return_value=True)
+    update_mock = AsyncMock()
+
+    with patch("modules.recruitment_flow._get_session", new=AsyncMock(return_value=session)), \
+         patch("modules.recruitment_flow._audit_candidate_conversation", new=audit_mock), \
+         patch("modules.recruitment_flow._update_session", new=update_mock), \
+         patch("modules.recruitment_flow._apply_audited_transition", new=AsyncMock()) as transition_mock:
+        result = await intake_message(
+            session["phone"], "Ami Security guard er job korte cai",
+            source="bridge2", message_id="msg-4",
+        )
+
+    # Must NOT advance to the next step or accept the sentence as a name.
+    assert result["action"] == "collecting"
+    assert result["reply"] != STEP_QUESTIONS["age"]
+    assert STEP_QUESTIONS["name"] in result["reply"]
+    update_mock.assert_not_awaited()
+    transition_mock.assert_not_awaited()
+    # The rejected turn is still recorded in the audit trail.
+    audit_mock.assert_awaited_once_with(
+        5, "name", "Ami Security guard er job korte cai", "bridge2", "msg-4",
+    )
+
+
+async def test_legitimate_name_is_still_accepted():
+    """Control: a plausible real name must still be accepted exactly as
+    before -- proves the fix is scoped to job-request-shaped text, not a
+    general tightening that would reject real Bangla/English names."""
+    from modules.recruitment_flow import intake_message
+
+    session = {
+        "id": 29,
+        "phone": "8801711000002",
+        "candidate_id": 6,
+        "collection_step": "name",
+        "funnel_stage": "collecting",
+    }
+    audit_mock = AsyncMock(return_value=True)
+
+    with patch("modules.recruitment_flow._get_session", new=AsyncMock(return_value=session)), \
+         patch("modules.recruitment_flow._audit_candidate_conversation", new=audit_mock), \
+         patch("modules.recruitment_flow._apply_audited_transition", new=AsyncMock(return_value=True)) as transition_mock:
+        result = await intake_message(
+            session["phone"], "Md Nurul Islam", source="bridge2", message_id="msg-name",
+        )
+
+    assert result["action"] == "collecting"
+    transition_mock.assert_awaited_once()
+    # _apply_audited_transition(phone, candidate_id, step, raw_message, source, message_id, update)
+    update_arg = transition_mock.await_args.args[6]
+    assert update_arg["full_name"] == "Md Nurul Islam"
+
+
 async def test_duplicate_message_id_does_not_advance_the_session():
     from modules.recruitment_flow import STEP_QUESTIONS, intake_message
 

@@ -483,7 +483,27 @@ async def intake_message(
     update: dict = {}
 
     if step == "name":
-        update["full_name"] = text.strip()[:100]
+        candidate_name = text.strip()
+        # 2026-08-14 fix: unlike age/job_preference below, this step had no
+        # plausibility check at all -- any text, including a repeated
+        # job-request sentence ("Ami Security guard er job korte cai"), was
+        # accepted verbatim as full_name. Reuses the existing
+        # is_recruitment_trigger() keyword/phrase check already defined in
+        # this module (no new validation mechanism) -- a "name" that itself
+        # reads as a job request is re-prompted exactly like an invalid
+        # age/job_preference answer already is, instead of silently
+        # corrupting full_name and advancing the funnel.
+        if not candidate_name or is_recruitment_trigger(candidate_name):
+            if candidate_id is not None:
+                await _audit_candidate_conversation(
+                    candidate_id, step, raw_message, source, message_id,
+                )
+            return {
+                "reply": "দয়া করে আপনার সঠিক নাম লিখুন।\n" + STEP_QUESTIONS["name"],
+                "action": "collecting",
+                "session_id": session["id"],
+            }
+        update["full_name"] = candidate_name[:100]
     elif step == "age":
         val = _parse_age(text)
         if val:
@@ -581,7 +601,8 @@ RECRUITMENT_TRIGGER_PHRASES: tuple[str, ...] = (
     "looking for work", "need a job", "job available", "job interest",
     # "job" in job-seeking context (was a bare INTAKE_KEYWORDS entry)
     "a job", "any job", "job vacancy", "job apply", "apply for job",
-    "job korte chai", "job er jonno", "job ache", "job lagbe",
+    "job korte chai", "job korte cai",  # 2026-08-14: common no-"h" transliteration
+    "job er jonno", "job ache", "job lagbe",
     "job pete chai", "job dorkar", "job chai",
     # "interested" in job-seeking context (was a bare INTAKE_KEYWORDS entry;
     # its Bangla equivalent "আগ্রহী" keeps working via the existing
@@ -675,6 +696,29 @@ async def recruitment_eligibility(
                 "active_session": active_session}
     if active_session and looks_like_recruitment_followup(text):
         return {"eligible": True, "autosend": False, "reason": "session_followup_draft",
+                "active_session": active_session}
+
+    # 2026-08-15 fix: a direct answer to the funnel's own question (an age
+    # like "25", a district name, a menu number) almost never independently
+    # matches the explicit trigger or the 3-layer detector's entity/intent
+    # layers below -- those are text-content signals a short factual answer
+    # was never going to contain. Left unhandled, that meant every
+    # COLLECTION_STEPS answer after the very first message fell through to
+    # the 3-layer detector's Layer 3 (active_session context match, see
+    # recruitment_detector._check_context), which is intentionally
+    # autosend=False -- so an entire in-progress intake funnel became stuck
+    # requiring manual admin approval on every single step, defeating the
+    # point of a step-by-step automated intake. The session itself could
+    # only ever have been created from an already-high-confidence origin
+    # (explicit trigger or entity-layer autosend=True -- see
+    # route_recruitment_message()'s background-session-creation branch), so
+    # trusting its own direct continuation (anything that isn't a tangential
+    # side-question, already handled above) is not a new confidence
+    # judgment -- it's honoring the confidence already established when the
+    # session was opened. session_followup_draft above is unaffected: an
+    # off-topic question mid-session still goes to draft, exactly as before.
+    if active_session:
+        return {"eligible": True, "autosend": True, "reason": "active_session_continuation",
                 "active_session": active_session}
 
     # 3-layer detector (2026-07-11): catches natural phrasing the flat

@@ -142,6 +142,73 @@ class TestRecruitmentEligibilityIntegration:
         assert result["reason"] == "operational_identity"
 
 
+class TestActiveSessionContinuationAutosend:
+    """2026-08-15 fix: a direct step-by-step answer inside an already-active
+    (already high-confidence-vetted) recruitment session must autosend, not
+    fall through to the 3-layer detector's Layer 3 (active_session context
+    match), which is intentionally autosend=False for the *first-contact*
+    ambiguous case. Left unfixed, this meant a candidate answering "25" to
+    "what's your age?" -- or any other structured funnel step -- could
+    never autosend, so the entire multi-step intake funnel was stuck
+    requiring manual admin approval on every single message after the
+    first, defeating the point of an automated step-by-step intake."""
+
+    async def test_plain_age_answer_during_active_session_now_autosends(self):
+        from modules.recruitment_flow import recruitment_eligibility
+
+        session = {"id": 28, "phone": "8801322982195", "collection_step": "age"}
+        with patch("modules.recruitment_flow.get_active_session", new=AsyncMock(return_value=session)):
+            result = await recruitment_eligibility(
+                "8801322982195", "25", role="candidate", intent="unknown",
+            )
+        assert result["eligible"] is True
+        assert result["autosend"] is True
+        assert result["reason"] == "active_session_continuation"
+        assert result["active_session"] == session
+
+    async def test_district_name_answer_during_active_session_autosends(self):
+        """Control: an area/district answer is exactly as unmatchable by
+        entity/explicit-trigger detection as an age -- must behave the same."""
+        from modules.recruitment_flow import recruitment_eligibility
+
+        session = {"id": 28, "phone": "8801322982195", "collection_step": "area"}
+        with patch("modules.recruitment_flow.get_active_session", new=AsyncMock(return_value=session)):
+            result = await recruitment_eligibility(
+                "8801322982195", "Cox's Bazar", role="candidate", intent="unknown",
+            )
+        assert result["autosend"] is True
+        assert result["reason"] == "active_session_continuation"
+
+    async def test_off_topic_question_during_active_session_still_drafts(self):
+        """session_followup_draft must be checked FIRST and still win over
+        the new continuation branch -- an off-topic side-question mid-
+        session ("who are you?") is not a trusted funnel answer and must
+        still go to draft review, exactly as before this fix."""
+        from modules.recruitment_flow import recruitment_eligibility
+
+        session = {"id": 28, "phone": "8801322982195", "collection_step": "age"}
+        with patch("modules.recruitment_flow.get_active_session", new=AsyncMock(return_value=session)):
+            result = await recruitment_eligibility(
+                "8801322982195", "who are you", role="candidate", intent="unknown",
+            )
+        assert result["eligible"] is True
+        assert result["autosend"] is False
+        assert result["reason"] == "session_followup_draft"
+
+    async def test_no_active_session_behavior_is_completely_unaffected(self):
+        """Control: the fix must not change anything about first-contact
+        (no active session) eligibility -- still gated by explicit trigger
+        / 3-layer detector exactly as before."""
+        from modules.recruitment_flow import recruitment_eligibility
+
+        with patch("modules.recruitment_flow.get_active_session", new=AsyncMock(return_value=None)):
+            result = await recruitment_eligibility(
+                "8801999000222", "25", role="candidate", intent="unknown",
+            )
+        assert result["eligible"] is False
+        assert result["reason"] == "no_recruitment_context"
+
+
 class TestUnknownSenderSoftAsk:
     """
     A brand-new number with zero prior history anywhere (identity_brain's
@@ -179,3 +246,31 @@ class TestUnknownSenderSoftAsk:
              patch("modules.recruitment_flow._create_session", new=AsyncMock(return_value=99)):
             result = await intake_message("8801999000111", "চাকরি দরকার")
         assert result["reply"].startswith(UNKNOWN_SENDER_SOFT_ASK)
+
+
+class TestIsRecruitmentTrigger:
+    """2026-08-14 fix regression coverage: the explicit trigger list had
+    "job korte chai" but not the very common no-"h" transliteration "job
+    korte cai" ("+8801322982195" incident, message 4: "Ami Security guard
+    er job korte cai"), so that message only ever qualified via the
+    3-layer detector's intent layer (autosend=False), never via the
+    explicit-trigger path (which would have set autosend=True)."""
+
+    def test_amar_cv_matches_bare_cv_keyword(self):
+        from modules.recruitment_flow import is_recruitment_trigger
+        assert is_recruitment_trigger("Amar CV") is True
+
+    def test_job_korte_chai_still_matches(self):
+        """Pre-existing phrase must be unaffected by the addition."""
+        from modules.recruitment_flow import is_recruitment_trigger
+        assert is_recruitment_trigger("ami job korte chai") is True
+
+    def test_job_korte_cai_now_matches(self):
+        """The fix: the common no-'h' transliteration must now match too."""
+        from modules.recruitment_flow import is_recruitment_trigger
+        assert is_recruitment_trigger("Ami Security guard er job korte cai") is True
+
+    def test_unrelated_message_still_does_not_match(self):
+        """Control: the new phrase must not widen matching to unrelated text."""
+        from modules.recruitment_flow import is_recruitment_trigger
+        assert is_recruitment_trigger("Hello sir, how are you?") is False

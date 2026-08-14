@@ -2098,10 +2098,23 @@ async def process_bridge_inbound(
             # Role-based auto-reply: read live from DB (via wa_chat_frontend) so the UI toggle takes effect immediately.
             _recruit_gate = False
             try:
-                from modules.wa_chat_frontend import get_effective_auto_reply as _get_ar, _id_role_to_setting_key
+                from modules.wa_chat_frontend import (
+                    get_effective_auto_reply as _get_ar,
+                    get_runtime_setting as _get_rs,
+                    _id_role_to_setting_key,
+                )
                 _role_key = _id_role_to_setting_key(id_role)
                 _auto_reply_on = await _get_ar(_role_key)
-                _recruit_autoreply_on = await _get_ar("recruitment")
+                # 2026-08-14 fix: recruitment's own SAFE-MODE bypass (P17-FIX-2,
+                # comment above) was being defeated by get_effective_auto_reply()'s
+                # own master-gate check (auto_reply.all) applying here too --
+                # auto_reply.recruitment='true' could never take effect while
+                # auto_reply.all='false', even though this whole block exists
+                # specifically to let recruitment bypass that master switch.
+                # Read the recruitment key directly instead, independent of the
+                # master gate. _auto_reply_on above (the general, non-recruitment
+                # path) is unchanged and still correctly master-gated.
+                _recruit_autoreply_on = (await _get_rs("auto_reply.recruitment", "false")).lower() in ("true", "1", "yes")
             except Exception:
                 _auto_reply_on = _settings.auto_reply_enabled
                 _recruit_autoreply_on = _settings.recruitment_autoreply_enabled
