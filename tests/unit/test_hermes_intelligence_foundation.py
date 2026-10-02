@@ -82,7 +82,7 @@ def test_recruitment_builder_keeps_contact_context_outside_policy_authority() ->
     assert "prior_answer_evidence=present" in prompt
 
 
-def test_recruitment_fact_register_never_promotes_unresolved_values() -> None:
+def test_recruitment_fact_register_separates_approved_and_archived_conflicts() -> None:
     from modules.recruitment_authority import facts_for_evidence
 
     facts = {fact.key: fact for fact in facts_for_evidence(
@@ -90,9 +90,10 @@ def test_recruitment_fact_register_never_promotes_unresolved_values() -> None:
         "বেতন কত? ফি কত?",
     )}
 
-    assert facts["salary.by_role"].status == "conflicting"
-    assert facts["salary.by_role"].value is None
-    assert facts["salary.by_role"].answerable is False
+    assert facts["salary.by_role"].status == "current_approved"
+    assert facts["salary.by_role"].value
+    assert facts["salary.by_role"].answerable is True
+    assert "salary.escort_survey_post_training" not in facts
     assert facts["recruitment.fee.existence"].answerable is True
 
 
@@ -105,11 +106,11 @@ def test_fact_authority_markers_preserve_provenance_and_status() -> None:
     )
 
     assert "salary.by_role" in markers
-    assert '"status": "conflicting"' in markers
+    assert '"status": "current_approved"' in markers
     assert "resources/ops/recruitment_source_of_truth.txt" in markers
 
 
-def test_recruitment_prompt_consumes_fact_authority_without_approving_salary() -> None:
+def test_recruitment_prompt_uses_approved_salary_and_excludes_archived_conflict() -> None:
     from modules.recruitment_authority import render_authority_markers
 
     context = render_authority_markers(
@@ -124,9 +125,9 @@ def test_recruitment_prompt_consumes_fact_authority_without_approving_salary() -
         kb_context=context,
     )
 
-    assert "status=conflicting" in prompt
-    assert "authority=evidence_only" in prompt
-    assert "No approved candidate-facing value" in prompt
+    assert '"key": "salary.by_role"' in prompt
+    assert '"status": "current_approved"' in prompt
+    assert '"key": "salary.escort_survey_post_training"' not in prompt
     assert "authority=owner_approved_fact" in prompt
     assert "Conversation/History শুধু অর্থ" in prompt
 

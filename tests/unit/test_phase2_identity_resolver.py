@@ -97,15 +97,34 @@ class TestCanonicalMessageKey:
             sender_phone="8801711111111", chat_jid="8801711111111@s.whatsapp.net",
         )
         assert k.startswith("bridge:msgid:") and "3eb0abc" in k
+        assert k.endswith(":message")
 
-    def test_cross_bridge_same_msgid_same_key(self):
+    def test_bridge_key_separates_account_and_event_kind(self):
+        a = compute_canonical_message_key(
+            platform="bridge1", account_instance="+8801700000001",
+            source_message_ref="X", sender_phone="8801711111111",
+            chat_jid="group@g.us", event_kind="message",
+        )
+        b = compute_canonical_message_key(
+            platform="bridge1", account_instance="+8801700000001",
+            source_message_ref="X", sender_phone="8801711111111",
+            chat_jid="group@g.us", event_kind="reaction",
+        )
+        c = compute_canonical_message_key(
+            platform="bridge2", account_instance="+8801700000002",
+            source_message_ref="X", sender_phone="8801711111111",
+            chat_jid="group@g.us", event_kind="message",
+        )
+        assert a != b and a != c
+
+    def test_different_bridge_accounts_do_not_share_a_provenance_key(self):
         a = compute_canonical_message_key(
             platform="bridge1", source_message_ref="XID", sender_phone="8801711111111",
             chat_jid="8801711111111@s.whatsapp.net")
         b = compute_canonical_message_key(
             platform="bridge2", source_message_ref="XID", sender_phone="8801711111111",
             chat_jid="8801711111111@s.whatsapp.net")
-        assert a == b
+        assert a != b
 
     def test_no_transport_id_no_key(self):
         # the old content+60s heuristic was removed — no ref => no key

@@ -76,6 +76,32 @@ async def test_inbound_provenance_multiple_actions_and_replay(provenance_db, sou
 
 
 @pytest.mark.asyncio
+async def test_reply_queue_keeps_original_message_and_sender_provenance(provenance_db):
+    from modules.message_router import inbound_execution
+    from modules.outbound import enqueue
+
+    mid = await _provenance_inbound(source="bridge1", reference="native-99", phone="8801700999000")
+    async with inbound_execution(
+        mid, "bridge1", "native-99", sender_phone="8801700999000",
+        account_instance="+8801700000001", chat_jid="group@g.us",
+        sender_jid="8801700999000@s.whatsapp.net",
+        participant_jid="8801700999000@s.whatsapp.net",
+        event_kind="message", reply_to_message_id="native-98",
+    ):
+        queue_id = await enqueue("8801700999000", "reply", source_bridge="bridge1", purpose="reply")
+
+    row = await provenance_db.fetchrow("SELECT meta_json FROM fazle_outbound_queue WHERE id=$1", queue_id)
+    meta = json.loads(row["meta_json"])
+    assert meta["core_message_id"] == mid
+    assert meta["source_message_ref"] == "native-99"
+    assert meta["sender_phone"] == "8801700999000"
+    assert meta["account_instance"] == "+8801700000001"
+    assert meta["chat_jid"] == "group@g.us"
+    assert meta["participant_jid"] == "8801700999000@s.whatsapp.net"
+    assert meta["reply_to_message_id"] == "native-98"
+
+
+@pytest.mark.asyncio
 async def test_draft_approval_queue_acceptance_and_receipt_are_distinct(provenance_db):
     from modules.message_router import inbound_execution
     from shared.draft_reply import create_draft_reply

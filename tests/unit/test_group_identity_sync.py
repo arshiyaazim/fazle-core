@@ -191,6 +191,25 @@ class TestE1BusinessLabelAssignment:
             await gi.list_approved_group_jids(force_refresh=True)
         assert calls["n"] == 2
 
+    async def test_owner_named_group_is_allowed_only_after_bridge_metadata_discovery(self):
+        from modules import group_identity as gi
+        gi._approved_jids_cache["jids"] = []
+        gi._approved_jids_cache["checked_at"] = 0.0
+
+        async def _fake_fetch_all(sql, *args):
+            return [{
+                "group_jid": "120363@g.us",
+                "display_name": "Al-Rifa'i Integrated Services Office group",
+                "business_label": None,
+            }, {
+                "group_jid": "unrelated@g.us",
+                "display_name": "Random group",
+                "business_label": None,
+            }]
+
+        with patch("app.database.fetch_all", new=_fake_fetch_all):
+            assert await gi.list_approved_group_jids(force_refresh=True) == ["120363@g.us"]
+
     async def test_list_approved_group_jids_keeps_stale_cache_on_db_error(self):
         from modules import group_identity as gi
         gi._approved_jids_cache["jids"] = ["stale@g.us"]
@@ -205,16 +224,15 @@ class TestE1BusinessLabelAssignment:
 
 
 class TestNoHardcodedGroupGuessing:
-    def test_source_never_hardcodes_the_office_group_jid_or_name(self):
-        """Stage D1's explicit rule: identity must come ONLY from synced
-        bridge metadata, never a manually typed JID or name-substring
-        match. Structural proof: the module source contains no literal
-        JID and no 'Al-Rifa' / 'office' substring match logic."""
+    def test_source_never_hardcodes_a_group_jid_and_named_allowlist_is_explicit(self):
+        """Identity still comes only from synced bridge metadata. The
+        owner-named allowlist may recognize a synced display name, but it
+        must never invent a JID or read arbitrary group names."""
         import inspect
         import modules.group_identity as gi
         src = inspect.getsource(gi)
         assert "120363426895117693" not in src
-        assert "al-rifa" not in src.lower()
+        assert "al-rifa'i integrated services" in src.lower()
         assert "office group" not in src.lower()
 
     def test_conversation_state_source_never_infers_from_role_labels(self):

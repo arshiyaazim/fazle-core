@@ -187,7 +187,7 @@ def _categorize_csv_contact(name: str) -> str:
 
 # ── Candidate keyword triggers ─────────────────────────────────────────────────
 _CANDIDATE_KEYWORDS = [
-    "চাকরি", "চাকরী", "কাজ চাই", "job", "apply", "বেতন কত",
+    "চাকরি", "চাকরী", "কাজ চাই", "job", "apply",
     "নিয়োগ", "recruitment", "vacancy", "আবেদন",
 ]
 
@@ -294,10 +294,22 @@ async def detect_identity(phone: str, text: str = "") -> dict:
         # unchanged — this only fixes WHICH role the accountant is given.
         if _check_accountant_settings(norm):
             emp = await _lookup_employee(norm)
-            return _build(
+            result = _build(
                 _phone=norm, role="accountant", confidence=100, source="settings",
                 priority=190, emp=emp,
             )
+            # The configured phone decides the role. A contact-book label is
+            # display evidence only, but retaining it makes the accountant's
+            # known alias available for audit and admin review.
+            try:
+                acct_contact = await _lookup_contact(norm)
+                if acct_contact:
+                    result["contact_id"] = acct_contact.get("contact_id")
+                    result["display_name"] = acct_contact.get("display_name") or result.get("display_name")
+                    result["relation_name"] = acct_contact.get("relation_name") or result.get("relation_name")
+            except Exception:
+                pass
+            return result
 
         # ── Step 2: seed rule lookup (fazle_contact_roles) ────────────────────
         seed = await _lookup_seed(norm)

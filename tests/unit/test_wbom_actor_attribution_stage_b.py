@@ -556,3 +556,41 @@ class TestD2GroupConversationKey:
         msg = {"id": "MSGID12", "content": "hi", "timestamp": None}  # no chat_jid key at all
         await bp._save_raw_core_copy("bridge2", msg, "8801700000001", "hi")
         assert captured["args"][6] == "8801700000001:bridge2"
+
+    async def test_raw_copy_preserves_sender_group_reply_and_account_provenance(self, monkeypatch):
+        """A later audit must be able to identify the raw sender, group,
+        receiving account, native message and quoted/replied message without
+        guessing from a display name or bridge label."""
+        import json
+
+        captured = {}
+
+        async def _fake_fetch_one(sql, *args):
+            captured["args"] = args
+            return {"message_id": 4}
+
+        monkeypatch.setattr(bp, "fetch_one", _fake_fetch_one)
+        monkeypatch.setattr(bp, "execute", AsyncMock())
+        monkeypatch.setattr(bp, "_source_to_receiver", lambda source: "+8801700000001")
+
+        msg = {
+            "id": "native-42",
+            "sender": "8801912345678@s.whatsapp.net",
+            "participant_jid": "8801912345678@s.whatsapp.net",
+            "chat_jid": "120363@g.us",
+            "event_kind": "message",
+            "quoted_message_id": "native-41",
+            "content": "salary question",
+            "timestamp": None,
+        }
+        await bp._save_raw_core_copy("bridge1", msg, "8801912345678", "salary question")
+
+        context = json.loads(captured["args"][9])
+        assert context["source_bridge"] == "bridge1"
+        assert context["account_instance"] == "+8801700000001"
+        assert context["sender_jid"] == "8801912345678@s.whatsapp.net"
+        assert context["participant_jid"] == "8801912345678@s.whatsapp.net"
+        assert context["chat_jid"] == "120363@g.us"
+        assert context["is_group"] is True
+        assert context["source_message_ref"] == "native-42"
+        assert context["reply_to_message_id"] == "native-41"

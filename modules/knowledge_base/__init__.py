@@ -32,7 +32,7 @@ _RECRUITMENT_LOOKUP_KEYS: dict[str, frozenset[str]] = {
     "training": frozenset({"training.duration"}),
     "probation": frozenset({"probation.duration"}),
     "duty": frozenset({"duty.conditions"}),
-    "salary": frozenset({"salary.by_role", "salary.escort_survey_post_training"}),
+    "salary": frozenset({"salary.by_role"}),
     "fee": frozenset({
         "recruitment.fee.existence", "recruitment.advance_fee_payment_requirement",
         "recruitment.early_departure_fee_adjustment", "fee.amounts",
@@ -96,13 +96,6 @@ def _recruitment_lookup_facts(text: str, intent: Optional[str]) -> tuple:
         for key in _RECRUITMENT_LOOKUP_KEYS[focus]
         if key in by_key
     }
-
-    # Keep the narrow Escort/Survey conflict open without blocking approved
-    # Operation Officer or Guard salary facts.
-    if focus == "salary" and not any(token in lowered for token in (
-        "escort", "এস্কর্ট", "survey", "সার্ভে", "scout", "স্কাউট",
-    )):
-        selected.pop("salary.escort_survey_post_training", None)
 
     # The exact refund/deduction calendar is unresolved unless asked for.
     if focus == "fee" and not any(token in lowered for token in (

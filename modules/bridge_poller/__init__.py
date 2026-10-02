@@ -1103,7 +1103,20 @@ async def _poll_bridge(config: dict):
                 if core_message_id is None:
                     continue  # Persistence must succeed before any business work.
                 from modules.message_router import inbound_execution
-                async with inbound_execution(core_message_id, bridge_name, str(msg_id)) as execution:
+                async with inbound_execution(
+                    core_message_id, bridge_name, str(msg_id),
+                    sender_phone=phone,
+                    account_instance=_source_to_receiver(bridge_name) or bridge_name,
+                    chat_jid=msg.get("chat_jid") or "",
+                    sender_jid=msg.get("sender") or "",
+                    participant_jid=msg.get("participant_jid") or msg.get("sender") or "",
+                    event_kind=msg.get("event_kind") or msg.get("message_event_kind") or "message",
+                    reply_to_message_id=(
+                        msg.get("reply_to_message_id")
+                        or msg.get("quoted_message_id")
+                        or msg.get("reply_to")
+                    ),
+                ) as execution:
                     if execution is None:
                         continue
                     # Stage E3 (2026-08-28, controlled Office-group ingestion):
@@ -2452,6 +2465,8 @@ async def _phase2_enrich_raw_copy(
             source_message_ref=str(msg.get("id") or msg.get("message_id") or "") or None,
             source_timestamp=source_ts.isoformat() if source_ts else None,
             message_type=media_type,
+            account_instance=_source_to_receiver(source) or source,
+            event_kind=str(msg.get("event_kind") or msg.get("message_event_kind") or "message"),
             bridge_full_name=(msg.get("full_name") or msg.get("contact_full_name") or None),
             bridge_push_name=(msg.get("push_name") or msg.get("contact_push_name") or None),
             bridge_business_name=(msg.get("business_name") or msg.get("contact_business_name") or None),
@@ -2530,8 +2545,19 @@ async def _save_raw_core_copy(source: str, msg: dict, phone: str, text: str) -> 
     msg_hash = _core_message_hash(source, msg_id)
     context = {
         "stage": "raw_received",
+        "source_bridge": source,
+        "account_instance": receiver or source,
         "source_message_ref": msg_id,
         "chat_jid": msg.get("chat_jid"),
+        "sender_jid": msg.get("sender"),
+        "participant_jid": msg.get("participant_jid") or msg.get("sender"),
+        "is_group": _chat_jid.endswith("@g.us"),
+        "event_kind": msg.get("event_kind") or msg.get("message_event_kind") or "message",
+        "reply_to_message_id": (
+            msg.get("reply_to_message_id")
+            or msg.get("quoted_message_id")
+            or msg.get("reply_to")
+        ),
         "filename": msg.get("filename"),
         "media_type": msg.get("media_type"),
         "has_processed_text": bool(msg.get("processed_text")),
@@ -2895,6 +2921,12 @@ def _with_inbound_provenance(func):
         async with inbound_execution(
             core_id, values["bridge_name"], values["message_id"],
             role=values["id_role"], confidence=values["id_conf"],
+            sender_phone=values["phone"],
+            account_instance=values["bridge_name"],
+            chat_jid=values["chat_jid"],
+            sender_jid=values["phone"],
+            participant_jid=values["phone"],
+            event_kind="message",
         ) as execution:
             if execution is None:
                 return

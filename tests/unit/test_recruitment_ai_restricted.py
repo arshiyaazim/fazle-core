@@ -1,4 +1,5 @@
 from pathlib import Path
+from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, patch
 
 from modules.recruitment_ai import (
@@ -214,6 +215,13 @@ async def test_meta_recruitment_safe_mode_bypass_uses_queue_compatible_channel()
     from app.main import _handle_meta_message
 
     enqueue = AsyncMock(return_value=321)
+    @asynccontextmanager
+    async def claimed_inbound(*_args, **_kwargs):
+        # The production handler requires a persisted inbound claim before it
+        # may enqueue a reply. Isolate that contract instead of mocking the
+        # save and accidentally causing an early return.
+        yield {"core_message_id": 9001, "active": True, "actions": []}
+
     with (
         patch("app.main._process_message", new=AsyncMock(return_value=("reply", None))),
         patch("app.main._should_recruitment_autoreply", new=AsyncMock(return_value=True)),
@@ -224,6 +232,7 @@ async def test_meta_recruitment_safe_mode_bypass_uses_queue_compatible_channel()
         patch("app.main._record_meta_delivery_state", new=AsyncMock()),
         patch("app.main._social_auto_reply_single_engine", return_value=False),
         patch("modules.outbound.enqueue", new=enqueue),
+        patch("modules.message_router.inbound_execution", new=claimed_inbound),
     ):
         await _handle_meta_message(
             {
@@ -282,13 +291,21 @@ async def test_fresh_session_followup_is_draft_only_not_autosend():
 
 async def test_common_outbound_meta_alias_dispatches_to_meta_whatsapp():
     from modules.outbound import _send_with_channel
+    from modules.identity_role_authorization import AuthorizationDecision
+    from modules.identity_role_authorization_adapter import issue_transport_authorization
 
     sender = AsyncMock(return_value="meta-message-id")
+    authorization = issue_transport_authorization(AuthorizationDecision(
+        allowed=True, reason_code="allowed", authorization_version=7,
+        manual_review_required=False, restriction_category=None,
+    ))
     with patch("modules.social_auto_reply.send_queue._send_meta_whatsapp", new=sender):
-        result = await _send_with_channel("meta", "8801999999999", "reply")
+        result = await _send_with_channel(
+            "meta", "8801999999999", "reply", authorization=authorization,
+        )
 
     assert result == "meta-message-id"
-    sender.assert_awaited_once_with("8801999999999", "reply")
+    sender.assert_awaited_once_with("8801999999999", "reply", authorization=authorization)
 
 
 # ===========================================================================

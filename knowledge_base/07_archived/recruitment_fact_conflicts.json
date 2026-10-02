@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "status": "historical_non_authoritative",
+  "note": "These records are retained for audit/history only. They must not be loaded as candidate-facing authority or used to answer current policy questions.",
+  "facts": [
+    {
+      "key": "salary.by_role.history",
+      "subject": "salary",
+      "status": "conflicting",
+      "values": [
+        "Operation Officer trial 12000-18000; permanent 18000-35000+",
+        "Guard probation 10000-13000 or package 17000; permanent 24700",
+        "Escort/Survey training 10000-15000; other sources 12000-18000"
+      ],
+      "sources": [
+        "resources/ops/recruitment_source_of_truth.txt",
+        "resources/ops/salary_structure.txt",
+        "db/migrations/014_career_hr_dataset.sql",
+        "scripts/seed_recruitment_kb.sql"
+      ],
+      "comment": "Historical comparison only; not effective policy."
+    },
+    {
+      "key": "salary.escort_survey_post_training",
+      "subject": "escort_survey_post_training_salary",
+      "status": "conflicting",
+      "values": ["BDT 12,000-24,000", "BDT 12,000-17,000"],
+      "sources": [
+        "owner_decision_register/recruitment-policy",
+        "resources/ops/salary_structure.txt",
+        "resources/ops/recruitment_source_of_truth.txt"
+      ],
+      "comment": "This historical conflict is not currently effective and must not be presented as an approved salary."
+    },
+    {
+      "key": "office.contact.current.history",
+      "subject": "recruitment_contact",
+      "status": "conflicting",
+      "values": ["01958 122322"],
+      "sources": ["resources/ops/joining_fee_policy.txt", "scripts/seed_recruitment_kb.sql"],
+      "comment": "Historical contact value; use the current approved contact only."
+    },
+    {
+      "key": "office.hours_and_friday.history",
+      "subject": "office_hours",
+      "status": "conflicting",
+      "values": ["10:00-17:00; Friday may be closed"],
+      "sources": ["resources/ops/recruitment_source_of_truth.txt", "scripts/seed_recruitment_kb.sql"],
+      "comment": "Historical schedule; not currently effective."
+    },
+    {
+      "key": "fee.amounts.history",
+      "subject": "form_and_joining_fee_amount",
+      "status": "conflicting",
+      "values": ["form fee 330", "joining fee 1000 minimum", "joining fee 3500", "no absolute advance prerequisite"],
+      "sources": [
+        "resources/ops/joining_fee_policy.txt",
+        "resources/ops/master_recruitment_employee_information.txt",
+        "resources/ops/recruitment_source_of_truth.txt",
+        "scripts/seed_recruitment_kb.sql"
+      ],
+      "comment": "Historical comparison only; the current approved record is maintained separately."
+    }
+  ]
+}

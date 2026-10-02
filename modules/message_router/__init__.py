@@ -655,7 +655,12 @@ def inbound_reference() -> dict:
         return {}
     # Detached existing tasks inherit this immutable identity even after the
     # synchronous turn ends; their queue/draft INSERTs remain traceable.
-    return {k: execution[k] for k in ("core_message_id", "source", "source_message_ref")}
+    keys = (
+        "core_message_id", "source", "source_message_ref", "sender_phone",
+        "account_instance", "chat_jid", "sender_jid", "participant_jid",
+        "event_kind", "reply_to_message_id",
+    )
+    return {k: execution[k] for k in keys if k in execution and execution[k] is not None}
 
 
 def record_inbound_action(kind: str, **fields) -> None:

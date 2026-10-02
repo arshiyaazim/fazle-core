@@ -2657,6 +2657,8 @@ async def _handle_meta_message(msg: dict, value: dict):
                 canonical_phone=sender,
                 source_message_ref=message_id or None,
                 message_type=msg_type or "text",
+                account_instance=get_settings().admin_meta_number or "meta",
+                event_kind=str(msg.get("event_kind") or "message"),
                 meta_profile_name=meta_profile_name,
             )
             _src = _ident.get("sender_name_source")
@@ -2686,7 +2688,16 @@ async def _handle_meta_message(msg: dict, value: dict):
     if core_message_id is None:
         return
     from modules.message_router import inbound_execution, record_inbound_action
-    async with inbound_execution(core_message_id, "meta", message_id) as execution:
+    async with inbound_execution(
+        core_message_id, "meta", message_id,
+        sender_phone=sender,
+        account_instance=get_settings().admin_meta_number or "meta",
+        chat_jid=sender,
+        sender_jid=sender,
+        participant_jid=sender,
+        event_kind=str(msg.get("event_kind") or "message"),
+        reply_to_message_id=(msg.get("reply_to_message_id") or msg.get("quoted_message_id")),
+    ) as execution:
         if execution is None:
             return
         if msg_type != "text" and not extracted_text:
@@ -3239,6 +3250,8 @@ async def _handle_bridge_event(payload: dict, source: str):
                     chat_jid=event.get("chat_jid") or None,
                     source_message_ref=(msg_id or None),
                     message_type=media_type or "text",
+                    account_instance=event.get("receiver_number") or source,
+                    event_kind=str(event.get("event_kind") or "message"),
                     bridge_full_name=event.get("full_name"),
                     bridge_push_name=event.get("push_name"),
                     bridge_business_name=event.get("business_name"),

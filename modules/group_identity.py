@@ -21,6 +21,7 @@ periodic hook once explicitly asked for).
 from __future__ import annotations
 
 import logging
+import re
 import sqlite3
 from typing import Optional
 
@@ -35,6 +36,21 @@ _BRIDGE_DB_PATH_ATTR = {
     "bridge2": "bridge2_db_path",
     "bridge3": "bridge3_db_path",
 }
+
+# Owner-named operational groups. Their JIDs still come only from the
+# WhatsApp bridge's own `chats` table; names are used only to recognize the
+# already-known groups, never to invent a JID. Messages remain read/index-only
+# until a separate analysis workflow explicitly consumes them.
+_NAMED_OPERATIONAL_GROUPS = {
+    "al rifai integrated services": "office_operations",
+    "al rifai integrated services office group": "office_operations",
+    "escort release slip": "escort_release_slip",
+    "al-aqsa escort program group": "escort_program",
+}
+
+
+def _group_name_key(value: str | None) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", (value or "").casefold()).strip()
 
 
 def _bridge_db_path(bridge_name: str) -> Optional[str]:
@@ -201,9 +217,15 @@ async def list_approved_group_jids(force_refresh: bool = False) -> list[str]:
     from app.database import fetch_all as _fetch_all
     try:
         rows = await _fetch_all(
-            "SELECT DISTINCT group_jid FROM wbom_group_identities WHERE business_label IS NOT NULL"
+            "SELECT DISTINCT group_jid, display_name, business_label "
+            "FROM wbom_group_identities "
+            "WHERE business_label IS NOT NULL OR display_name IS NOT NULL"
         )
-        jids = [r["group_jid"] for r in rows]
+        jids = [
+            r["group_jid"] for r in rows
+            if r.get("business_label")
+            or _group_name_key(r.get("display_name")) in _NAMED_OPERATIONAL_GROUPS
+        ]
     except Exception as exc:
         log.warning("[group_identity] list_approved_group_jids failed, keeping stale cache: %s", exc)
         return _approved_jids_cache["jids"]

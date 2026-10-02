@@ -504,6 +504,8 @@ def compute_canonical_message_key(
     source_timestamp_iso: str | None = None,
     content: str | None = None,
     media_fingerprint: str | None = None,
+    account_instance: str | None = None,
+    event_kind: str | None = None,
 ) -> Optional[str]:
     """
     Generate a stable cross-source canonical key for an inbound message.
@@ -546,8 +548,14 @@ def compute_canonical_message_key(
     sender_seg = _sender_key_segment(sender_phone)
     if sender_seg is None:
         return None
+    account_seg = re.sub(
+        r"[^a-z0-9_.:@+-]", "_", (account_instance or platform).strip().lower()
+    ) or "unknown_account"
     chat_seg = (chat_jid or "").strip().lower() or "unknown_chat"
-    return f"bridge:msgid:{sender_seg}:{chat_seg}:{ref_seg}"
+    kind_seg = re.sub(
+        r"[^a-z0-9_.:-]", "_", (event_kind or "message").strip().lower()
+    ) or "message"
+    return f"bridge:msgid:{account_seg}:{chat_seg}:{ref_seg}:{kind_seg}"
 
 
 def _sender_key_segment(phone: str | None) -> Optional[str]:
@@ -583,6 +591,8 @@ async def resolve_inbound_identity(
     bridge_business_name: str | None = None,
     meta_profile_name: str | None = None,
     social_inbox_name: str | None = None,
+    account_instance: str | None = None,
+    event_kind: str | None = None,
 ) -> dict:
     """
     The ONE canonical inbound-identity resolver. Used by every ingestion
@@ -614,6 +624,8 @@ async def resolve_inbound_identity(
         content=message_body,
         media_fingerprint=media_fingerprint,
         message_type=message_type,
+        account_instance=account_instance,
+        event_kind=event_kind,
     )
 
     identity_role = "unknown"

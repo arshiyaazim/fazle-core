@@ -196,6 +196,16 @@ class TestDetectIdentityUnknown:
         actual_role = result.get("identity_role") or result.get("role")
         assert actual_role == "unknown"
 
+    async def test_unknown_salary_question_is_not_assumed_to_be_recruitment(self):
+        """Salary alone is ambiguous; do not classify an unknown number as
+        an applicant without job-seeking context or identity evidence."""
+        from modules.identity_brain import detect_identity
+
+        with patch("modules.identity_brain.fetch_one", new=AsyncMock(return_value=None)):
+            result = await detect_identity("8801900000000", "বেতন কত?")
+
+        assert (result.get("identity_role") or result.get("role")) == "unknown"
+
 
 class TestEscortContentDetection:
     """Messages containing vessel keywords should hint escort_client role."""
