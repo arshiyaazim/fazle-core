@@ -45,12 +45,17 @@ _NAMED_OPERATIONAL_GROUPS = {
     "al rifai integrated services": "office_operations",
     "al rifai integrated services office group": "office_operations",
     "escort release slip": "escort_release_slip",
-    "al-aqsa escort program group": "escort_program",
+    "al aqsa escort program group": "escort_program",
 }
 
 
 def _group_name_key(value: str | None) -> str:
-    return re.sub(r"[^a-z0-9]+", " ", (value or "").casefold()).strip()
+    # Drop apostrophes (straight and typographic) so owner names like
+    # "Al-Rifa'i Integrated Services Office group" normalize to a stable
+    # "al rifai integrated services office group" key instead of splitting
+    # on the apostrophe ("al rifa i ...").
+    text = (value or "").casefold().replace("'", "").replace("\u2019", "")
+    return re.sub(r"[^a-z0-9]+", " ", text).strip()
 
 
 def _bridge_db_path(bridge_name: str) -> Optional[str]:

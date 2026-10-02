@@ -660,7 +660,14 @@ def inbound_reference() -> dict:
         "account_instance", "chat_jid", "sender_jid", "participant_jid",
         "event_kind", "reply_to_message_id",
     )
-    return {k: execution[k] for k in keys if k in execution and execution[k] is not None}
+    identity = execution.get("identity") or {}
+    reference: dict = {}
+    for k in keys:
+        if execution.get(k) is not None:
+            reference[k] = execution[k]
+        elif identity.get(k) is not None:
+            reference[k] = identity[k]
+    return reference
 
 
 def record_inbound_action(kind: str, **fields) -> None:

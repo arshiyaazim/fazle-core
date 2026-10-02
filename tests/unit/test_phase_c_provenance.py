@@ -534,3 +534,71 @@ def test_history_entry_required_fields():
         "workflow", "reply_to", "thread_identity",
     ]:
         assert hasattr(he, f)
+
+
+@pytest.mark.asyncio
+async def test_provider_fallback_preserves_inbound_provenance(provenance_db, monkeypatch):
+    """Hermes -> Ollama provider fallback changes only the reply text; the
+    original inbound provenance (sender_phone, source_message_ref,
+    core_message_id) is never lost."""
+    from modules.message_router import inbound_execution
+    from modules.outbound import enqueue
+    import modules.hermes_dispatch as hermes_dispatch
+    import app.ollama as ollama
+
+    mid = await _provenance_inbound(source="bridge1", reference="native-77", phone="8801700999000")
+
+    async def _hermes_fail(*a, **k):
+        return None
+
+    async def _ollama_ok(*a, **k):
+        return "ollama reply"
+
+    monkeypatch.setattr(hermes_dispatch, "generate_reply", _hermes_fail)
+    monkeypatch.setattr(ollama, "generate_reply", _ollama_ok)
+
+    async with inbound_execution(
+        mid, "bridge1", "native-77", sender_phone="8801700999000",
+        account_instance="+8801700000002", chat_jid="", event_kind="message",
+    ):
+        reply = await hermes_dispatch.generate_reply("hi", "greeting")
+        if not reply:
+            reply = await ollama.generate_reply("hi", "greeting")
+        assert reply == "ollama reply"
+        queue_id = await enqueue("8801700999000", reply, source_bridge="bridge1", purpose="reply")
+
+    row = await provenance_db.fetchrow("SELECT meta_json FROM fazle_outbound_queue WHERE id=$1", queue_id)
+    meta = json.loads(row["meta_json"])
+    assert meta["core_message_id"] == mid
+    assert meta["source_message_ref"] == "native-77"
+    assert meta["sender_phone"] == "8801700999000"
+    assert meta["account_instance"] == "+8801700000002"
+
+
+@pytest.mark.asyncio
+async def test_same_native_id_different_account_instance_does_not_collide(provenance_db):
+    """The same native message ID from two receiving account instances must
+    not collide: distinct inbound rows and distinct queue rows."""
+    from modules.message_router import inbound_execution
+    from modules.outbound import enqueue
+
+    mid1 = await _provenance_inbound(source="bridge1", reference="native-dup", phone="8801700999000")
+    mid2 = await _provenance_inbound(source="bridge2", reference="native-dup", phone="8801700999000")
+    assert mid1 != mid2
+
+    async with inbound_execution(
+        mid1, "bridge1", "native-dup", sender_phone="8801700999000",
+        account_instance="+8801700000001", event_kind="message",
+    ):
+        q1 = await enqueue("8801700999000", "reply-a", source_bridge="bridge1", purpose="reply")
+    async with inbound_execution(
+        mid2, "bridge2", "native-dup", sender_phone="8801700999000",
+        account_instance="+8801700000002", event_kind="message",
+    ):
+        q2 = await enqueue("8801700999000", "reply-b", source_bridge="bridge2", purpose="reply")
+
+    assert q1 and q2 and q1 != q2
+    m1 = json.loads((await provenance_db.fetchrow("SELECT meta_json FROM fazle_outbound_queue WHERE id=$1", q1))["meta_json"])
+    m2 = json.loads((await provenance_db.fetchrow("SELECT meta_json FROM fazle_outbound_queue WHERE id=$1", q2))["meta_json"])
+    assert m1["account_instance"] == "+8801700000001"
+    assert m2["account_instance"] == "+8801700000002"

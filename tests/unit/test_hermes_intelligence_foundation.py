@@ -107,7 +107,9 @@ def test_fact_authority_markers_preserve_provenance_and_status() -> None:
 
     assert "salary.by_role" in markers
     assert '"status": "current_approved"' in markers
-    assert "resources/ops/recruitment_source_of_truth.txt" in markers
+    # Approved source for salary.by_role is the salary structure document,
+    # not the legacy source-of-truth file.
+    assert "resources/ops/salary_structure.txt" in markers
 
 
 def test_recruitment_prompt_uses_approved_salary_and_excludes_archived_conflict() -> None:

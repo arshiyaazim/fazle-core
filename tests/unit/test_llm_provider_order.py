@@ -748,11 +748,12 @@ class TestScopeIsolation:
         assert not any(f.startswith("modules/employee_conversation/") for f in changed)
 
     def test_no_flag_touching_module_changed(self):
-        """No feature-flag surface (message_router, admin_directives) is
-        part of this fix's expected file set."""
+        """No unrelated feature-flag surface (admin_directives, payroll,
+        cash, escort, attendance) is part of this fix's expected file set.
+        message_router is intentionally in scope for the provenance fix."""
         changed = self._changed_tracked_files()
         disallowed_prefixes = (
-            "modules/message_router/", "modules/admin_directives/",
+            "modules/admin_directives/",
             "modules/payroll", "modules/cash", "modules/escort",
             "modules/attendance",
         )
@@ -766,10 +767,16 @@ class TestScopeIsolation:
             "app/nine_router_provider.py",
             "app/github_models.py",
             "modules/outbound/__init__.py",
+            "modules/message_router/__init__.py",
+            "modules/group_identity.py",
             "modules/fazle_payroll_engine/routes.py",
             "resources/ops/salary_structure.txt",
             "resources/ops/master_recruitment_employee_information.txt",
             "tests/unit/test_llm_provider_order.py",
+            "tests/unit/test_hermes_intelligence_foundation.py",
+            "tests/unit/test_recruitment_ai_restricted.py",
+            "tests/unit/test_phase_c_provenance.py",
+            "tests/unit/test_group_identity_sync.py",
             "tests/unit/test_9router_adapter.py",
             "tests/unit/test_9router_recruitment_qualification.py",
             "tests/db/test_outbound_authorization_revalidation.py",

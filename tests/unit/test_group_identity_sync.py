@@ -179,7 +179,7 @@ class TestE1BusinessLabelAssignment:
 
         async def _fake_fetch_all(sql, *args):
             calls["n"] += 1
-            return [{"group_jid": "a@g.us"}]
+            return [{"group_jid": "a@g.us", "display_name": None, "business_label": "office_internal"}]
 
         with patch("app.database.fetch_all", new=_fake_fetch_all):
             r1 = await gi.list_approved_group_jids()
@@ -232,8 +232,34 @@ class TestNoHardcodedGroupGuessing:
         import modules.group_identity as gi
         src = inspect.getsource(gi)
         assert "120363426895117693" not in src
-        assert "al-rifa'i integrated services" in src.lower()
-        assert "office group" not in src.lower()
+        # The allowlist is explicit (normalized names), never a hardcoded JID.
+        for name in (
+            "al rifai integrated services",
+            "escort release slip",
+            "al aqsa escort program group",
+        ):
+            assert name in src.lower()
+
+    async def test_named_operational_groups_recognized_by_normalized_display_name(self):
+        """Behavioral: each owner-named group is recognized from the synced
+        display_name alone (no hardcoded JID), including the apostrophe in
+        "Al-Rifa'i"."""
+        from modules import group_identity as gi
+
+        cases = {
+            "Al-Rifa'i Integrated Services Office group": "office@g.us",
+            "Escort Release Slip": "escort@g.us",
+            "Al-Aqsa Escort Program Group": "aqsa@g.us",
+        }
+        for display_name, jid in cases.items():
+            gi._approved_jids_cache["jids"] = []
+            gi._approved_jids_cache["checked_at"] = 0.0
+
+            async def _fake_fetch_all(sql, *args, _dn=display_name, _jid=jid):
+                return [{"group_jid": _jid, "display_name": _dn, "business_label": None}]
+
+            with patch("app.database.fetch_all", new=_fake_fetch_all):
+                assert await gi.list_approved_group_jids(force_refresh=True) == [jid]
 
     def test_conversation_state_source_never_infers_from_role_labels(self):
         """Stage D6/D7's explicit rule: state comes only from the

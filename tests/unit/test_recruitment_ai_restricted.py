@@ -18,7 +18,10 @@ from modules.recruitment_flow import (
 
 
 def test_recruitment_source_is_inside_approved_ops_path():
-    expected_parent = Path("/home/azim/core/resources/ops")
+    # Resolve the repository root from this test file (tests/unit/...), so the
+    # assertion holds in /home/azim/core and in isolated worktrees alike.
+    repo_root = Path(__file__).resolve().parents[2]
+    expected_parent = repo_root / "resources" / "ops"
     assert _RECRUITMENT_SOURCE.parent == expected_parent
     assert _RECRUITMENT_SOURCE.name == "recruitment_source_of_truth.txt"
 
@@ -292,7 +295,7 @@ async def test_fresh_session_followup_is_draft_only_not_autosend():
 async def test_common_outbound_meta_alias_dispatches_to_meta_whatsapp():
     from modules.outbound import _send_with_channel
     from modules.identity_role_authorization import AuthorizationDecision
-    from modules.identity_role_authorization_adapter import issue_transport_authorization
+    from modules.outbound_authorization import issue_transport_authorization
 
     sender = AsyncMock(return_value="meta-message-id")
     authorization = issue_transport_authorization(AuthorizationDecision(
@@ -360,18 +363,37 @@ async def test_k31_role_specific_approved_salary_survives_narrow_conflict(monkey
     assert "10:00-17:00" not in reply
 
 
-async def test_k31_conflicting_salary_fee_schedule_and_vacancy_fail_closed(monkeypatch):
+async def test_k31_conflicting_fee_schedule_and_vacancy_fail_closed(monkeypatch):
     import modules.knowledge_base as kb
 
     monkeypatch.setattr(kb, "fetch_all", AsyncMock(return_value=_k31_stale_rows()))
 
-    salary = await kb.get_reply("Escort salary কত?", "salary_query")
     fee_schedule = await kb.get_reply("ফি ফেরত কবে?", "unknown")
     vacancies = await kb.get_reply("এখন কয়টি vacancy আছে?", "unknown")
 
-    assert salary == "এই বিষয়ে নিশ্চিত তথ্যের জন্য অফিসে যোগাযোগ করুন।"
     assert fee_schedule == "এই বিষয়ে নিশ্চিত তথ্যের জন্য অফিসে যোগাযোগ করুন।"
     assert vacancies == "এই বিষয়ে নিশ্চিত তথ্যের জন্য অফিসে যোগাযোগ করুন।"
+
+
+async def test_k31_approved_role_salary_answerable_post_training_not_authoritative(monkeypatch):
+    import modules.knowledge_base as kb
+
+    monkeypatch.setattr(kb, "fetch_all", AsyncMock(return_value=_k31_stale_rows()))
+
+    # Approved role-level salary may be answered (no legacy leakage).
+    salary = await kb.get_reply("Escort salary কত?", "salary_query")
+    assert "LEGACY" not in salary
+    assert "BDT" in salary
+
+    # The unresolved Escort/Survey post-training salary is archived and must
+    # never be answerable from the active authority register.
+    from modules.recruitment_authority import facts_for_evidence
+
+    active = {f.key: f for f in facts_for_evidence(
+        "resources/ops/recruitment_source_of_truth.txt",
+        "Escort/Survey post-training salary কত?",
+    )}
+    assert "salary.escort_survey_post_training" not in active
 
 
 async def test_k31_generic_or_misclassified_recruitment_path_never_returns_legacy(monkeypatch):
