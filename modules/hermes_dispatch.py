@@ -844,20 +844,6 @@ async def _call_hermes(message: str, *, sender_phone: str, log_label: str) -> Op
     return reply
 
 
-async def _minimax_primary_enabled() -> bool:
-    """Task 13 MiniMax-primary promotion (2026-08-22): the one shared flag
-    check every MiniMax-first call site in this module uses. Fails closed
-    to False (hermes-runner-only, today's behavior) on any error reading
-    the flag -- a broken feature-flag lookup must never newly enable a
-    code path, only ever fail toward the already-proven-safe default."""
-    try:
-        from modules.preflight_guard import is_feature_active
-        return is_feature_active("minimax_customer_primary", default=False)
-    except Exception as exc:  # noqa: BLE001 — must never raise
-        log.debug("[hermes_dispatch] minimax_customer_primary flag check failed: %s", exc)
-        return False
-
-
 def _shadow_check_reply_grounding(
     reply: Optional[str], db_context: str, *, role: str, intent: str, source: str,
 ) -> None:
@@ -917,26 +903,9 @@ async def generate_reply(
     falls back to hermes-runner's shared "new" bucket, same as before this
     existed.
 
-    Task 13 MiniMax-primary promotion (2026-08-22, flag-gated by
-    `minimax_customer_primary`, default OFF): when the flag is OFF this
-    function's behavior is byte-identical to before -- hermes-runner only.
-    When ON, MiniMax M3 (app.minimax_provider.generate_reply(), the exact
-    same call shape) is tried first; any failure/timeout/empty response
-    falls through to the existing hermes-runner call below unchanged."""
-    if await _minimax_primary_enabled():
-        try:
-            from app.minimax_provider import generate_reply as _minimax_generate_reply
-            minimax_reply = await _minimax_generate_reply(
-                user_message, intent, db_context, history, role, source,
-            )
-        except Exception as exc:  # noqa: BLE001 — must never raise into the caller
-            log.warning("[hermes_dispatch] generate_reply minimax call raised: %s", exc)
-            minimax_reply = None
-        if minimax_reply:
-            log.info("[hermes_dispatch] generate_reply(minimax_primary) role=%s intent=%s source=%s", role, intent, source)
-            _shadow_check_reply_grounding(minimax_reply, db_context, role=role, intent=intent, source=source)
-            return minimax_reply
-        log.info("[hermes_dispatch] generate_reply minimax unavailable/empty — falling back to hermes-runner")
+    The Hermes runner is the only provider used by this dispatch layer;
+    the caller falls through to the Core provider chain when it returns no
+    usable reply."""
 
     message = build_whatsapp_reply_policy(
         source=source,
@@ -1307,38 +1276,9 @@ async def generate_recruitment_reply(
     caller is responsible for falling through to
     modules.conversation_layer.generate_recruitment_reply().
 
-    Task 13 MiniMax-primary promotion (2026-08-22, flag-gated by
-    `minimax_customer_primary`, default OFF): when OFF this function's
-    behavior is byte-identical to before -- hermes-runner only, one
-    fact-check. When ON, MiniMax M3 (app.minimax_provider.
-    generate_recruitment_reply(), the exact same call shape) is tried
-    first and is subject to the SAME fact-check against kb_context as the
-    hermes-runner leg -- a MiniMax reply that fails the fact-check is
-    treated exactly like any other unusable MiniMax response and falls
-    through to hermes-runner, never returned bypassing the check."""
-    if await _minimax_primary_enabled():
-        try:
-            from app.minimax_provider import generate_recruitment_reply as _minimax_recruitment_reply
-            minimax_reply = await _minimax_recruitment_reply(
-                user_message=text,
-                kb_context=kb_context,
-                history=history,
-                contact_context=contact_context,
-                source=source,
-            )
-        except Exception as exc:  # noqa: BLE001 — must never raise into the caller
-            log.warning("[hermes_dispatch] generate_recruitment_reply minimax call raised: %s", exc)
-            minimax_reply = None
-        if minimax_reply and _recruitment_reply_matches_source(
-            minimax_reply, kb_context,
-            extra_supported_numbers=_candidate_identity_numbers(phone, text),
-        ):
-            log.info("[hermes_dispatch] generate_recruitment_reply(minimax_primary) source=%s", source)
-            return minimax_reply
-        if minimax_reply:
-            log.warning("[hermes_dispatch] generate_recruitment_reply minimax reply failed fact-check — falling back to hermes-runner")
-        else:
-            log.info("[hermes_dispatch] generate_recruitment_reply minimax unavailable/empty — falling back to hermes-runner")
+    The Hermes runner is the only provider used by this dispatch layer;
+    the caller falls through to the Core provider chain when it returns no
+    usable reply."""
 
     message = build_whatsapp_recruitment_policy(
         source=source,
@@ -1384,8 +1324,7 @@ async def deliver_authoritative_recruitment_reply(
     build_recruitment_context() + generate_recruitment_reply() exactly as
     the legacy Phase-1B allowlisted call site does, including
     _recruitment_reply_matches_source() (enforced inside
-    generate_recruitment_reply() itself, MiniMax leg and hermes-runner leg
-    alike).
+    generate_recruitment_reply() itself and the hermes-runner leg alike).
 
     Deliberately does NOT call recruitment_eligibility() or
     route_recruitment_message() — kept fully separate from both so their
@@ -1561,7 +1500,6 @@ def _try_parse_semantic_decision(raw: str) -> Optional[SemanticDecision]:
     """Strict JSON parse of the gate's one-line JSON reply. Returns None
     (not a decision) on ANY parse/validation failure -- empty response,
     malformed JSON, non-object, or invalid domain -- so a caller trying
-    multiple providers (Task 13 MiniMax-primary promotion, 2026-08-22) can
     distinguish "this provider's response was unusable, try the next one"
     from "this provider legitimately decided no_match", which
     _parse_semantic_decision() below (used only for the final,
@@ -1615,7 +1553,7 @@ def _parse_semantic_decision(raw: str) -> SemanticDecision:
     specific historical failure-reason rationale strings
     (empty_response/json_parse_failed/non_object_response/invalid_domain)
     existing tests already assert on -- see that function for the actual
-    parse logic, now shared with the MiniMax-primary path."""
+    parse logic, now shared with the semantic gate path."""
     if not raw:
         return SemanticDecision(domain="no_match", confidence=0.0, rationale="empty_response")
     text = raw.strip()
@@ -1642,36 +1580,6 @@ def _parse_semantic_decision(raw: str) -> SemanticDecision:
     return decision  # type: ignore[return-value]
 
 
-async def _semantic_gate_via_minimax(payload_text: str) -> Optional[SemanticDecision]:
-    """Task 13 MiniMax-primary promotion (2026-08-22). Attempts the
-    classifier prompt against MiniMax M3 via
-    app.minimax_provider.generate_raw_completion() -- the same restricted
-    evidence payload the hermes-runner leg builds, no tool access, no
-    admin/system prompt, no privileged session (the MiniMax client is a
-    plain OpenAI-compatible completion call; it was never given tools to
-    begin with). Returns None -- not a decision -- on ANY failure
-    (exception, empty response, invalid/malformed JSON, invalid domain) so
-    the caller falls back to the existing hermes-runner path exactly as it
-    worked before this promotion. Never raises."""
-    try:
-        from app.minimax_provider import generate_raw_completion as _minimax_raw
-    except Exception as exc:  # noqa: BLE001 — must never raise into the gate
-        log.warning("[hermes_dispatch] semantic_gate minimax import failed: %s", exc)
-        return None
-    try:
-        raw = await _minimax_raw(payload_text, max_tokens=300, temperature=0.0)
-    except Exception as exc:  # noqa: BLE001 — must never raise into the gate
-        log.warning("[hermes_dispatch] semantic_gate minimax call raised: %s", exc)
-        return None
-    if not raw:
-        log.info("[hermes_dispatch] semantic_gate minimax empty response; falling back")
-        return None
-    decision = _try_parse_semantic_decision(raw)
-    if decision is None:
-        log.warning("[hermes_dispatch] semantic_gate minimax invalid response; falling back raw=%r", raw[:200])
-    return decision
-
-
 async def semantic_gate(input_context: Dict[str, Any]) -> SemanticDecision:
     """Hermes-driven semantic decision for the Recruitment/Employee
     conversational target. The gate is OPT-IN: callers must pre-flight
@@ -1683,24 +1591,7 @@ async def semantic_gate(input_context: Dict[str, Any]) -> SemanticDecision:
     `no_match` so message_router falls through to its existing dispatch
     chain unchanged.
 
-    Task 13 MiniMax-primary promotion (2026-08-22, flag-gated by
-    `minimax_customer_primary`, default OFF): when the flag is OFF, this
-    function's behavior is UNCHANGED from before this promotion -- MiniMax
-    is never attempted, only the existing hermes-runner path runs, in the
-    same order, with the same payload. When the flag is ON, MiniMax M3 is
-    tried FIRST with the identical evidence payload; only on MiniMax
-    failure/timeout/rate-limit/invalid-JSON/empty-response does this fall
-    back to the existing hermes-runner call below -- never both, and a
-    total failure of both still returns SemanticDecision(no_match) exactly
-    as it always has (fail-open, never raise)."""
-    minimax_primary = False
-    try:
-        from modules.preflight_guard import is_feature_active
-        minimax_primary = is_feature_active("minimax_customer_primary", default=False)
-    except Exception as exc:  # noqa: BLE001 — flag check must never block the gate
-        log.debug("[hermes_dispatch] semantic_gate minimax flag check failed: %s", exc)
-        minimax_primary = False
-
+    The gate uses Hermes only and returns `no_match` on provider failure."""
     evidence = {
         "text": (input_context or {}).get("text", ""),
         "identity_reference": (input_context or {}).get("identity_reference", {}),
@@ -1720,17 +1611,6 @@ async def semantic_gate(input_context: Dict[str, Any]) -> SemanticDecision:
         + "\n\nEVIDENCE (JSON):\n" + _json.dumps(evidence, ensure_ascii=False, default=str)
     )
     sender_phone = (input_context or {}).get("sender_phone", "") or ""
-
-    if minimax_primary:
-        decision = await _semantic_gate_via_minimax(payload_text)
-        if decision is not None:
-            decision.identity_reference = evidence["identity_reference"]
-            log.info(
-                "[hermes_dispatch] semantic_gate(minimax_primary) domain=%s confidence=%.2f rationale=%s",
-                decision.domain, decision.confidence, decision.rationale,
-            )
-            return decision
-        log.info("[hermes_dispatch] semantic_gate minimax unavailable/invalid — falling back to hermes-runner")
 
     base_url, secret = _configured()
     if not base_url or not secret:

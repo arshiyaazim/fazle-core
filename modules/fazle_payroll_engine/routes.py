@@ -112,6 +112,20 @@ async def _require_viewer_or_above(key: str = Depends(_API_KEY_HEADER)) -> str:
     raise HTTPException(status_code=403, detail="viewer role or above required")
 
 
+async def _require_core_read_scope(key: str = Depends(_API_KEY_HEADER)) -> str:
+    """Authorize the Site's read-only `/api/core` proxy contract.
+
+    A configured FAZLE_CORE_READ_KEY is accepted only by routes that attach
+    this dependency. It is never accepted by mutation routes. If the key is
+    not configured, the existing viewer/operator/accountant/admin RBAC path
+    remains available for local dashboards and backwards compatibility.
+    """
+    settings = get_settings()
+    if settings.fazle_core_read_key and key == settings.fazle_core_read_key:
+        return key
+    return await _require_viewer_or_above(key)
+
+
 async def _require_operator_or_above(key: str = Depends(_API_KEY_HEADER)) -> str:
     """Submit/draft actions that create a pending row without touching the
     ledger (e.g. operator submissions) — operator/accountant/admin/superadmin."""
@@ -314,7 +328,7 @@ async def _resolve_review_employee_candidate(
 
 # ── Health ────────────────────────────────────────────────────────────────────
 
-@router.get("/health")
+@router.get("/health", dependencies=[Depends(_require_core_read_scope)])
 async def health():
     total_msgs = await fetch_val("SELECT COUNT(*) FROM fpe_wa_messages") or 0
     total_txns = await fetch_val("SELECT COUNT(*) FROM fpe_cash_transactions WHERE NOT is_reversal") or 0
@@ -342,7 +356,7 @@ async def ingest(req: IngestionRequest):
 
 # ── Transactions ──────────────────────────────────────────────────────────────
 
-@router.get("/transactions", dependencies=[Depends(_require_viewer_or_above)])
+@router.get("/transactions", dependencies=[Depends(_require_core_read_scope)])
 async def list_transactions(
     employee_id: Optional[int] = Query(None),
     period: Optional[str] = Query(None, description="YYYY-MM"),
@@ -472,7 +486,7 @@ async def list_transactions(
     }
 
 
-@router.get("/transactions/{txn_id}", dependencies=[Depends(_require_viewer_or_above)])
+@router.get("/transactions/{txn_id}", dependencies=[Depends(_require_core_read_scope)])
 async def get_transaction(txn_id: int):
     row = await fetch_one(
         """
@@ -743,7 +757,7 @@ async def create_employee(payload: dict):
     return {"status": "created", "employee": employee}
 
 
-@router.get("/employees/search", dependencies=[Depends(_require_viewer_or_above)])
+@router.get("/employees/search", dependencies=[Depends(_require_core_read_scope)])
 async def search_employees(
     q: str = Query(..., min_length=1, max_length=100),
     limit: int = Query(20, ge=1, le=50),
@@ -1666,9 +1680,13 @@ async def get_ledger(emp_id: int, periods: int = Query(12, le=36)):
 
 # ── Unmatched messages ────────────────────────────────────────────────────────
 
-@router.get("/unmatched", dependencies=[Depends(_require_viewer_or_above)])
+@router.get("/unmatched", dependencies=[Depends(_require_core_read_scope)])
 async def list_unmatched(reviewed: bool = Query(False), limit: int = Query(50, le=200)):
-    await _cleanup_stale_review_queue_rows()
+    """Read the review queue without cleanup or any other side effect.
+
+    Stale-row cleanup belongs to the maintenance worker, never to the Site's
+    read-only GET contract.
+    """
     rows = await fetch_all(
         """
         SELECT u.id, u.fpe_wa_message_id, u.reason, u.raw_content,
@@ -1726,7 +1744,7 @@ async def trigger_sync(chat_jids: Optional[list[str]] = None):
 
 # ── Pipeline stats ────────────────────────────────────────────────────────────
 
-@router.get("/stats", dependencies=[Depends(_require_viewer_or_above)])
+@router.get("/stats", dependencies=[Depends(_require_core_read_scope)])
 async def pipeline_stats():
     status_counts = await fetch_all(
         """

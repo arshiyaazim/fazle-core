@@ -535,10 +535,9 @@ async def _call_hermes_readonly(
     is set (see hermes-runner/server.py's _lock_key_for) -- so the WhatsApp
     relay and each Phase 5B job's investigation no longer contend with each
     other just because neither carries a real hermes_session_id. Omitting
-    it keeps the prior shared-bucket behavior, unchanged. Also selects the
-    MiniMax-M3 model override in hermes-runner (WHATSAPP_ADMIN_READONLY_KEY)
-    -- this is independent of force_read_only below, see that flag's own
-    note.
+    it keeps the prior shared-bucket behavior, unchanged. The readonly
+    channel uses the configured Hermes runner model policy. This is
+    independent of force_read_only below, see that flag's own note.
 
     hermes_session_id (2026-08-13, Bridge1 Hermes Control Channel
     follow-up): when set, asks hermes-runner to --resume that exact

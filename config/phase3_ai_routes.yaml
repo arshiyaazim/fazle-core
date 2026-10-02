@@ -113,5 +113,4 @@ routes:
 
 dispositions:
   github_models: dormant_legacy
-  minimax_direct: migrate_to_policy_not_registered_yet
   historical_replay: development_only

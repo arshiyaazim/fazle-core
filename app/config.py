@@ -7,7 +7,7 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 from pydantic_settings import BaseSettings
-from pydantic import field_validator, Field
+from pydantic import field_validator, model_validator
 import re
 
 
@@ -69,15 +69,17 @@ class Settings(BaseSettings):
     # English and Bengali sample messages, 8/8 correct, ~110ms latency.
     groq_api_key: str = ""
     groq_model_name: str = "allam-2-7b"
+    # Customer messaging profile: keep this OFF when local Ollama must be the
+    # immediate backup for OmniRoute. Classification may still use Groq when
+    # configured; this gate applies only to reply generation.
+    groq_fallback_enabled: bool = False
 
-    # MiniMax (2026-08-22, Phase 2A isolated — NOT wired into llm.py chain yet).
-    # Reuses the AsyncOpenAI client pattern from groq_provider.py. Real
-    # base_url and model name must be supplied via .env before any caller can
-    # invoke the provider; defaults intentionally empty so a misconfigured
-    # deployment fails closed (see minimax_provider._make_client).
-    minimax_api_key: str = ""
-    minimax_base_url: str = ""
-    minimax_model_name: str = Field("", alias="MINIMAX_MODEL")
+    # Read-only machine contract used by the Vessel Register Site proxy.
+    # Keep empty until the Site-side secret is configured privately. When set,
+    # this key is accepted only by explicitly read-scoped FPE GET routes.
+    fazle_core_read_key: str = ""
+    vessel_register_context_enabled: bool = True
+    vessel_register_context_timeout_seconds: float = 1.5
 
     # OmniRoute (2026-08-05, Owner decision: new provider order for AI
     # generation/polish — OmniRoute → Groq → local Ollama/Hermes → Kimi).
@@ -545,6 +547,17 @@ class Settings(BaseSettings):
     def fpe_income_authorized_phone_list(self) -> list[str]:
         return [n.strip() for n in self.fpe_income_authorized_phones.split(",") if n.strip()]
 
+    @model_validator(mode="after")
+    def _validate_read_key_is_not_privileged(self) -> "Settings":
+        """Fail closed if the Site read credential is a superuser key."""
+        if (
+            self.fazle_core_read_key
+            and self.internal_api_key
+            and self.fazle_core_read_key == self.internal_api_key
+        ):
+            raise ValueError("FAZLE_CORE_READ_KEY must be distinct from INTERNAL_API_KEY")
+        return self
+
     @property
     def admin_number_list(self) -> list[str]:
         return [n.strip() for n in self.admin_numbers.split(",") if n.strip()]
@@ -607,8 +620,7 @@ class Settings(BaseSettings):
         # BaseSettings still reads from real environment variables if provided by systemd/Docker.
         "env_file": str(Path(__file__).resolve().parents[1] / ".env"),
         "extra": "ignore",
-        # Allow both field name and env-var alias to construct/validate Settings.
-        # Required by MINIMAX_MODEL env-var alias used by minimax_provider.
+        # Allow both field names and environment variables to construct/validate Settings.
         "populate_by_name": True,
     }
 

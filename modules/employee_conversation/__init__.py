@@ -1320,6 +1320,105 @@ async def handle_employee_informational_query(
     return reply, None
 
 
+async def handle_employee_attendance_query(
+    phone: str,
+    text: str,
+    source: str,
+    emp_id: int,
+) -> tuple[str, Optional[dict]]:
+    """Answer a verified employee's own attendance question read-only.
+
+    The employee id is resolved by identity_brain before this function is
+    called.  This function never accepts an employee name/id from the
+    message, never writes attendance, and never exposes another employee's
+    rows.  Attendance submissions continue through the existing draft path.
+    """
+    try:
+        rows = await fetch_all(
+            """SELECT attendance_date, status, location, remarks
+               FROM wbom_attendance
+               WHERE employee_id = $1
+               ORDER BY attendance_date DESC
+               LIMIT 90""",
+            emp_id,
+        )
+    except Exception as exc:  # noqa: BLE001
+        log.warning("[ec/attendance] read failed emp=%s: %s", emp_id, exc)
+        rows = []
+
+    if rows:
+        present = sum(1 for row in rows if str(row.get("status") or "").lower() == "present")
+        absent = sum(1 for row in rows if str(row.get("status") or "").lower() == "absent")
+        leave = sum(1 for row in rows if "leave" in str(row.get("status") or "").lower())
+        lines = [
+            f"Attendance records available: {len(rows)} recent records.",
+            f"Present: {present}; Absent: {absent}; Leave: {leave}.",
+        ]
+        for row in rows[:30]:
+            date_value = row.get("attendance_date") or "unknown date"
+            status = row.get("status") or "unknown"
+            location = f"; location={row['location']}" if row.get("location") else ""
+            remarks = f"; remarks={row['remarks']}" if row.get("remarks") else ""
+            lines.append(f"- {date_value}: {status}{location}{remarks}")
+        db_ctx = "\n".join(lines)
+    else:
+        db_ctx = "No attendance records were found for this verified employee."
+
+    try:
+        from modules.rag import safe_search as _rag_search
+        hits = await _rag_search(text, k=3, role="employee")
+        policy_lines = [
+            f"- {hit.get('title', '')}: {(hit.get('text') or '').strip()[:300]}"
+            for hit in hits
+            if (hit.get("text") or "").strip()
+        ]
+        if policy_lines:
+            db_ctx += "\n\nKB Context:\n" + "\n".join(policy_lines)
+    except Exception as exc:  # noqa: BLE001
+        log.debug("[ec/attendance] KB enrichment skipped: %s", exc)
+
+    try:
+        from modules.message_router import get_recent_history
+        history = "\n".join(await get_recent_history(phone, limit=5))
+    except Exception as exc:  # noqa: BLE001
+        log.debug("[ec/attendance] history fetch failed: %s", exc)
+        history = ""
+
+    reply: Optional[str] = None
+    try:
+        from modules.preflight_guard import is_feature_active
+        if is_feature_active("hermes_customer_employee", default=False):
+            from modules.hermes_dispatch import generate_reply as _hermes_generate_reply
+            reply = await _hermes_generate_reply(
+                text, "attendance", db_ctx, history=history, role="employee",
+                source=source, sender_phone=phone,
+            )
+    except Exception as exc:  # noqa: BLE001
+        log.warning("[ec/attendance] Hermes path failed: %s", exc)
+
+    if not reply:
+        try:
+            from app import llm as _ai
+            reply = await _ai.generate_reply(
+                text, "attendance", db_ctx, history=history,
+                role="employee", source=source,
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.warning("[ec/attendance] AI path failed: %s", exc)
+            reply = ""
+
+    try:
+        from shared.reply_policy import (
+            clean_general_reply as _clean_reply,
+            enforce_general_reply_confidentiality as _enforce_confidentiality,
+        )
+        reply = _enforce_confidentiality(_clean_reply(reply), sender_phone=phone)
+    except Exception as exc:  # noqa: BLE001
+        log.debug("[ec/attendance] confidentiality net failed: %s", exc)
+
+    return (reply or "আপনার হাজিরার তথ্য এই মুহূর্তে যাচাই করে জানাতে পারছি না।"), None
+
+
 # ── Phase 6 (2026-08-26): Short-context intent refinement ─────────────────────
 # For very short inbound texts (হ্যাঁ / না / ৩২ / চট্�গ্রাম / আগেই বলেছি /
 # ওটাই / "আগেরটার কী হলো?"-class follow-ups), the upstream intent

@@ -348,6 +348,8 @@ async def generate_reply(
         except Exception as e:
             _record_attempt("groq", settings.groq_model_name, "error", str(e))
             log.warning("[llm] groq generate failed, falling back to local ollama/hermes: %s", e)
+    elif not settings.groq_fallback_enabled:
+        _record_attempt("groq", settings.groq_model_name, "skipped_by_policy")
     else:
         _record_attempt("groq", settings.groq_model_name, "skipped_not_configured")
 
@@ -524,7 +526,7 @@ async def generate_recruitment_reply(
     else:
         _record_attempt("omniroute", settings.omniroute_model_name, "skipped_not_configured")
 
-    if settings.groq_api_key:
+    if settings.groq_api_key and settings.groq_fallback_enabled:
         try:
             from app import groq_provider
             reply = await groq_provider.generate_recruitment_reply(
@@ -552,6 +554,8 @@ async def generate_recruitment_reply(
         except Exception as e:
             _record_attempt("groq", settings.groq_model_name, "error", str(e))
             log.warning("[llm] groq recruitment failed, falling back to local ollama/hermes: %s", e)
+    elif not settings.groq_fallback_enabled:
+        _record_attempt("groq", settings.groq_model_name, "skipped_by_policy")
     else:
         _record_attempt("groq", settings.groq_model_name, "skipped_not_configured")
 

@@ -3,6 +3,7 @@ uvicorn[standard]==0.32.1
 pydantic-settings==2.6.1
 asyncpg==0.30.0
 httpx==0.28.0
+openai==1.58.1
 cryptography==44.0.0
 python-multipart==0.0.12
 rapidfuzz==3.10.1

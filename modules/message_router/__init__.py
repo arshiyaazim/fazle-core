@@ -68,6 +68,7 @@ from modules.employee_verification import (
 # Produces ONLY a draft — no transaction, no ledger, no balance change.
 from modules.employee_conversation import (
     handle_employee_payment_request as ec_handle_payment_request,
+    handle_employee_attendance_query as ec_handle_attendance_query,
     detect_payment_request_trigger as ec_detect_trigger,
     get_conversation_session as ec_get_session,
 )
@@ -102,6 +103,33 @@ def _v2_cross_ref_enabled() -> bool:
 # Roles that trigger the escort client flow
 _ESCORT_ROLES = frozenset({"escort_client", "client_escort_buyer", "vip_client", "repeat_client"})
 _ESCORT_ORDER_PREFIXES: tuple[str, ...] = ("escort", "client", "tcis", "gms")
+
+
+def _looks_like_employee_attendance_query(text: str) -> bool:
+    """Distinguish an employee asking about records from a submission.
+
+    Messages that report today's attendance still go to the existing draft
+    workflow. Only personal record/history questions enter the read-only AI
+    path, and that path is called only after employee identity verification.
+    """
+    value = (text or "").strip().lower()
+    if not value:
+        return False
+    record_terms = any(token in value for token in (
+        "হাজিরা", "উপস্থিতি", "attendance", "absent", "অনুপস্থিত",
+        "record", "রেকর্ড", "কতদিন", "কয়দিন", "কয়দিন",
+    ))
+    question_terms = any(token in value for token in (
+        "?", "কত", "কয়", "কয়", "ছিল", "আছে", "দেখান", "জানতে",
+        "how many", "show", "history",
+    ))
+    submission_terms = any(token in value for token in (
+        "দিলাম", "দিয়েছি", "দিয়েছি", "জানালাম", "submitted", "reporting",
+    ))
+    return record_terms and not submission_terms and (
+        question_terms or "my attendance" in value or "আমার হাজিরা" in value
+        or "আমার উপস্থিতি" in value
+    )
 
 
 def _is_verified_escort_identity(identity: dict, role_str: str) -> bool:
@@ -1320,7 +1348,7 @@ async def process_message(
         kb_reply = await kb_get_reply(text, intent)
         if kb_reply:
             return kb_reply, None
-        db_ctx = await get_contact_context(sender)
+        db_ctx = await get_contact_context(sender, text=text)
         history = "\n".join(await get_recent_history(sender))
         reply = await ai.generate_reply(text, intent, db_ctx, history=history, role=role_str, source=source)
         # S6 (2026-08-08): accountant is trusted for its own domain's data
@@ -1382,7 +1410,7 @@ async def process_message(
             ) or {}
         except Exception as _det_exc:
             log.debug("[router] recruitment_detector skipped: %s", _det_exc)
-        db_ctx_pre = await get_contact_context(sender)
+        db_ctx_pre = await get_contact_context(sender, text=text)
         history_pre = "\n".join(await get_recent_history(sender))
         gate_input = {
             "text": text,
@@ -1549,7 +1577,7 @@ async def process_message(
             log.warning("[router] task13 authoritative dispatch skipped (non-fatal): %s", _t13_auth_exc)
 
     if recruit_decision["eligible"]:
-        db_ctx = await get_contact_context(sender)
+        db_ctx = await get_contact_context(sender, text=text)
         history = "\n".join(await get_recent_history(sender))
         rec_route = await route_recruitment_message(
             phone=sender,
@@ -1608,6 +1636,13 @@ async def process_message(
         if session:
             _hk_fire(role_str, intent, "reply", "employee-verification-session")
             return await advance_verification(sender, text, source, emp_id)
+
+        if (
+            emp_id
+            and _looks_like_employee_attendance_query(text)
+        ):
+            _hk_fire(role_str, "attendance", "reply", "employee-attendance-readonly")
+            return await ec_handle_attendance_query(sender, text, source, emp_id)
 
         if intent == "attendance" or is_attendance_message(text):
             _hk_fire(role_str, "attendance", "draft", "employee-attendance")
@@ -1920,7 +1955,7 @@ async def process_message(
         log.debug("[reviewed] lookup non-fatal error: %s", _rrm_err)
 
     # ── 15. AI FALLBACK ────────────────────────────────────────────────────────
-    db_ctx = await get_contact_context(sender)
+    db_ctx = await get_contact_context(sender, text=text)
     # Phase 3, 2026-08-25 recovery pass ("employee-info grounding gap"):
     # a known employee's general company-rules/leave/attendance/duty
     # question landed here with only get_contact_context() + generic
@@ -2107,7 +2142,7 @@ async def get_recent_history(phone: str, limit: int = 5) -> list:
         return []
 
 
-async def get_contact_context(phone: str) -> str:
+async def get_contact_context(phone: str, *, text: str = "") -> str:
     lines: list[str] = []
     try:
         phone_variants = _phone_variants(phone)
@@ -2160,6 +2195,16 @@ async def get_contact_context(phone: str) -> str:
             mem_lines = [f"- [{m['memory_type']}] {m['content'][:120]}" for m in mem_rows]
             lines.append("স্মৃতি-প্রসঙ্গ (context only — not authoritative):\n" + "\n".join(mem_lines))
 
+        # Optional Vessel Register context is read from Core's own canonical
+        # PostgreSQL records. It never calls the Site or performs a write.
+        if text:
+            try:
+                from modules.vessel_register_context import build_operational_context
+                operational = await build_operational_context(text=text, sender_phone=phone)
+                if operational:
+                    lines.append(operational)
+            except Exception as _operational_exc:
+                log.debug("Operational context enrichment skipped: %s", _operational_exc)
     except Exception as e:
         log.debug(f"Context fetch error: {e}")
     return "\n".join(lines)

@@ -20,6 +20,10 @@ def _reset_settings(monkeypatch, *, omniroute=False, groq=True, github=True):
     monkeypatch.setenv("OLLAMA_REPLY_DISABLED", "false")
     monkeypatch.setenv("OLLAMA_MODEL", "phi4-mini:latest")
     monkeypatch.setenv("GROQ_API_KEY", "test-groq" if groq else "")
+    # These tests cover the historical OmniRoute -> Groq -> Ollama order;
+    # production's customer-messaging profile defaults this policy off so
+    # Ollama is the direct OmniRoute fallback.
+    monkeypatch.setenv("GROQ_FALLBACK_ENABLED", "true")
     monkeypatch.setenv("GITHUB_TOKEN", "test-github" if github else "")
     monkeypatch.setenv("OMNIROUTE_API_KEY", "test-omniroute" if omniroute else "")
     from app.config import get_settings

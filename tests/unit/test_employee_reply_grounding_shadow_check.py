@@ -82,7 +82,6 @@ class TestGenerateReplyReturnsUnchangedRegardlessOfShadowCheck:
         from modules import hermes_dispatch
         from unittest.mock import AsyncMock
 
-        monkeypatch.setattr(hermes_dispatch, "_minimax_primary_enabled", AsyncMock(return_value=False))
         monkeypatch.setattr(hermes_dispatch, "build_whatsapp_reply_policy", lambda **kw: "prompt")
         monkeypatch.setattr(
             hermes_dispatch, "_call_hermes",

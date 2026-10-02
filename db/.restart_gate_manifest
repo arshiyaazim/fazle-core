@@ -369,7 +369,6 @@ tests/unit/test_phase_c_decision.py
 tests/unit/test_phase_c_extract.py
 tests/unit/test_phase_c_provenance.py
 tests/unit/test_phase_c_wireins.py
-tests/unit/test_minimax_provider.py
 tests/unit/data/recruitment_regression_corpus/_tools/phase_c_replay.py
 
 # 2026-08-24: Owner directive "ESTABLISH SINGLE AUTHORITATIVE NO-AUTO-REPLY
