@@ -247,3 +247,83 @@ Focused commits (oldest → newest):
    container on 127.0.0.1:5433 with `TEST_DB_PASSWORD`.
 5. **Production activation = NOT PERFORMED** — no restart, deployment,
    activation, gateway change, or message send.
+
+---
+
+## 10. Continuation — 2026-10-02 (9Router routing qualification only)
+
+Sections 1–9 above are the unchanged verified baseline. This continuation
+touched only the canonical 9Router **routing** question from Section 5.2. It
+introduced no salary engine, repeated no completed audit, and performed no
+activation, restart, deployment, or send.
+
+**Evidence:** `docs/9ROUTER_ROUTING_QUALIFICATION_2026-10-02.md`
+**Machine-readable record:** `docs/nine_router_capability_record.json`
+**New offline guard:** `tests/unit/test_9router_routing_qualification.py`
+
+### 10.1 Resolved by evidence (capability, not approval)
+
+- **Single-upstream guarantee = NOT_SUPPORTED by 9Router 0.5.75.** The
+  gateway's chat-completions dispatch retries across connections inside one
+  client request (`for(;;)` loop, failing connection added to an exclusion set,
+  `continue`). Fallback triggers on 401/402/403/404/429 and on the error texts
+  `no credentials`, `rate limit`, `too many requests`, `quota exceeded`,
+  `capacity`, `overloaded`; anything unmatched still falls back (30 min
+  cooldown). The configured `openrouter` provider has 4 active connections, and
+  the chat path offers no per-request connection pinning.
+- **No setting can bound it.** `maxAttempts`, `maxRetries`, `noFallback`,
+  `disableFallback`, `fallbackEnabled` do not exist in the 0.5.75 settings
+  surface; `fallbackStrategy`/`stickyRoundRobinLimit` only choose which
+  connection is used first.
+- Therefore `nine_router_single_upstream_guaranteed` **remains `False`** and the
+  Core gate at `app/unified_routing.py:481` stays closed. This closes the
+  capability question; it does **not** supply approval.
+- **Physical-model-only and text-only are client-side only.** 9Router itself
+  will expand the `general`/`coding`/`fast`/`auto` combos (default
+  `comboStrategy: fallback`) and will substitute capacity-adapter models for
+  non-text modalities. The existing Core-side rejections are load-bearing and
+  must not be relaxed.
+
+### 10.2 Statuses carried forward unchanged
+
+| Item | Status |
+|---|---|
+| Salary qualification | `PARTIAL` |
+| Live 9Router prompt/reply artifact | `NOT CAPTURED` |
+| All-role permanent range `17,000–24,700` approval | `UNVERIFIED` |
+| 30-working-day rule approval | `UNVERIFIED` |
+| 9Router upstream attribution (`ACTUAL_UPSTREAM_PROVIDER` / `ACTUAL_UPSTREAM_MODEL`) | `UNVERIFIED` |
+| 9Router routing acceptance / approval provenance | `UNVERIFIED` |
+| Production activation | `NOT PERFORMED` |
+
+Attribution stays `UNVERIFIED` because `ENABLE_REQUEST_LOGS=false` and
+`requestDetails` is empty (no prompt/reply bodies, no request ids), and
+`usageHistory` recorded 286/286 successful attempts with zero failures — so it
+names the *successful* connection but cannot reveal or exclude a hidden retry.
+The response `model` field remains gateway-reported; a requested provider prefix
+is not proof.
+
+### 10.3 What was deliberately not re-run
+
+- The 11-file verified baseline suite (232 passed at `913f072`) was not
+  re-run. Exception: `tests/unit/test_9router_adapter.py` and
+  `tests/unit/test_9router_routing_qualification.py` were run to validate this
+  change set, plus `test_llm_provider_order.py::TestScopeIsolation`.
+  Result: **27 passed** and **5 passed** respectively.
+- The three live inference tests in
+  `tests/unit/test_9router_recruitment_qualification.py` were **not** re-run.
+  They are live NO-SEND evidence already recorded at `913f072`; re-running them
+  would add upstream inference calls and no new information. They are kept in a
+  separate file from the new synthetic offline guard so the two evidence classes
+  are never mixed.
+
+### 10.4 Remaining gaps (supersedes Section 8 ordering)
+
+1. A newer **reviewed** 9Router version, or a documented configuration that
+   bounds attempts to one upstream connection — until then the flag stays
+   `False` and no customer-facing workload may use the Core 9Router route.
+2. Correlated gateway logs or a verified contract for upstream attribution.
+3. A sanitized live 9Router prompt/reply artifact (`NOT CAPTURED`).
+4. Original owner-approval records for the all-role permanent range and the
+   30-working-day rule; KB labels alone remain insufficient.
+5. Salary engine extension stays out of scope until 1–4 are resolved.

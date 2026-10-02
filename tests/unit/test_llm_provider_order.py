@@ -19,6 +19,9 @@ def _reset_settings(monkeypatch, *, omniroute=False, groq=True, github=True):
     monkeypatch.setenv("PRIMARY_AI_PROVIDER", "ollama")
     monkeypatch.setenv("OLLAMA_REPLY_DISABLED", "false")
     monkeypatch.setenv("OLLAMA_MODEL", "phi4-mini:latest")
+    # Production defaults KIMI_MODEL_NAME blank (Kimi cloud disabled); these
+    # tests still exercise the Kimi step, so enable it explicitly here.
+    monkeypatch.setenv("KIMI_MODEL_NAME", "kimi-k2.6:cloud")
     monkeypatch.setenv("GROQ_API_KEY", "test-groq" if groq else "")
     # These tests cover the historical OmniRoute -> Groq -> Ollama order;
     # production's customer-messaging profile defaults this policy off so
@@ -763,6 +766,7 @@ class TestScopeIsolation:
         expected_allowed = {
             "app/config.py",
             "app/llm.py",
+            "config/phase3_ai_routes.yaml",
             "app/unified_routing.py",
             "app/nine_router_provider.py",
             "app/github_models.py",
@@ -779,6 +783,7 @@ class TestScopeIsolation:
             "tests/unit/test_group_identity_sync.py",
             "tests/unit/test_9router_adapter.py",
             "tests/unit/test_9router_recruitment_qualification.py",
+            "docs/SALARY_QUALIFICATION_CHECKPOINT_2026-10-01.md",
             "tests/db/test_outbound_authorization_revalidation.py",
             "tests/unit/test_payment_relay.py",
             "tests/unit/test_bridge_poller_payment_relay_gate.py",

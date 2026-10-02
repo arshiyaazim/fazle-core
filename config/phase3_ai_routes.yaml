@@ -62,7 +62,7 @@ routes:
     latency_classes: [interactive, background]
     context_limit: 32768
     structured_output: true
-    enabled: true
+    enabled: false
     environments: [development, test, production]
     max_attempts: 2
     retry_backoff_seconds: 1
@@ -106,7 +106,7 @@ routes:
     latency_classes: [interactive, background]
     context_limit: 128000
     structured_output: true
-    enabled: true
+    enabled: false
     environments: [development, test, production]
     max_attempts: 1
     retry_backoff_seconds: 0

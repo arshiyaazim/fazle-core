@@ -393,6 +393,10 @@ async def generate_reply(
     else:
         _record_attempt("ollama", settings.ollama_model, "skipped_disabled")
 
+    if not (settings.kimi_model_name or "").strip():
+        _record_attempt("kimi", "", "skipped_disabled")
+        return _FALLBACK_REPLY
+
     try:
         from app import ollama
         reply = await ollama.generate_reply(
@@ -591,6 +595,10 @@ async def generate_recruitment_reply(
             log.warning("[llm] local ollama/hermes recruitment failed, falling back to kimi: %s", e)
     else:
         _record_attempt("ollama", settings.ollama_model, "skipped_disabled")
+
+    if not (settings.kimi_model_name or "").strip():
+        _record_attempt("kimi", "", "skipped_disabled")
+        return "এই বিষয়ে নিশ্চিত তথ্যের জন্য অফিসে যোগাযোগ করুন।"
 
     try:
         from app import ollama
