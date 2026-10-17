@@ -9,16 +9,16 @@ runtime_index: true
 # Cash Workflow
 
 ## Flow
-Admin Payment Message -> Accountant Receipt -> Transaction Parse -> Duplicate Check -> Cash Ledger Entry -> Employee Balance Update -> Payroll/Advance Sync.
+Verified Owner → actual Accountant direct chat → payment-intent + employee-mobile validation → source and business duplicate check → review/authorized instruction handling. Message receipt is not proof that money was paid or received.
 
 ## Source Of Truth
 
 Daily cash payment has two separate paths:
 
 1. Employee/Escort request path: employee asks for advance/payment -> system verifies identity/duty/slip/payment method -> creates `fazle_payment_drafts` only -> waits for admin action. This path never writes a final cash transaction.
-2. Admin -> Accountant instruction path: admin sends a payment instruction to accountant -> message is treated as final payment proof -> parser writes `fpe_cash_transactions` directly via `create_transaction()`. No additional verification or draft is required.
+2. **Superseded for AL-RIFA’I (2026-10-17):** an Admin/Owner message reaching an Accountant chat is not final payment proof and must not directly post a cash transaction. Use the mandatory gate in `docs/AL-RIFAI-CASH-PAYMENT-POLICY.md`. This reference repo must not be operated as a parallel AL-RIFA’I cash writer.
 
-Admin's message reaching the accountant is the completion trigger.
+A message reaching an Accountant is not a completion trigger and is not proof of payment.
 
 ## Transaction Fields
 Name, employee ID if available, phone, payment method, amount, purpose, date, source message, admin actor.

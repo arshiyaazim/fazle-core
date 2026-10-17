@@ -26,7 +26,7 @@ Not allowed:
 - Modify identity brain or developer prompt rules unless separately authorized.
 
 ## Business Rules
-- Accountant receiving admin payment message is the payment-complete trigger.
+- **Superseded 2026-10-17:** receiving an Owner message is not a payment-complete trigger. For AL-RIFA’I cash, the actual Owner sender and actual Accountant direct-chat destination must be independently verified; message body phone numbers and group/display names are not identity proof. See `docs/AL-RIFAI-CASH-PAYMENT-POLICY.md`.
 - Ledger/database update follows accountant handoff.
 
 ## Cross References
