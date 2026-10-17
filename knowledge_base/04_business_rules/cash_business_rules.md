@@ -12,8 +12,8 @@ runtime_index: true
 Define cash ledger behavior and accountant handoff rules.
 
 ## Rules
-- Accountant handoff from admin payment message is payment completion trigger.
-- Each payment message becomes a transaction record.
+- **Superseded 2026-10-17:** Accountant handoff is not proof of payment completion. This reference repo is not the AL-RIFA’I cash writer. The canonical AL-RIFA’I Owner → Accountant identity gate is in `docs/AL-RIFAI-CASH-PAYMENT-POLICY.md`.
+- Only a message that passes the verified Owner sender, actual Accountant direct-chat recipient/JID, cash intent, reliable employee mobile, source/detail validation and idempotency gates may become an instruction record. Any uncertain condition means review only, no Cash Transaction.
 - Multiple payment transactions may exist in one admin message.
 - Ledger update must preserve transaction amount, method, employee/name, phone, purpose, and date.
 - Duplicate prevention must run before final ledger update.
