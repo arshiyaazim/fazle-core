@@ -1,5 +1,7 @@
 # Fazle Core
 
+> **AL-RIFA’I owner policy (2026-10-17):** this repository is source/reference only for the new AL-RIFA’I app. Do not use it as a parallel cash writer. All WhatsApp cash instructions must obey [`docs/AL-RIFAI-CASH-PAYMENT-POLICY.md`](docs/AL-RIFAI-CASH-PAYMENT-POLICY.md); the older “message reached Accountant = payment complete” rule is superseded. Real Owner/Accountant identifiers must stay in private VPS configuration, not this public repo.
+
 **Repository:** <https://github.com/arshiyaazim/fazle-core>
 **Branch:** `feat/bridge1-2-conversation-continuity-20260902`
 **Commit:** `104df66c18504a7e946b8f6208d5045d5d3d9e66`
