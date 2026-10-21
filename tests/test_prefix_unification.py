@@ -341,6 +341,7 @@ def _dotted(path: str) -> str:
 # --------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestRenamedTables:
     def test_no_legacy_table_name_remains_in_source(self):
         """None of the seven legacy table names may appear in source again."""
@@ -398,6 +399,7 @@ class TestRenamedTables:
 # --------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestRenamedModules:
     @pytest.mark.parametrize("old,new", sorted(MODULE_RENAMES.items()))
     def test_new_module_path_exists(self, old, new):
@@ -427,22 +429,25 @@ class TestRenamedModules:
         shims = _shim_paths()
         old_dotted = {_dotted(old) for old in MODULE_RENAMES}
         alt = "|".join(re.escape(m) for m in sorted(old_dotted, key=len, reverse=True))
-        patterns = [
-            re.compile(r"(?:from|import)\s+(" + alt + r")(?![A-Za-z0-9_])"),
-            # `from modules import intent`
-            re.compile(
-                r"from\s+modules\s+import\s+[^\n]*?\b("
-                + "|".join(sorted(m.split(".")[-1] for m in old_dotted))
-                + r")\b"
-            ),
-        ]
+        # `import modules.foo` / `from modules.foo import ...`
+        dotted_pattern = re.compile(r"(?:from|import)\s+(" + alt + r")(?![A-Za-z0-9_])")
+        # `from modules import foo` -- only the IMPORTED NAME counts, not the
+        # local alias (`from modules import fazle_admin_commands as
+        # admin_commands` is a legitimate new-path import).
+        from_modules_pattern = re.compile(r"from\s+modules\s+import\s+([^\n(]+)")
+        base_names = {m.split(".")[-1] for m in old_dotted}
         for rel, text in _iter_source_files():
             if rel in shims:
                 continue
-            for pattern in patterns:
-                for match in pattern.finditer(text):
-                    line = text.count("\n", 0, match.start()) + 1
-                    offenders.setdefault(match.group(1), []).append(f"{rel}:{line}")
+            for match in dotted_pattern.finditer(text):
+                line = text.count("\n", 0, match.start()) + 1
+                offenders.setdefault(match.group(1), []).append(f"{rel}:{line}")
+            for match in from_modules_pattern.finditer(text):
+                for part in match.group(1).split(","):
+                    imported = part.strip().split(" as ")[0].strip()
+                    if imported in base_names:
+                        line = text.count("\n", 0, match.start()) + 1
+                        offenders.setdefault(imported, []).append(f"{rel}:{line}")
         assert not offenders, (
             "old module import paths still used: "
             + "; ".join(f"{k} -> {v[:5]}" for k, v in offenders.items())
@@ -454,6 +459,7 @@ class TestRenamedModules:
 # --------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestRenameMigrations:
     @pytest.mark.parametrize("filename", UNIFY_MIGRATION_FILES)
     def test_migration_file_exists(self, filename):
@@ -541,6 +547,7 @@ class TestLiveSchema:
 # --------------------------------------------------------------------------
 
 
+@pytest.mark.unit
 class TestDeliverables:
     def test_verification_sql_exists(self):
         path = REPO_ROOT / "scripts" / "verify_prefix_unification.sql"
