@@ -8,6 +8,9 @@ runtime_index: false
 
 # PKCA Report 09: State Machine Coverage Report
 
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **Date:** 2026-06-22
 **Mode:** Read-Only Analysis
 
@@ -68,7 +71,7 @@ draft → confirmed → Assigned → Running → Completed
 
 ### SM-03: Payment Draft State Machine — 0% Covered
 
-**Source:** `modules/payment_workflow`, `modules/outbound`
+**Source:** `modules/fazle_payment_workflow`, `modules/outbound`
 
 ```
 pending → sent (after admin PAID/ADVANCE command + finalize_payment())
@@ -99,7 +102,7 @@ new → step:name → step:age → step:area → step:position → step:experien
 
 ### SM-05: Attendance Draft State Machine — 0% Covered
 
-**Source:** `modules/attendance`, `modules/admin_commands._cmd_approve`
+**Source:** `modules/attendance`, `modules/fazle_admin_commands._cmd_approve`
 
 ```
 pending → approved (admin APPROVE <id>) → saved to wbom_attendance
@@ -133,7 +136,7 @@ pending → approved (admin APPROVE <id>) → saved to wbom_attendance
 
 ### SM-07: Draft Reply General State Machine — 5% Covered
 
-**Source:** `modules/drafts`, `modules/admin_commands._cmd_approve`
+**Source:** `modules/drafts`, `modules/fazle_admin_commands._cmd_approve`
 
 ```
 pending → approved (admin APPROVE) → sent_at timestamp set

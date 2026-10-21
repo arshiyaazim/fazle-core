@@ -39,10 +39,10 @@ The Fazle Payroll Engine (FPE) is an entirely separate background system from th
 4. MessageType enum: payment, balance_summary, cash_command, income_command, escort_payment, other
 5. TxnCategory enum
 6. ProcessingStatus enum
-7. FPE database tables: fpe_wa_messages, fpe_message_processing_state, fpe_cash_transactions, fpe_employees
+7. FPE database tables: fpe_wa_messages, fpe_message_processing_state, fazle_cash_transactions, fazle_employees
 8. FPE API routes: /api/fpe/* endpoints
-9. Key distinction: fpe_cash_transactions is separate from wbom_cash_transactions
-10. FPE does NOT write to wbom_cash_transactions (only accountant_summary module is involved in that path)
+9. Key distinction: fazle_cash_transactions is separate from fazle_cash_transactions_archive
+10. FPE does NOT write to fazle_cash_transactions_archive (only accountant_summary module is involved in that path)
 
 **Visibility:** DEVELOPER
 **Priority:** P2

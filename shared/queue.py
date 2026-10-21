@@ -212,7 +212,7 @@ async def record_heartbeat(
 
 # Per-bridge stale-threshold overrides, in minutes (2026-08-05, Owner
 # decision). Design mismatch this fixes: bridge1/bridge2/bridge3 heartbeat
-# on every successful POLL CYCLE (modules.bridge_poller -- a transport/
+# on every successful POLL CYCLE (modules.fazle_bridge_poller -- a transport/
 # liveness signal, updated whether or not new messages exist), but "meta"
 # only heartbeats when a real inbound WhatsApp message actually arrives via
 # the Meta webhook (app.main._handle_meta_message -- a traffic signal, not

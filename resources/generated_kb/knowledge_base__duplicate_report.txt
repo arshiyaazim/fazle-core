@@ -3,7 +3,6 @@ SHA256: ac6706b17a7f65f3af0e46529b9c7b9202041740694f624cc61f89c876afcff4
 Version: ac6706b17a7f
 
 # Duplicate Report
-
 | Duplicate Topic | Similarity | Confidence | Merge Risk | Authoritative File | Keep | Archive/Delete |
 |---|---:|---:|---:|---|---|---|
 | Company identity repeated in HR and Fazle System | High | 0.98 | Low | company_identity.md | Official identity | Archive duplicates as source notes |

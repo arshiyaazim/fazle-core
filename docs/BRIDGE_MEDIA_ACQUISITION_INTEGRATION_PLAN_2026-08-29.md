@@ -11,14 +11,14 @@
 
 ## 1. Current architecture (traced from source, not assumed)
 
-### 1.1 Inbound bridge media path — `modules/bridge_poller/__init__.py`
+### 1.1 Inbound bridge media path — `modules/fazle_bridge_poller/__init__.py`
 
 | Step | Location | Behavior |
 |---|---|---|
 | SQLite fetch | `_fetch_new_messages` (~L293) | Reads bridge `messages.db`. SELECT (built via `shared.sqlite_compat.processed_text_column()` — tolerates a store without `processed_text`) returns `id, chat_jid, sender, content, timestamp, media_type, <processed_text|NULL>, filename, url`. For a media row with no `content` and no `processed_text` **and** `filename`/`url` present → `msg["text"] = f"[media:{media_type}]"`. Rows with a media_type but no filename **and** no url are dropped (`skipped_no_text`). **`direct_path`/`media_key`/`file_sha256`/`file_enc_sha256`/`file_length` are NOT read by fazle-core** (they live in the bridge DB; the bridge's own `/api/download` reads them). |
 | Per-bridge loop | `_poll_bridge` (~L855), `while True` | Iterates `BRIDGE_CONFIGS` = `[{name, messages_db, whatsapp_db, get_bridge}]` (L64-83). `get_bridge = config["get_bridge"]` (L860); `config["get_bridge"]` is `get_bridge1/2/3` — **each message carries its own bridge's client**. |
 | Dedup | L917 `_is_processed(msg_id, bridge)` | `SELECT 1 FROM processed_bridge_messages WHERE message_id=$1 AND bridge=$2` → `dedup_skipped; continue`. |
-| Raw canonical write | L929 `core_message_id = await _save_raw_core_copy(bridge_name, msg, phone, text)` | First `wbom_whatsapp_messages` INSERT (+ a `fazle_message_queue` row keyed `bridge_poller:{bridge}:{msg_id}`). |
+| Raw canonical write | L929 `core_message_id = await _save_raw_core_copy(bridge_name, msg, phone, text)` | First `fazle_whatsapp_messages` INSERT (+ a `fazle_message_queue` row keyed `bridge_poller:{bridge}:{msg_id}`). |
 | **Group guard** | L962 `if chat_jid.endswith("@g.us")` | `_mark_core_queue_status("skipped","group_read_index_only"); continue`. **Runs before any media handling — group media never reaches acquisition.** |
 | **Media placeholder intercept (7997cea)** | **L980** `if is_media_placeholder(text) and not has_meaningful_text(msg.get("processed_text"))` | `_mark_processed` → `_finalize_core_copy(status="skipped", error="media_unprocessed")` → `_mark_core_queue_status("skipped","media_unprocessed")` → `log MEDIA_UNPROCESSED` → **`continue`**. **This is where every inbound media message currently ends** (the bridge historically provided no file). |
 | Image pre-OCR (caption present) | L998 `if media_type=="image" and has_meaningful_text(text)` | `classify_slip_type(caption)`; if `release_slip` → `handle_ocr_release_slip`, set `text` to a Bengali ack. |
@@ -50,7 +50,7 @@
 - `media-processor.service` :8090 — `POST /transcribe|/ocr|/extract`, body `{"file_path": "..."}` → `{"text": "..."}`. Stateless. Proven working on a bridge-downloaded `.ogg` (session STT proof: HTTP 200, non-empty transcript; the transcript language was mis-detected on a short clip — a *quality* item, not a pipeline defect).
 - `modules/voice_processor.process_voice(file_path, skip_intent=False) -> VoiceResult{transcript, word_count, confident, language_hint, intent, reply}`. `_call_transcribe`: 60s timeout, one retry at 45s, raises on non-timeout error, `FileNotFoundError` propagates.
 - `modules/ocr_processor`: `process_document(file_path, filename) -> DocResult{doc_type, extracted_text, confidence_score, reply, auto_send_safe}`; `process_image(file_path) -> OcrResult{raw_text, slip_type, is_duplicate}`. `_call_ocr`/`_call_extract`: 30s timeout.
-- **`modules/media_normalization.normalize_meta_media_message(msg)` — the already-built, tested Meta equivalent of what we need.** `_download_meta_media(media_id)` (Graph API) → temp file → `process_voice`/`process_image`/`process_document` → `MediaNormalizationResult{text, media_type, meta{normalized, …}}`. Combines as `text = f"[{type} message] {extracted}"`. On download fail / empty extraction → returns the placeholder with `meta.normalized=False`. Deletes the temp file in `finally`.
+- **`modules/fazle_media_normalization.normalize_meta_media_message(msg)` — the already-built, tested Meta equivalent of what we need.** `_download_meta_media(media_id)` (Graph API) → temp file → `process_voice`/`process_image`/`process_document` → `MediaNormalizationResult{text, media_type, meta{normalized, …}}`. Combines as `text = f"[{type} message] {extracted}"`. On download fail / empty extraction → returns the placeholder with `meta.normalized=False`. Deletes the temp file in `finally`.
 
 ### 1.6 Meta WhatsApp
 
@@ -63,15 +63,15 @@
 - `processed_text` present on bridge2 & bridge3 stores (legacy); **absent on bridge1's post-re-pair store** — fazle-core already handles this via `processed_text_column()` (`d7cbb85`).
 
 **Postgres canonical (per inbound message):**
-1. `wbom_whatsapp_messages` INSERT (`_save_raw_core_copy`) — raw text (`[media:*]` for media).
+1. `fazle_whatsapp_messages` INSERT (`_save_raw_core_copy`) — raw text (`[media:*]` for media).
 2. `fazle_message_queue` row, idempotency_key `bridge_poller:{bridge}:{msg_id}`.
-3. `wbom_whatsapp_messages` UPDATE (`_finalize_core_copy`) — `message_body`, `message_type`, `is_processed`, `identity_role`, `identity_confidence`, `workflow_triggered`, `intent_detected`, **`extracted_text`**, metadata-JSON `status` ∈ {`processing`,`done`,`skipped`,`failed`} + `error`.
+3. `fazle_whatsapp_messages` UPDATE (`_finalize_core_copy`) — `message_body`, `message_type`, `is_processed`, `identity_role`, `identity_confidence`, `workflow_triggered`, `intent_detected`, **`extracted_text`**, metadata-JSON `status` ∈ {`processing`,`done`,`skipped`,`failed`} + `error`.
 4. `fazle_message_queue` UPDATE (`_mark_core_queue_status`) — `status` + `last_error` (currently `media_unprocessed` for media).
 5. `processed_bridge_messages` INSERT (`_mark_processed`) — dedup.
 6. Downstream (`process_message`): recruitment sessions/candidates, `fazle_draft_replies`, etc. — unchanged.
 
 **Where media outcome is recorded — no new column/table needed:**
-| outcome | `wbom_whatsapp_messages` | `fazle_message_queue` |
+| outcome | `fazle_whatsapp_messages` | `fazle_message_queue` |
 |---|---|---|
 | acquired + extracted + routed | `is_processed=true`, `extracted_text=<text>`, status `done` | `status=done` |
 | acquired, extraction empty | status `skipped`, `error=media_extraction_empty` | `status=skipped` |
@@ -118,7 +118,7 @@ async def download_media(self, message_id: str, chat_jid: str) -> Optional[str]:
         return None
 ```
 
-### 2.2 Modified — `modules/bridge_poller/__init__.py` L980 intercept
+### 2.2 Modified — `modules/fazle_bridge_poller/__init__.py` L980 intercept
 
 Replace the unconditional skip with **acquire-then-fall-through**, gated by a flag (default OFF):
 
@@ -296,18 +296,18 @@ New file `test_bridge_media_acquisition.py`:
 
 ### INTEGRATION PROOF (`tests/integration/`, real sqlite temp store + stubbed HTTP)
 
-- Build a temp `messages.db` (both schema shapes), insert an audio row with `filename`, point `store_dir` at a temp dir, pre-place a real `.ogg`, stub `BridgeClient.download_media` to "stage" the file, stub media-processor `/transcribe`. Drive one `_poll_bridge` iteration (mirror pattern per `test_bridge_poller_orphan_message_fix.py` / `test_group_ingestion_stage_e3.py`) and assert the full chain: `MEDIA_ACQUIRED` → transcript → `wbom_whatsapp_messages.extracted_text` set → `fazle_message_queue.status=done` → `processed_bridge_messages` row → exactly one `process_message` call.
+- Build a temp `messages.db` (both schema shapes), insert an audio row with `filename`, point `store_dir` at a temp dir, pre-place a real `.ogg`, stub `BridgeClient.download_media` to "stage" the file, stub media-processor `/transcribe`. Drive one `_poll_bridge` iteration (mirror pattern per `test_bridge_poller_orphan_message_fix.py` / `test_group_ingestion_stage_e3.py`) and assert the full chain: `MEDIA_ACQUIRED` → transcript → `fazle_whatsapp_messages.extracted_text` set → `fazle_message_queue.status=done` → `processed_bridge_messages` row → exactly one `process_message` call.
 - Meta media: `normalize_meta_media_message` with a mocked `_download_meta_media` + stubbed extractors → unchanged result (regression).
 
 ### LIVE / ORGANIC PROOF (post-deploy, flag ON, one bridge at a time)
 
 - Wait for organic keyed DM/group media (offset-aware timestamp filter — do **not** repeat the naive-vs-`+02:00` bug from the bridge1 canary).
-- Verify: `MEDIA_ACQUIRED` logged → file present under that bridge's store → `AUDIO_TRANSCRIBED` / `DOC_PROCESSED` / OCR log → `wbom_whatsapp_messages.extracted_text` populated → `fazle_message_queue.status=done` → routing/reply consistent with the transcript → **no duplicate reply**, **no LOOP/echo regression**, bridge sessions untouched, `NRestarts` unchanged.
+- Verify: `MEDIA_ACQUIRED` logged → file present under that bridge's store → `AUDIO_TRANSCRIBED` / `DOC_PROCESSED` / OCR log → `fazle_whatsapp_messages.extracted_text` populated → `fazle_message_queue.status=done` → routing/reply consistent with the transcript → **no duplicate reply**, **no LOOP/echo regression**, bridge sessions untouched, `NRestarts` unchanged.
 - Negative live check: a newsletter image → `MEDIA_UNPROCESSED` (no `media_key`), no error escalation.
 
 ### Regression suites to run before deploy
 
-`tests/unit/test_media_placeholder_hardening.py`, `test_bridge_poller_*` (all), `test_media_normalization_phase3.py`, `test_voice_processor_skip_intent.py`, `test_chat_voice_endpoint.py`, `test_escort_ocr_pipeline.py`, `test_bridge_poller_processed_text_compat.py`, `test_fpe_bridge_path_authority.py`, `test_group_ingestion_stage_e3.py`, `test_wbom_actor_attribution_stage_b.py`, `test_admin_channel_group_isolation_stage_f.py`; then `scripts/restart_gate.sh --check-only` (checks 1-7 incl. 4/4b/4c recruitment golden + Phase C corpus).
+`tests/unit/test_media_placeholder_hardening.py`, `test_bridge_poller_*` (all), `test_media_normalization_phase3.py`, `test_voice_processor_skip_intent.py`, `test_chat_voice_endpoint.py`, `test_escort_ocr_pipeline.py`, `test_bridge_poller_processed_text_compat.py`, `test_fazle_bridge_path_authority.py`, `test_group_ingestion_stage_e3.py`, `test_fazle_actor_attribution_stage_b.py`, `test_admin_channel_group_isolation_stage_f.py`; then `scripts/restart_gate.sh --check-only` (checks 1-7 incl. 4/4b/4c recruitment golden + Phase C corpus).
 
 ---
 
@@ -316,7 +316,7 @@ New file `test_bridge_media_acquisition.py`:
 1. Implement §2.1 + §2.2 + §2.3 (+ optional §2.5). Add env docs: `BRIDGE_MEDIA_ACQUISITION_ENABLED` (default `false`), `BRIDGE_MEDIA_DOWNLOAD_TIMEOUT_S` (default `45`). **Flag defaults OFF → dark deploy, zero behavior change.**
 2. New unit tests (§7 CODE) + integration test. `go`/`gofmt` n/a (Python).
 3. Run the regression suites (§7).
-4. `git diff` review — confirm: only `app/bridge.py` + `modules/bridge_poller/__init__.py` (+ optional `modules/media_extract.py`) + tests + `.env.example`/docs touched; no routing/business-logic drift; no schema file.
+4. `git diff` review — confirm: only `app/bridge.py` + `modules/fazle_bridge_poller/__init__.py` (+ optional `modules/media_extract.py`) + tests + `.env.example`/docs touched; no routing/business-logic drift; no schema file.
 5. Commit: `fix: acquire inbound bridge media via /api/download for OCR/STT` (+ update this doc's status line and `docs/NEXT_IMPLEMENTATION_QUEUE.md`).
 6. `scripts/restart_gate.sh --check-only` → expect PASS.
 7. **Explicit Owner approval.**
@@ -361,8 +361,8 @@ Downloaded media files already written to `store/<chat_jid>/` are harmless and c
 ## 11. Explicit implementation checklist (next session)
 
 - [ ] `app/bridge.py`: add `BridgeClient.download_media(message_id, chat_jid) -> Optional[str]` (never raises; circuit-breaker aware; `BRIDGE_MEDIA_DOWNLOAD_TIMEOUT_S`).
-- [ ] `modules/bridge_poller/__init__.py` L980: acquire-then-fall-through behind `BRIDGE_MEDIA_ACQUISITION_ENABLED` (default OFF); preconditions = flag ON + `filename` + `media_type ∈ {audio,ptt,image,document,application}` + not `unresolved:` + `phone not in _own_bridge_numbers()`.
-- [ ] `modules/bridge_poller/__init__.py`: empty-extraction fallback → `MEDIA_EXTRACTION_EMPTY` skip (before the L1266 `from=` log); ensure `_mark_processed` not double-called.
+- [ ] `modules/fazle_bridge_poller/__init__.py` L980: acquire-then-fall-through behind `BRIDGE_MEDIA_ACQUISITION_ENABLED` (default OFF); preconditions = flag ON + `filename` + `media_type ∈ {audio,ptt,image,document,application}` + not `unresolved:` + `phone not in _own_bridge_numbers()`.
+- [ ] `modules/fazle_bridge_poller/__init__.py`: empty-extraction fallback → `MEDIA_EXTRACTION_EMPTY` skip (before the L1266 `from=` log); ensure `_mark_processed` not double-called.
 - [ ] Confirm no `continue` path leaves `fazle_message_queue` non-terminal (mirror the 2026-07-09 stuck-row discipline).
 - [ ] (optional) `modules/media_extract.py` shared `voice/image/document → text` helper; refactor `media_normalization` + `bridge_poller` onto it.
 - [ ] `.env.example` + `docs/OPERATIONS.md`: document both env vars.
@@ -391,7 +391,7 @@ META WHATSAPP CHANGED   = NO
 
 **Files touched (implementation):**
 - `app/bridge.py` — `BridgeClient.download_media()` + dedicated `media_breaker` (never trips the outbound-send breaker).
-- `modules/bridge_poller/__init__.py` — per-message `_acquired` flag; L980 intercept becomes acquire-then-fall-through behind `BRIDGE_MEDIA_ACQUISITION_ENABLED` (default OFF); new `MEDIA_EXTRACTION_EMPTY` terminal skip for acquired-but-unextractable media.
+- `modules/fazle_bridge_poller/__init__.py` — per-message `_acquired` flag; L980 intercept becomes acquire-then-fall-through behind `BRIDGE_MEDIA_ACQUISITION_ENABLED` (default OFF); new `MEDIA_EXTRACTION_EMPTY` terminal skip for acquired-but-unextractable media.
 - `tests/unit/test_bridge_media_acquisition.py` — 32 tests (download_media contract, breaker isolation, provenance, intercept structure, precondition mirror, routing-guard regression).
 - `docs/OPERATIONS.md` — the two new env vars.
 - `docs/BRIDGE_MEDIA_ACQUISITION_INTEGRATION_PLAN_2026-08-29.md` — this status.

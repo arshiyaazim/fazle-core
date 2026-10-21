@@ -6,13 +6,13 @@
 --   2) Keep future inserts defaulted to 10000.00
 --
 -- Notes:
---   - Additive/safe update only on fpe_employees.basic_salary
+--   - Additive/safe update only on fazle_employees.basic_salary
 --   - No transactional ledger rows are modified here
 
-ALTER TABLE fpe_employees
+ALTER TABLE fazle_employees
     ALTER COLUMN basic_salary SET DEFAULT 10000.00;
 
-UPDATE fpe_employees
+UPDATE fazle_employees
 SET basic_salary = 10000.00,
     updated_at = NOW()
 WHERE basic_salary IS DISTINCT FROM 10000.00;

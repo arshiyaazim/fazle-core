@@ -2,16 +2,16 @@
 --
 -- Context: docs/CANONICAL_CLIENT_DOMAIN.md / docs/CLIENT_DOMAIN_IMPLEMENTATION_PLAN.md
 -- (Phase 2A). Production evidence (2026-07-09, read-only queries) found THREE
--- uncoordinated client-classification mechanisms: wbom_contacts.relation (stale
--- free text), wbom_contacts.relation_type_id -> wbom_relation_types (structured,
--- ~5% populated), and fazle_contact_roles.role (free text, no FK to wbom_contacts
--- at all, 47 rows). This migration makes wbom_contacts.relation_type_id the
+-- uncoordinated client-classification mechanisms: fazle_contacts.relation (stale
+-- free text), fazle_contacts.relation_type_id -> wbom_relation_types (structured,
+-- ~5% populated), and fazle_contact_roles.role (free text, no FK to fazle_contacts
+-- at all, 47 rows). This migration makes fazle_contacts.relation_type_id the
 -- single source of truth going forward by backfilling it from
 -- fazle_contact_roles, using the SAME normalized last-10-digit phone-matching
 -- convention already established in
 -- modules/fazle_payroll_engine/migrations/008_unification.sql (fe.primary_phone
 -- <-> we.employee_mobile), since fazle_contact_roles.phone and
--- wbom_contacts.whatsapp_number are stored in inconsistent formats
+-- fazle_contacts.whatsapp_number are stored in inconsistent formats
 -- (some 01XXXXXXXXX, some 8801XXXXXXXXX).
 --
 -- Verified read-only against production before writing this file:
@@ -19,7 +19,7 @@
 --     explicitly noted "temporary smoke test identity (deactivated)" (created
 --     2026-07-04) -- excluded entirely, not real client/contact data.
 --   - Of the remaining 41 real rows, EVERY one matches exactly one
---     wbom_contacts row via normalized phone (0 orphans, 0 fan-out/duplicate
+--     fazle_contacts row via normalized phone (0 orphans, 0 fan-out/duplicate
 --     matches) -- this reconciliation is safe to run as written.
 --   - No row being touched already has a conflicting relation_type_id set
 --     (the one pre-existing match, relation_type_id=5, already agrees with
@@ -36,7 +36,7 @@
 --                                    rather than leaving 8 real, already-
 --                                    classified contacts unclassified)
 --   blocked                      -> NOT a relation type at all -- handled by
---                                    setting wbom_contacts.is_active = false
+--                                    setting fazle_contacts.is_active = false
 --                                    (the column that already exists for this
 --                                    purpose), not by inventing a "Blocked"
 --                                    relationship type.
@@ -46,11 +46,11 @@
 --   (no such rows are ever created -- Part A only adds 'Family', nothing else).
 --   They map to the EXISTING 'Employee' relation_type_id=4 *only* where the
 --   phone number independently, verifiably matches a real row in
---   wbom_employees.employee_mobile -- never as a blanket free-text-label
+--   fazle_employees_legacy.employee_mobile -- never as a blanket free-text-label
 --   mapping. Checked exhaustively against production (2026-07-09): every
 --   single one of the 5 distinct 'supervisor'-tagged phones and both
 --   'accountant'-tagged phone-format rows (1 real person, 2 formats) matches
---   an Active wbom_employees row. Zero 'supervisor'/'accountant' rows failed
+--   an Active fazle_employees_legacy row. Zero 'supervisor'/'accountant' rows failed
 --   this check in this dataset, but the guard below is a real JOIN, not a
 --   hardcoded list -- if a future 'supervisor'/'accountant' tag does NOT match
 --   an employee, it is left untouched by construction, not force-mapped.
@@ -61,13 +61,13 @@
 --   Phone numbers declared in .env (ADMIN_NUMBERS, ACCOUNTANT_PHONE,
 --   FPE_CASH_AUTHORIZED_PHONES, FPE_INCOME_AUTHORIZED_PHONES) are the
 --   MANDATORY, authoritative source of truth for who holds a functional
---   role/authorization in this system. wbom_contacts (contact_book),
---   wbom_employees, and cash-transaction-derived signals are supporting /
+--   role/authorization in this system. fazle_contacts (contact_book),
+--   fazle_employees_legacy, and cash-transaction-derived signals are supporting /
 --   enrichment sources only -- never authoritative on their own, and must
 --   never silently override an .env-declared identity.
 --   Verified before writing this migration (read-only cross-check of all 22
---   distinct .env-listed numbers against wbom_contacts, fazle_contact_roles,
---   and wbom_employees): every .env-listed number that this migration's
+--   distinct .env-listed numbers against fazle_contacts, fazle_contact_roles,
+--   and fazle_employees_legacy): every .env-listed number that this migration's
 --   UPDATEs would touch resolves to a classification that AGREES with its
 --   .env-declared role (the 5 supervisor/accountant-turned-Employee cases are
 --   all independently confirmed employees; the escort-client-tagged numbers
@@ -94,11 +94,11 @@ INSERT INTO wbom_relation_types (relation_type_id, relation_name, description, i
 SELECT 6, 'Family', 'Family member of the Owner/admin, contacts via WhatsApp', true
 WHERE NOT EXISTS (SELECT 1 FROM wbom_relation_types WHERE relation_type_id = 6);
 
--- ── Part B: wbom_contacts.relation_type_id backfill from fazle_contact_roles ──
+-- ── Part B: fazle_contacts.relation_type_id backfill from fazle_contact_roles ──
 -- Guarded: only fills NULL relation_type_id, never overwrites an existing
 -- classification. Excludes smoke-test/inactive fazle_contact_roles rows.
 
-UPDATE wbom_contacts wc
+UPDATE fazle_contacts wc
    SET relation_type_id = 1  -- Client
   FROM fazle_contact_roles fcr
  WHERE fcr.is_active = true
@@ -107,7 +107,7 @@ UPDATE wbom_contacts wc
      = RIGHT(REGEXP_REPLACE(fcr.phone, '\D', '', 'g'), 10)
    AND wc.relation_type_id IS NULL;
 
-UPDATE wbom_contacts wc
+UPDATE fazle_contacts wc
    SET relation_type_id = 5  -- Escort Client
   FROM fazle_contact_roles fcr
  WHERE fcr.is_active = true
@@ -116,7 +116,7 @@ UPDATE wbom_contacts wc
      = RIGHT(REGEXP_REPLACE(fcr.phone, '\D', '', 'g'), 10)
    AND wc.relation_type_id IS NULL;
 
-UPDATE wbom_contacts wc
+UPDATE fazle_contacts wc
    SET relation_type_id = 2  -- Vendor
   FROM fazle_contact_roles fcr
  WHERE fcr.is_active = true
@@ -125,7 +125,7 @@ UPDATE wbom_contacts wc
      = RIGHT(REGEXP_REPLACE(fcr.phone, '\D', '', 'g'), 10)
    AND wc.relation_type_id IS NULL;
 
-UPDATE wbom_contacts wc
+UPDATE fazle_contacts wc
    SET relation_type_id = 4  -- Employee
   FROM fazle_contact_roles fcr
  WHERE fcr.is_active = true
@@ -134,7 +134,7 @@ UPDATE wbom_contacts wc
      = RIGHT(REGEXP_REPLACE(fcr.phone, '\D', '', 'g'), 10)
    AND wc.relation_type_id IS NULL;
 
-UPDATE wbom_contacts wc
+UPDATE fazle_contacts wc
    SET relation_type_id = 6  -- Family
   FROM fazle_contact_roles fcr
  WHERE fcr.is_active = true
@@ -144,13 +144,13 @@ UPDATE wbom_contacts wc
    AND wc.relation_type_id IS NULL;
 
 -- 'supervisor' / 'accountant' -> Employee, ONLY where independently verified
--- against wbom_employees.employee_mobile (see header). This is a real JOIN
+-- against fazle_employees_legacy.employee_mobile (see header). This is a real JOIN
 -- guard, not a blanket free-text-label mapping -- an unverified
 -- supervisor/accountant row is left untouched by construction.
-UPDATE wbom_contacts wc
+UPDATE fazle_contacts wc
    SET relation_type_id = 4  -- Employee (existing type; no new type created)
   FROM fazle_contact_roles fcr
-  JOIN wbom_employees we
+  JOIN fazle_employees_legacy we
     ON RIGHT(REGEXP_REPLACE(we.employee_mobile, '\D', '', 'g'), 10)
      = RIGHT(REGEXP_REPLACE(fcr.phone, '\D', '', 'g'), 10)
  WHERE fcr.is_active = true
@@ -160,11 +160,11 @@ UPDATE wbom_contacts wc
    AND wc.relation_type_id IS NULL;
 
 -- ── Part C: 'blocked' is a moderation flag, not a relationship type ───────────
--- Sets is_active = false on the matching wbom_contacts row (the column that
+-- Sets is_active = false on the matching fazle_contacts row (the column that
 -- already exists for this purpose) instead of inventing a "Blocked" relation
 -- type.
 
-UPDATE wbom_contacts wc
+UPDATE fazle_contacts wc
    SET is_active = false
   FROM fazle_contact_roles fcr
  WHERE fcr.is_active = true

@@ -63,9 +63,9 @@ correction plus one new view.
 
 | View | Source Tables | What AI sees |
 |---|---|---|
-| `ai_read_employees` | `wbom_employees` | name, mobile, designation, status, salary |
-| `ai_read_contacts` | `wbom_contacts` | name, number, relation, company |
-| `ai_read_recent_messages` | `wbom_whatsapp_messages` | last 7 days, 300 char body |
+| `ai_read_employees` | `fazle_employees_legacy` | name, mobile, designation, status, salary |
+| `ai_read_contacts` | `fazle_contacts` | name, number, relation, company |
+| `ai_read_recent_messages` | `fazle_whatsapp_messages` | last 7 days, 300 char body |
 | `ai_read_escort_programs` | `wbom_escort_programs` | vessel, employee, status, last 30 days |
 | `ai_read_attendance_summary` | `wbom_attendance` | current + last month |
 | `ai_read_payroll_runs` | `wbom_payroll_runs` | salary summaries, last year |
@@ -73,7 +73,7 @@ correction plus one new view.
 | `ai_read_module_bridge_status` | `fazle_service_heartbeats` | service health |
 | `ai_read_kb_articles` | `fazle_knowledge_base` | active KB content |
 | `ai_read_billing_outstanding` | `wbom_billing_records` | bill number, client, date, amount, status, days outstanding — pending bills only |
-| `ai_read_cash_transactions` | `fpe_cash_transactions` **only** — never `wbom_cash_transactions` (legacy/archive, Owner Directive 2026-06-29, see `CANONICAL_BUSINESS_RULES.md` §Cash Transaction) | ref, date, amount, category, status, method, employee name — no phone numbers, no raw payload/metadata. **DDL pending as of this entry** — see `assistant-platform/proposal_ai_read_cash_transactions_20260802.md`. |
+| `ai_read_cash_transactions` | `fazle_cash_transactions` **only** — never `fazle_cash_transactions_archive` (legacy/archive, Owner Directive 2026-06-29, see `CANONICAL_BUSINESS_RULES.md` §Cash Transaction) | ref, date, amount, category, status, method, employee name — no phone numbers, no raw payload/metadata. **DDL pending as of this entry** — see `assistant-platform/proposal_ai_read_cash_transactions_20260802.md`. |
 
 ## Python Tool Functions
 

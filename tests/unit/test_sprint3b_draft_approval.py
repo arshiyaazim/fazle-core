@@ -11,7 +11,7 @@ Sprint-3B Acceptance Tests — Draft Approval → Canonical Transaction → Ledg
     Test-6:  Accountant Forward — parser-compatible message (STEP 6)
     Test-7:  Canonical Transaction — create_transaction called (STEP 7)
     Test-8:  Ledger Update — _upsert_ledger called internally (STEP 8)
-    Test-9:  Employee Balance — read from fpe_employee_ledger (STEP 9)
+    Test-9:  Employee Balance — read from fazle_employee_ledger (STEP 9)
     Test-10: Draft Finalization — status='completed' (STEP 10)
     Test-11: Reject Workflow — no transaction, no ledger (STEP 11)
     Test-12: Draft Expiry — 24h TTL enforcement (STEP 12)
@@ -38,7 +38,7 @@ class Test1DraftRetrieval:
     @pytest.mark.asyncio
     async def test_retrieve_draft_returns_row(self, test_db_pool, seed_sprint3b_draft):
         db_module._pool = test_db_pool
-        from modules.draft_approval import retrieve_draft
+        from modules.fazle_draft_approval import retrieve_draft
 
         draft = await retrieve_draft(seed_sprint3b_draft["id"])
         assert draft is not None
@@ -49,7 +49,7 @@ class Test1DraftRetrieval:
     @pytest.mark.asyncio
     async def test_retrieve_draft_nonexistent_returns_none(self, test_db_pool):
         db_module._pool = test_db_pool
-        from modules.draft_approval import retrieve_draft
+        from modules.fazle_draft_approval import retrieve_draft
 
         draft = await retrieve_draft(99999)
         assert draft is None
@@ -57,7 +57,7 @@ class Test1DraftRetrieval:
     @pytest.mark.asyncio
     async def test_retrieve_draft_has_sprint3b_columns(self, test_db_pool, seed_sprint3b_draft):
         db_module._pool = test_db_pool
-        from modules.draft_approval import retrieve_draft
+        from modules.fazle_draft_approval import retrieve_draft
 
         draft = await retrieve_draft(seed_sprint3b_draft["id"])
         # Sprint-3B columns must exist (even if NULL for a fresh draft)
@@ -83,7 +83,7 @@ class Test2StateValidation:
     @pytest.mark.asyncio
     async def test_pending_draft_is_pending(self, test_db_pool, seed_sprint3b_draft):
         db_module._pool = test_db_pool
-        from modules.draft_approval import retrieve_draft, is_draft_pending
+        from modules.fazle_draft_approval import retrieve_draft, is_draft_pending
 
         draft = await retrieve_draft(seed_sprint3b_draft["id"])
         assert is_draft_pending(draft) is True
@@ -91,7 +91,7 @@ class Test2StateValidation:
     @pytest.mark.asyncio
     async def test_completed_draft_not_pending(self, test_db_pool, seed_sprint3b_draft):
         db_module._pool = test_db_pool
-        from modules.draft_approval import retrieve_draft, is_draft_pending
+        from modules.fazle_draft_approval import retrieve_draft, is_draft_pending
 
         await execute(
             "UPDATE fazle_payment_drafts SET status='completed' WHERE id=$1",
@@ -103,7 +103,7 @@ class Test2StateValidation:
     @pytest.mark.asyncio
     async def test_rejected_draft_not_pending(self, test_db_pool, seed_sprint3b_draft):
         db_module._pool = test_db_pool
-        from modules.draft_approval import retrieve_draft, is_draft_pending
+        from modules.fazle_draft_approval import retrieve_draft, is_draft_pending
 
         await execute(
             "UPDATE fazle_payment_drafts SET status='rejected' WHERE id=$1",
@@ -121,7 +121,7 @@ class Test3AdminCommandProcessing:
     @pytest.mark.asyncio
     async def test_unknown_command_rejected(self, test_db_pool, seed_sprint3b_draft):
         db_module._pool = test_db_pool
-        from modules.draft_approval import process_admin_decision
+        from modules.fazle_draft_approval import process_admin_decision
 
         result = await process_admin_decision(
             "UNKNOWN", seed_sprint3b_draft["id"], "8801700000001",
@@ -132,7 +132,7 @@ class Test3AdminCommandProcessing:
     @pytest.mark.asyncio
     async def test_approved_without_amount_fails(self, test_db_pool, seed_sprint3b_draft):
         db_module._pool = test_db_pool
-        from modules.draft_approval import process_admin_decision
+        from modules.fazle_draft_approval import process_admin_decision
 
         result = await process_admin_decision(
             "APPROVED", seed_sprint3b_draft["id"], "8801700000001",
@@ -149,7 +149,7 @@ class Test4EditWorkflow:
     @pytest.mark.asyncio
     async def test_edit_increments_version(self, test_db_pool, seed_sprint3b_draft):
         db_module._pool = test_db_pool
-        from modules.draft_approval import edit_draft, retrieve_draft
+        from modules.fazle_draft_approval import edit_draft, retrieve_draft
 
         result = await edit_draft(
             seed_sprint3b_draft["id"], 3000.0, "nagad", None,
@@ -169,7 +169,7 @@ class Test4EditWorkflow:
     @pytest.mark.asyncio
     async def test_edit_saves_before_after_state(self, test_db_pool, seed_sprint3b_draft):
         db_module._pool = test_db_pool
-        from modules.draft_approval import edit_draft, retrieve_draft
+        from modules.fazle_draft_approval import edit_draft, retrieve_draft
 
         result = await edit_draft(
             seed_sprint3b_draft["id"], 2500.0, "bkash", "019999999999",
@@ -185,7 +185,7 @@ class Test4EditWorkflow:
     @pytest.mark.asyncio
     async def test_edit_on_non_pending_fails(self, test_db_pool, seed_sprint3b_draft):
         db_module._pool = test_db_pool
-        from modules.draft_approval import edit_draft
+        from modules.fazle_draft_approval import edit_draft
 
         await execute(
             "UPDATE fazle_payment_drafts SET status='completed' WHERE id=$1",
@@ -209,7 +209,7 @@ class Test5ApprovedWorkflow:
         self, test_db_pool, seed_sprint3b_draft, seed_fpe_employee
     ):
         db_module._pool = test_db_pool
-        from modules.draft_approval import approve_draft
+        from modules.fazle_draft_approval import approve_draft
 
         result = await approve_draft(
             seed_sprint3b_draft["id"], 2000.0, "bkash", "8801700000001",
@@ -227,7 +227,7 @@ class Test5ApprovedWorkflow:
         self, test_db_pool, seed_sprint3b_draft, seed_fpe_employee
     ):
         db_module._pool = test_db_pool
-        from modules.draft_approval import approve_draft
+        from modules.fazle_draft_approval import approve_draft
 
         await execute(
             "UPDATE fazle_payment_drafts SET status='completed' WHERE id=$1",
@@ -244,18 +244,18 @@ class Test5ApprovedWorkflow:
 
 class Test5bUnresolvedActiveEmployee:
     """A draft that names a specific wbom employee_id, but that employee has
-    no active fpe_employees counterpart, must be blocked -- not silently
+    no active fazle_employees counterpart, must be blocked -- not silently
     routed through match_or_create_employee() into a newly-created/loosely-
-    matched fpe_employees row with no admin visibility."""
+    matched fazle_employees row with no admin visibility."""
 
     @pytest.mark.asyncio
     async def test_approve_blocked_when_no_active_fpe_match(
         self, test_db_pool, seed_sprint3b_draft
     ):
         # Deliberately no seed_fpe_employee fixture here -- this employee_id
-        # has zero fpe_employees row at all, active or otherwise.
+        # has zero fazle_employees row at all, active or otherwise.
         db_module._pool = test_db_pool
-        from modules.draft_approval import approve_draft
+        from modules.fazle_draft_approval import approve_draft
 
         result = await approve_draft(
             seed_sprint3b_draft["id"], 2000.0, "bkash", "8801700000001",
@@ -264,13 +264,13 @@ class Test5bUnresolvedActiveEmployee:
         assert "active FPE record" in result["error"]
 
         # No financial write must have happened.
-        txn_count = await fetch_val("SELECT COUNT(*) FROM fpe_cash_transactions")
+        txn_count = await fetch_val("SELECT COUNT(*) FROM fazle_cash_transactions")
         assert txn_count == 0
-        ledger_count = await fetch_val("SELECT COUNT(*) FROM fpe_employee_ledger")
+        ledger_count = await fetch_val("SELECT COUNT(*) FROM fazle_employee_ledger")
         assert ledger_count == 0
 
         # No employee must have been silently created either.
-        emp_count = await fetch_val("SELECT COUNT(*) FROM fpe_employees")
+        emp_count = await fetch_val("SELECT COUNT(*) FROM fazle_employees")
         assert emp_count == 0
 
     @pytest.mark.asyncio
@@ -278,7 +278,7 @@ class Test5bUnresolvedActiveEmployee:
         self, test_db_pool, seed_sprint3b_draft
     ):
         db_module._pool = test_db_pool
-        from modules.draft_approval import approve_draft, retrieve_draft
+        from modules.fazle_draft_approval import approve_draft, retrieve_draft
 
         await approve_draft(
             seed_sprint3b_draft["id"], 2000.0, "bkash", "8801700000001",
@@ -292,10 +292,10 @@ class Test5bUnresolvedActiveEmployee:
     async def test_approve_still_works_when_active_fpe_match_exists(
         self, test_db_pool, seed_sprint3b_draft, seed_fpe_employee
     ):
-        """Non-regression: an employee WITH an active fpe_employees match
+        """Non-regression: an employee WITH an active fazle_employees match
         must still approve exactly as before."""
         db_module._pool = test_db_pool
-        from modules.draft_approval import approve_draft
+        from modules.fazle_draft_approval import approve_draft
 
         result = await approve_draft(
             seed_sprint3b_draft["id"], 2000.0, "bkash", "8801700000001",
@@ -312,7 +312,7 @@ class Test6AccountantForward:
     @pytest.mark.asyncio
     async def test_accountant_message_format(self, test_db_pool, seed_sprint3b_draft):
         db_module._pool = test_db_pool
-        from modules.draft_approval import build_accountant_message, retrieve_draft
+        from modules.fazle_draft_approval import build_accountant_message, retrieve_draft
 
         draft = await retrieve_draft(seed_sprint3b_draft["id"])
         msg = build_accountant_message(draft, 2000.0, "bkash")
@@ -324,7 +324,7 @@ class Test6AccountantForward:
     @pytest.mark.asyncio
     async def test_accountant_message_method_codes(self, test_db_pool, seed_sprint3b_draft):
         db_module._pool = test_db_pool
-        from modules.draft_approval import build_accountant_message, retrieve_draft
+        from modules.fazle_draft_approval import build_accountant_message, retrieve_draft
 
         draft = await retrieve_draft(seed_sprint3b_draft["id"])
 
@@ -355,7 +355,7 @@ class Test7CanonicalTransaction:
         self, test_db_pool, seed_sprint3b_draft, seed_fpe_employee
     ):
         db_module._pool = test_db_pool
-        from modules.draft_approval import create_canonical_transaction, retrieve_draft
+        from modules.fazle_draft_approval import create_canonical_transaction, retrieve_draft
 
         draft = await retrieve_draft(seed_sprint3b_draft["id"])
         result = await create_canonical_transaction(draft, 2000.0, "bkash", "8801700000001")
@@ -364,9 +364,9 @@ class Test7CanonicalTransaction:
         assert result["txn_ref"] is not None
         assert result["accountant_msg"] is not None
 
-        # Verify the transaction exists in fpe_cash_transactions
+        # Verify the transaction exists in fazle_cash_transactions
         txn = await fetch_one(
-            "SELECT * FROM fpe_cash_transactions WHERE id = $1",
+            "SELECT * FROM fazle_cash_transactions WHERE id = $1",
             result["transaction_id"],
         )
         assert txn is not None
@@ -378,14 +378,14 @@ class Test7CanonicalTransaction:
         self, test_db_pool, seed_sprint3b_draft, seed_fpe_employee
     ):
         db_module._pool = test_db_pool
-        from modules.draft_approval import create_canonical_transaction, retrieve_draft
+        from modules.fazle_draft_approval import create_canonical_transaction, retrieve_draft
 
         draft = await retrieve_draft(seed_sprint3b_draft["id"])
         # seed_sprint3b_draft has purpose='advance'
         result = await create_canonical_transaction(draft, 2000.0, "bkash", "8801700000001")
 
         txn = await fetch_one(
-            "SELECT txn_category FROM fpe_cash_transactions WHERE id = $1",
+            "SELECT txn_category FROM fazle_cash_transactions WHERE id = $1",
             result["transaction_id"],
         )
         assert txn["txn_category"] == "advance"
@@ -401,7 +401,7 @@ class Test8LedgerUpdate:
         self, test_db_pool, seed_sprint3b_draft, seed_fpe_employee
     ):
         db_module._pool = test_db_pool
-        from modules.draft_approval import approve_draft
+        from modules.fazle_draft_approval import approve_draft
 
         result = await approve_draft(
             seed_sprint3b_draft["id"], 2000.0, "bkash", "8801700000001",
@@ -411,7 +411,7 @@ class Test8LedgerUpdate:
         # Check ledger exists for this employee + current period
         period = datetime.now(timezone.utc).strftime("%Y-%m")
         ledger = await fetch_one(
-            "SELECT * FROM fpe_employee_ledger WHERE employee_id = $1 AND accounting_period = $2",
+            "SELECT * FROM fazle_employee_ledger WHERE employee_id = $1 AND accounting_period = $2",
             seed_fpe_employee["id"], period,
         )
         assert ledger is not None
@@ -422,12 +422,12 @@ class Test8LedgerUpdate:
 # ── Test-9: Employee Balance (STEP 9) ──────────────────────────────────────────
 
 class Test9EmployeeBalance:
-    """STEP 9 — get_employee_balance reads from fpe_employee_ledger."""
+    """STEP 9 — get_employee_balance reads from fazle_employee_ledger."""
 
     @pytest.mark.asyncio
     async def test_balance_returns_zero_for_new_employee(self, test_db_pool, seed_fpe_employee):
         db_module._pool = test_db_pool
-        from modules.draft_approval import get_employee_balance
+        from modules.fazle_draft_approval import get_employee_balance
 
         balance = await get_employee_balance(seed_fpe_employee["id"])
         assert float(balance["total_paid"]) == 0.0
@@ -439,7 +439,7 @@ class Test9EmployeeBalance:
         self, test_db_pool, seed_sprint3b_draft, seed_fpe_employee
     ):
         db_module._pool = test_db_pool
-        from modules.draft_approval import approve_draft, get_employee_balance
+        from modules.fazle_draft_approval import approve_draft, get_employee_balance
 
         await approve_draft(
             seed_sprint3b_draft["id"], 2000.0, "bkash", "8801700000001",
@@ -460,7 +460,7 @@ class Test10DraftFinalization:
         self, test_db_pool, seed_sprint3b_draft, seed_fpe_employee
     ):
         db_module._pool = test_db_pool
-        from modules.draft_approval import approve_draft, retrieve_draft
+        from modules.fazle_draft_approval import approve_draft, retrieve_draft
 
         result = await approve_draft(
             seed_sprint3b_draft["id"], 2000.0, "bkash", "8801700000001",
@@ -484,7 +484,7 @@ class Test11RejectWorkflow:
     @pytest.mark.asyncio
     async def test_reject_sets_status(self, test_db_pool, seed_sprint3b_draft):
         db_module._pool = test_db_pool
-        from modules.draft_approval import reject_draft, retrieve_draft
+        from modules.fazle_draft_approval import reject_draft, retrieve_draft
 
         result = await reject_draft(
             seed_sprint3b_draft["id"], "8801700000001", reason="invalid request",
@@ -502,21 +502,21 @@ class Test11RejectWorkflow:
         self, test_db_pool, seed_sprint3b_draft
     ):
         db_module._pool = test_db_pool
-        from modules.draft_approval import reject_draft
+        from modules.fazle_draft_approval import reject_draft
 
         await reject_draft(seed_sprint3b_draft["id"], "8801700000001")
 
-        count = await fetch_val("SELECT COUNT(*) FROM fpe_cash_transactions")
+        count = await fetch_val("SELECT COUNT(*) FROM fazle_cash_transactions")
         assert count == 0
 
     @pytest.mark.asyncio
     async def test_reject_updates_no_ledger(self, test_db_pool, seed_sprint3b_draft):
         db_module._pool = test_db_pool
-        from modules.draft_approval import reject_draft
+        from modules.fazle_draft_approval import reject_draft
 
         await reject_draft(seed_sprint3b_draft["id"], "8801700000001")
 
-        count = await fetch_val("SELECT COUNT(*) FROM fpe_employee_ledger")
+        count = await fetch_val("SELECT COUNT(*) FROM fazle_employee_ledger")
         assert count == 0
 
 
@@ -530,7 +530,7 @@ class Test12DraftExpiry:
         self, test_db_pool, seed_sprint3b_draft, seed_fpe_employee
     ):
         db_module._pool = test_db_pool
-        from modules.draft_approval import approve_draft
+        from modules.fazle_draft_approval import approve_draft
 
         # Set expiry to past
         await execute(
@@ -547,7 +547,7 @@ class Test12DraftExpiry:
     @pytest.mark.asyncio
     async def test_expire_draft_marks_expired(self, test_db_pool, seed_sprint3b_draft):
         db_module._pool = test_db_pool
-        from modules.draft_approval import expire_draft, retrieve_draft
+        from modules.fazle_draft_approval import expire_draft, retrieve_draft
 
         result = await expire_draft(seed_sprint3b_draft["id"])
         assert result is True
@@ -566,7 +566,7 @@ class Test13Idempotency:
         self, test_db_pool, seed_sprint3b_draft, seed_fpe_employee
     ):
         db_module._pool = test_db_pool
-        from modules.draft_approval import approve_draft
+        from modules.fazle_draft_approval import approve_draft
 
         # First approval
         result1 = await approve_draft(
@@ -583,7 +583,7 @@ class Test13Idempotency:
         assert "not pending" in result2["error"].lower() or "already" in result2["error"].lower()
 
         # Only one transaction in DB
-        count = await fetch_val("SELECT COUNT(*) FROM fpe_cash_transactions")
+        count = await fetch_val("SELECT COUNT(*) FROM fazle_cash_transactions")
         assert count == 1
 
     @pytest.mark.asyncio
@@ -591,7 +591,7 @@ class Test13Idempotency:
         self, test_db_pool, seed_sprint3b_draft, seed_fpe_employee
     ):
         db_module._pool = test_db_pool
-        from modules.draft_approval import approve_draft, is_draft_already_processed, retrieve_draft
+        from modules.fazle_draft_approval import approve_draft, is_draft_already_processed, retrieve_draft
 
         # First approval
         await approve_draft(
@@ -612,7 +612,7 @@ class Test14AuditRequirements:
         self, test_db_pool, seed_sprint3b_draft, seed_fpe_employee
     ):
         db_module._pool = test_db_pool
-        from modules.draft_approval import approve_draft, get_draft_audit_events
+        from modules.fazle_draft_approval import approve_draft, get_draft_audit_events
 
         await approve_draft(
             seed_sprint3b_draft["id"], 2000.0, "bkash", "8801700000001",
@@ -629,7 +629,7 @@ class Test14AuditRequirements:
     @pytest.mark.asyncio
     async def test_reject_creates_audit_event(self, test_db_pool, seed_sprint3b_draft):
         db_module._pool = test_db_pool
-        from modules.draft_approval import reject_draft, get_draft_audit_events
+        from modules.fazle_draft_approval import reject_draft, get_draft_audit_events
 
         await reject_draft(seed_sprint3b_draft["id"], "8801700000001", reason="test reject")
 
@@ -640,7 +640,7 @@ class Test14AuditRequirements:
     @pytest.mark.asyncio
     async def test_edit_creates_audit_event(self, test_db_pool, seed_sprint3b_draft):
         db_module._pool = test_db_pool
-        from modules.draft_approval import edit_draft, get_draft_audit_events
+        from modules.fazle_draft_approval import edit_draft, get_draft_audit_events
 
         await edit_draft(
             seed_sprint3b_draft["id"], 3000.0, "nagad", None,
@@ -656,7 +656,7 @@ class Test14AuditRequirements:
         self, test_db_pool, seed_sprint3b_draft, seed_fpe_employee
     ):
         db_module._pool = test_db_pool
-        from modules.draft_approval import approve_draft, get_draft_audit_events
+        from modules.fazle_draft_approval import approve_draft, get_draft_audit_events
 
         await approve_draft(
             seed_sprint3b_draft["id"], 2000.0, "bkash", "8801700000001",
@@ -679,7 +679,7 @@ class Test15WhatsAppCompatibility:
         self, test_db_pool, seed_sprint3b_draft
     ):
         db_module._pool = test_db_pool
-        from modules.draft_approval import build_accountant_message, retrieve_draft
+        from modules.fazle_draft_approval import build_accountant_message, retrieve_draft
         from modules.fazle_payroll_engine.parser import parse_message
 
         draft = await retrieve_draft(seed_sprint3b_draft["id"])
@@ -696,7 +696,7 @@ class Test15WhatsAppCompatibility:
         self, test_db_pool, seed_sprint3b_draft
     ):
         db_module._pool = test_db_pool
-        from modules.draft_approval import build_accountant_message, retrieve_draft
+        from modules.fazle_draft_approval import build_accountant_message, retrieve_draft
         from modules.fazle_payroll_engine.parser import parse_message
 
         draft = await retrieve_draft(seed_sprint3b_draft["id"])
@@ -713,7 +713,7 @@ class Test15WhatsAppCompatibility:
     ):
         """End-to-end: approve draft → accountant message is parser-compatible."""
         db_module._pool = test_db_pool
-        from modules.draft_approval import approve_draft
+        from modules.fazle_draft_approval import approve_draft
         from modules.fazle_payroll_engine.parser import parse_message
 
         result = await approve_draft(

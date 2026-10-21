@@ -1,4 +1,8 @@
 # Fazle Core — Deep Research Report
+
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **Date:** 2026-05-06  
 **Scope:** Complete codebase audit — no code changes made.
 
@@ -70,7 +74,7 @@ Three entry surfaces all funnel into the same `process_message()` router:
 | Bridge 2 (OPS) | `POST /webhook/mcp2` | 8801880446111 | 8081 |
 
 Bridge 1 and Bridge 2 are Go-based WhatsApp bridges running in Docker at `localhost:8080` and `localhost:8081`.  
-A background **Bridge Poller** (`modules/bridge_poller`) also polls these bridges via SQLite DB files:
+A background **Bridge Poller** (`modules/fazle_bridge_poller`) also polls these bridges via SQLite DB files:
 - Bridge1: `/home/azim/bridges/bridge1/store/messages.db`
 - Bridge2: `/home/azim/bridges/bridge2/store/messages.db`
 
@@ -95,7 +99,7 @@ A background **Bridge Poller** (`modules/bridge_poller`) also polls these bridge
 
 ## 5. Database Tables (Complete Schema Reference)
 
-### 5.1 `wbom_employees` — Core Employee Registry
+### 5.1 `fazle_employees_legacy` — Core Employee Registry
 | Column | Type | Notes |
 |---|---|---|
 | `employee_id` | SERIAL PK | |
@@ -114,7 +118,7 @@ A background **Bridge Poller** (`modules/bridge_poller`) also polls these bridge
 | `created_at`, `updated_at` | TIMESTAMPTZ | |
 
 **How frontend uses it:**  
-The "Payroll" and "Transactions" dashboard tabs query this table to show employee names alongside salary runs and cash transactions. The identity brain (`modules/identity_brain`) looks up `employee_mobile` to classify inbound senders.
+The "Payroll" and "Transactions" dashboard tabs query this table to show employee names alongside salary runs and cash transactions. The identity brain (`modules/fazle_identity_brain`) looks up `employee_mobile` to classify inbound senders.
 
 ---
 
@@ -126,7 +130,7 @@ The "Payroll" and "Transactions" dashboard tabs query this table to show employe
 | `lighter_vessel` | VARCHAR(100) | Lighter vessel name |
 | `master_mobile` | VARCHAR(20) | Lighter master's phone |
 | `destination` | VARCHAR(100) | |
-| `escort_employee_id` | INT FK→wbom_employees | Assigned guard |
+| `escort_employee_id` | INT FK→fazle_employees_legacy | Assigned guard |
 | `escort_mobile` | VARCHAR(20) | Guard's mobile |
 | `program_date` | DATE | Start date |
 | `shift` | VARCHAR(1) | D (Day) or N (Night) |
@@ -139,7 +143,7 @@ The "Payroll" and "Transactions" dashboard tabs query this table to show employe
 | `capacity` | VARCHAR(20) | Vessel capacity (MT) |
 | `completion_time` | TIMESTAMPTZ | When duty ended |
 | `remarks` | TEXT | JSON blob: sender_phone, escort_name, etc. |
-| `contact_id` | INT FK→wbom_contacts | Client who placed the order |
+| `contact_id` | INT FK→fazle_contacts | Client who placed the order |
 
 ---
 
@@ -147,7 +151,7 @@ The "Payroll" and "Transactions" dashboard tabs query this table to show employe
 | Column | Type | Notes |
 |---|---|---|
 | `attendance_id` | SERIAL PK | |
-| `employee_id` | INT FK→wbom_employees | |
+| `employee_id` | INT FK→fazle_employees_legacy | |
 | `attendance_date` | DATE | |
 | `status` | VARCHAR(20) | Present / Absent / Leave / Half-day |
 | `location` | VARCHAR(100) | Site/vessel name |
@@ -160,11 +164,11 @@ The "Payroll" and "Transactions" dashboard tabs query this table to show employe
 
 ---
 
-### 5.4 `wbom_cash_transactions` — All Money Movements
+### 5.4 `fazle_cash_transactions_archive` — All Money Movements
 | Column | Type | Notes |
 |---|---|---|
 | `transaction_id` | SERIAL PK | |
-| `employee_id` | INT FK→wbom_employees | |
+| `employee_id` | INT FK→fazle_employees_legacy | |
 | `program_id` | INT FK→wbom_escort_programs | Optional link |
 | `transaction_type` | VARCHAR(20) | advance / escort_payment / Advance / Food / Conveyance / Salary / Deduction / Other |
 | `amount` | DECIMAL(10,2) | |
@@ -189,7 +193,7 @@ The "Payroll" and "Transactions" dashboard tabs query this table to show employe
 |---|---|---|
 | `id` | SERIAL PK | |
 | `draft_type` | TEXT | escort_payment / advance / salary |
-| `employee_id` | INT FK→wbom_employees | |
+| `employee_id` | INT FK→fazle_employees_legacy | |
 | `employee_name` | TEXT | |
 | `employee_mobile` | TEXT | |
 | `escort_program_id` | INT FK→wbom_escort_programs | |
@@ -244,8 +248,8 @@ The "Payroll" and "Transactions" dashboard tabs query this table to show employe
 | `wbom_salary_records` | Legacy monthly salary records |
 | `wbom_employee_requests` | Self-service advance/salary query requests |
 | `wbom_cases` | Incident/case tracking |
-| `wbom_contacts` | WhatsApp contact directory |
-| `wbom_whatsapp_messages` | Full message archive |
+| `fazle_contacts` | WhatsApp contact directory |
+| `fazle_whatsapp_messages` | Full message archive |
 | `wbom_staging_payments` | Imported payment staging area |
 
 ---
@@ -260,7 +264,7 @@ modules/
 ├── attendance_parser/    ← Supervisor bulk attendance from list format
 ├── backup/               ← Automated DB backup (Batch 18)
 ├── bridge_poller/        ← Background poll of bridge SQLite DBs
-├── contact_sync/         ← Sync contacts to wbom_contacts
+├── contact_sync/         ← Sync contacts to fazle_contacts
 ├── context_memory/       ← In-process 3-message rolling context window
 ├── csv_import/           ← Bulk employee/data import
 ├── draft_quality/        ← Draft quality scoring
@@ -277,7 +281,7 @@ modules/
 ├── knowledge_base/       ← KB lookup (fazle_knowledge_base)
 ├── media/                ← Media download & storage
 ├── media_normalization/  ← Normalize media messages to text
-├── message_archive/      ← Save all messages to wbom_whatsapp_messages
+├── message_archive/      ← Save all messages to fazle_whatsapp_messages
 ├── message_router/       ← MASTER ROUTER: dispatches all inbound messages
 ├── number_identity/      ← Phone number normalization
 ├── observability/        ← Prometheus-style metrics (Batch 22)
@@ -322,7 +326,7 @@ Technology: Single HTML file — pure vanilla JavaScript, no framework.
 | **Recruitment** | `/dashboard/recruitment` | Active recruitment sessions, funnel stages, scores |
 | **Payroll** | `/dashboard/payroll` | Monthly payroll runs by employee, status transitions |
 | **Escort Duty** | `/dashboard/escort` | wbom_escort_programs list: active/completed programs |
-| **Transactions** | `/dashboard/transactions` | wbom_cash_transactions: advances, payments, method breakdown |
+| **Transactions** | `/dashboard/transactions` | fazle_cash_transactions_archive: advances, payments, method breakdown |
 | **Attendance** | `/dashboard/attendance` | wbom_attendance log: present/absent by date/employee |
 | **Reports** | `/dashboard/reports` | On-demand: daily, payroll, cash, recon, escort reports |
 | **Users (B19)** | `/dashboard/users` | Admin user management (add/role/remove) |
@@ -341,9 +345,9 @@ GET  /health/deep              → Extended health with bridge connectivity
 GET  /drafts                   → fazle_draft_replies (pending)
 GET  /payment-drafts           → fazle_payment_drafts (pending)
 GET  /conversations            → Recent message threads
-GET  /employees                → wbom_employees list
+GET  /employees                → fazle_employees_legacy list
 GET  /escort-programs          → wbom_escort_programs
-GET  /transactions             → wbom_cash_transactions
+GET  /transactions             → fazle_cash_transactions_archive
 GET  /attendance               → wbom_attendance records
 GET  /payroll/runs             → wbom_payroll_runs
 GET  /reports/{name}           → Report by name (daily_summary, monthly_payroll…)
@@ -377,11 +381,11 @@ Priority order:
  9. unknown                → intent engine → KB → AI
 ```
 
-**Identity detection** (`modules/identity_brain`) resolves role in this priority:
+**Identity detection** (`modules/fazle_identity_brain`) resolves role in this priority:
 1. `settings` — admin numbers from env
 2. `fazle_contact_roles` seed rules (supervisor, accountant, vip_client, family…)
-3. `wbom_employees` — employee_mobile match
-4. `wbom_contacts` — contact directory match
+3. `fazle_employees_legacy` — employee_mobile match
+4. `fazle_contacts` — contact directory match
 5. Text keyword hint → `candidate`
 6. `unknown`
 
@@ -474,7 +478,7 @@ Loops from `program_date` to `end_date`, inserting one row per day. `recorded_by
 `create_escort_payment_draft()` calculates:
 - `daily_rate` = `basic_salary / 30`
 - `expected` = `duty_days × daily_rate`
-- `advances` = SUM from `wbom_cash_transactions` (type='advance', last 60 days)
+- `advances` = SUM from `fazle_cash_transactions_archive` (type='advance', last 60 days)
 - `net_payable` = `max(expected - advances, 0)`
 
 Formatted Bengali draft saved to `fazle_payment_drafts`:
@@ -501,9 +505,9 @@ Formatted Bengali draft saved to `fazle_payment_drafts`:
 
 **Formula:**
 ```
-basic_salary         = wbom_employees.basic_salary
+basic_salary         = fazle_employees_legacy.basic_salary
 program_allowance    = SUM(day_count × rate) for all Completed programs in period
-total_advances       = SUM(wbom_cash_transactions.amount) WHERE type='advance' AND date IN period
+total_advances       = SUM(fazle_cash_transactions_archive.amount) WHERE type='advance' AND date IN period
 gross_salary         = basic_salary + program_allowance + other_allowance
 net_salary           = max(gross_salary - total_advances - total_deductions, 0)
 ```
@@ -539,7 +543,7 @@ There are **three distinct pathways** that write to `wbom_attendance`:
 1. Guard sends a message containing keywords: `হাজির`, `উপস্থিত`, `present`, `on duty`, `check in`, `checked in`, etc.
 2. `modules/attendance/is_attendance_message()` returns `True`
 3. `handle_attendance_message()`:
-   - Looks up `wbom_employees` by `employee_mobile` (tries both `0X` and `880X` formats)
+   - Looks up `fazle_employees_legacy` by `employee_mobile` (tries both `0X` and `880X` formats)
    - Extracts status (Present/Absent) and optional location from message
    - Creates a draft in `fazle_draft_replies` (intent='attendance')
    - Sends draft text to admin for approval
@@ -588,7 +592,7 @@ Admin (WhatsApp — Bridge1/Bridge2)
 process_admin_command() → _cmd_paid()
       │
       ├─ finalize_payment()
-      │    ├─ INSERT wbom_cash_transactions
+      │    ├─ INSERT fazle_cash_transactions_archive
       │    │    (employee_id, amount, type, method, "Draft #N — approved by admin")
       │    ├─ UPDATE fazle_payment_drafts SET status='sent', accountant_msg=...
       │    └─ returns accountant_msg (formatted Bengali text)
@@ -609,7 +613,7 @@ Accountant (WhatsApp — typically Bridge1/Bridge2)
 - The accountant's phone is identified via `fazle_contact_roles` seed rule (role=`accountant`)
 - The accountant receives formatted payment instructions; they then physically execute the Bkash/Nagad/cash transfer
 - The `accountant_msg` is stored in `fazle_payment_drafts.accountant_msg` for audit
-- Every payment is recorded in `wbom_cash_transactions` **before** the accountant message is sent
+- Every payment is recorded in `fazle_cash_transactions_archive` **before** the accountant message is sent
 
 ### Accountant Inbound Messages
 When the accountant messages back, the router (`message_router`) identifies them as `accountant` role and routes to:
@@ -632,8 +636,8 @@ English: advance, cash advance, need money, loan…
 1. Message detected as `advance_request` intent
 2. `modules/employee_verification` may run to confirm employee identity
 3. `create_advance_request_draft()` assembles context:
-   - Fetches `wbom_employees` for name, mobile, bkash_number, basic_salary
-   - Queries `wbom_cash_transactions` for `paid_this_month` (SUM for current month)
+   - Fetches `fazle_employees_legacy` for name, mobile, bkash_number, basic_salary
+   - Queries `fazle_cash_transactions_archive` for `paid_this_month` (SUM for current month)
    - Queries `wbom_escort_programs` for `active_duties` count
 4. Draft saved to `fazle_payment_drafts` (type='advance'):
    ```
@@ -655,14 +659,14 @@ Admin sends: `ADVANCE <draft_id> <amount> bkash`
 
 `finalize_payment()` is called:
 - `txn_type = 'advance'`
-- `INSERT INTO wbom_cash_transactions` with `transaction_type='advance'`
+- `INSERT INTO fazle_cash_transactions_archive` with `transaction_type='advance'`
 - `UPDATE fazle_payment_drafts SET status='sent'`
 - Accountant notification sent
 
 ### How Advances Affect Salary
 In `payroll.compute_run()`:
 ```python
-advances = SUM(wbom_cash_transactions.amount)
+advances = SUM(fazle_cash_transactions_archive.amount)
            WHERE employee_id=$1 AND transaction_type='advance'
            AND transaction_date BETWEEN period_start AND period_end
 
@@ -676,12 +680,12 @@ An `advance` component line item is also inserted into `wbom_payroll_run_items` 
 
 ### Transactions Tab
 - API: `GET /transactions?page=1&limit=50&employee_id=X&date_from=...`
-- DB query: `SELECT * FROM wbom_cash_transactions LEFT JOIN wbom_employees ...`
+- DB query: `SELECT * FROM fazle_cash_transactions_archive LEFT JOIN fazle_employees_legacy ...`
 - Shows: transaction_date, employee_name, transaction_type, amount, payment_method, status, remarks
 
 ### Employees Tab
 - API: `GET /employees`
-- DB query: `SELECT * FROM wbom_employees ORDER BY employee_name`
+- DB query: `SELECT * FROM fazle_employees_legacy ORDER BY employee_name`
 - Shows: ID, name, designation, mobile, bkash_number, basic_salary, status
 
 ### Draft Approval Actions
@@ -721,11 +725,11 @@ Admin commands for after-the-fact corrections:
 
 ```
 REVERSE <draft_id> <reason>
-→ Inserts a negative wbom_cash_transactions row (is_reversal=True, reversal_of=original_id)
+→ Inserts a negative fazle_cash_transactions_archive row (is_reversal=True, reversal_of=original_id)
 → Updates original draft status to 'reversed'
 
 ADJUST <draft_id> <new_amount> <method> [reason]
-→ REVERSE the original + create a new corrected wbom_cash_transactions row
+→ REVERSE the original + create a new corrected fazle_cash_transactions_archive row
 → Updates draft with new approved_amount
 ```
 
@@ -761,14 +765,14 @@ app/main.py (dedup → save_message → _process_message)
 modules/message_router/process_message()
     │
     ├─ detect_identity()
-    │    └─ fazle_contact_roles → wbom_employees → wbom_contacts → text_hint
+    │    └─ fazle_contact_roles → fazle_employees_legacy → fazle_contacts → text_hint
     │
     ├─ [escort_client] → modules/escort → wbom_escort_programs (draft)
     │                                   → fazle_draft_replies (admin notif)
     │
-    ├─ [admin]         → modules/admin_commands → 
+    ├─ [admin]         → modules/fazle_admin_commands → 
     │                    APPROVE → fazle_draft_replies(sent) → delivery
-    │                    PAID/ADVANCE → wbom_cash_transactions
+    │                    PAID/ADVANCE → fazle_cash_transactions_archive
     │                                 → fazle_payment_drafts(sent)
     │                                 → accountant notification
     │                    RELEASE → wbom_escort_programs(Completed)

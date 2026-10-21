@@ -11,8 +11,8 @@ from datetime import datetime, timezone
 from app.config import get_settings
 from app.critical_numbers import CRITICAL_NUMBERS, normalize_phone_880
 from app.database import close_db, fetch_all, fetch_one, get_pool, init_db
-from modules.identity_brain import detect_identity
-from modules.message_archive import init_tables as init_archive_tables, save_message
+from modules.fazle_identity_brain import detect_identity
+from modules.fazle_message_archive import init_tables as init_archive_tables, save_message
 from modules.number_identity import canonical_phone, format_critical_log_line, phone_last10
 
 
@@ -165,7 +165,7 @@ async def _fetch_db_messages(numbers: list[str], since: datetime | None, until: 
                COALESCE(source_timestamp, received_at) AS event_ts,
                source_context, critical_contact, identity_role, critical_log_path,
                original_sender_number, platform
-        FROM wbom_whatsapp_messages
+        FROM fazle_whatsapp_messages
         WHERE phone_last10 = ANY($1::text[])
            OR right(regexp_replace(COALESCE(canonical_phone, ''), '\\D', '', 'g'), 10) = ANY($1::text[])
            OR right(regexp_replace(COALESCE(sender_number, ''), '\\D', '', 'g'), 10) = ANY($1::text[])
@@ -196,7 +196,7 @@ async def _normalize_existing_message_rows(conn, numbers: list[str]) -> None:
     rows = await conn.fetch(
         """
         SELECT message_id, sender_number, contact_identifier, canonical_phone, critical_log_path
-        FROM wbom_whatsapp_messages
+        FROM fazle_whatsapp_messages
         WHERE phone_last10 = ANY($1::text[])
            OR right(regexp_replace(COALESCE(canonical_phone, ''), '\\D', '', 'g'), 10) = ANY($1::text[])
            OR right(regexp_replace(COALESCE(sender_number, ''), '\\D', '', 'g'), 10) = ANY($1::text[])
@@ -221,7 +221,7 @@ async def _normalize_existing_message_rows(conn, numbers: list[str]) -> None:
                 shutil.move(log_path, canonical_log_path)
         await conn.execute(
             """
-            UPDATE wbom_whatsapp_messages
+            UPDATE fazle_whatsapp_messages
             SET canonical_phone = $2,
                 phone_last10 = $3,
                 critical_contact = true,
@@ -241,7 +241,7 @@ async def _unify_critical_contacts(conn, numbers: list[str]) -> dict[str, str]:
         rows = await conn.fetch(
             """
             SELECT display_name, updated_at
-            FROM wbom_contacts
+            FROM fazle_contacts
             WHERE regexp_replace(COALESCE(whatsapp_number, ''), '\\D', '', 'g') = $1
             ORDER BY updated_at DESC NULLS LAST, display_name DESC
             """,
@@ -276,7 +276,7 @@ async def _unify_critical_contacts(conn, numbers: list[str]) -> dict[str, str]:
             )
             await conn.execute(
                 """
-                INSERT INTO wbom_contacts (whatsapp_number, display_name, platform, last_seen, updated_at)
+                INSERT INTO fazle_contacts (whatsapp_number, display_name, platform, last_seen, updated_at)
                 VALUES ($1, $2, 'whatsapp', NOW(), NOW())
                 ON CONFLICT (whatsapp_number, platform) DO UPDATE
                     SET display_name = EXCLUDED.display_name,
@@ -317,7 +317,7 @@ async def _sync_transcript_file(conn, number: str) -> tuple[str, int]:
                COALESCE(identity_role, '') AS identity_role,
                COALESCE(original_sender_number, sender_number, '') AS original_sender_number,
                message_id
-        FROM wbom_whatsapp_messages
+        FROM fazle_whatsapp_messages
         WHERE canonical_phone = $1
         ORDER BY COALESCE(source_timestamp, received_at) ASC, message_id ASC
         """,
@@ -344,7 +344,7 @@ async def _sync_transcript_file(conn, number: str) -> tuple[str, int]:
             existing.add(line)
             appended += 1
     await conn.execute(
-        "UPDATE wbom_whatsapp_messages SET critical_log_path = $2 WHERE canonical_phone = $1",
+        "UPDATE fazle_whatsapp_messages SET critical_log_path = $2 WHERE canonical_phone = $1",
         number,
         path,
     )

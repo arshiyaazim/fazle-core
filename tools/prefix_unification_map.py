@@ -82,6 +82,36 @@ IMPORT_PATH_MAP: dict[str, str] = {
     "modules.payment_ingest.fpe_bridge": "modules.fazle_payment_ingest.fpe_bridge",
 }
 
+# Slash-form module path references (docs, comments, markdown).
+MODULE_PATH_MAP: dict[str, str] = {
+    "modules/payment_ingest/wbom_fpe_sync.py": "modules/fazle_data_sync/__init__.py",
+    "modules/payment_ingest/wbom_fpe_sync": "modules/fazle_data_sync",
+    "modules/payment_ingest/fpe_bridge.py": "modules/fazle_payment_ingest/fpe_bridge.py",
+    "modules/payment_ingest": "modules/fazle_payment_ingest",
+    "modules/payment_workflow": "modules/fazle_payment_workflow",
+    "modules/bridge_poller": "modules/fazle_bridge_poller",
+    "modules/message_archive": "modules/fazle_message_archive",
+    "modules/media_normalization": "modules/fazle_media_normalization",
+    "modules/identity_resolver.py": "modules/fazle_identity_resolver.py",
+    "modules/identity_resolver": "modules/fazle_identity_resolver",
+    "modules/identity_brain": "modules/fazle_identity_brain",
+    "modules/identity_brain/claim_verification.py": "modules/fazle_identity_brain/claim_verification.py",
+    "modules/admin_commands": "modules/fazle_admin_commands",
+    "modules/admin_commands/date_parser.py": "modules/fazle_admin_commands/date_parser.py",
+    "modules/admin_commands/nl_advance_record.py": "modules/fazle_admin_commands/nl_advance_record.py",
+    "modules/admin_commands/nl_employee_stats.py": "modules/fazle_admin_commands/nl_employee_stats.py",
+    "modules/admin_commands/nl_outbound.py": "modules/fazle_admin_commands/nl_outbound.py",
+    "modules/admin_commands/nl_payments.py": "modules/fazle_admin_commands/nl_payments.py",
+    "modules/admin_commands/nl_router.py": "modules/fazle_admin_commands/nl_router.py",
+    "modules/admin_commands/nl_search.py": "modules/fazle_admin_commands/nl_search.py",
+    "modules/draft_approval": "modules/fazle_draft_approval",
+    "modules/draft_approval/routes.py": "modules/fazle_draft_approval/routes.py",
+    "modules/group_identity.py": "modules/fazle_group_identity.py",
+    "modules/group_identity": "modules/fazle_group_identity",
+    "modules/intent": "modules/fazle_intent",
+    "modules/image_hash": "modules/fazle_image_hash",
+}
+
 # ── Column names that legitimately keep the legacy prefix ───────────────────
 # HARD CONSTRAINT #4 forbids changing column names.  These are columns on
 # the renamed tables and MUST NOT be rewritten.

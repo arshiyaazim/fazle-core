@@ -4,7 +4,7 @@ Persistent Task/Execution State + diff-level Action Approval — API routes
 pass and the BUILD/RUN/business-action capability audit).
 
 Deliberately dumb pass-throughs over modules.hermes_tasks — no business
-logic here, matching the exact discipline modules/draft_approval/routes.py
+logic here, matching the exact discipline modules/fazle_draft_approval/routes.py
 already established for the structurally identical propose->approve
 pattern. RBAC: task_read (viewer), task_write (operator, planning
 bookkeeping), task_approve (superadmin, the one command that actually
@@ -26,7 +26,7 @@ log = logging.getLogger("fazle.hermes_tasks.routes")
 router = APIRouter(tags=["hermes-tasks"])
 
 # Local copy of the API-key dependency + require_command reimplementation,
-# same circular-import-avoidance convention as modules/draft_approval/routes.py.
+# same circular-import-avoidance convention as modules/fazle_draft_approval/routes.py.
 _API_KEY_HEADER = APIKeyHeader(name="X-Internal-Key", auto_error=False)
 
 
@@ -46,7 +46,7 @@ def _require_command(command: str):
 
 async def _resolve_admin_identity(key: str) -> str:
     """Server-resolved actor identity from the API key only -- never a
-    client-supplied body field. Mirrors modules/draft_approval/routes.py's
+    client-supplied body field. Mirrors modules/fazle_draft_approval/routes.py's
     own _resolve_admin_identity() exactly."""
     settings = get_settings()
     if key and key == settings.internal_api_key:

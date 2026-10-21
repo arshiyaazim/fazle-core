@@ -19,17 +19,17 @@ runtime_index: true
 
 ## Employee Identity Unification (2026-07-02)
 
-`fpe_employees` is now the **single canonical employee table** for the entire
+`fazle_employees` is now the **single canonical employee table** for the entire
 platform. It carries both identity fields (phone, name) and HR profile fields
 (`basic_salary`, `designation`, `joining_date` — added by migration 011).
 
-All employee creation paths now create or link `fpe_employees` rows:
-- WhatsApp payment parser → `match_or_create_employee()` → `fpe_employees`
-- Escort program confirmation → `_ensure_fpe_employee_link()` → `fpe_employees`
-- Frontend Add Employee → `_seed_fpe()` → `fpe_employees` with `wbom_employee_id`
-- Frontend roster create → `_resolve_escort_employee_id()` → `fpe_employees`
+All employee creation paths now create or link `fazle_employees` rows:
+- WhatsApp payment parser → `match_or_create_employee()` → `fazle_employees`
+- Escort program confirmation → `_ensure_fpe_employee_link()` → `fazle_employees`
+- Frontend Add Employee → `_seed_fpe()` → `fazle_employees` with `wbom_employee_id`
+- Frontend roster create → `_resolve_escort_employee_id()` → `fazle_employees`
 
-Cross-reference with `wbom_employees` is maintained via `wbom_employee_id`
+Cross-reference with `fazle_employees_legacy` is maintained via `wbom_employee_id`
 soft-link. Migration 011 backfilled all 178 WBOM employees into FPE.
 
 See: `database_rules.md` Domain 4 (CASH/FPE) for full table schema.
@@ -53,7 +53,7 @@ in `01XXXXXXXXX` (11-digit) format. Cross-domain lookups (FPE ↔ WBOM/RBAC) use
 | Worker names, count, intervals | Developer | No — developer only |
 | Transaction amounts or ledger entries | Restricted | Never |
 | Employee payment history | Restricted | Never |
-| `fpe_employees` or `fpe_cash_transactions` table existence | Developer | Never expose table names |
+| `fazle_employees` or `fazle_cash_transactions` table existence | Developer | Never expose table names |
 | API routes (`/api/fpe/...`) | Developer | Never expose to candidates/employees |
 | Zero-loss unmatched queue | Admin | Summarize count to admin; no details |
 | FPE vs core payroll distinction | Developer | Never |
@@ -112,9 +112,9 @@ Bridge webhooks ────────────> POST /api/fpe/ingest
                         accounting_worker
                          ├── validate_for_accounting()
                          ├── match_or_create_employee()
-                         └── create_transaction() → fpe_cash_transactions (immutable)
+                         └── create_transaction() → fazle_cash_transactions (immutable)
                                 ↓
-                        fpe_employee_ledger (running totals per employee per month)
+                        fazle_employee_ledger (running totals per employee per month)
 ```
 
 ---
@@ -178,12 +178,12 @@ Bridge webhooks ────────────> POST /api/fpe/ingest
 |---|---|
 | `payment` | Requires admin/accountant final-instruction context or manual promotion. Calls `match_or_create_employee()`. Creates transaction only after final instruction/review is satisfied. |
 | `escort_payment` | Parses multi-employee list (NAME=AMOUNT/ per line). Creates one `fazle_payment_drafts` row per entry. Links to escort program if duty_date matches. |
-| `cash_command` | Employee MUST already exist in `fpe_employees` (no auto-create). If not found: sends WhatsApp error reply to the source chat JID. Creates salary transaction. |
+| `cash_command` | Employee MUST already exist in `fazle_employees` (no auto-create). If not found: sends WhatsApp error reply to the source chat JID. Creates salary transaction. |
 | `income_command` | Auto-creates employee if not found. Creates income transaction via `create_income_transaction()`. |
 
 **Zero-loss invariant:** If money is detected but cannot be matched to an employee, the detected data (amount, phone, name, method, date, confidence) is stored in `fpe_unmatched_messages`. The ledger is NEVER touched. An admin must promote the unmatched row to a verified transaction.
 
-**No auto-finalize from employee request:** Generic bKash/Nagad SMS, employee requests, voice+number requests, or ambiguous money text stay in staging/review/draft. They do not directly write `fpe_cash_transactions` or `wbom_cash_transactions`.
+**No auto-finalize from employee request:** Generic bKash/Nagad SMS, employee requests, voice+number requests, or ambiguous money text stay in staging/review/draft. They do not directly write `fazle_cash_transactions` or `fazle_cash_transactions_archive`.
 
 **Prometheus gauges updated on each tick:**
 - `fpe_pending_review_count` — rows in `fpe_unmatched_messages` with `review_status='pending'`
@@ -304,7 +304,7 @@ Each status change also increments `attempts`.
 
 ## Employee Identity in FPE
 
-FPE maintains its own employee table (`fpe_employees`) that is **separate from the main `wbom_employees` table**.
+FPE maintains its own employee table (`fazle_employees`) that is **separate from the main `fazle_employees_legacy` table**.
 
 **Why separate:** FPE reconstructs employee identity from historical WhatsApp message text, not from the HR system. Employee records are auto-created from parsed payment messages and merged over time.
 
@@ -334,10 +334,10 @@ All FPE tables use the `fpe_*` prefix. They are managed exclusively by FPE migra
 | `fpe_wa_messages` | Immutable raw WhatsApp message archive | No (immutable) |
 | `fpe_message_processing_state` | Per-message processing FSM | Yes (status updates) |
 | `fpe_parser_results` | Parser output per message | No (write-once) |
-| `fpe_employees` | FPE employee directory | Yes (name, phone, merge) |
+| `fazle_employees` | FPE employee directory | Yes (name, phone, merge) |
 | `fpe_employee_aliases` | Multi-phone/name per employee | Yes (additive only) |
-| `fpe_cash_transactions` | Verified transaction ledger | No (immutable; reversal creates new row) |
-| `fpe_employee_ledger` | Running totals per employee per month (11 columns — see schema below) | Yes (updated per transaction) |
+| `fazle_cash_transactions` | Verified transaction ledger | No (immutable; reversal creates new row) |
+| `fazle_employee_ledger` | Running totals per employee per month (11 columns — see schema below) | Yes (updated per transaction) |
 | `fpe_unmatched_messages` | Parse failures / review queue | Yes (review_status updates) |
 | `fpe_accounting_audit_logs` | Immutable accounting audit trail | No |
 | `fpe_sync_checkpoints` | Historical sync progress per bridge+JID | Yes |
@@ -348,7 +348,7 @@ All FPE tables use the `fpe_*` prefix. They are managed exclusively by FPE migra
 | `fazle_bridge_heartbeats` | Per-bridge liveness heartbeats | Yes |
 | `fazle_message_queue` | Central inbound message queue | Yes |
 
-### `fpe_employee_ledger` — Column Schema (Wave-4)
+### `fazle_employee_ledger` — Column Schema (Wave-4)
 
 **Source:** `modules/fazle_payroll_engine/migrations/001_fpe_schema.sql`
 **UNIQUE constraint:** `(employee_id, accounting_period)` — one row per employee per month
@@ -356,7 +356,7 @@ All FPE tables use the `fpe_*` prefix. They are managed exclusively by FPE migra
 | Column | Type | Nullable | Default | Notes |
 |---|---|---|---|---|
 | `id` | BIGSERIAL | NOT NULL | auto | PK |
-| `employee_id` | BIGINT | NOT NULL | — | FK → `fpe_employees(id)` |
+| `employee_id` | BIGINT | NOT NULL | — | FK → `fazle_employees(id)` |
 | `accounting_period` | TEXT | NOT NULL | — | `YYYY-MM` format |
 | `opening_balance` | NUMERIC(12,2) | NOT NULL | 0 | Carry-forward from prior period |
 | `total_earned` | NUMERIC(12,2) | NOT NULL | 0 | Sum of all earned amounts in period |
@@ -378,22 +378,22 @@ All FPE tables use the `fpe_*` prefix. They are managed exclusively by FPE migra
 | Column | Type | Nullable | Default | Notes |
 |---|---|---|---|---|
 | `id` | BIGSERIAL | NOT NULL | auto | PK |
-| `transaction_id` | BIGINT | NOT NULL | — | FK → `fpe_cash_transactions.id` (original txn) |
+| `transaction_id` | BIGINT | NOT NULL | — | FK → `fazle_cash_transactions.id` (original txn) |
 | `old_employee_id` | BIGINT | — | NULL | Employee the txn was incorrectly attributed to |
 | `new_employee_id` | BIGINT | — | NULL | Correct employee after repair |
 | `old_employee_name` | TEXT | — | NULL | Snapshot of old name at repair time |
 | `new_employee_name` | TEXT | — | NULL | Snapshot of new name at repair time |
 | `repair_reason` | TEXT | — | NULL | Human-readable reason for re-attribution |
 | `match_method` | TEXT | — | NULL | How the correct employee was found (phone / name / alias / manual) |
-| `reversal_txn_id` | BIGINT | — | NULL | FK → `fpe_cash_transactions.id` (counter-transaction created) |
-| `new_txn_id` | BIGINT | — | NULL | FK → `fpe_cash_transactions.id` (new corrected transaction) |
+| `reversal_txn_id` | BIGINT | — | NULL | FK → `fazle_cash_transactions.id` (counter-transaction created) |
+| `new_txn_id` | BIGINT | — | NULL | FK → `fazle_cash_transactions.id` (new corrected transaction) |
 | `review_needed` | BOOLEAN | NOT NULL | `false` | Flag for cases that need additional human review |
 | `review_note` | TEXT | — | NULL | Note for reviewer |
 | `dry_run` | BOOLEAN | NOT NULL | `false` | If true, repair was simulated only (no DB changes) |
 | `repaired_at` | TIMESTAMPTZ | NOT NULL | NOW() | When repair was executed |
 | `repaired_by` | TEXT | NOT NULL | `'repair_tool'` | Actor (repair tool name or admin phone) |
 
-**Relationship to ledger:** A repair creates a reversal transaction (`reversal_txn_id`) on the old employee's account and a new transaction (`new_txn_id`) on the correct employee's account. The `fpe_employee_ledger` is re-computed by the accounting worker after these transactions are inserted. The repair row itself is append-only — never modified after creation.
+**Relationship to ledger:** A repair creates a reversal transaction (`reversal_txn_id`) on the old employee's account and a new transaction (`new_txn_id`) on the correct employee's account. The `fazle_employee_ledger` is re-computed by the accounting worker after these transactions are inserted. The repair row itself is append-only — never modified after creation.
 
 ---
 
@@ -455,10 +455,10 @@ All routes are under `/api/fpe/`. Authentication: `X-Internal-Key` header (same 
 
 - All FPE API routes require `X-Internal-Key` header (same as main app)
 - `cash_command` and `income_command` require sender phone to be in admin-controlled environment lists (`fpe_cash_authorized_phone_list`, `fpe_income_authorized_phone_list`)
-- `fpe_cash_transactions` is immutable — no route allows UPDATE or DELETE on transaction rows
+- `fazle_cash_transactions` is immutable — no route allows UPDATE or DELETE on transaction rows
 - Reversals create a NEW transaction row (`is_reversal=True`, `reversed_txn_id` FK) — original row preserved
 - All admin actions (promote, dismiss) are recorded in `fpe_review_audit_logs` with actor, before_state, after_state
-- `fpe_employees` are never hard-deleted — only `status='inactive'` via `/normalization/employees/{id}/inactivate`
+- `fazle_employees` are never hard-deleted — only `status='inactive'` via `/normalization/employees/{id}/inactivate`
 
 ---
 
@@ -467,7 +467,7 @@ All routes are under `/api/fpe/`. Authentication: `X-Internal-Key` header (same 
 | | FPE (`fpe_*` tables) | Core Payroll (`wbom_payroll_runs`) |
 |---|---|---|
 | What it records | Individual transactions parsed from WhatsApp messages | Monthly payroll computation runs |
-| Employee source | `fpe_employees` (FPE-specific) | `wbom_employees` (main HR table) |
+| Employee source | `fazle_employees` (FPE-specific) | `fazle_employees_legacy` (main HR table) |
 | State machine | pending→parsing→parsed→accounting→done | draft→reviewed→approved→locked→paid |
 | Who triggers | WhatsApp message (automated) | Admin PAYROLL command or daily_payroll_compute job |
 | Modification | Immutable — reversals only | Cancellable until paid |
@@ -494,7 +494,7 @@ All routes are under `/api/fpe/`. Authentication: `X-Internal-Key` header (same 
 
 | # | Question | Impact |
 |---|---|---|
-| 1 | Is `fpe_employees` synchronized with `wbom_employees` in any direction? | Determines whether FPE and core payroll share an employee record |
+| 1 | Is `fazle_employees` synchronized with `fazle_employees_legacy` in any direction? | Determines whether FPE and core payroll share an employee record |
 | 2 | What triggers the `/api/fpe/ingest` endpoint — bridge poller, separate webhook, or both? | Understanding of ingestion flow completeness |
 | 3 | What is `fpe_income_authorized_phone_list` populated with? | Authorization boundary for income commands |
 | 4 | Does `escort_payment` processing via `fazle_payment_drafts` require a matching escort program, or does it create an orphan draft? | Escorts with no matching program ID get `escort_program_id=NULL` |
@@ -520,7 +520,7 @@ All routes are under `/api/fpe/`. Authentication: `X-Internal-Key` header (same 
 | API routes | `routes.py` | Router docstring + route decorators |
 | FPE tables | `migrations/001_fpe_schema.sql` | All `CREATE TABLE IF NOT EXISTS` statements |
 | Escort payment drafts table | `workers.py` | `_handle_escort_payment()` |
-| Immutable transaction rule | `routes.py` | Comment: "STRICTLY FORBIDDEN: Mutating fpe_cash_transactions" |
+| Immutable transaction rule | `routes.py` | Comment: "STRICTLY FORBIDDEN: Mutating fazle_cash_transactions" |
 
 ---
 
@@ -540,13 +540,13 @@ The following clarifications result from the Entity Ownership Audit completed 20
 PKMA Report 17 listed 43 tables as undocumented. The Entity Ownership Audit found 21 tables in the CASH/FPE domain specifically (including 17 `fpe_*` prefix tables and 4 shared tables). Total platform tables = 84.
 
 **FPE ↔ HR master soft-link (migration 008):**
-`fpe_employees.wbom_employee_id` is a nullable column added by FPE migration 008. It is populated via phone last-10 normalization backfill on service restart. This is NOT an enforced FK — FPE can run without any wbom_employees rows. The link is informational for reconciliation purposes.
+`fazle_employees.wbom_employee_id` is a nullable column added by FPE migration 008. It is populated via phone last-10 normalization backfill on service restart. This is NOT an enforced FK — FPE can run without any fazle_employees_legacy rows. The link is informational for reconciliation purposes.
 
 **Unresolved Questions — Updated Status:**
 
 | # | Question | Status (Wave-2B) |
 |---|---|---|
-| 1 | Is `fpe_employees` synchronized with `wbom_employees`? | Partially resolved: soft-link via `wbom_employee_id` (migration 008). One-way: FPE reads wbom for phone matching. No reverse sync confirmed. |
+| 1 | Is `fazle_employees` synchronized with `fazle_employees_legacy`? | Partially resolved: soft-link via `wbom_employee_id` (migration 008). One-way: FPE reads wbom for phone matching. No reverse sync confirmed. |
 | 2 | What triggers `/api/fpe/ingest`? | Unresolved — bridge poller or separate webhook not confirmed from KB |
 | 3 | `fpe_income_authorized_phone_list` format? | Unresolved — comma-separated env list inferred but not verified |
 | 4 | Orphan escort payment draft (no matching program)? | Confirmed: `escort_program_id=NULL` — creates orphan draft; admin must link manually |

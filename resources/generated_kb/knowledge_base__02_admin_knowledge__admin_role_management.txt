@@ -63,7 +63,7 @@ USER REMOVE 01799999999
 USER APIKEY 01711234567
 ```
 
-**Source Module:** `modules/admin_commands`, `modules/rbac`
+**Source Module:** `modules/fazle_admin_commands`, `modules/rbac`
 **PKCA Report:** 12_command_coverage_report.md
 **Management Authority:** Production evidence; documented 2026-06-22
 

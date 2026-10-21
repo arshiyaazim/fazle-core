@@ -85,7 +85,7 @@ the conversational `_recruit_gate` block).
 
 | File | Change |
 |---|---|
-| `modules/bridge_poller/__init__.py` | F6 gate `bridge_name == "bridge3"` → `bridge_name in ("bridge1", "bridge2", "bridge3")` (Meta excluded). **One line + comment.** No other logic touched. |
+| `modules/fazle_bridge_poller/__init__.py` | F6 gate `bridge_name == "bridge3"` → `bridge_name in ("bridge1", "bridge2", "bridge3")` (Meta excluded). **One line + comment.** No other logic touched. |
 | `tests/unit/test_bridge1_bridge2_conversation_continuity.py` | new — F6-covers-3-bridges, same-source affinity (no hard-coded bridge, no fan-out), Bridge3 held with globals true, enqueue still refuses Bridge3 |
 | `tests/unit/test_bridge_poller_history_sync_quarantine.py` | structural F6 assertion updated for the 3-bridge tuple |
 
@@ -145,7 +145,7 @@ existing fail-closed quarantine is authoritative.
 ## 9. Payment / FPE freeze confirmation
 
 **Untouched.** No file under `modules/payment_relay*`, `modules/fpe_payroll_engine`, or the
-`owner-accountant-payment-relay` path is in this diff. `fpe_cash_transactions` remains the
+`owner-accountant-payment-relay` path is in this diff. `fazle_cash_transactions` remains the
 sole canonical ledger; exact payment-format text still relays per the established
 Bridge1/Bridge2 authority; successful owner/admin→accountant delivery remains the
 authoritative completion event; no LLM interpretation enters that path; inactive-employee
@@ -203,7 +203,7 @@ number (so it resolves as unknown/candidate), unless the test says otherwise.
 
 **Do not** include a Payment/FPE relay as a live test just for verification. **Do not** send
 any Meta/Messenger/Instagram message. After each test, the agent verifies read-only (queue,
-`wbom_whatsapp_messages`, `fazle_recruitment_sessions`, `fazle_payment_drafts`, logs) that
+`fazle_whatsapp_messages`, `fazle_recruitment_sessions`, `fazle_payment_drafts`, logs) that
 the "expected" happened and the "must not" did not.
 
 ## 13. Deployment / restart evidence
@@ -233,7 +233,7 @@ Runtime settings via `PATCH /api/wa/settings` (live, no restart):
   `outbound_allowed=true`, `pairing_state=null`.
 - recovery sweep `effective_enabled=false`; `phone_block.447710173736=true`; bridge3 poller
   cursor `2026-09-01 21:12:23Z` unchanged.
-- 0 Bridge3 rows in `fazle_outbound_queue` / `wbom_whatsapp_messages` since the deploy
+- 0 Bridge3 rows in `fazle_outbound_queue` / `fazle_whatsapp_messages` since the deploy
   window; the only 2 queue rows in the window are routine `draft-only-contact-review`
   admin notifications on Bridge1. No `customer-reply` on any bridge since the toggles were
   applied (no organic traffic; ad still restricted).

@@ -1156,7 +1156,7 @@ class ReadonlyBusinessAdapter(BusinessAdapter):
 
     async def _payroll_page_summary(self, entry, payload: dict[str, Any]) -> ToolResultEnvelope:
         """Reads the same source payroll.html's Overview tab uses
-        (fpe_cash_transactions via modules.fazle_payroll_engine.routes),
+        (fazle_cash_transactions via modules.fazle_payroll_engine.routes),
         not the empty/draft-only wbom_payroll_runs view BUS-003 reads.
         Both imported functions are plain async functions with no
         Request/Depends usage in their bodies -- safe to call directly,
@@ -1185,7 +1185,7 @@ class ReadonlyBusinessAdapter(BusinessAdapter):
         date_from = date_to = None
         if not period:
             from datetime import timedelta as _timedelta
-            from modules.admin_commands.date_parser import parse_date_range
+            from modules.fazle_admin_commands.date_parser import parse_date_range
             # default_days=None: only act on a genuinely recognized date
             # phrase (আজ/গতকাল/this week/etc.) -- a question with no date
             # signal at all (e.g. "payroll status") must keep returning
@@ -1228,7 +1228,7 @@ class ReadonlyBusinessAdapter(BusinessAdapter):
             return _envelope(
                 entry=entry,
                 status="failed",
-                data={"period": period or "all", "source": "fpe_cash_transactions"},
+                data={"period": period or "all", "source": "fazle_cash_transactions"},
                 source="modules.fazle_payroll_engine.routes",
                 errors=[_safe_error(exc)],
                 confidence="Unknown",
@@ -1241,7 +1241,7 @@ class ReadonlyBusinessAdapter(BusinessAdapter):
                 "total_transactions": health_result.get("total_transactions", 0),
                 "period": period or "all",
                 "rows": rows,
-                "source": "fpe_cash_transactions",
+                "source": "fazle_cash_transactions",
             },
             source="modules.fazle_payroll_engine.routes",
         )

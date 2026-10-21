@@ -1,5 +1,8 @@
 # BRIDGE3 NEW-NUMBER RECOVERY — INITIAL CHECKPOINT
 
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **Status:** `READ-ONLY VERIFICATION COMPLETE — PRESERVATION + SAFETY HOLD IN PROGRESS — AWAITING OWNER PAIRING`
 **Session:** owner-authorized operational recovery, 2026-09-01
 **Author:** Claude (VS Code agent)
@@ -56,12 +59,12 @@ files are frozen at 2026-08-31 14:31 (no writes since).
 | bridge in-house log | `/home/azim/whatsapp3/store/messages.db` | 1,564,672 bytes, **4,196 messages**, 2026-05-25 → 2026-08-31 14:31:04 |
 | per-chat media dirs | `/home/azim/whatsapp3/store/*@lid/…` | 29 subdirectories |
 | pre-existing old backup | `/home/azim/whatsapp3/store-backup-20260726/` | left untouched |
-| central Postgres (canonical) | `wbom_whatsapp_messages WHERE platform='bridge3'` | **5,820 rows** (3,472 inbound + 2,348 outbound), 2026-05-18 → 2026-08-31 12:39:32 |
+| central Postgres (canonical) | `fazle_whatsapp_messages WHERE platform='bridge3'` | **5,820 rows** (3,472 inbound + 2,348 outbound), 2026-05-18 → 2026-08-31 12:39:32 |
 | dedup ledger | `processed_bridge_messages WHERE bridge='bridge3'` | 3,374 rows, max 2026-08-31 12:31:12 |
 | poller cursor | `bridge_poller_cursor WHERE bridge='bridge3'` | `last_ts = 2026-08-31 12:31:04+00` |
 | recruitment | `wbom_candidates` | 545 total (165 in last 7 d) — not platform-scoped, but recruitment intake is Bridge3-fed |
 
-Provenance is stored per row in `wbom_whatsapp_messages.platform = 'bridge3'` (there is no
+Provenance is stored per row in `fazle_whatsapp_messages.platform = 'bridge3'` (there is no
 `source_bridge` column on that table — the bridge id lives in `platform`). Historical rows
 are therefore already attributable to "the Bridge3 channel". See §4 for the new-number
 identity design.
@@ -150,7 +153,7 @@ is the **external sender's normalized phone** (`8801XXXXXXXXX`), never the bridg
 number — so a change of the Bridge3 account number does not create or mutate any
 employee / applicant / contact record, and does not reattribute any historical message.
 
-- No schema change is required: `wbom_whatsapp_messages.platform` already distinguishes
+- No schema change is required: `fazle_whatsapp_messages.platform` already distinguishes
   the channel; the *account* number is not stored per-row and does not need to be for
   routing.
 - Optional, additive-only (decide with owner, not required for pairing): record the

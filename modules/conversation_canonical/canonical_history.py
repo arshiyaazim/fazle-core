@@ -1,7 +1,7 @@
 """Canonical history view (Phase C).
 
 Per Owner directive correction 5: this is an interpretation/read layer
-over the existing wbom_whatsapp_messages rows. It does NOT create a
+over the existing fazle_whatsapp_messages rows. It does NOT create a
 parallel conversation database. It reads the rows, labels each with
 actor_type + provenance_confidence, and returns the ordered view.
 
@@ -75,7 +75,7 @@ async def build_canonical_history(
             workflow_triggered,
             conversation_key,
             metadata_json
-        FROM wbom_whatsapp_messages
+        FROM fazle_whatsapp_messages
         WHERE sender_number = %s
           AND direction IN ('inbound', 'outbound')
         ORDER BY received_at DESC

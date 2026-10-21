@@ -9,7 +9,7 @@
 -- IS the authoritative source Stage D1 asked us to look for first. This
 -- migration adds the smallest canonical structure to mirror that bridge-
 -- provided metadata into Postgres via an explicit sync (see
--- modules/group_identity.py) -- it does NOT replace the bridge's own store
+-- modules/fazle_group_identity.py) -- it does NOT replace the bridge's own store
 -- as the source of truth, and does NOT hand-write any JID.
 --
 -- display_name vs business_label (kept deliberately separate, per Stage D1
@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS wbom_group_identities (
 
 COMMENT ON TABLE wbom_group_identities IS
     'Stage D1: mirror of each WhatsApp bridge''s own authoritative chats.name '
-    'cache for @g.us JIDs, synced explicitly via modules.group_identity, '
+    'cache for @g.us JIDs, synced explicitly via modules.fazle_group_identity, '
     'never hand-maintained. One row per (group_jid, source_bridge) because '
     'different bridges'' local name caches can genuinely disagree.';
 COMMENT ON COLUMN wbom_group_identities.display_name IS
@@ -61,5 +61,5 @@ COMMENT ON COLUMN wbom_group_identities.metadata_updated_at IS
     'When our own sync last wrote/refreshed this row (distinct from '
     'last_seen_at, which is the bridge''s own activity timestamp).';
 
-CREATE INDEX IF NOT EXISTS idx_wbom_group_identities_business_label
+CREATE INDEX IF NOT EXISTS idx_fazle_group_identities_business_label
     ON wbom_group_identities (business_label) WHERE business_label IS NOT NULL;

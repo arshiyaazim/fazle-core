@@ -1,3 +1,4 @@
+
 """Focused S5 tests for the recruitment candidate conversation audit trail."""
 from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock, patch

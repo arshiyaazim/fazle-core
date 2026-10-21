@@ -1,5 +1,5 @@
 """Unit + integration + failure-injection tests — the identity-window
-orphan-message fix in modules.bridge_poller (2026-08-04).
+orphan-message fix in modules.fazle_bridge_poller (2026-08-04).
 
 Background (see knowledge_base/00_governance/management_decisions.md "55
 Stuck WhatsApp Messages" and the follow-up entry for this fix): before this
@@ -7,7 +7,7 @@ change, an unhandled exception between _mark_processed() (a permanent
 bridge-side dedup marker) and the routing-critical _finalize_core_copy()
 call would propagate past the entire per-message loop to _poll_bridge()'s
 single top-level `except Exception: log.exception(...)`, leaving the
-message's Postgres bookkeeping (wbom_whatsapp_messages.is_processed,
+message's Postgres bookkeeping (fazle_whatsapp_messages.is_processed,
 fazle_message_queue.status) stuck at "processing"/attempts=0 forever, with
 no retry possible. This happened for real 2026-07-09..12 (identity_brain.
 _lookup_contact() had wrong column names, fixed separately in 47a9c8e).
@@ -25,10 +25,10 @@ orchestrator, admin notifications, etc.) -- not practical to invoke
 directly in a test. Following this repo's own established convention for
 testing deep inline _poll_bridge logic (see test_escort_ocr_pipeline.py's
 "Simulate the X block from _poll_bridge" pattern), these tests mirror the
-exact try/except control flow added in modules/bridge_poller/__init__.py
+exact try/except control flow added in modules/fazle_bridge_poller/__init__.py
 (the block immediately following the `log.info(f"[{bridge_name}] from=...")`
 line), but call the REAL, unmodified _finalize_core_copy/_mark_processed/
-_save_raw_core_copy functions from modules.bridge_poller -- only the
+_save_raw_core_copy functions from modules.fazle_bridge_poller -- only the
 surrounding control flow is mirrored, not the underlying DB-writing logic.
 """
 from __future__ import annotations
@@ -39,16 +39,16 @@ from unittest.mock import AsyncMock, patch
 import asyncpg
 import pytest
 
-from modules.bridge_poller import _finalize_core_copy, _mark_processed, _save_raw_core_copy
+from modules.fazle_bridge_poller import _finalize_core_copy, _mark_processed, _save_raw_core_copy
 
 
 async def _run_identity_window(core_message_id, bridge_name, msg, phone, text, msg_id, extracted_text=""):
-    """Mirrors the exact try/except added in modules/bridge_poller/__init__.py
+    """Mirrors the exact try/except added in modules/fazle_bridge_poller/__init__.py
     immediately after `log.info(f"[{bridge_name}] from=...")`. Returns
     ("processed", (id_role, id_conf, id_name)) on success, or
     ("failed", str(exc)) on exception -- matching the real code's two
     outcomes (fall through to routing, vs. finalize+continue)."""
-    from modules.identity_brain import detect_identity
+    from modules.fazle_identity_brain import detect_identity
     try:
         identity = await detect_identity(phone, text)
         id_role = identity["identity_role"]
@@ -81,9 +81,9 @@ class TestIdentityWindowExceptionHandling:
 
     async def test_detect_identity_exception_finalizes_to_failed_not_processing(self):
         msg = {"id": "MSGID1", "type": "text"}
-        with patch("modules.identity_brain.detect_identity", new=AsyncMock(side_effect=RuntimeError("boom"))), \
-             patch("modules.bridge_poller.execute", new=AsyncMock()) as mock_execute, \
-             patch("modules.bridge_poller._save_message", new=AsyncMock()):
+        with patch("modules.fazle_identity_brain.detect_identity", new=AsyncMock(side_effect=RuntimeError("boom"))), \
+             patch("modules.fazle_bridge_poller.execute", new=AsyncMock()) as mock_execute, \
+             patch("modules.fazle_bridge_poller._save_message", new=AsyncMock()):
             outcome, detail = await _run_identity_window(
                 core_message_id=42, bridge_name="bridge1", msg=msg,
                 phone="8801700000099", text="hello", msg_id="MSGID1",
@@ -96,7 +96,7 @@ class TestIdentityWindowExceptionHandling:
         # that *some* UPDATE happened.
         wbom_update_calls = [
             c for c in mock_execute.await_args_list
-            if "UPDATE wbom_whatsapp_messages" in c.args[0]
+            if "UPDATE fazle_whatsapp_messages" in c.args[0]
         ]
         assert len(wbom_update_calls) == 1
         # message_body, message_type, is_processed(always true), identity_role,
@@ -118,9 +118,9 @@ class TestIdentityWindowExceptionHandling:
     async def test_successful_identity_detection_returns_processed(self):
         msg = {"id": "MSGID2", "type": "text"}
         fake_identity = {"identity_role": "client_escort_buyer", "identity_confidence": 80, "display_name": "Test Client"}
-        with patch("modules.identity_brain.detect_identity", new=AsyncMock(return_value=fake_identity)), \
-             patch("modules.bridge_poller.execute", new=AsyncMock()), \
-             patch("modules.bridge_poller._save_message", new=AsyncMock()):
+        with patch("modules.fazle_identity_brain.detect_identity", new=AsyncMock(return_value=fake_identity)), \
+             patch("modules.fazle_bridge_poller.execute", new=AsyncMock()), \
+             patch("modules.fazle_bridge_poller._save_message", new=AsyncMock()):
             outcome, detail = await _run_identity_window(
                 core_message_id=43, bridge_name="bridge2", msg=msg,
                 phone="8801700000098", text="hi", msg_id="MSGID2",
@@ -133,9 +133,9 @@ class TestIdentityWindowExceptionHandling:
         finalize to failed, not propagate a raw KeyError -- the try/except
         wraps the dict access too, not just the await call itself."""
         msg = {"id": "MSGID3", "type": "text"}
-        with patch("modules.identity_brain.detect_identity", new=AsyncMock(return_value={})), \
-             patch("modules.bridge_poller.execute", new=AsyncMock()), \
-             patch("modules.bridge_poller._save_message", new=AsyncMock()):
+        with patch("modules.fazle_identity_brain.detect_identity", new=AsyncMock(return_value={})), \
+             patch("modules.fazle_bridge_poller.execute", new=AsyncMock()), \
+             patch("modules.fazle_bridge_poller._save_message", new=AsyncMock()):
             outcome, detail = await _run_identity_window(
                 core_message_id=44, bridge_name="bridge1", msg=msg,
                 phone="8801700000097", text="hi", msg_id="MSGID3",
@@ -148,9 +148,9 @@ class TestIdentityWindowExceptionHandling:
         down), _run_identity_window itself must not raise -- matching
         _finalize_core_copy's own documented never-raises contract."""
         msg = {"id": "MSGID4", "type": "text"}
-        with patch("modules.identity_brain.detect_identity", new=AsyncMock(side_effect=RuntimeError("boom"))), \
-             patch("modules.bridge_poller.execute", new=AsyncMock(side_effect=ConnectionError("db down"))), \
-             patch("modules.bridge_poller._save_message", new=AsyncMock()):
+        with patch("modules.fazle_identity_brain.detect_identity", new=AsyncMock(side_effect=RuntimeError("boom"))), \
+             patch("modules.fazle_bridge_poller.execute", new=AsyncMock(side_effect=ConnectionError("db down"))), \
+             patch("modules.fazle_bridge_poller._save_message", new=AsyncMock()):
             outcome, detail = await _run_identity_window(
                 core_message_id=45, bridge_name="bridge1", msg=msg,
                 phone="8801700000096", text="hi", msg_id="MSGID4",
@@ -174,7 +174,7 @@ class TestIdentityWindowFixIntegration:
         assert core_id is not None
         await _mark_processed("REALMSG1", "bridge1", phone)
 
-        with patch("modules.identity_brain.detect_identity", new=AsyncMock(side_effect=RuntimeError("simulated identity failure"))):
+        with patch("modules.fazle_identity_brain.detect_identity", new=AsyncMock(side_effect=RuntimeError("simulated identity failure"))):
             outcome, _ = await _run_identity_window(
                 core_message_id=core_id, bridge_name="bridge1", msg=msg,
                 phone=phone, text="hello from integration test", msg_id="REALMSG1",
@@ -183,7 +183,7 @@ class TestIdentityWindowFixIntegration:
 
         async with test_db_pool.acquire() as conn:
             w_row = await conn.fetchrow(
-                "SELECT is_processed, metadata_json FROM wbom_whatsapp_messages WHERE message_id = $1", core_id
+                "SELECT is_processed, metadata_json FROM fazle_whatsapp_messages WHERE message_id = $1", core_id
             )
             q_row = await conn.fetchrow(
                 "SELECT status, attempts, last_error FROM fazle_message_queue WHERE idempotency_key = $1",
@@ -223,7 +223,7 @@ class TestOrphanMessageFailureInjection:
         identity_brain._lookup_contact() and NOT caught by
         detect_identity()'s own except clause (which only catches
         AttributeError/LookupError/TypeError/ValueError -- confirmed by
-        reading modules/identity_brain/__init__.py directly; UndefinedColumnError
+        reading modules/fazle_identity_brain/__init__.py directly; UndefinedColumnError
         is an asyncpg.PostgresError subclass, not any of those). This test
         injects that exact real exception class at the same call site and
         proves the message now reaches a terminal state instead of being
@@ -240,8 +240,8 @@ class TestOrphanMessageFailureInjection:
         undefined_column_error = asyncpg.exceptions.UndefinedColumnError(
             'column "contact_name" does not exist'
         )
-        with patch("modules.identity_brain._lookup_contact", new=AsyncMock(side_effect=undefined_column_error)):
-            from modules.identity_brain import detect_identity
+        with patch("modules.fazle_identity_brain._lookup_contact", new=AsyncMock(side_effect=undefined_column_error)):
+            from modules.fazle_identity_brain import detect_identity
             # Sanity check: confirm detect_identity's own narrow except
             # clause does NOT swallow this exception class today (i.e. this
             # test is exercising a real, still-open gap in identity_brain,
@@ -294,7 +294,7 @@ class TestOrphanMessageFailureInjection:
             return good_identity
 
         results = []
-        with patch("modules.identity_brain.detect_identity", new=_flaky_detect_identity):
+        with patch("modules.fazle_identity_brain.detect_identity", new=_flaky_detect_identity):
             for core_id, bridge_name, msg, phone, text, msg_id in [
                 (core_id1, "bridge2", msg1, phone1, "first message, will fail", "BATCH1"),
                 (core_id2, "bridge2", msg2, phone2, "second message, should still work", "BATCH2"),
@@ -313,7 +313,7 @@ class TestOrphanMessageFailureInjection:
                 "SELECT status FROM fazle_message_queue WHERE idempotency_key = $1", "bridge_poller:bridge2:BATCH1"
             )
             w2 = await conn.fetchval(
-                "SELECT is_processed FROM wbom_whatsapp_messages WHERE message_id = $1", core_id2
+                "SELECT is_processed FROM fazle_whatsapp_messages WHERE message_id = $1", core_id2
             )
         assert q1 == "failed"
         # message 2's finalize call in the real code uses status="processing"

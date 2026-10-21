@@ -142,14 +142,14 @@ social_inbox_events.reply_status ← updated to 'sent'
 `_is_draft_always_sender(target_id, latest_event)` for every plan with `auto_send=True`:
 
 - **True** (sender matches `DRAFT_ALWAYS_ROLES`/`DRAFT_ALWAYS_PHONES`/`DRAFT_ALWAYS_NAMES`,
-  same config the legacy `modules/bridge_poller` path already uses) → `_draft_instead_of_send()`
+  same config the legacy `modules/fazle_bridge_poller` path already uses) → `_draft_instead_of_send()`
   creates a `fazle_draft_replies` row and notifies the primary admin (`purpose=
   "social-draft-pending"`). Never reaches `social_reply_queue`.
 - **False** (everyone else) → `enqueue_reply()` → `social_reply_queue` → real dispatch via
   `send_queue.sweep_once()`, same as before 2026-06-23.
 
-`_is_draft_always_sender()` resolves identity via `modules.identity_brain.detect_identity()`
-(role + display_name) and calls `modules.bridge_poller._is_draft_always()` directly — the
+`_is_draft_always_sender()` resolves identity via `modules.fazle_identity_brain.detect_identity()`
+(role + display_name) and calls `modules.fazle_bridge_poller._is_draft_always()` directly — the
 match rules are not reimplemented here. `target_id` is not always a phone number (Facebook
 comment/PSID identifiers, `meta_whatsapp` numbers, etc.) — `detect_identity()` safely falls
 back to `role="unknown"` for anything that doesn't normalize as a phone, which never matches

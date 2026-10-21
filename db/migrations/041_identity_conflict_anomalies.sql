@@ -41,10 +41,10 @@ CREATE TABLE IF NOT EXISTS fpe_identity_anomalies (
 );
 
 -- Only one open row per (type, phone) -- see dedupe rationale above.
-CREATE UNIQUE INDEX IF NOT EXISTS uq_fpe_identity_anomalies_open
+CREATE UNIQUE INDEX IF NOT EXISTS uq_fazle_identity_anomalies_open
     ON fpe_identity_anomalies (anomaly_type, phone)
     WHERE NOT resolved;
 
-CREATE INDEX IF NOT EXISTS idx_fpe_identity_anomalies_unresolved_recent
+CREATE INDEX IF NOT EXISTS idx_fazle_identity_anomalies_unresolved_recent
     ON fpe_identity_anomalies (last_detected_at DESC)
     WHERE NOT resolved;

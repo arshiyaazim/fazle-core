@@ -146,7 +146,7 @@ runtime_index: false
 ---
 
 ### 9. `bridge_poller.md`
-**Source read:** `modules/bridge_poller/__init__.py` (2026-06-23)
+**Source read:** `modules/fazle_bridge_poller/__init__.py` (2026-06-23)
 
 | Dimension | Score | Notes |
 |---|---|---|
@@ -174,7 +174,7 @@ runtime_index: false
 ---
 
 ### 11. `admin_commands_detail.md` (NEW)
-**Source read:** `modules/admin_commands/__init__.py` + `nl_router.py` + `date_parser.py` + `modules/rbac/__init__.py` (2026-06-23)
+**Source read:** `modules/fazle_admin_commands/__init__.py` + `nl_router.py` + `date_parser.py` + `modules/rbac/__init__.py` (2026-06-23)
 
 | Dimension | Score | Notes |
 |---|---|---|
@@ -237,7 +237,7 @@ runtime_index: false
 
 ---
 
-### 16. `fpe_overview.md` (updated Wave-4 — fpe_employee_ledger DDL)
+### 16. `fpe_overview.md` (updated Wave-4 — fazle_employee_ledger DDL)
 | Dimension | Score | Notes |
 |---|---|---|
 | Accuracy (AC) | 5 | 10-column ledger DDL from 001_fpe_schema.sql; UNIQUE constraint correct |

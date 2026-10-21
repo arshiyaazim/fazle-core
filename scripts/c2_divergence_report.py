@@ -1,9 +1,10 @@
+
 #!/usr/bin/env python3
 """
 Hermes C2 — Read-only Decision Comparison Script
 
 Compares Hermes shadow decisions (hermes_decision_audit_log) against
-ground-truth routing outcomes (wbom_whatsapp_messages) over a configurable
+ground-truth routing outcomes (fazle_whatsapp_messages) over a configurable
 date range and produces a divergence report.
 
 Usage:
@@ -75,7 +76,7 @@ async def run(days: int, dry_run: bool, write_snapshots: bool) -> int:
             print("Ensure HERMES_DECISION_AUDIT_ENABLED=true and messages are flowing.")
             return 1
 
-        # 2. Join against wbom_whatsapp_messages for ground truth
+        # 2. Join against fazle_whatsapp_messages for ground truth
         role_divergences = 0
         unmatched = 0
         branch_coverage: dict[str, int] = {}
@@ -93,7 +94,7 @@ async def run(days: int, dry_run: bool, write_snapshots: bool) -> int:
             wbom = await conn.fetchrow(
                 """
                 SELECT identity_role, direction, received_at
-                FROM wbom_whatsapp_messages
+                FROM fazle_whatsapp_messages
                 WHERE sender_number = ANY($1::text[])
                   AND received_at BETWEEN $2 AND $3
                   AND direction = 'inbound'

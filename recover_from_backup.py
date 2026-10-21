@@ -6,8 +6,8 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from app.database import close_db, fetch_val, init_db
-from modules.identity_brain import detect_identity
-from modules.message_archive import init_tables as init_archive_tables, save_message
+from modules.fazle_identity_brain import detect_identity
+from modules.fazle_message_archive import init_tables as init_archive_tables, save_message
 from modules.number_identity import canonical_phone, phone_last10
 
 
@@ -122,7 +122,7 @@ async def _message_exists(phone: str, direction: str, text: str, event_ts: datet
     exists = await fetch_val(
         """
         SELECT 1
-        FROM wbom_whatsapp_messages
+        FROM fazle_whatsapp_messages
         WHERE direction = $1
           AND COALESCE(message_body, '') = $2
           AND ABS(EXTRACT(EPOCH FROM (received_at - $3::timestamptz))) < 2

@@ -1,4 +1,4 @@
-"""Unit tests — modules.bridge_poller cross-bridge system-notification echo guard.
+"""Unit tests — modules.fazle_bridge_poller cross-bridge system-notification echo guard.
 
 Live bug (2026-08-30): modules.supervised_draft enqueued a "📋 ADMIN REVIEW
 DRAFT" card to the primary admin number (= bridge2's own paired number) via
@@ -17,7 +17,7 @@ from types import SimpleNamespace
 
 import pytest
 
-import modules.bridge_poller as bp
+import modules.fazle_bridge_poller as bp
 
 pytestmark = pytest.mark.unit
 

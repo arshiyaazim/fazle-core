@@ -24,7 +24,7 @@ Assess the maturity of the identity resolution system. The identity brain is mat
 
 | Component | Detail |
 |---|---|
-| Source | `modules/identity_brain.resolve_identity()` |
+| Source | `modules/fazle_identity_brain.resolve_identity()` |
 | KB Articles | `03_ai_identity/identity_overview.md`, `03_ai_identity/permission_matrix.md` (both enriched Wave-1) |
 | Role Count | 11 official + 1 implicit (blocked) |
 | Evidence Sources | 8 sources across 5 database tables |
@@ -45,7 +45,7 @@ Assess the maturity of the identity resolution system. The identity brain is mat
 | Dimension | Status |
 |---|---|
 | Steps | 11 steps documented: step 0 (blocked pre-check), steps 1–11 (ordered evidence sources) |
-| Source | `modules/identity_brain.resolve_identity()` |
+| Source | `modules/fazle_identity_brain.resolve_identity()` |
 | Step Order | Explicitly documented with priority rationale |
 | Exit Condition | Returns on first confident match (confidence ≥ 0.5) |
 | Fallback | role=unknown, confidence=0.0 |
@@ -67,10 +67,10 @@ Assess the maturity of the identity resolution system. The identity brain is mat
 |---|---|---|---|
 | blocked_numbers | fazle_blocked_numbers | Hard stop (1.0) | Yes |
 | direct admin entry | fazle_admins | 1.0 | Yes |
-| employee phone match | wbom_employees | 0.95 | Yes |
-| cash/attendance record | wbom_cash_transactions / wbom_attendance | 0.7 | Yes |
+| employee phone match | fazle_employees_legacy | 0.95 | Yes |
+| cash/attendance record | fazle_cash_transactions_archive / wbom_attendance | 0.7 | Yes |
 | escort roster | wbom_escort_programs | 0.7 | Yes |
-| contact directory | wbom_contacts | 0.5 | Yes |
+| contact directory | fazle_contacts | 0.5 | Yes |
 | recruitment session active | fazle_recruitment_sessions | 0.7 | Yes |
 | external contact registry | fazle_contacts | 0.5 | Yes |
 
@@ -158,10 +158,10 @@ All 12 roles documented with all 4 gate behaviors (Wave-1).
 
 | Evidence Type | Source | Confidence |
 |---|---|---|
-| Cash transaction record | wbom_cash_transactions | 0.7 |
+| Cash transaction record | fazle_cash_transactions_archive | 0.7 |
 | Attendance record | wbom_attendance | 0.7 |
 | Escort roster entry | wbom_escort_programs | 0.7 |
-| Contact directory | wbom_contacts | 0.5 |
+| Contact directory | fazle_contacts | 0.5 |
 
 Four secondary sources documented in Wave-1.
 **Production Verified:** Yes.

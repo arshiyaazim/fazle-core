@@ -19,7 +19,7 @@ Design rules (verified against real code before implementation, not guessed):
     in ('collecting','new'), TTL-expiring — verified by reading it directly,
     NOT the 'is_complete' column the original spec assumed, which does not
     exist on fazle_recruitment_sessions) and message_router.get_recent_history()
-    (verified real columns: wbom_whatsapp_messages.sender_number/message_body/
+    (verified real columns: fazle_whatsapp_messages.sender_number/message_body/
     received_at/direction — NOT sender/message_text/created_at as originally
     assumed).
   - Never raises exceptions — returns is_recruitment=False on any error.

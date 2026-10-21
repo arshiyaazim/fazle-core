@@ -111,7 +111,7 @@ def classify_message(message_text: str) -> tuple[str, float]:
 
 def identify_sender(sender_number: str) -> Optional[dict]:
     """Look up sender in contacts table."""
-    rows = search_rows("wbom_contacts", "whatsapp_number", sender_number, limit=1)
+    rows = search_rows("fazle_contacts", "whatsapp_number", sender_number, limit=1)
     return rows[0] if rows else None
 
 
@@ -155,7 +155,7 @@ def process_incoming_message(
         "message_body": message_body,
         "classification": classification,
     }
-    stored_msg = insert_row("wbom_whatsapp_messages", msg_data)
+    stored_msg = insert_row("fazle_whatsapp_messages", msg_data)
     message_id = stored_msg["message_id"]
 
     # 3b. Multi-lighter detection (Phase 8 §Scenario 3)
@@ -215,7 +215,7 @@ def process_incoming_message(
         missing_fields = unfilled_fields
 
     # 6. Mark as processed
-    update_row_no_ts("wbom_whatsapp_messages", "message_id", message_id, {
+    update_row_no_ts("fazle_whatsapp_messages", "message_id", message_id, {
         "is_processed": True,
         "classification": classification,
         "template_used_id": template["template_id"] if template else None,
@@ -232,7 +232,7 @@ def process_incoming_message(
         complaint_type = "client"
         if contact_id:
             from database import get_row as _get_row
-            c = _get_row("wbom_contacts", "contact_id", contact_id)
+            c = _get_row("fazle_contacts", "contact_id", contact_id)
             if c and c.get("relation") in ("employee", "staff"):
                 complaint_type = "employee"
 

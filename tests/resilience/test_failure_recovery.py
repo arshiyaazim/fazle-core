@@ -230,11 +230,11 @@ class TestConcurrentMessageFlood:
             assert r.status_code in (200, 202)
 
         # Dedup: the 20 messages with same sender should result in <= 1 archive row
-        # wbom_whatsapp_messages has no "phone" column — the real column is
+        # fazle_whatsapp_messages has no "phone" column — the real column is
         # sender_number (db/migrations/029:310). Fixed 2026-07-13.
         async with test_db_pool.acquire() as conn:
             count = await conn.fetchval(
-                "SELECT COUNT(*) FROM wbom_whatsapp_messages WHERE sender_number=$1",
+                "SELECT COUNT(*) FROM fazle_whatsapp_messages WHERE sender_number=$1",
                 UNKNOWN_PHONE,
             )
         # Just assert it didn't blow up — actual dedup count depends on implementation

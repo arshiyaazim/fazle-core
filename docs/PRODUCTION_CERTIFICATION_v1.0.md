@@ -1,5 +1,8 @@
 # Fazle Core — Production Certification v1.0 (Phase 1.5)
 
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **Date:** 2026-07-09
 **Scope:** Certify whether Phase 1 (Consolidation) is genuinely complete and Phase 2 (Dispatch → Billing → GL) may begin.
 **Method:** Evidence-based only. Every claim below is backed by a live test run, a live production query (read-only), or a specific file/line reference. Where evidence was not gathered, this document says **Not verified** rather than assuming.
@@ -25,7 +28,7 @@ No change since `SYSTEM_ATLAS.md` §3 was last written — re-verified this sess
 
 - RBAC fail-closed (`modules/admin_commands/__init__.py`): still in place, and this session's fixture-isolation fix (see Testing Status) removed a false-negative test artifact around it. Verified via `unit/test_admin_commands.py` (27/27 pass) and `unit/test_rbac.py` (19/19 pass). **PASS.**
 - `INTERNAL_API_KEY`: rotated last pass, still the value in `.env`; not re-rotated this session (not requested, no new leak found). **PASS.**
-- Webhook signature enforcement: `modules/bridge_poller` and `app/main.py` log `[WEBHOOK_AUTH_AUDIT] unsigned bridge1 webhook accepted; enforcement disabled` on every unsigned request (confirmed live in `resilience/test_failure_recovery.py` output this session). This is a known, logged, intentional interim state — but it is a live security control that is currently a no-op. **PASS WITH DEBT** — Owner should confirm this is still intentional; it's been true for at least one full test-suite generation.
+- Webhook signature enforcement: `modules/fazle_bridge_poller` and `app/main.py` log `[WEBHOOK_AUTH_AUDIT] unsigned bridge1 webhook accepted; enforcement disabled` on every unsigned request (confirmed live in `resilience/test_failure_recovery.py` output this session). This is a known, logged, intentional interim state — but it is a live security control that is currently a no-op. **PASS WITH DEBT** — Owner should confirm this is still intentional; it's been true for at least one full test-suite generation.
 - AI/production boundary (Ollama read-only tools): not re-tested this session. **Not verified** (carried over from prior audit, no new evidence gathered).
 
 ---
@@ -51,9 +54,9 @@ No change since `SYSTEM_ATLAS.md` §3 was last written — re-verified this sess
 | # | File | Change | Risk |
 |---|---|---|---|
 | 1 | `tests/conftest.py` | `_split_sql_safe` now handles `--` line comments | test-only |
-| 2 | `db/migrations/030_reconcile_drift_columns_payment_drafts_replies.sql` (new) | Adds `fazle_payment_drafts.approved_at`, `fazle_draft_replies.{sent_at,error_text,edited_at}`, and the partial unique index `idx_fpe_emp_phone_unique` — all three confirmed **already live in production** via read-only query, with zero corresponding migration anywhere in the repo | additive, idempotent, documents existing prod state only |
-| 3 | `tests/conftest.py` | New `autouse` fixture clears `modules.admin_commands._dedup_cache` (a module-level in-process LRU) before/after every test — it has no TTL-aware test isolation, so two tests sending the same admin-command text within 30s collided | test-only |
-| 4 | `tests/test_fpe_accounting.py` | `TestReverseTransaction`'s hand-built mock `original` dict was missing `employee_id_phone`/`employee_phone`, which `reverse_transaction()` genuinely reads — added them | test-only |
+| 2 | `db/migrations/030_reconcile_drift_columns_payment_drafts_replies.sql` (new) | Adds `fazle_payment_drafts.approved_at`, `fazle_draft_replies.{sent_at,error_text,edited_at}`, and the partial unique index `idx_fazle_emp_phone_unique` — all three confirmed **already live in production** via read-only query, with zero corresponding migration anywhere in the repo | additive, idempotent, documents existing prod state only |
+| 3 | `tests/conftest.py` | New `autouse` fixture clears `modules.fazle_admin_commands._dedup_cache` (a module-level in-process LRU) before/after every test — it has no TTL-aware test isolation, so two tests sending the same admin-command text within 30s collided | test-only |
+| 4 | `tests/test_fazle_accounting.py` | `TestReverseTransaction`'s hand-built mock `original` dict was missing `employee_id_phone`/`employee_phone`, which `reverse_transaction()` genuinely reads — added them | test-only |
 
 ### Remaining 29 failures — classified, not fixed (all Category C except where noted)
 
@@ -79,7 +82,7 @@ No change since `SYSTEM_ATLAS.md` §3 was last written — re-verified this sess
 A full `information_schema` diff was run between live production and everything the tracked migration set (`db/migrations/` + `modules/fazle_payroll_engine/migrations/`) would produce in a clean database. This is new evidence this session — the previous 27-table bootstrap (migration 029) closed one gap but this is a different, larger one found by comparing the *complete* schema, not a hand-picked table list.
 
 - **~150 tables exist in production with no corresponding migration file anywhere in the repo.** Examples: `fazle_clients`, `fazle_users`, `wbom_cases`, `escort_calculation_config`, `organizations`/`organization_users`, `voice_clones`, `telephony_events`, `alembic_version`, `schema_migrations`, several `_legacy_*` and `*_bak_*` tables. Many of these are plausibly legacy/experimental/backup tables outside the 24-27 "core" tables migration 029 targeted — but that has not been individually verified table-by-table, and `alembic_version`/`schema_migrations` existing at all suggests at least one other migration tool was used against this database at some point outside this repo's own tooling.
-- **88 columns exist in production that are missing from the same-named table in a from-scratch migration build**, on tables that ARE tracked, including live business tables: `wbom_contacts` (18 missing columns), `wbom_cases` (17), `wbom_salary_records` (12), `fazle_payment_drafts.approved_at` (now fixed in migration 030), `fazle_draft_replies` (3, now fixed), `wbom_escort_programs.total_days`, `wbom_payroll_runs.remarks`, and more.
+- **88 columns exist in production that are missing from the same-named table in a from-scratch migration build**, on tables that ARE tracked, including live business tables: `fazle_contacts` (18 missing columns), `wbom_cases` (17), `wbom_salary_records` (12), `fazle_payment_drafts.approved_at` (now fixed in migration 030), `fazle_draft_replies` (3, now fixed), `wbom_escort_programs.total_days`, `wbom_payroll_runs.remarks`, and more.
 - **24 columns exist in the migration files but NOT in production** (the reverse direction) — e.g. `wbom_salary_records.amount`/`.created_at`/`.record_id` vs production's `.total_advances`/`.net_salary`/`.program_allowance` naming, suggesting a column rename happened in production that the migration files never picked up.
 
 **What this means concretely:** if production's database were ever lost and rebuilt from this repo's migrations alone, the result would be missing ~150 tables and ~88 columns that live application code currently reads and writes. This is a disaster-recovery risk, and it is **larger than what Migration Governance documentation currently states** (`db/MIGRATION_INVENTORY.md` describes the 3-legacy-path problem but not this scale of undocumented drift).
@@ -124,7 +127,7 @@ The audit asked to identify "Formula A" vs "Formula B" and pick one canonical. *
 
 - **`wbom_payroll_runs`: 703 rows total, ALL in `status='draft'`, ALL with `total_programs = 0`.** Formula A's escort-program component has never contributed a nonzero amount in any real payroll run, ever. The state machine (draft→reviewed→approved→locked→paid) has never progressed a single row past `draft`.
 - **`fazle_payment_drafts` with `draft_type='escort_payment'`: 47 rows total, ALL `status='expired'`.** Formula C has never resulted in one completed payment.
-- **`fpe_cash_transactions`: 3,671 rows, all `source IN ('whatsapp','migration','operator','manual')`, `program_id` is `NULL` on every single row.** Real money movement (2,606 WhatsApp-sourced 'salary' transactions) happens through a path that never populates `program_id`, i.e. is not linked to an escort program by either Formula A or C's own bookkeeping.
+- **`fazle_cash_transactions`: 3,671 rows, all `source IN ('whatsapp','migration','operator','manual')`, `program_id` is `NULL` on every single row.** Real money movement (2,606 WhatsApp-sourced 'salary' transactions) happens through a path that never populates `program_id`, i.e. is not linked to an escort program by either Formula A or C's own bookkeeping.
 - **The actual payment-recording command** (`modules/admin_commands/__init__.py`, `_PAID_RE = r"^paid\s+(\d+)\s+(\d[\d,]*)\s*(bkash|nagad|cash)?$"`) accepts a **free-typed amount from the admin** and passes it straight through to `create_transaction()`. Formula C's draft text *suggests* a `net_payable` figure ending in "PAID <id> {net_payable} bkash" — but the admin can type any number and the system records it with no cross-check against any formula's output.
 
 ### Conclusion

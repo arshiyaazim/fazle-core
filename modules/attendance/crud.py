@@ -6,10 +6,10 @@ approval_channel='manual_direct', approved immediately at creation (no
 draft/review stage) — only reachable by an already-authorized (admin+)
 actor, per this module's routes.py RBAC gate.
 
-Employee DB (wbom_employees) remains authoritative. This module never
+Employee DB (fazle_employees_legacy) remains authoritative. This module never
 duplicates mutable employee identity fields into wbom_attendance beyond
 employee_id and the audit/source columns added by migration 040 — every
-read joins back to wbom_employees for display fields.
+read joins back to fazle_employees_legacy for display fields.
 """
 from __future__ import annotations
 
@@ -42,7 +42,7 @@ def derive_duty_days(duty_status: str) -> float:
 
 async def _validate_employee(employee_id: int) -> dict:
     row = await fetch_one(
-        "SELECT employee_id, employee_name, status FROM wbom_employees WHERE employee_id = $1",
+        "SELECT employee_id, employee_name, status FROM fazle_employees_legacy WHERE employee_id = $1",
         employee_id,
     )
     if not row:
@@ -194,7 +194,7 @@ async def create_attendance_draft_entry(
 async def get_attendance(attendance_id: int) -> Optional[dict]:
     row = await fetch_one(
         """SELECT a.*, e.employee_name, e.designation
-           FROM wbom_attendance a JOIN wbom_employees e ON e.employee_id = a.employee_id
+           FROM wbom_attendance a JOIN fazle_employees_legacy e ON e.employee_id = a.employee_id
            WHERE a.attendance_id = $1""",
         attendance_id,
     )
@@ -231,12 +231,12 @@ async def list_attendance(
     offset = (page - 1) * page_size
 
     total = await fetch_val(
-        f"SELECT COUNT(*) FROM wbom_attendance a JOIN wbom_employees e ON e.employee_id = a.employee_id {where_clause}",
+        f"SELECT COUNT(*) FROM wbom_attendance a JOIN fazle_employees_legacy e ON e.employee_id = a.employee_id {where_clause}",
         *params,
     )
     rows = await fetch_all(
         f"""SELECT a.*, e.employee_name, e.designation
-            FROM wbom_attendance a JOIN wbom_employees e ON e.employee_id = a.employee_id
+            FROM wbom_attendance a JOIN fazle_employees_legacy e ON e.employee_id = a.employee_id
             {where_clause}
             ORDER BY a.attendance_date DESC, a.attendance_id DESC
             LIMIT ${idx} OFFSET ${idx + 1}""",
@@ -254,23 +254,23 @@ async def list_attendance(
 
 # ── Structured employee lookup (Owner decision: dedicated, non-fuzzy) ────────
 # Deliberately not modules.fazle_payroll_engine.routes.suggest_employees,
-# which is tuned for messy free-form WhatsApp text against fpe_employees.
-# This is a plain, structured lookup against wbom_employees (the canonical
+# which is tuned for messy free-form WhatsApp text against fazle_employees.
+# This is a plain, structured lookup against fazle_employees_legacy (the canonical
 # Employee DB) for the admin-facing form.
 
 _LOOKUP_FIELDS = "w.employee_id, w.employee_name, w.employee_mobile, w.address, w.designation, w.status, w.basic_salary"
 
-# 2026-07-13 audit Fix #3: attach fpe_employees.employee_id_phone (the
+# 2026-07-13 audit Fix #3: attach fazle_employees.employee_id_phone (the
 # identifier every OTHER payroll.html form already shows) via a scalar
 # subquery, not a JOIN -- a JOIN with these OR conditions could multiply
-# rows if more than one fpe_employees row matched. Prefers the clean
+# rows if more than one fazle_employees row matched. Prefers the clean
 # wbom_employee_id FK link (set as a "runtime repair" by
 # fazle_payroll_engine.employee.match_or_create_employee's step 3b)
 # over the phone-string fallback when both exist. Read-only: unlike that
 # step 3b logic, this never creates or links anything, just displays
 # whatever link already exists.
 _FPE_PHONE_SUBQUERY = """(
-    SELECT fpe.employee_id_phone FROM fpe_employees fpe
+    SELECT fpe.employee_id_phone FROM fazle_employees fpe
     WHERE fpe.wbom_employee_id = w.employee_id
        OR fpe.primary_phone IN (w.employee_mobile, w.bkash_number, w.nagad_number)
        OR fpe.employee_id_phone IN (w.employee_mobile, w.bkash_number, w.nagad_number)
@@ -281,7 +281,7 @@ _FPE_PHONE_SUBQUERY = """(
 
 async def lookup_employee_by_id(employee_id: int) -> Optional[dict]:
     row = await fetch_one(
-        f"SELECT {_LOOKUP_FIELDS}, {_FPE_PHONE_SUBQUERY} FROM wbom_employees w WHERE w.employee_id = $1",
+        f"SELECT {_LOOKUP_FIELDS}, {_FPE_PHONE_SUBQUERY} FROM fazle_employees_legacy w WHERE w.employee_id = $1",
         employee_id,
     )
     return dict(row) if row else None
@@ -293,7 +293,7 @@ async def suggest_employees_by_name(query: str, limit: int = 8) -> list[dict]:
     if not query or not query.strip():
         return []
     rows = await fetch_all(
-        f"""SELECT {_LOOKUP_FIELDS}, {_FPE_PHONE_SUBQUERY} FROM wbom_employees w
+        f"""SELECT {_LOOKUP_FIELDS}, {_FPE_PHONE_SUBQUERY} FROM fazle_employees_legacy w
             WHERE w.employee_name ILIKE $1
             ORDER BY (w.status = 'Active') DESC, w.employee_name
             LIMIT $2""",

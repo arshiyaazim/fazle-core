@@ -1,7 +1,7 @@
 """Bridge2 self-chat natural-language Admin->Hermes routing fix
 (2026-08-27, Owner-directed).
 
-Root cause this closes: modules.bridge_poller's outgoing/self-chat scanner
+Root cause this closes: modules.fazle_bridge_poller's outgoing/self-chat scanner
 (the ONLY channel through which the Owner's own is_from_me=1 Bridge2
 self-chat messages can ever reach Hermes -- see
 _fetch_outgoing_escort_completions()'s docstring) only ever recognized the
@@ -37,7 +37,7 @@ import inspect
 
 import pytest
 
-import modules.bridge_poller as bp
+import modules.fazle_bridge_poller as bp
 
 pytestmark = pytest.mark.unit
 

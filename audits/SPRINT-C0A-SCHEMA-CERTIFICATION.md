@@ -1,4 +1,8 @@
 # Sprint-C0A: Production Schema Certification Report
+
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 ## Production DB ↔ Migration Files ↔ Repository (conftest.py) Alignment Audit
 
 **Date:** 2026-06-28  

@@ -1,3 +1,4 @@
+
 -- Phase 2 / FG1: LocationWhere read-adapter audit ledger (additive only)
 
 CREATE TABLE IF NOT EXISTS assistant_ext_location_audit (

@@ -1,5 +1,9 @@
 # Pre-Deployment Acceptance & Credential-Remediation Pass
 
+
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **Date:** 2026-08-18
 **Scope:** Read-only verification only. No gated action taken — no restart, no migration apply,
 no commit, no push, no secret value printed or written anywhere in this report.
@@ -133,7 +137,7 @@ Traced the complete call chain for both, end to end:
 identity_tools.resolve_identity(phone, text)
   → core.get("/api/identity/resolve", {"phone": phone, "text": text})   [identity_tools.py:30]
     → GET /api/identity/resolve  (app/main.py:1234)
-      → result = await detect_identity(phone, text)                     [app/main.py:1241, calls modules/identity_brain/__init__.py:161 UNCHANGED]
+      → result = await detect_identity(phone, text)                     [app/main.py:1241, calls modules/fazle_identity_brain/__init__.py:161 UNCHANGED]
       → return {k: v for k, v in result.items() if k not in (...)}      [app/main.py:1242, a filter, not a transform]
 ```
 
@@ -141,13 +145,13 @@ identity_tools.resolve_identity(phone, text)
 identity_tools.classify_intent(text)
   → core.get("/api/intent/classify", {"text": text})                    [identity_tools.py:38]
     → GET /api/intent/classify  (app/main.py:1246)
-      → return {"intent": classify(text)}                               [app/main.py:1250, calls modules/intent/__init__.py:113 UNCHANGED]
+      → return {"intent": classify(text)}                               [app/main.py:1250, calls modules/fazle_intent/__init__.py:113 UNCHANGED]
 ```
 
 **No new classification/decision logic exists anywhere in this chain.** Every role, confidence
 score, source, and intent label returned still originates from `identity_brain.detect_identity()`
-and `modules.intent.classify()` exactly as they existed before this session — confirmed by `git
-diff` showing **zero changes** to `modules/identity_brain/__init__.py` or `modules/intent/__init__.py`
+and `modules.fazle_intent.classify()` exactly as they existed before this session — confirmed by `git
+diff` showing **zero changes** to `modules/fazle_identity_brain/__init__.py` or `modules/fazle_intent/__init__.py`
 (neither file appears in `git status --porcelain` at all). The only operations added anywhere in
 the chain are: an HTTP GET, an `await`, and a dict-comprehension filter (see §4).
 
@@ -279,7 +283,7 @@ IDE's SQL linter is evaluating against the wrong dialect; not a real defect in t
 - The failing assertions (`assertIn("confirmation", result["error"])`, etc.) fail because
   `send_whatsapp_tools.py:105` now returns `"source_bridge is required -- ..."` for the exact
   input these tests use — a validation check inside `send_whatsapp_tools.py` that predates this
-  session (confirmed: `modules/identity_brain/`, `identity_tools.py` and this session's edits
+  session (confirmed: `modules/fazle_identity_brain/`, `identity_tools.py` and this session's edits
   never touch `send_whatsapp_tools.py`; `git status` shows it was already modified before today —
   file mtime is ~3.7 days older than "now" in this environment, consistent with an earlier,
   separate session's uncommitted work, not today's).
@@ -310,7 +314,7 @@ scope):** running `test_identity_brain.py` and `test_escort_client_identity_conv
 the **same** pytest process — in that order — produces 3 assertion failures in the latter file
 that do **not** occur when either file runs alone, or in combination with this session's 2 new
 test files. Isolated via 4 controlled pairwise runs (see below); confirmed **not** connected to
-anything changed this session — `modules/identity_brain/`, `modules/escort/` are both untouched
+anything changed this session — `modules/fazle_identity_brain/`, `modules/escort/` are both untouched
 (`git status --porcelain` clean for both):
 
 | Combination | Result |

@@ -38,7 +38,7 @@ An inbound WhatsApp message from an identified `admin`-role sender reaches `modu
 
 **Rate limiting:** a plain in-process `dict[str, float]` (`_ai_cooldown`), 5 seconds per admin phone, checked before RBAC (so a denied/unauthorized attempt doesn't consume the cooldown) and updated only after a successful, authorized call is about to be made. No new table — deliberately simple, single-process, GIL-safe.
 
-**Voice notes:** no special handling needed. `modules.bridge_poller` already transcribes *any* inbound audio (admin or not) into `text` before role-based routing happens — an admin's voice note "AI, ..." arrives as already-transcribed text and hits the same `is_admin_ai_command()` check as typed text.
+**Voice notes:** no special handling needed. `modules.fazle_bridge_poller` already transcribes *any* inbound audio (admin or not) into `text` before role-based routing happens — an admin's voice note "AI, ..." arrives as already-transcribed text and hits the same `is_admin_ai_command()` check as typed text.
 
 ---
 
@@ -47,7 +47,7 @@ An inbound WhatsApp message from an identified `admin`-role sender reaches `modu
 Two independent gates exist, layered:
 
 1. **Global:** `AUTO_REPLY_ENABLED` env var — SAFE MODE, blocks all auto-sends system-wide. Untouched by this work.
-2. **Per-number:** `fazle_runtime_settings` key `phone_block.{phone}`, read by `modules.bridge_poller._is_draft_always(phone, role, display_name)` — the function that decides whether a given inbound message must be drafted for admin review instead of auto-replied. This check runs *first*, before the pre-existing static `DRAFT_ALWAYS_PHONES`/role/name-prefix checks, so it can force draft-mode for a number that wouldn't otherwise match any static rule.
+2. **Per-number:** `fazle_runtime_settings` key `phone_block.{phone}`, read by `modules.fazle_bridge_poller._is_draft_always(phone, role, display_name)` — the function that decides whether a given inbound message must be drafted for admin review instead of auto-replied. This check runs *first*, before the pre-existing static `DRAFT_ALWAYS_PHONES`/role/name-prefix checks, so it can force draft-mode for a number that wouldn't otherwise match any static rule.
 
 The flag itself was not new — `POST /api/wa/contacts/{phone}/block|unblock` already wrote it — but nothing read it until `_is_draft_always()` was extended. This is why the fix is described as "wiring a dead control live" rather than "building a new gate."
 
@@ -77,5 +77,5 @@ Purely client-side, in `app/static/open-chat.html` — `window.speechSynthesis` 
 
 - **The LLM never receives a write-capable tool.** `orchestrate_console_request()`'s adapters are all `Readonly*`/`AIMemoryAdapter` — confirmed by `modules.ai_console.adapters.py`'s own `prohibited_side_effects` declarations per adapter class, unchanged by this work.
 - **Every write path in this system requires an explicit, code-decided (not model-decided) trigger.** `AUTOREPLY`/`REMEMBER`/`FORGET` write directly (to a runtime flag or the narrow directive table — never a business/financial table). `SEND` never sends — it only creates a `fazle_draft_replies` row, subject to the exact same human-approval queue every other AI-suggested reply already goes through.
-- **RBAC fails closed everywhere in this system**, including the new surfaces — an exception during a permission check is treated as denial, matching the system-wide rule established after the 2026-07-09 fail-open fix in `modules.admin_commands`.
+- **RBAC fails closed everywhere in this system**, including the new surfaces — an exception during a permission check is treated as denial, matching the system-wide rule established after the 2026-07-09 fail-open fix in `modules.fazle_admin_commands`.
 - **Rate limiting exists only for the LLM-calling path** (`AI <question>`), not the deterministic commands — those are cheap, local operations with no external call to protect against abuse of.

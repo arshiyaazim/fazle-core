@@ -113,7 +113,7 @@ class TestFooterRemoval:
         """bridge_poller._is_system_generated_notification must detect our
         own notifications by their known title prefix alone -- no marker
         of any kind is appended anywhere anymore."""
-        from modules.bridge_poller import _is_system_generated_notification
+        from modules.fazle_bridge_poller import _is_system_generated_notification
 
         assert _is_system_generated_notification("\U0001F4CB ADMIN REVIEW DRAFT\nSender: x") is True
         assert _is_system_generated_notification("plain human text") is False
@@ -161,7 +161,7 @@ class TestDraftContentFiveParts:
     """Verify the admin review draft contains all 5 required parts."""
 
     def test_build_admin_review_draft_has_all_5_parts(self):
-        from modules.bridge_poller import _build_admin_review_draft
+        from modules.fazle_bridge_poller import _build_admin_review_draft
         draft = _build_admin_review_draft(
             sender_name="Karim",
             sender_mobile="8801711111111",
@@ -184,7 +184,7 @@ class TestDraftContentFiveParts:
         assert "Reject" in draft
 
     def test_build_admin_review_draft_with_unknown_sender(self):
-        from modules.bridge_poller import _build_admin_review_draft
+        from modules.fazle_bridge_poller import _build_admin_review_draft
         draft = _build_admin_review_draft(
             sender_name="",
             sender_mobile="8801999999999",
@@ -198,7 +198,7 @@ class TestDraftContentFiveParts:
     @pytest.mark.asyncio
     async def test_save_draft_enriched_with_sender_context(self):
         """_save_draft with sender_name+sender_message creates an enriched draft."""
-        from modules.bridge_poller import _save_draft
+        from modules.fazle_bridge_poller import _save_draft
 
         captured = {}
 
@@ -209,8 +209,8 @@ class TestDraftContentFiveParts:
             captured["context"] = context
             return 99
 
-        with patch("modules.bridge_poller.create_draft_reply", side_effect=_fake_create_draft):
-            with patch("modules.bridge_poller.execute", new=AsyncMock()):
+        with patch("modules.fazle_bridge_poller.create_draft_reply", side_effect=_fake_create_draft):
+            with patch("modules.fazle_bridge_poller.execute", new=AsyncMock()):
                 with patch("modules.draft_quality.check_draft_quality", return_value=(True, None)):
                     with patch("modules.draft_quality.strip_reply_emoji", side_effect=lambda x: x):
                         await _save_draft(
@@ -304,7 +304,7 @@ class TestApproveFlow:
 
     @pytest.mark.asyncio
     async def test_approve_sends_via_same_bridge(self):
-        from modules.admin_commands import _cmd_approve
+        from modules.fazle_admin_commands import _cmd_approve
 
         draft_row = {
             "id": 55, "status": "pending", "recipient": "8801711111111",
@@ -325,8 +325,8 @@ class TestApproveFlow:
                 sent["text"] = text
                 return True
 
-        with patch("modules.admin_commands.fetch_one", side_effect=_fake_fetch_one):
-            with patch("modules.admin_commands.execute", side_effect=_fake_execute):
+        with patch("modules.fazle_admin_commands.fetch_one", side_effect=_fake_fetch_one):
+            with patch("modules.fazle_admin_commands.execute", side_effect=_fake_execute):
                 with patch("app.bridge.get_bridge1", return_value=_FakeBridge()):
                     with patch("app.bridge.get_bridge2", return_value=_FakeBridge()):
                         with patch("shared.draft_reply.submit_approved_draft", new=AsyncMock(return_value=901)) as queued:
@@ -340,7 +340,7 @@ class TestApproveFlow:
 
     @pytest.mark.asyncio
     async def test_approve_uses_bridge1_for_meta_source(self):
-        from modules.admin_commands import _cmd_approve
+        from modules.fazle_admin_commands import _cmd_approve
 
         draft_row = {
             "id": 56, "status": "pending", "recipient": "8801711111111",
@@ -365,8 +365,8 @@ class TestApproveFlow:
                 bridge_used.append("bridge2")
                 return True
 
-        with patch("modules.admin_commands.fetch_one", side_effect=_fake_fetch_one):
-            with patch("modules.admin_commands.execute", side_effect=_fake_execute):
+        with patch("modules.fazle_admin_commands.fetch_one", side_effect=_fake_fetch_one):
+            with patch("modules.fazle_admin_commands.execute", side_effect=_fake_execute):
                 with patch("app.bridge.get_bridge1", return_value=_FakeBridge1()):
                     with patch("app.bridge.get_bridge2", return_value=_FakeBridge2()):
                         with patch("shared.draft_reply.submit_approved_draft", new=AsyncMock(return_value=902)) as queued:
@@ -383,7 +383,7 @@ class TestEditFlow:
 
     @pytest.mark.asyncio
     async def test_edit_sends_edited_text_to_recipient(self):
-        from modules.admin_commands import _cmd_edit
+        from modules.fazle_admin_commands import _cmd_edit
 
         draft_row = {
             "id": 66, "recipient": "8801711111111", "source": "bridge2",
@@ -407,8 +407,8 @@ class TestEditFlow:
                 sent["text"] = text
                 return True
 
-        with patch("modules.admin_commands.fetch_one", side_effect=_fake_fetch_one):
-            with patch("modules.admin_commands.execute", side_effect=_fake_execute):
+        with patch("modules.fazle_admin_commands.fetch_one", side_effect=_fake_fetch_one):
+            with patch("modules.fazle_admin_commands.execute", side_effect=_fake_execute):
                 with patch("app.bridge.get_bridge1", return_value=_FakeBridge()):
                     with patch("app.bridge.get_bridge2", return_value=_FakeBridge()):
                         with patch("modules.reviewed_reply_memory.create_or_update_from_edit", new=AsyncMock()):
@@ -423,7 +423,7 @@ class TestEditFlow:
 
     @pytest.mark.asyncio
     async def test_edit_uses_same_bridge_as_inbound(self):
-        from modules.admin_commands import _cmd_edit
+        from modules.fazle_admin_commands import _cmd_edit
 
         draft_row = {
             "id": 67, "recipient": "8801711111111", "source": "bridge1",
@@ -448,8 +448,8 @@ class TestEditFlow:
                 bridge_used.append("bridge2")
                 return True
 
-        with patch("modules.admin_commands.fetch_one", side_effect=_fake_fetch_one):
-            with patch("modules.admin_commands.execute", side_effect=_fake_execute):
+        with patch("modules.fazle_admin_commands.fetch_one", side_effect=_fake_fetch_one):
+            with patch("modules.fazle_admin_commands.execute", side_effect=_fake_execute):
                 with patch("app.bridge.get_bridge1", return_value=_FakeBridge1()):
                     with patch("app.bridge.get_bridge2", return_value=_FakeBridge2()):
                         with patch("modules.reviewed_reply_memory.create_or_update_from_edit", new=AsyncMock()):
@@ -467,7 +467,7 @@ class TestRejectFlow:
 
     @pytest.mark.asyncio
     async def test_reject_marks_rejected_and_sends_nothing(self):
-        from modules.admin_commands import _cmd_reject
+        from modules.fazle_admin_commands import _cmd_reject
 
         draft_row = {"id": 77, "status": "pending"}
 
@@ -487,8 +487,8 @@ class TestRejectFlow:
                 sent.append((jid, text))
                 return True
 
-        with patch("modules.admin_commands.fetch_one", side_effect=_fake_fetch_one):
-            with patch("modules.admin_commands.execute", side_effect=_fake_execute):
+        with patch("modules.fazle_admin_commands.fetch_one", side_effect=_fake_fetch_one):
+            with patch("modules.fazle_admin_commands.execute", side_effect=_fake_execute):
                 with patch("app.bridge.get_bridge1", return_value=_FakeBridge()):
                     with patch("app.bridge.get_bridge2", return_value=_FakeBridge()):
                         result = await _cmd_reject(77, "8801700000001")
@@ -501,15 +501,15 @@ class TestRejectFlow:
 
     @pytest.mark.asyncio
     async def test_reject_already_sent_returns_warning(self):
-        from modules.admin_commands import _cmd_reject
+        from modules.fazle_admin_commands import _cmd_reject
 
         draft_row = {"id": 78, "status": "sent"}
 
         async def _fake_fetch_one(query, *args):
             return draft_row
 
-        with patch("modules.admin_commands.fetch_one", side_effect=_fake_fetch_one):
-            with patch("modules.admin_commands.execute", new=AsyncMock()):
+        with patch("modules.fazle_admin_commands.fetch_one", side_effect=_fake_fetch_one):
+            with patch("modules.fazle_admin_commands.execute", new=AsyncMock()):
                 result = await _cmd_reject(78, "8801700000001")
 
         assert "⚠️" in result
@@ -553,7 +553,7 @@ class TestExclusionsUnchanged:
         """System-generated messages (recognized by known title prefix, not
         by any appended marker) must still be detected by bridge_poller's
         guard."""
-        from modules.bridge_poller import _is_system_generated_notification
+        from modules.fazle_bridge_poller import _is_system_generated_notification
 
         assert _is_system_generated_notification("⚠️ RELEASE REVIEW REQUIRED\nmsg") is True
         assert _is_system_generated_notification("plain human text") is False
@@ -569,7 +569,7 @@ class TestRealDraftNumber:
     async def test_save_draft_replaces_placeholder_with_real_id(self):
         """After _save_draft creates the draft, the reply_text must contain
         the real draft ID, not the placeholder."""
-        from modules.bridge_poller import _save_draft
+        from modules.fazle_bridge_poller import _save_draft
 
         captured = {}
 
@@ -583,8 +583,8 @@ class TestRealDraftNumber:
             update_calls.append((query, args))
             return None
 
-        with patch("modules.bridge_poller.create_draft_reply", side_effect=_fake_create_draft):
-            with patch("modules.bridge_poller.execute", side_effect=_fake_execute):
+        with patch("modules.fazle_bridge_poller.create_draft_reply", side_effect=_fake_create_draft):
+            with patch("modules.fazle_bridge_poller.execute", side_effect=_fake_execute):
                 with patch("modules.draft_quality.check_draft_quality", return_value=(True, None)):
                     with patch("modules.draft_quality.strip_reply_emoji", side_effect=lambda x: x):
                         await _save_draft(
@@ -649,60 +649,60 @@ class TestHumanFormatParsing:
     """Admin reply parser must support human formats like 'Draft 123 / 1'."""
 
     def test_parse_approve_by_number(self):
-        from modules.admin_commands import _parse_draft_reply_option
+        from modules.fazle_admin_commands import _parse_draft_reply_option
         action, text = _parse_draft_reply_option("1")
         assert action == "approve"
         assert text is None
 
     def test_parse_approve_by_keyword(self):
-        from modules.admin_commands import _parse_draft_reply_option
+        from modules.fazle_admin_commands import _parse_draft_reply_option
         action, text = _parse_draft_reply_option("Approved")
         assert action == "approve"
         assert text is None
 
     def test_parse_approve_with_numbered_prefix(self):
-        from modules.admin_commands import _parse_draft_reply_option
+        from modules.fazle_admin_commands import _parse_draft_reply_option
         action, text = _parse_draft_reply_option("1. Approved")
         assert action == "approve"
         assert text is None
 
     def test_parse_reject_by_number(self):
-        from modules.admin_commands import _parse_draft_reply_option
+        from modules.fazle_admin_commands import _parse_draft_reply_option
         action, text = _parse_draft_reply_option("3")
         assert action == "reject"
         assert text is None
 
     def test_parse_reject_by_keyword(self):
-        from modules.admin_commands import _parse_draft_reply_option
+        from modules.fazle_admin_commands import _parse_draft_reply_option
         action, text = _parse_draft_reply_option("Reject")
         assert action == "reject"
         assert text is None
 
     def test_parse_edit_by_number_with_text(self):
-        from modules.admin_commands import _parse_draft_reply_option
+        from modules.fazle_admin_commands import _parse_draft_reply_option
         action, text = _parse_draft_reply_option("2 / নতুন বার্তা এখানে")
         assert action == "edit"
         assert text == "নতুন বার্তা এখানে"
 
     def test_parse_edit_by_keyword_with_text(self):
-        from modules.admin_commands import _parse_draft_reply_option
+        from modules.fazle_admin_commands import _parse_draft_reply_option
         action, text = _parse_draft_reply_option("Edit / hello world")
         assert action == "edit"
         assert text == "hello world"
 
     def test_parse_edit_without_text_returns_none_text(self):
-        from modules.admin_commands import _parse_draft_reply_option
+        from modules.fazle_admin_commands import _parse_draft_reply_option
         action, text = _parse_draft_reply_option("2")
         assert action == "edit"
         assert text is None
 
     def test_parse_unknown_option(self):
-        from modules.admin_commands import _parse_draft_reply_option
+        from modules.fazle_admin_commands import _parse_draft_reply_option
         action, text = _parse_draft_reply_option("xyz")
         assert action == "unknown"
 
     def test_draft_reply_regex_matches_all_formats(self):
-        from modules.admin_commands import _DRAFT_REPLY_RE
+        from modules.fazle_admin_commands import _DRAFT_REPLY_RE
         # All required human formats must match
         test_cases = [
             "Draft 123 / 1",
@@ -720,16 +720,16 @@ class TestHumanFormatParsing:
             assert _DRAFT_REPLY_RE.match(tc), f"Failed to match: {tc!r}"
 
     def test_is_admin_command_recognizes_draft_format(self):
-        from modules.admin_commands import is_admin_command
+        from modules.fazle_admin_commands import is_admin_command
         assert is_admin_command("Draft 123 / 1") is True
         assert is_admin_command("Draft 123 / Edit / hello") is True
         assert is_admin_command("Draft 123 / 3") is True
 
     @pytest.mark.asyncio
     async def test_cmd_draft_reply_routes_to_approve(self):
-        from modules.admin_commands import _cmd_draft_reply
+        from modules.fazle_admin_commands import _cmd_draft_reply
 
-        with patch("modules.admin_commands._cmd_approve", new=AsyncMock(return_value="approved!")) as mock_approve:
+        with patch("modules.fazle_admin_commands._cmd_approve", new=AsyncMock(return_value="approved!")) as mock_approve:
             result = await _cmd_draft_reply(123, "1", "8801700000001")
 
         mock_approve.assert_called_once_with(123, "8801700000001")
@@ -737,9 +737,9 @@ class TestHumanFormatParsing:
 
     @pytest.mark.asyncio
     async def test_cmd_draft_reply_routes_to_reject(self):
-        from modules.admin_commands import _cmd_draft_reply
+        from modules.fazle_admin_commands import _cmd_draft_reply
 
-        with patch("modules.admin_commands._cmd_reject", new=AsyncMock(return_value="rejected!")) as mock_reject:
+        with patch("modules.fazle_admin_commands._cmd_reject", new=AsyncMock(return_value="rejected!")) as mock_reject:
             result = await _cmd_draft_reply(123, "3", "8801700000001")
 
         mock_reject.assert_called_once_with(123, "8801700000001")
@@ -747,9 +747,9 @@ class TestHumanFormatParsing:
 
     @pytest.mark.asyncio
     async def test_cmd_draft_reply_routes_to_edit(self):
-        from modules.admin_commands import _cmd_draft_reply
+        from modules.fazle_admin_commands import _cmd_draft_reply
 
-        with patch("modules.admin_commands._cmd_edit", new=AsyncMock(return_value="edited!")) as mock_edit:
+        with patch("modules.fazle_admin_commands._cmd_edit", new=AsyncMock(return_value="edited!")) as mock_edit:
             result = await _cmd_draft_reply(123, "2 / new text", "8801700000001")
 
         mock_edit.assert_called_once_with(123, "new text", "8801700000001")
@@ -757,7 +757,7 @@ class TestHumanFormatParsing:
 
     @pytest.mark.asyncio
     async def test_cmd_draft_reply_edit_without_text_errors(self):
-        from modules.admin_commands import _cmd_draft_reply
+        from modules.fazle_admin_commands import _cmd_draft_reply
 
         result = await _cmd_draft_reply(123, "2", "8801700000001")
         assert "❌" in result
@@ -767,11 +767,11 @@ class TestHumanFormatParsing:
     async def test_process_admin_command_dispatches_draft_format(self):
         """End-to-end: process_admin_command recognizes 'Draft 123 / 1' and
         routes it through the draft-reply handler."""
-        from modules.admin_commands import process_admin_command
+        from modules.fazle_admin_commands import process_admin_command
 
         with patch("modules.rbac.check_permission", new=AsyncMock(return_value={"allowed": True, "required_role": "operator", "admin": True})):
             with patch("modules.rbac.record_audit", new=AsyncMock()):
-                with patch("modules.admin_commands._cmd_approve", new=AsyncMock(return_value="approved!")) as mock_approve:
+                with patch("modules.fazle_admin_commands._cmd_approve", new=AsyncMock(return_value="approved!")) as mock_approve:
                     result = await process_admin_command(
                         text="Draft 123 / 1",
                         admin_phone="8801700000001",
@@ -791,7 +791,7 @@ class TestNoAutoSendBeforeApproval:
     async def test_save_draft_does_not_send_to_sender(self):
         """_save_draft must only create a draft, never send the reply to the
         recipient. The reply is only sent after admin APPROVE/EDIT."""
-        from modules.bridge_poller import _save_draft
+        from modules.fazle_bridge_poller import _save_draft
 
         sent = []
 
@@ -803,8 +803,8 @@ class TestNoAutoSendBeforeApproval:
                 sent.append((jid, text))
                 return True
 
-        with patch("modules.bridge_poller.create_draft_reply", side_effect=_fake_create_draft):
-            with patch("modules.bridge_poller.execute", new=AsyncMock()):
+        with patch("modules.fazle_bridge_poller.create_draft_reply", side_effect=_fake_create_draft):
+            with patch("modules.fazle_bridge_poller.execute", new=AsyncMock()):
                 with patch("modules.draft_quality.check_draft_quality", return_value=(True, None)):
                     with patch("modules.draft_quality.strip_reply_emoji", side_effect=lambda x: x):
                         with patch("app.bridge.get_bridge1", return_value=_FakeBridge()):
@@ -822,7 +822,7 @@ class TestNoAutoSendBeforeApproval:
         """Structural proof: when _save_draft is called in process_bridge_inbound,
         it is always followed by 'return' — the send path is never reached."""
         import inspect
-        from modules.bridge_poller import process_bridge_inbound
+        from modules.fazle_bridge_poller import process_bridge_inbound
         source = inspect.getsource(process_bridge_inbound)
         # Every _save_draft call in the function must be followed by return
         # (not by the enqueue_outbound send path). This is a structural check

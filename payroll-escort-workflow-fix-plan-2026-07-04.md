@@ -1,5 +1,9 @@
 # Payroll Escort Workflow Fix Plan
 
+
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **Plan date:** 2026-07-04  
 **Objective:** Unify payroll, employee finance, escort lifecycle, attendance, and payment operations under one canonical write path with no data loss, no double entry, and full auditability.
 

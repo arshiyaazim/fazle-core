@@ -1,5 +1,9 @@
 # Payroll Engine, Employee Finance & Escort Operations Audit
 
+
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **Audit date:** 2026-07-04  
 **Mode:** Read-only repository code inspection (no destructive action)  
 **Scope:** Employee onboarding, payroll, salary/advance/payment flows, accountant posting, escort order lifecycle, roster projection, release settlement, OCR/review path, and WBOM-FPE consistency
@@ -33,14 +37,14 @@ Overall assessment:
 This report is based on current source verification of key modules and tests, including:
 
 - `modules/escort_lifecycle`
-- `modules/payment_workflow`
-- `modules/draft_approval`
+- `modules/fazle_payment_workflow`
+- `modules/fazle_draft_approval`
 - `modules/payroll`
 - `modules/escort`
 - `modules/escort_roster`
 - `modules/fazle_payroll_engine/employee`
-- `modules/payment_ingest/wbom_fpe_sync`
-- `modules/bridge_poller`, `app/main`, `app/config`
+- `modules/fazle_data_sync`
+- `modules/fazle_bridge_poller`, `app/main`, `app/config`
 
 Important note:
 
@@ -111,8 +115,8 @@ Employee payroll summary logic now reads canonical FPE transaction history for p
 
 There are two active command families:
 
-- `APPROVED` path through `modules/draft_approval` (designed canonical flow)
-- `PAID`/`ADVANCE` path through `modules/payment_workflow` + extra draft status updates
+- `APPROVED` path through `modules/fazle_draft_approval` (designed canonical flow)
+- `PAID`/`ADVANCE` path through `modules/fazle_payment_workflow` + extra draft status updates
 
 Risk:
 

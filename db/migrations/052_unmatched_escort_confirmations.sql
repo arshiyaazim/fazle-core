@@ -13,7 +13,7 @@
 --
 -- Dedup identity: this repo already has two independent dedup tables for
 -- admin-confirmation ingestion -- processed_bridge_messages (inbound
--- webhook/poller race guard, modules/bridge_poller/__init__.py) and
+-- webhook/poller race guard, modules/fazle_bridge_poller/__init__.py) and
 -- processed_outgoing_escort_messages (the bridge-poller's own outgoing-scan
 -- guard, same file) -- but they guard two *different* ingestion paths
 -- independently, so the same physical admin confirmation can still reach
@@ -72,15 +72,15 @@ CREATE TABLE IF NOT EXISTS wbom_unmatched_confirmations (
 );
 
 -- Same partial-unique-on-nullable-message-id pattern already used for
--- wbom_cash_transactions' own whatsapp-message dedup index
--- (idx_wbom_transactions_wa_msg_dedup, migration 029) -- not a new pattern.
+-- fazle_cash_transactions_archive' own whatsapp-message dedup index
+-- (idx_fazle_transactions_wa_msg_dedup, migration 029) -- not a new pattern.
 CREATE UNIQUE INDEX IF NOT EXISTS
-    uq_wbom_unmatched_confirmations_source_message
+    uq_fazle_unmatched_confirmations_source_message
     ON wbom_unmatched_confirmations (source_bridge, source_message_id)
     WHERE source_message_id IS NOT NULL AND source_message_id <> '';
 
-CREATE INDEX IF NOT EXISTS idx_wbom_unmatched_confirmations_status
+CREATE INDEX IF NOT EXISTS idx_fazle_unmatched_confirmations_status
     ON wbom_unmatched_confirmations (status);
 
-CREATE INDEX IF NOT EXISTS idx_wbom_unmatched_confirmations_created_at
+CREATE INDEX IF NOT EXISTS idx_fazle_unmatched_confirmations_created_at
     ON wbom_unmatched_confirmations (created_at DESC);

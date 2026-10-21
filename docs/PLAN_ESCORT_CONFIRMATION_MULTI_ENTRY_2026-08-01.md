@@ -171,7 +171,7 @@ that result is what gets saved.
 
 **Design note:** this is *not* wired onto the existing generic
 `APPROVE <id>` / `EDIT <id> <text>` / `REJECT <id>` commands in
-`modules/admin_commands/__init__.py` (`_cmd_approve`/`_cmd_edit`/
+`modules/fazle_admin_commands/__init__.py` (`_cmd_approve`/`_cmd_edit`/
 `_cmd_reject`), because those have a different, hardcoded meaning baked in
 for the generic AI-reply-drafts case — `_cmd_edit` (`:674-`) sends the
 edited text **to the original message sender as a reply**, which is wrong
@@ -184,7 +184,7 @@ need different action semantics. This queue gets its own dedicated intent
 (`escort_confirmation_review`) and its own command regexes matching the
 Owner's exact `<id> Type: APPROVE|EDIT|REJECT` syntax, reusing the existing
 push mechanism (`shared.draft_reply.create_draft_reply()` +
-`modules.bridge_poller._notify_admin_bridge()`, shipped 2026-08-01 for the
+`modules.fazle_bridge_poller._notify_admin_bridge()`, shipped 2026-08-01 for the
 FPE unmatched-cash queue) but its own handler functions.
 
 ---
@@ -281,7 +281,7 @@ that look like X" against "rows that resulted from X"):
    there today. Purely additive — no schema change, `remarks` is already a
    free-form JSON text column.
 2. Daily (proposed 08:00, configurable via `ESCORT_GAP_SCAN_HOUR` matching
-   the `DAILY_DIGEST_HOUR` pattern), scan `wbom_whatsapp_messages` for the
+   the `DAILY_DIGEST_HOUR` pattern), scan `fazle_whatsapp_messages` for the
    last 7 days: inbound, sender in `ESCORT_CLIENT_PHONES`, where
    `is_order_complete(message_body)` is true (reusing the existing,
    already-shipped completeness gate — no new parsing logic).
@@ -317,7 +317,7 @@ Do you think to review this message?
 ```
 
 pushed immediately via `_notify_admin_bridge()` (same mechanism as Step 4).
-New, **dedicated** command parser in `modules/admin_commands/__init__.py`
+New, **dedicated** command parser in `modules/fazle_admin_commands/__init__.py`
 (not the generic `APPROVE <id>`/`EDIT <id> <text>`/`REJECT <id>`, whose
 `_cmd_edit` sends the edited text *to the original sender* — wrong meaning
 here; mirrors the existing `fazle_payment_drafts`-specific verb-set

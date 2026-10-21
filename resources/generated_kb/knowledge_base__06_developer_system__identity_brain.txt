@@ -4,7 +4,7 @@ Version: 709590a18aba
 
 # Identity Brain
 **KB Article ID:** DEV-06-IDENTITY-BRAIN
-**Sources:** `modules/identity_brain/__init__.py` (393 lines — read 2026-06-23), `modules/role_classifier/__init__.py`
+**Sources:** `modules/fazle_identity_brain/__init__.py` (393 lines — read 2026-06-23), `modules/role_classifier/__init__.py`
 **Visibility:** Developer / Admin only — do NOT set `safe_for_customer=True`
 **Certified:** 2026-06-23 (Wave-3, W3P2-AUTH)
 
@@ -32,9 +32,9 @@ The identity brain resolves every contact to exactly one role using an ordered, 
 | 3 | accountant | `fazle_contact_roles` (role=accountant) | — |
 | 4 | vip_client | `fazle_contact_roles` (role=vip_client) | — |
 | 5 | client_escort_buyer | `fazle_contact_roles` (role=client_escort_buyer) | — |
-| 6 | repeat_client | `fpe_cash_transactions` history | — |
+| 6 | repeat_client | `fazle_cash_transactions` history | — |
 | 7 | vendor | `fazle_contact_roles` (role=vendor) | — |
-| 8 | employee | `wbom_employees` (3 phone variants) | A: cash transactions, B: attendance records, C: escort roster, D: contact DB |
+| 8 | employee | `fazle_employees_legacy` (3 phone variants) | A: cash transactions, B: attendance records, C: escort roster, D: contact DB |
 | 9 | supervisor | `fazle_contact_roles` (role=supervisor) | — |
 | 10 | candidate | `fazle_recruitment_sessions` (active session) | — |
 | 11 | unknown | fallback (no match) | — |
@@ -44,15 +44,15 @@ The identity brain resolves every contact to exactly one role using an ordered, 
 **Special Case — blocked:** Contacts with `role='blocked'` in `fazle_contact_roles` are hard-silently-skipped before step 1. No reply, no draft, no log entry.
 
 **Employee secondary evidence (Step 8):**
-When the primary phone lookup in `wbom_employees` fails, the system tries four secondary evidence sources in order:
-- A: `fpe_cash_transactions` — any payment record with this phone
+When the primary phone lookup in `fazle_employees_legacy` fails, the system tries four secondary evidence sources in order:
+- A: `fazle_cash_transactions` — any payment record with this phone
 - B: `wbom_attendance` — any attendance record with this phone
 - C: `escort_roster_entries` — any roster entry
-- D: `wbom_contacts` — contact DB match
+- D: `fazle_contacts` — contact DB match
 
 **Validation:** Phone lookup always tries three variants simultaneously: `01XXXXXXXXX`, `880XXXXXXXXX`, `+880XXXXXXXXX`
 
-**Source Module:** `modules/identity_brain/__init__.py`
+**Source Module:** `modules/fazle_identity_brain/__init__.py`
 **Source Function:** `detect_identity(phone, text="")` (393 lines — read 2026-06-23)
 **PKCA Report:** 11_identity_coverage_report.md
 **Management Authority:** Production evidence; documented 2026-06-22
@@ -65,7 +65,7 @@ When the primary phone lookup in `wbom_employees` fails, the system tries four s
 
 ## Identity Brain Module Constants
 
-Source: `modules/identity_brain/__init__.py` — all values read directly from code 2026-06-23
+Source: `modules/fazle_identity_brain/__init__.py` — all values read directly from code 2026-06-23
 
 ### `_ROLE_PRIORITY` — Numeric Priority Weights
 
@@ -142,7 +142,7 @@ Each resolved identity carries two confidence fields in the returned dict:
 - `identity_confidence`: raw integer (0–100)
 - `confidence`: float (0.0–1.0) = `identity_confidence / 100`
 
-Actual values from code (source: `detect_identity()` call sites in `modules/identity_brain/__init__.py`):
+Actual values from code (source: `detect_identity()` call sites in `modules/fazle_identity_brain/__init__.py`):
 
 | Resolution Path | `identity_confidence` | `confidence` float | Source |
 |---|---|---|---|
@@ -188,11 +188,11 @@ Actual values from code (source: `detect_identity()` call sites in `modules/iden
 |---|---|---|
 | Contact roles | `fazle_contact_roles` | Steps 1–5, 7, 9 |
 | Admin registry | `fazle_admins` | Step 1 (admin) |
-| Employee registry | `wbom_employees` | Step 8 (primary) |
-| Cash transactions | `wbom_cash_transactions` | Step 8 (secondary A) |
+| Employee registry | `fazle_employees_legacy` | Step 8 (primary) |
+| Cash transactions | `fazle_cash_transactions_archive` | Step 8 (secondary A) |
 | Attendance records | `wbom_attendance` | Step 8 (secondary B) |
 | Escort roster | `escort_roster_entries` | Step 8 (secondary C) |
-| Contact book | `wbom_contacts` | Step 8 (secondary D) |
+| Contact book | `fazle_contacts` | Step 8 (secondary D) |
 | Recruitment sessions | `fazle_recruitment_sessions` | Step 10 (candidate) |
 
 ---
@@ -308,4 +308,4 @@ Each resolved role injects a Bangla language-style directive into the LLM system
 |---|---|---|
 | 2026-06-22 | Wave-2B: Added role_classifier module documentation — ROLE_PRIORITY lookup (15 roles), _ROLE_PROMPTS (8 roles, Bangla prompt injection), get_user_context() function (7-key output dict), build_context_for_llm() function, visibility rules, cross references. Previous article was 103 lines (identity_brain resolution algorithm only). | KSP Wave-2B |
 | 2026-06-22 | PKVC correction: "14 roles" corrected to "15 roles" in revision history. Production `ROLE_PRIORITY` dict has 15 entries. | KSP PKVC |
-| 2026-06-23 | Wave-3 Phase 2 (W3P2-AUTH): Added Identity Brain Module Constants section — `_ROLE_PRIORITY` numeric table (11 entries), `_CANDIDATE_KEYWORDS` exact list (10 terms), `_ESCORT_CONTENT_RE` description; corrected confidence score table (actual code values); corrected admin detection mechanism (settings-based, not fazle_admins); corrected candidate step number (Step 5 text_hint, not Step 10 recruitment_sessions). Source: `modules/identity_brain/__init__.py` read directly. | Wave-3 Agent |
+| 2026-06-23 | Wave-3 Phase 2 (W3P2-AUTH): Added Identity Brain Module Constants section — `_ROLE_PRIORITY` numeric table (11 entries), `_CANDIDATE_KEYWORDS` exact list (10 terms), `_ESCORT_CONTENT_RE` description; corrected confidence score table (actual code values); corrected admin detection mechanism (settings-based, not fazle_admins); corrected candidate step number (Step 5 text_hint, not Step 10 recruitment_sessions). Source: `modules/fazle_identity_brain/__init__.py` read directly. | Wave-3 Agent |

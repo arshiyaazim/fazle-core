@@ -4,7 +4,7 @@
 --   "For WhatsApp identity, the normalized WhatsApp mobile number is the
 --    primary identity key. Names are supporting/display evidence only."
 --
--- This migration is purely additive on wbom_whatsapp_messages:
+-- This migration is purely additive on fazle_whatsapp_messages:
 --   * 6 nullable columns  (sender_name_snapshot / _source / _confidence,
 --                          canonical_message_key, resolved_phone, resolved_at)
 --   * 1 CHECK constraint on sender_name_source (NULL-tolerant, doesn't
@@ -26,7 +26,7 @@
 BEGIN;
 
 -- 1. New columns -----------------------------------------------------------------
-ALTER TABLE wbom_whatsapp_messages
+ALTER TABLE fazle_whatsapp_messages
     ADD COLUMN IF NOT EXISTS sender_name_snapshot   text,
     ADD COLUMN IF NOT EXISTS sender_name_source     varchar(40),
     ADD COLUMN IF NOT EXISTS sender_name_confidence smallint,
@@ -38,13 +38,13 @@ ALTER TABLE wbom_whatsapp_messages
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'ck_wbom_messages_sender_name_source'
+        SELECT 1 FROM pg_constraint WHERE conname = 'ck_fazle_messages_sender_name_source'
     ) THEN
-        ALTER TABLE wbom_whatsapp_messages
-            ADD CONSTRAINT ck_wbom_messages_sender_name_source CHECK (
+        ALTER TABLE fazle_whatsapp_messages
+            ADD CONSTRAINT ck_fazle_messages_sender_name_source CHECK (
                 sender_name_source IS NULL OR sender_name_source IN (
                     'employee',
-                    'wbom_contacts',
+                    'fazle_contacts',
                     'identity_brain',
                     'whatsmeow_full_name',
                     'whatsmeow_push_name',
@@ -67,16 +67,16 @@ END $$;
 -- business idempotency stays on the specific transaction/stanza key.
 -- [2026-09-01: comment corrected — the earlier "action-layer dedup pre-check"
 --  consumer was never built; the content+time heuristic was removed.]
-CREATE INDEX IF NOT EXISTS idx_wbom_msg_canonical_key
-    ON wbom_whatsapp_messages (canonical_message_key, platform, received_at DESC)
+CREATE INDEX IF NOT EXISTS idx_fazle_msg_canonical_key
+    ON fazle_whatsapp_messages (canonical_message_key, platform, received_at DESC)
     WHERE canonical_message_key IS NOT NULL
       AND platform IN ('bridge1', 'bridge2', 'bridge3');
 
 -- 4. Partial index: Meta source_message_ref --------------------------------------
 -- Used by app.main._handle_meta_message()'s existing dedup SELECT (speeds any
 -- future Meta correlation queries).
-CREATE INDEX IF NOT EXISTS idx_wbom_msg_meta_source_ref
-    ON wbom_whatsapp_messages (source_message_ref)
+CREATE INDEX IF NOT EXISTS idx_fazle_msg_meta_source_ref
+    ON fazle_whatsapp_messages (source_message_ref)
     WHERE platform = 'meta' AND direction = 'inbound';
 
 COMMIT;

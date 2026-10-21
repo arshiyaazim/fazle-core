@@ -10,7 +10,7 @@ Covers (see the §26 matrix in the autonomous-session brief):
                   normalization, unresolved-LID rejection, canonical_message_key
                   (transport-ID-only, forensic), _best_name precedence
   DB-backed     — trusted role/name resolution, inactive employee still matches,
-                  wbom_contacts platform='whatsapp' filter (+ negative case),
+                  fazle_contacts platform='whatsapp' filter (+ negative case),
                   push-name never authoritative, name never overrides phone,
                   ambiguous name search, secret non-exposure, fallback preserves
                   identity_phone
@@ -20,7 +20,7 @@ from __future__ import annotations
 import pytest
 import pytest_asyncio
 
-from modules.identity_resolver import (
+from modules.fazle_identity_resolver import (
     resolve_inbound_identity,
     compute_identity_phone,
     compute_canonical_message_key,
@@ -180,10 +180,10 @@ async def test_employee_phone_resolves_role_and_name_pushname_ignored(seed_emplo
 async def test_inactive_employee_still_matches_no_duplicate(test_db_pool):
     async with test_db_pool.acquire() as conn:
         await conn.execute(
-            "INSERT INTO wbom_employees (employee_mobile, employee_name, designation, status, basic_salary) "
+            "INSERT INTO fazle_employees_legacy (employee_mobile, employee_name, designation, status, basic_salary) "
             "VALUES ('8801799999999', 'Former Staffer', 'Security Guard', 'Inactive', 9000)"
         )
-        before = await conn.fetchval("SELECT count(*) FROM wbom_employees")
+        before = await conn.fetchval("SELECT count(*) FROM fazle_employees_legacy")
     res = await resolve_inbound_identity(
         platform="bridge1", sender_number="8801799999999", canonical_phone="8801799999999",
     )
@@ -191,7 +191,7 @@ async def test_inactive_employee_still_matches_no_duplicate(test_db_pool):
     assert res["trusted_identity_name"] == "Former Staffer"
     assert (res.get("identity_lifecycle") or "").lower() == "inactive"
     async with test_db_pool.acquire() as conn:
-        after = await conn.fetchval("SELECT count(*) FROM wbom_employees")
+        after = await conn.fetchval("SELECT count(*) FROM fazle_employees_legacy")
     assert after == before  # resolver never creates rows
 
 
@@ -199,12 +199,12 @@ async def test_inactive_employee_still_matches_no_duplicate(test_db_pool):
 async def test_wbom_contacts_platform_filter_positive_and_negative(test_db_pool):
     async with test_db_pool.acquire() as conn:
         await conn.execute(
-            "INSERT INTO wbom_contacts (whatsapp_number, display_name, platform, is_active) "
+            "INSERT INTO fazle_contacts (whatsapp_number, display_name, platform, is_active) "
             "VALUES ('8801744444444', 'WA Contact', 'whatsapp', true)"
         )
         # a same-number row on a different platform must NOT become WA identity
         await conn.execute(
-            "INSERT INTO wbom_contacts (whatsapp_number, display_name, platform, is_active) "
+            "INSERT INTO fazle_contacts (whatsapp_number, display_name, platform, is_active) "
             "VALUES ('8801755555555', 'Messenger Only', 'facebook', true)"
         )
     hit = await resolve_inbound_identity(
@@ -271,7 +271,7 @@ async def test_protected_admin_and_secret_non_exposure(seed_admin):
 async def test_name_search_ambiguous_returns_candidates(test_db_pool):
     async with test_db_pool.acquire() as conn:
         await conn.execute(
-            "INSERT INTO wbom_contacts (whatsapp_number, display_name, platform, is_active) VALUES "
+            "INSERT INTO fazle_contacts (whatsapp_number, display_name, platform, is_active) VALUES "
             "('8801766666661', 'Rahim Sharif', 'whatsapp', true),"
             "('8801766666662', 'Rahim Ali', 'whatsapp', true)"
         )
@@ -284,7 +284,7 @@ async def test_name_search_ambiguous_returns_candidates(test_db_pool):
 async def test_name_search_ignores_non_whatsapp_contacts(test_db_pool):
     async with test_db_pool.acquire() as conn:
         await conn.execute(
-            "INSERT INTO wbom_contacts (whatsapp_number, display_name, platform, is_active) "
+            "INSERT INTO fazle_contacts (whatsapp_number, display_name, platform, is_active) "
             "VALUES ('8801777777777', 'Zephyr Unique', 'facebook', true)"
         )
     results = await search_identity_by_name("Zephyr Unique")
@@ -294,7 +294,7 @@ async def test_name_search_ignores_non_whatsapp_contacts(test_db_pool):
 @pytest.mark.asyncio
 async def test_fallback_preserves_identity_phone_on_db_error(monkeypatch):
     # force a DB error inside the tier chain; identity_phone (pure) must survive
-    import modules.identity_resolver as ir
+    import modules.fazle_identity_resolver as ir
 
     async def _boom(*a, **k):
         raise RuntimeError("simulated pool failure")

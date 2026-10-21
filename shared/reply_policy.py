@@ -268,7 +268,7 @@ ROLE_PROMPTS: dict[str, str] = {
     "partner":       "এই ব্যক্তি আমাদের ব্যবসায়িক অংশীদার। সম্মানজনক ও সহযোগিতামূলক টোনে কথা বলো।",
     "known_contact": "এই ব্যক্তি আমাদের পরিচিত যোগাযোগ। সৌজন্যমূলক টোনে কথা বলো।",
     # ── Added 2026-08-03 (Owner-approved persona proposal) — real bug fix,
-    # not just new features: these are real modules/identity_brain role
+    # not just new features: these are real modules/fazle_identity_brain role
     # values (see knowledge_base/06_developer_system/identity_brain.md,
     # confirmed live by reading modules/message_router/__init__.py directly:
     # `role_str = identity["role"]` is passed straight into generate_reply()

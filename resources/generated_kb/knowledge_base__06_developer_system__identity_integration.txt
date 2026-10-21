@@ -4,7 +4,7 @@ Version: 08a3b0e426db
 
 # Identity Integration Reference
 **KB Article ID:** DEV-06-IDENTITY-INTEGRATION
-**Sources:** `modules/identity_brain/__init__.py` (393 lines), `modules/message_router/__init__.py` (598 lines), `shared/reply_policy.py` (291 lines), `knowledge_base/ai_access_matrix.md` — all read 2026-06-23
+**Sources:** `modules/fazle_identity_brain/__init__.py` (393 lines), `modules/message_router/__init__.py` (598 lines), `shared/reply_policy.py` (291 lines), `knowledge_base/ai_access_matrix.md` — all read 2026-06-23
 **Visibility:** Developer / Admin only — do NOT set `safe_for_customer=True`
 **Certified:** 2026-06-23 (Wave-3, W3P2-AUTH)
 
@@ -30,8 +30,8 @@ Each row is a sender type. Each column is one of the six identity dimensions.
 |---|---|---|---|
 | **Admin** | `_check_admin_settings()` — phone in env admin list | `app.config.settings` (ADMIN_NUMBERS, bridge admin phones) | 100 (1.00) |
 | **Admin (alt)** | Seed rule with `role='admin'` in `fazle_contact_roles` | `_lookup_seed()` | from DB column |
-| **Employee** | Primary phone match in `wbom_employees` | `_lookup_employee()` | 88 (0.88) |
-| **Employee (secondary)** | Cash payment records → `fpe_cash_transactions` | `_lookup_cash_identity()` | 86 (0.86) |
+| **Employee** | Primary phone match in `fazle_employees_legacy` | `_lookup_employee()` | 88 (0.88) |
+| **Employee (secondary)** | Cash payment records → `fazle_cash_transactions` | `_lookup_cash_identity()` | 86 (0.86) |
 | **Employee (secondary)** | Attendance record → `wbom_attendance` | `_lookup_attendance_identity()` | 86 (0.86) |
 | **Employee (secondary)** | Escort duty → `wbom_escort_programs` (escort_mobile match) | `_lookup_escort_roster()` | 85 (0.85) |
 | **Supervisor** | Seed rule with `role='supervisor'` in `fazle_contact_roles` | `_lookup_seed()` | from DB column |
@@ -39,7 +39,7 @@ Each row is a sender type. Each column is one of the six identity dimensions.
 | **repeat_client (escort unknown)** | Vessel/escort keywords in text from unregistered sender | `_ESCORT_CONTENT_RE` pattern match | 40 (0.40) |
 | **Unknown** | None of the above matched | `_unknown()` fallback | 0 (0.00) |
 
-Source: `modules/identity_brain/__init__.py` `detect_identity()` function.
+Source: `modules/fazle_identity_brain/__init__.py` `detect_identity()` function.
 
 **Resolution order (highest priority first):** admin → seed rule → employee (primary, cash, attendance, escort) → contact DB → text-hint candidate → text-hint escort → unknown.
 

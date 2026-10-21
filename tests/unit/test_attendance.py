@@ -63,7 +63,7 @@ class TestHandleAttendanceMessage:
         assert draft is not None
 
     async def test_returns_none_for_unknown_sender(self, test_db_pool):
-        """Unknown sender not in wbom_employees — should not crash."""
+        """Unknown sender not in fazle_employees_legacy — should not crash."""
         import app.database as db_module
         db_module._pool = test_db_pool
 
@@ -297,7 +297,7 @@ class TestFinalizeAttendanceDraft:
 
         async with test_db_pool.acquire() as conn:
             emp_count = await conn.fetchval(
-                "SELECT COUNT(*) FROM wbom_employees WHERE employee_name='Totally Unknown Person'"
+                "SELECT COUNT(*) FROM fazle_employees_legacy WHERE employee_name='Totally Unknown Person'"
             )
         assert emp_count == 0, "No employee should have been auto-created"
 
@@ -308,7 +308,7 @@ class TestFinalizeAttendanceDraft:
 
         async with test_db_pool.acquire() as conn:
             await conn.execute(
-                "UPDATE wbom_employees SET status='Inactive' WHERE employee_id=$1",
+                "UPDATE fazle_employees_legacy SET status='Inactive' WHERE employee_id=$1",
                 seed_employee["employee_id"],
             )
         draft_id = await _insert_attendance_draft(

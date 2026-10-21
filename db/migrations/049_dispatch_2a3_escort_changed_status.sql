@@ -31,10 +31,10 @@
 BEGIN;
 
 ALTER TABLE wbom_escort_programs
-    DROP CONSTRAINT wbom_escort_programs_status_check;
+    DROP CONSTRAINT fazle_escort_programs_status_check;
 
 ALTER TABLE wbom_escort_programs
-    ADD CONSTRAINT wbom_escort_programs_status_check
+    ADD CONSTRAINT fazle_escort_programs_status_check
     CHECK (status IN (
         'draft', 'confirmed', 'running', 'completed', 'cancelled', 'expired',
         'escort_changed'
@@ -44,7 +44,7 @@ COMMIT;
 
 -- Downgrade (manual, run only after confirming zero escort_changed rows):
 --   BEGIN;
---   ALTER TABLE wbom_escort_programs DROP CONSTRAINT wbom_escort_programs_status_check;
---   ALTER TABLE wbom_escort_programs ADD CONSTRAINT wbom_escort_programs_status_check
+--   ALTER TABLE wbom_escort_programs DROP CONSTRAINT fazle_escort_programs_status_check;
+--   ALTER TABLE wbom_escort_programs ADD CONSTRAINT fazle_escort_programs_status_check
 --       CHECK (status IN ('draft','confirmed','running','completed','cancelled','expired'));
 --   COMMIT;

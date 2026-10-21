@@ -33,7 +33,7 @@ USAGE
     try:
         rows_affected = await optimistic_update(
             conn=ctx.conn,
-            table="wbom_employees",
+            table="fazle_employees_legacy",
             pk_col="employee_id",
             pk_val=employee_id,
             updates={"salary": 28000},
@@ -45,7 +45,7 @@ USAGE
         raise
 
     # Duplicate check before inserting payment
-    await assert_not_duplicate(conn, "fpe_cash_transactions", txn_ref)
+    await assert_not_duplicate(conn, "fazle_cash_transactions", txn_ref)
 """
 from __future__ import annotations
 

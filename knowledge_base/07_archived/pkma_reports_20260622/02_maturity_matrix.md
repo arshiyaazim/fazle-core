@@ -22,12 +22,12 @@ Maturity levels: 0=Unknown | 1=Documented | 2=Production Verified | 3=Management
 |---|---|---|---|---|---|---|---|---|
 | 1 | Attendance | 3 | Management Approved | attendance_workflow.md | `modules/attendance`, `modules/attendance_parser` | DUP-05 approved | None | Conditionally yes |
 | 2 | Escort | 3 | Management Approved | escort_workflow.md, escort_business_rules.md | `modules/escort_lifecycle` | CON-01, CON-02, CON-03, CON-04 | None | Conditionally yes |
-| 3 | Escort Payment | 3 | Management Approved | payment_workflow.md, escort_business_rules.md | `modules/payment_workflow`, `modules/escort_lifecycle` | CON-01, CON-02 | None | Conditionally yes |
+| 3 | Escort Payment | 3 | Management Approved | payment_workflow.md, escort_business_rules.md | `modules/fazle_payment_workflow`, `modules/escort_lifecycle` | CON-01, CON-02 | None | Conditionally yes |
 | 4 | Release Slip / OCR | 2 | Production Verified | release_slip_workflow.md | `modules/escort_slip_extractor`, `modules/escort_lifecycle` | None for slip-specific | Full 18-field TypedDict missing | No |
 | 5 | Payroll | 3 | Management Approved | salary_workflow.md | `modules/payroll` | CON-01 (formula) | None | Conditionally yes |
 | 6 | Cash / FPE | 1 | Documented | payment_business_rules.md (partial) | Partially — FPE workers verified ACTIVE but not KB-documented | None | FPE article missing | No |
 | 7 | Recruitment | 3 | Management Approved | recruitment_workflow.md, recruitment_business_rules.md, recruitment_policy.md | `modules/recruitment_flow`, `modules/recruitment_ai` | BR-25, HK-33, HK-34, HK-36 | None (BR-25 resolved) | Conditionally yes |
-| 8 | Identity Brain | 2 | Production Verified | identity_overview.md, permission_matrix.md | `modules/identity_brain`, `modules/phone_normalizer` | None formal | None | No |
+| 8 | Identity Brain | 2 | Production Verified | identity_overview.md, permission_matrix.md | `modules/fazle_identity_brain`, `modules/phone_normalizer` | None formal | None | No |
 | 9 | AI Behavior | 2 | Production Verified | automation_pipeline.md, ai_response_rules.md | `app/llm.py`, `app/bridge.py` | None formal | LLM fallback order not management-approved | No |
 | 10 | RAG | 1 | Documented | rag_strategy.md (abstract) | Not verified — BM25 params absent from KB | None | Full BM25 config undocumented | No |
 | 11 | OCR Engine | 1 | Documented | release_slip_workflow.md (partial), ocr_engine.md (stub) | `modules/escort_slip_extractor` verified partially | None | 18-field TypedDict not in KB | No |
@@ -35,7 +35,7 @@ Maturity levels: 0=Unknown | 1=Documented | 2=Production Verified | 3=Management
 | 13 | Message Router | 3 | Management Approved | ai_response_rules.md, security_rules.md | `app/message_router`, `app/bridge_poller` | HK-01, HK-03, HK-04, HK-09, HK-13 | None | Conditionally yes |
 | 14 | Notification / Outbound | 2 | Production Verified | automation_pipeline.md (inline) | `modules/outbound` verified (queue, DLQ, sweep) | None formal | No dedicated article | No |
 | 15 | Security Rules | 3 | Management Approved | security_rules.md | `app/bridge_poller` — all patterns verified | HK-13 (loop), HK-44 (cooldown) | HK-12/14/15 not formally approved | Partial |
-| 16 | Admin Commands | 2 | Production Verified | admin_operations_overview.md, admin_role_management.md | `modules/admin_commands` — all 37 verified | RBAC roles in system | No PKVC certification post-Wave-1 | No |
+| 16 | Admin Commands | 2 | Production Verified | admin_operations_overview.md, admin_role_management.md | `modules/fazle_admin_commands` — all 37 verified | RBAC roles in system | No PKVC certification post-Wave-1 | No |
 | 17 | RBAC | 2 | Production Verified | role_permissions.md, permission_matrix.md | `modules/rbac`, `COMMAND_ROLE` verified | HK-41 (bootstrap only) | No formal RBAC-as-whole approval | No |
 | 18 | Database Behavior | 0 | Unknown | database_rules.md (abstract only) | Not read; 43 tables undocumented | None | Entire table inventory missing | No |
 | 19 | Parser Engine | 1 | Documented | parser_engine.md (stub); workflow articles (partial) | `modules/attendance_parser` partially; others not verified | None | 14 of 15 parsers undocumented | No |

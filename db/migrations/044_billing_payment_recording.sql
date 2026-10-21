@@ -38,5 +38,5 @@ CREATE TABLE IF NOT EXISTS wbom_billing_payment_log (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_wbom_billing_payment_log_bill_id ON wbom_billing_payment_log(bill_id);
-CREATE INDEX IF NOT EXISTS idx_wbom_billing_payment_log_actor ON wbom_billing_payment_log(actor);
+CREATE INDEX IF NOT EXISTS idx_fazle_billing_payment_log_bill_id ON wbom_billing_payment_log(bill_id);
+CREATE INDEX IF NOT EXISTS idx_fazle_billing_payment_log_actor ON wbom_billing_payment_log(actor);

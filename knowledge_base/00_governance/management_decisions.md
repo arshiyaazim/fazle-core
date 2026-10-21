@@ -86,7 +86,7 @@ These are not decisions — they are unresolved schema questions that require a 
 | ID | Question | Risk | Target Version |
 |---|---|---|---|
 | U-01 | Does `wbom_candidates` exist in current production schema? | ✅ RESOLVED 2026-06-23 — EXISTS. 21 columns. See schema below. |
-| U-02 | Does `fpe_transaction_repairs` have a DDL anywhere in production? | ✅ RESOLVED 2026-06-23 — EXISTS. 15 columns. FKs to `fpe_cash_transactions`. See schema below. |
+| U-02 | Does `fpe_transaction_repairs` have a DDL anywhere in production? | ✅ RESOLVED 2026-06-23 — EXISTS. 15 columns. FKs to `fazle_cash_transactions`. See schema below. |
 | U-03 | Is `wbom_staging_payments` the same table as `fpe_staging_payments`, or two separate tables? | ✅ RESOLVED 2026-06-23 — `wbom_staging_payments` EXISTS (16 columns). `fpe_staging_payments` does NOT EXIST. They are NOT the same — only one table exists. |
 
 ---
@@ -105,7 +105,7 @@ Key columns: `candidate_id`, `phone` (UNIQUE), `full_name`, `age`, `area`, `job_
 
 ### U-02: `fpe_transaction_repairs` — EXISTS ✅
 
-15 columns. 3 FKs to `fpe_cash_transactions` (original txn, reversal txn, new txn). Tracks re-attribution of transactions to different employees.
+15 columns. 3 FKs to `fazle_cash_transactions` (original txn, reversal txn, new txn). Tracks re-attribution of transactions to different employees.
 
 Key columns: `transaction_id` (original), `old_employee_id`, `new_employee_id`, `repair_reason`, `match_method`, `reversal_txn_id`, `new_txn_id`, `review_needed`, `dry_run`, `repaired_by`.
 
@@ -117,7 +117,7 @@ Key columns: `transaction_id` (original), `old_employee_id`, `new_employee_id`, 
 These are NOT two separate tables — only `wbom_staging_payments` is in production.
 
 16 columns: `staging_id`, `message_id`, `sender_number`, `extracted_name`, `extracted_mobile`, `amount`, `payment_method`, `transaction_type`, `matched_employee_id`, `name_match_ratio`, `status` (default 'pending'), `approved_by`, `approved_at`, `created_at`, `final_transaction_id`, `idempotency_key`.
-FK: `final_transaction_id` → `fpe_cash_transactions.id` (canonical per Owner Directive 2026-06-29; was `wbom_cash_transactions.transaction_id` historically).
+FK: `final_transaction_id` → `fazle_cash_transactions.id` (canonical per Owner Directive 2026-06-29; was `fazle_cash_transactions_archive.transaction_id` historically).
 
 **KB action:** Update `database_rules.md` entry for C-02 — table name is `wbom_staging_payments` (not `fpe_staging_payments`). Correct domain assignment stands (CASH/FPE).
 
@@ -218,11 +218,11 @@ FK: `final_transaction_id` → `fpe_cash_transactions.id` (canonical per Owner D
 
 **Status:** Fully implemented, zero external callers (audited 2026-06-02)
 **Functions:** `reverse_payment()`, `adjust_payment()`, `list_corrections()`
-**DB tables required:** `fazle_payment_drafts` ✅, `fpe_cash_transactions` ✅ (canonical per Owner Directive 2026-06-29), `fazle_payment_correction_log` ✅ (migration `008_payment_correction.sql`)
+**DB tables required:** `fazle_payment_drafts` ✅, `fazle_cash_transactions` ✅ (canonical per Owner Directive 2026-06-29), `fazle_payment_correction_log` ✅ (migration `008_payment_correction.sql`)
 
 **To activate — changes required:**
-1. `modules/admin_commands/__init__.py`: Wire `REVERSE <draft_id> <reason>` → `payment_correction.reverse_payment()`
-2. `modules/admin_commands/__init__.py`: Wire `ADJUST <draft_id> <new_amount> <method> [reason]` → `payment_correction.adjust_payment()`
+1. `modules/fazle_admin_commands/__init__.py`: Wire `REVERSE <draft_id> <reason>` → `payment_correction.reverse_payment()`
+2. `modules/fazle_admin_commands/__init__.py`: Wire `ADJUST <draft_id> <new_amount> <method> [reason]` → `payment_correction.adjust_payment()`
 3. Add `REVERSE` and `ADJUST` to `COMMAND_ROLE` dict with required role (recommended: `superadmin` for REVERSE, `admin` for ADJUST)
 4. KB: Create `06_developer_system/payment_correction.md` documenting both commands
 5. Test: Write unit tests for `reverse_payment()` edge cases (already reversed, non-approved status)
@@ -307,7 +307,7 @@ FK: `final_transaction_id` → `fpe_cash_transactions.id` (canonical per Owner D
 
 | ID | File | Change | Date |
 |---|---|---|---|
-| ESX-WIRE | `modules/bridge_poller/__init__.py` | Image STEP 2: replace `_proc_img(file_path, None)` with `extract_escort_slip(file_path, source_label=bridge_name)`. Replace keyword-based `slip_type` check with `completion_date is not None` for release detection. Remove `slip_type == "duplicate"` case (not a concept in escort_slip_extractor). Use `raw_ocr_text` field name. | 2026-06-23 |
+| ESX-WIRE | `modules/fazle_bridge_poller/__init__.py` | Image STEP 2: replace `_proc_img(file_path, None)` with `extract_escort_slip(file_path, source_label=bridge_name)`. Replace keyword-based `slip_type` check with `completion_date is not None` for release detection. Remove `slip_type == "duplicate"` case (not a concept in escort_slip_extractor). Use `raw_ocr_text` field name. | 2026-06-23 |
 
 ### Technical Notes (Session 10)
 
@@ -397,10 +397,10 @@ authorized as a management decision without a separate approval round per phase.
 
 | ID | Decision | Details | Date |
 |---|---|---|---|
-| S13-01 | Social auto-reply draft policy = **Selective**, not blanket | Only senders matching `DRAFT_ALWAYS_ROLES`/`DRAFT_ALWAYS_PHONES`/`DRAFT_ALWAYS_NAMES` (`modules.bridge_poller._is_draft_always()`) get routed to an admin-approval draft. Everyone else gets a real auto-send via `enqueue_reply()` → `social_reply_queue`, matching pre-2026-06-23 behavior. This supersedes the interim blanket-draft-for-everyone behavior briefly shipped the same day in commit `7bbe641` — that was never the intended end state, just a safety-first placeholder while the underlying disabled-send-worker bug was being root-caused. | 2026-07-15 |
-| S13-02 | `mark_paid()` must post to canonical `fpe_cash_transactions`, fail closed if unlinked | Payroll payouts now write a `create_transaction()` ledger entry via the `fpe_employees.wbom_employee_id` bridge; if no active FPE employee is linked, the run is not marked paid rather than completing with a missing ledger entry. | 2026-07-15 |
+| S13-01 | Social auto-reply draft policy = **Selective**, not blanket | Only senders matching `DRAFT_ALWAYS_ROLES`/`DRAFT_ALWAYS_PHONES`/`DRAFT_ALWAYS_NAMES` (`modules.fazle_bridge_poller._is_draft_always()`) get routed to an admin-approval draft. Everyone else gets a real auto-send via `enqueue_reply()` → `social_reply_queue`, matching pre-2026-06-23 behavior. This supersedes the interim blanket-draft-for-everyone behavior briefly shipped the same day in commit `7bbe641` — that was never the intended end state, just a safety-first placeholder while the underlying disabled-send-worker bug was being root-caused. | 2026-07-15 |
+| S13-02 | `mark_paid()` must post to canonical `fazle_cash_transactions`, fail closed if unlinked | Payroll payouts now write a `create_transaction()` ledger entry via the `fazle_employees.wbom_employee_id` bridge; if no active FPE employee is linked, the run is not marked paid rather than completing with a missing ledger entry. | 2026-07-15 |
 | S13-03 | Settlement formula: prorate office-staff basic salary by attendance | `basic_salary ÷ calendar_days_in_month × approved_duty_days`, wired into `compute_run(..., prorate_basic=True)`, called only from `compute_all_for_period_office_only()` (still gated behind `office_payroll_authoritative_enabled=False` — 0 real eligible employees exist in production as of this date, so the flag stays off pending real-data validation). Escort-inclusive `compute_all_for_period()` is unaffected. | 2026-07-15 |
-| S13-04 | WBOM status case-mismatch fix | `modules/fazle_payroll_engine/employee.py`'s WBOM cross-lookup now compares `LOWER(status)` — was a permanent no-op against Title-case `wbom_employees.status` values. | 2026-07-15 |
+| S13-04 | WBOM status case-mismatch fix | `modules/fazle_payroll_engine/employee.py`'s WBOM cross-lookup now compares `LOWER(status)` — was a permanent no-op against Title-case `fazle_employees_legacy.status` values. | 2026-07-15 |
 
 ### Files Authorized for Change (Session 13)
 
@@ -446,7 +446,7 @@ employee-scoped transactions view.
 
 Owner (superadmin) reported being unable to update Salary/Designation/Joining Date from
 the Employees panel Edit form. Audit found the edits were being written successfully to
-`wbom_employees` but never propagated to `fpe_employees` — the table every display surface
+`fazle_employees_legacy` but never propagated to `fazle_employees` — the table every display surface
 (Employees list, Employee Detail panel) actually reads — so saved changes were invisible.
 Status already had a working WBOM→FPE sync (`deactivate_employee`/`reactivate_employee`);
 Salary/Designation/Joining Date did not. Owner approved ("Approve as-is") extending the
@@ -454,14 +454,14 @@ same sync pattern to those three fields.
 
 | ID | Decision | Details | Date |
 |---|---|---|---|
-| S15-01 | WBOM→FPE sync for designation/basic_salary/joining_date | `update_employee()` (PUT `/api/admin/employees/{id}`) now propagates these three fields to the linked `fpe_employees` row after the `wbom_employees` write, matched by `wbom_employee_id` (the FK — more precise than the phone-match the status sync uses). Best-effort/non-fatal, same pattern as the existing status sync. | 2026-07-16 |
-| S15-02 | Fix pre-existing `joining_date` 500 on `PUT /api/admin/employees/{id}` | Found live during S15-01 smoke-testing: `EmployeeUpdate.joining_date` is a plain `str` (per its own docstring) but `wbom_employees.joining_date`/`fpe_employees.joining_date` are `DATE` columns — asyncpg does not auto-cast, so any non-empty `joining_date` in the PUT body 500'd, predating this session entirely. Now parsed via `date.fromisoformat()` before binding (400 on bad format instead of 500). In scope of the same authorized function/endpoint, not a separate change. | 2026-07-16 |
+| S15-01 | WBOM→FPE sync for designation/basic_salary/joining_date | `update_employee()` (PUT `/api/admin/employees/{id}`) now propagates these three fields to the linked `fazle_employees` row after the `fazle_employees_legacy` write, matched by `wbom_employee_id` (the FK — more precise than the phone-match the status sync uses). Best-effort/non-fatal, same pattern as the existing status sync. | 2026-07-16 |
+| S15-02 | Fix pre-existing `joining_date` 500 on `PUT /api/admin/employees/{id}` | Found live during S15-01 smoke-testing: `EmployeeUpdate.joining_date` is a plain `str` (per its own docstring) but `fazle_employees_legacy.joining_date`/`fazle_employees.joining_date` are `DATE` columns — asyncpg does not auto-cast, so any non-empty `joining_date` in the PUT body 500'd, predating this session entirely. Now parsed via `date.fromisoformat()` before binding (400 on bad format instead of 500). In scope of the same authorized function/endpoint, not a separate change. | 2026-07-16 |
 
 ### Files Authorized for Change (Session 15)
 
 | ID | File | Change |
 |---|---|---|
-| S15-01 | `modules/admin_employees/__init__.py` | `update_employee()` gained a post-write sync step propagating designation/basic_salary/joining_date to `fpe_employees` via `wbom_employee_id`. |
+| S15-01 | `modules/admin_employees/__init__.py` | `update_employee()` gained a post-write sync step propagating designation/basic_salary/joining_date to `fazle_employees` via `wbom_employee_id`. |
 | S15-02 | `modules/admin_employees/__init__.py` | `update_employee()` now parses `joining_date` into a `date` object before the SQL bind, instead of passing the raw string through. |
 
 ---
@@ -483,7 +483,7 @@ proposal") as scoped down in that doc.
 
 | ID | Decision | Details | Date |
 |---|---|---|---|
-| S16-01 | Delete 18 historical unauthorized-sender `wbom_escort_programs` rows | program_id: 155, 213, 214, 219, 229, 230, 765, 769, 774, 779, 808, 840, 851, 860, 869, 871, 873, 880 — all pre-date the 2026-06-27 sender-validation gate, all verified financially inert (no `escort_employee_id`, zero `fpe_cash_transactions` references). Full row content logged to `escort_roster_audit_logs` (action `manual_unauthorized_sender_cleanup`) before each delete. `940` (`is_historical=true`) and the 5 known-sender expired drafts explicitly NOT touched, per Owner's constraint. | 2026-07-16 |
+| S16-01 | Delete 18 historical unauthorized-sender `wbom_escort_programs` rows | program_id: 155, 213, 214, 219, 229, 230, 765, 769, 774, 779, 808, 840, 851, 860, 869, 871, 873, 880 — all pre-date the 2026-06-27 sender-validation gate, all verified financially inert (no `escort_employee_id`, zero `fazle_cash_transactions` references). Full row content logged to `escort_roster_audit_logs` (action `manual_unauthorized_sender_cleanup`) before each delete. `940` (`is_historical=true`) and the 5 known-sender expired drafts explicitly NOT touched, per Owner's constraint. | 2026-07-16 |
 | S16-02 | Defensive sweep for legacy `status='expired'` rows | `expire_stale_drafts()` in `modules/escort_roster/db.py` extended to also catch any *future* financially-inert `status='expired'` row past TTL, so the "stuck in expired limbo" failure mode (root cause of S16-01's backlog) can't recur even in an edge case. Not required by current evidence — pure defensive addition per Rule 3's "no exceptions" framing. | 2026-07-16 |
 
 ### Files Authorized for Change (Session 16)
@@ -510,11 +510,11 @@ only.
 | ID | Decision | Details | Date |
 |---|---|---|---|
 | S17-01 | Delete 10 legacy known-sender expired drafts | program_id: 141, 759, 760, 761, 763, 764, 768, 770, 771, 777 — registered sender, pre-2026-06-27, abandoned mid-order, verified financially inert. Audit-logged (`manual_legacy_expired_cleanup`) before delete. | 2026-07-16 |
-| S17-02 | S/N 777 reproducibility test — no code change | Raw message recovered from `wbom_whatsapp_messages`, replayed through current `parse_escort_message()` in isolation. The original "label leakage into lighter_vessel" defect does not reproduce; `is_minimum_escort_order()` now correctly rejects the message outright (no mother vessel stated) instead of saving a corrupted row. Folded into S17-01's delete batch. | 2026-07-16 |
+| S17-02 | S/N 777 reproducibility test — no code change | Raw message recovered from `fazle_whatsapp_messages`, replayed through current `parse_escort_message()` in isolation. The original "label leakage into lighter_vessel" defect does not reproduce; `is_minimum_escort_order()` now correctly rejects the message outright (no mother vessel stated) instead of saving a corrupted row. Folded into S17-01's delete batch. | 2026-07-16 |
 | S17-03 | Historical backfill 9-row review — recommendations only, no edits made | 699/702/704/718/727 = keep (blank master_mobile is correct per source text). 703/707 = flagged for admin input (unclaimed phone-like number near lighter name, ambiguous vs Escort Mobile). 734 = flagged for admin review (no MV label in source at all, most ambiguous). 933 = recommend delete as duplicate of 934 (933 is the system's own internal admin-review alert text, accidentally backfilled as if it were a real confirmation) — **not deleted, pending sign-off**. | 2026-07-16 |
 | S17-04 | Duplicate review corrected: 6 of 8 pairs are not duplicates | Original detection grouped by mv+lv+master only, missing `program_date` — 58/136, 60/107, 62/93, 900/905, 901/906 all have different program_dates (legitimate separate runs of a recurring vessel/lighter pairing), not duplicates. Only 1/9 and 3/10 (same date, 10 minutes apart, same 2026-04-18 bulk-seed batch) look like genuine accidental duplicates. **No deletions made** for 1/9, 3/10, or 933/934 — all three pending explicit sign-off. | 2026-07-16 |
 | S17-05 | master_mobile blank-field rule documented from KB | `escort_business_rules.md`: Master Mobile is a required *draft* field but NOT a required *confirmation* field. Rows created via `_create_confirmed_from_admin()` (`auto_created=true`) can legitimately have a blank master_mobile; rows that went through a real draft first should not. The 189 flagged rows were not individually reclassified — report only, per Owner's instruction. | 2026-07-16 |
-| S17-06 | New finding, out of scope, not acted on | 900/901/905/906 all have `destination` containing leaked `"Escort Name: X"` text instead of a place name. Reproducibility unconfirmed (no matching raw message found in `wbom_whatsapp_messages` to replay). Flagged for a possible future follow-up audit; no action taken this session. | 2026-07-16 |
+| S17-06 | New finding, out of scope, not acted on | 900/901/905/906 all have `destination` containing leaked `"Escort Name: X"` text instead of a place name. Reproducibility unconfirmed (no matching raw message found in `fazle_whatsapp_messages` to replay). Flagged for a possible future follow-up audit; no action taken this session. | 2026-07-16 |
 
 ### Files Authorized for Change (Session 17)
 
@@ -537,7 +537,7 @@ service restart performed.
 
 | ID | Decision | Details | Date |
 |---|---|---|---|
-| S18-01 | Delete 3 confirmed duplicate rows | program_id 933 (dup of 934), 1 (dup of 9), 3 (dup of 10). Re-verified zero references across every FK-linked table (`fpe_cash_transactions`, `wbom_cash_transactions`, `wbom_billing_records`, `wbom_cases`, `wbom_whatsapp_messages`, `fazle_payment_drafts`, `escort_order_lighters`) before deleting. `escort_shift_logs` (7 rows each for 1 and 3, no FK) deleted alongside. `escort_roster_entries` for 1/3 had non-zero computed `total`/`net_payable` (৳1,400 / ৳3,000) — flagged explicitly since this differs from every other row removed in this audit; confirmed no actual payout (`fpe_cash_transactions`) existed, and the kept sibling (9/10) carries the identical computed amount, so nothing is lost. Audit-logged (`manual_duplicate_cleanup`) before each delete. | 2026-07-16 |
+| S18-01 | Delete 3 confirmed duplicate rows | program_id 933 (dup of 934), 1 (dup of 9), 3 (dup of 10). Re-verified zero references across every FK-linked table (`fazle_cash_transactions`, `fazle_cash_transactions_archive`, `wbom_billing_records`, `wbom_cases`, `fazle_whatsapp_messages`, `fazle_payment_drafts`, `escort_order_lighters`) before deleting. `escort_shift_logs` (7 rows each for 1 and 3, no FK) deleted alongside. `escort_roster_entries` for 1/3 had non-zero computed `total`/`net_payable` (৳1,400 / ৳3,000) — flagged explicitly since this differs from every other row removed in this audit; confirmed no actual payout (`fazle_cash_transactions`) existed, and the kept sibling (9/10) carries the identical computed amount, so nothing is lost. Audit-logged (`manual_duplicate_cleanup`) before each delete. | 2026-07-16 |
 | S18-02 | 703/707/734 left as-is | Owner directive: do not guess at field ownership when raw text is ambiguous. Review note added to the Phase 2 KB doc instead of an edit. | 2026-07-16 |
 | S18-03 | Destination-field leak tracked as a separate open issue | New doc `knowledge_base/00_governance/escort_destination_field_leak_issue_2026-07-16.md` — evidence (4 known rows), what was checked (could not locate the source admin messages to test reproducibility, unlike S/N 777), and a recommended-next-step list. No fix attempted, no proposal written — explicitly a documentation-only holding doc per Owner's instruction. | 2026-07-16 |
 
@@ -565,7 +565,7 @@ just never logged here at the time.
 | ID | Decision | Details | Date |
 |---|---|---|---|
 | S19-00a | Retroactive record: Migration 043 (`office_assistant_role`) | Formalizes `office_assistant` as a real `fazle_roles` row (level 20, between `viewer`/10 and `operator`/30): view attendance list/own records, create attendance draft entries only — no review/approve/edit/salary visibility. Replaces the prior ad-hoc name-string check (`_OFFICE_ASSISTANT_NAMES` in `modules/admin_transactions/__init__.py`). Corrected both known office-assistant accounts (`officeassistant01`, `officeassistant02`) from inconsistent prior roles (`operator`/`viewer`) to this one properly-scoped role — a real permission *reduction* for `officeassistant01` (lost stray `operator`-level edit/approve power), which was the intended fix. Shipped in commit `aea5679` (2026-07-11), no governance entry made at the time. | 2026-07-11 (retroactive) |
-| S19-00b | Retroactive record: Migration 046 (`fpe_employee_edit_requests`) | New `fpe_employee_edit_requests` table backing `payroll.html`'s Employees-tab edit flow for non-admin roles: admin/superadmin edits still write directly to `fpe_employees`/`wbom_employees` (unchanged), any other role's edit is queued here (`changes` JSONB diff, `pending`/`approved`/`rejected` status) for an admin to approve/reject. Deliberately a new table rather than reusing the Operator-submission pattern's storage (shape mismatch — that one requires a synthetic WhatsApp-message FK row). Named `edit_requests`, not `review_queue`, to avoid colliding with the existing parser-confidence "Review Queue" tab. Shipped in commit `fbf1204` (2026-07-14), no governance entry made at the time. **Compatibility confirmed with Session 15** (`admin_employees/__init__.py` WBOM→FPE sync for designation/basic_salary/joining_date, 2026-07-16): S15's sync sits *after* a direct admin/superadmin write in the same function this migration's approve-handler also writes through — both changes are additive to different branches (direct-edit vs. queued-request-then-approve) of the same underlying update logic, not conflicting. | 2026-07-14 (retroactive) |
+| S19-00b | Retroactive record: Migration 046 (`fpe_employee_edit_requests`) | New `fpe_employee_edit_requests` table backing `payroll.html`'s Employees-tab edit flow for non-admin roles: admin/superadmin edits still write directly to `fazle_employees`/`fazle_employees_legacy` (unchanged), any other role's edit is queued here (`changes` JSONB diff, `pending`/`approved`/`rejected` status) for an admin to approve/reject. Deliberately a new table rather than reusing the Operator-submission pattern's storage (shape mismatch — that one requires a synthetic WhatsApp-message FK row). Named `edit_requests`, not `review_queue`, to avoid colliding with the existing parser-confidence "Review Queue" tab. Shipped in commit `fbf1204` (2026-07-14), no governance entry made at the time. **Compatibility confirmed with Session 15** (`admin_employees/__init__.py` WBOM→FPE sync for designation/basic_salary/joining_date, 2026-07-16): S15's sync sits *after* a direct admin/superadmin write in the same function this migration's approve-handler also writes through — both changes are additive to different branches (direct-edit vs. queued-request-then-approve) of the same underlying update logic, not conflicting. | 2026-07-14 (retroactive) |
 | S19-00c | Note: `open-webui` Groq API key still plaintext | Confirmed still open (`/home/azim/docker-compose.yml`, outside this repo) — same class of issue as the already-rotated Postgres password, smaller blast radius. Deferred to its own dedicated rotation task, not bundled into this implementation queue (Owner decision, 2026-07-17). | 2026-07-17 |
 
 ### Files Authorized for Change (Session 19, Step 0)
@@ -584,7 +584,7 @@ just never logged here at the time.
 
 | ID | File | Change |
 |---|---|---|
-| S19-01 | `app/main.py` | `_handle_bridge_event()`: added `and not _requires_legacy_workflow(text, {"media_type": media_type})` to the `ingest_social_event()` gating condition (mirrors `modules.bridge_poller._requires_legacy_workflow`, imported locally); dedup-check `except` block changed from log-and-fall-through to log-and-`continue`. |
+| S19-01 | `app/main.py` | `_handle_bridge_event()`: added `and not _requires_legacy_workflow(text, {"media_type": media_type})` to the `ingest_social_event()` gating condition (mirrors `modules.fazle_bridge_poller._requires_legacy_workflow`, imported locally); dedup-check `except` block changed from log-and-fall-through to log-and-`continue`. |
 
 **Verification status:** function-level only — `_requires_legacy_workflow()` confirmed (via a standalone import test) to correctly classify the exact escort-order message used in `tests/integration/test_webhooks.py::test_escort_order_creates_program` as requiring the legacy workflow, and a plain greeting as not. Full HTTP/integration-level verification (posting to the live `/webhook/mcp1` route, or running the pytest suite against the test DB) was **not possible this session** — no sudo access to restart `fazle-core.service`, and the test DB host (`172.20.0.3`) is unreachable from this session's network. **Pending:** run `scripts/restart_gate.sh --restart` and re-run `pytest tests/integration/test_webhooks.py -k escort_order` in a session with the necessary access before considering this fully verified live. **This restart is also the outstanding prerequisite for Step 1 above** — until it happens, the webhook-gate and fail-closed-dedup fixes exist only in the working tree, not in the running `fazle-core` process.
 
@@ -661,9 +661,9 @@ Everything above this line was written based on Session 13's note ("blocked on s
 When the Owner ran the install commands, `systemctl status chat-sync.service` revealed the service was **already `active (running)` since `Wed 2026-07-15 23:28:28 CEST`** — roughly 20 minutes after Session 13 staged the files (`~/chat_sync_staging/`, mtime 2026-07-15 23:11) and about 1.5 hours before Session 14 began the same night. **Someone or something installed and started this service in that window, entirely outside of any recorded Claude Code session** — no commit, no `management_decisions.md` entry, nothing. This is the same class of gap already found in Step 0 (undocumented migrations 043/046) — a third instance of a real production change happening with zero governance trail.
 
 **Verified healthy over its full ~2-day undocumented run:**
-- `chat_history` contains 9,156 rows (8,437 from `wbom_whatsapp_messages`, 719 from `fazle_outbound_queue`), spanning 2026-07-15 08:15:39 UTC → 2026-07-17 01:13:55 UTC (query run by the assistant) — continuous, real, still growing.
+- `chat_history` contains 9,156 rows (8,437 from `fazle_whatsapp_messages`, 719 from `fazle_outbound_queue`), spanning 2026-07-15 08:15:39 UTC → 2026-07-17 01:13:55 UTC (query run by the assistant) — continuous, real, still growing.
 - `journalctl -u chat-sync.service -n 50 --no-pager` (run by the Owner, since the assistant has no sudo/journal-group access this session): every line from `chat_sync started, poll_interval=20s` (2026-07-15 23:28:28) through `synced 1 rows...` (2026-07-17 03:13:50) is `INFO`-level — **zero errors, zero warnings**, across the entire run.
-- The final logged sync (`2026-07-17 03:13:50, synced 1 rows`) is the assistant's own Step 1 escort-gate smoke-test message (sent 03:13:38 CEST the same session) — confirming the full pipeline (webhook → `wbom_whatsapp_messages` → `chat_sync` → `chat_history`) is working end-to-end, live, right now.
+- The final logged sync (`2026-07-17 03:13:50, synced 1 rows`) is the assistant's own Step 1 escort-gate smoke-test message (sent 03:13:38 CEST the same session) — confirming the full pipeline (webhook → `fazle_whatsapp_messages` → `chat_sync` → `chat_history`) is working end-to-end, live, right now.
 
 The Owner's `sudo cp`/`systemctl enable --now` commands run this session did not restart anything (systemd does not restart an already-active unit on `--now`) — they overwrote `/opt/chat_sync/sync.py` with byte-identical content (already confirmed matching the staged version) and re-enabled the unit for boot, both no-ops on the already-correct running state.
 
@@ -765,7 +765,7 @@ PUT /api/admin/employees/143 returned 500 at 2026-07-16 20:48:46 — single occu
 
 ### Session 19 — Bridge1 cursor: confirmed correct, no action
 
-Bridge1 cursor advance mechanism confirmed correct 2026-07-17 — `fetched=0` over 10h overnight period is expected behavior when no inbound messages arrive, not a bug. Advance-only-if-newer guard (`if new_cursor > cursor: cursor = new_cursor; await _set_cursor(...)`, `modules/bridge_poller/__init__.py:1140-1143`) working as designed. Owner will do a manual sanity check by texting the HR number directly; no code change made or needed.
+Bridge1 cursor advance mechanism confirmed correct 2026-07-17 — `fetched=0` over 10h overnight period is expected behavior when no inbound messages arrive, not a bug. Advance-only-if-newer guard (`if new_cursor > cursor: cursor = new_cursor; await _set_cursor(...)`, `modules/fazle_bridge_poller/__init__.py:1140-1143`) working as designed. Owner will do a manual sanity check by texting the HR number directly; no code change made or needed.
 
 ### Session 19 — Incident: Step 7 caused a brief production outage (self-inflicted, same-session hotfix)
 
@@ -789,7 +789,7 @@ All Session 19 commits (`5ad65f3` through `e458158`, 19 commits) plus 65 earlier
 
 | ID | Decision | Details | Date |
 |---|---|---|---|
-| S20-01 | `history_sync.py`'s blocking SQLite read dispatched off the event loop | `docs/NEXT_IMPLEMENTATION_QUEUE.md` "Immediate Next" #9 / "Technical Debt": `modules/escort_roster/history_sync.py::sync_from_bridge_sqlite()` ran a raw `sqlite3.connect()`/`execute()`/`close()` sequence directly inside its `async def` body with no executor/`to_thread()` dispatch — found (not fixed) in Session 19 Step 8 as the same bug class already fixed in `modules/bridge_poller/__init__.py` (commit `a5d3871`). Backs the admin-triggered `/backfill-sqlite` route (`escort_roster/routes.py:536`), lower frequency than the continuous poller loop but still blocks the whole app's event loop for every other concurrent request while it runs. Fixed using the identical pattern: extracted the connect/execute/close sequence into a new sync helper, `_fetch_backfill_messages(db_path, jid_patterns)`, dispatched via `asyncio.to_thread()`. Same query, same params, same 5.0s timeout, same outer `try/except` and error handling (`stats["errors"]` append + early return on failure) — only the execution now happens off the event loop. No business logic changed, matching the session's explicit scope. | 2026-07-17 |
+| S20-01 | `history_sync.py`'s blocking SQLite read dispatched off the event loop | `docs/NEXT_IMPLEMENTATION_QUEUE.md` "Immediate Next" #9 / "Technical Debt": `modules/escort_roster/history_sync.py::sync_from_bridge_sqlite()` ran a raw `sqlite3.connect()`/`execute()`/`close()` sequence directly inside its `async def` body with no executor/`to_thread()` dispatch — found (not fixed) in Session 19 Step 8 as the same bug class already fixed in `modules/fazle_bridge_poller/__init__.py` (commit `a5d3871`). Backs the admin-triggered `/backfill-sqlite` route (`escort_roster/routes.py:536`), lower frequency than the continuous poller loop but still blocks the whole app's event loop for every other concurrent request while it runs. Fixed using the identical pattern: extracted the connect/execute/close sequence into a new sync helper, `_fetch_backfill_messages(db_path, jid_patterns)`, dispatched via `asyncio.to_thread()`. Same query, same params, same 5.0s timeout, same outer `try/except` and error handling (`stats["errors"]` append + early return on failure) — only the execution now happens off the event loop. No business logic changed, matching the session's explicit scope. | 2026-07-17 |
 
 ### Files Authorized for Change (Session 20, Step 1)
 
@@ -943,9 +943,9 @@ All 6 Owner-approved sub-groups landed, each its own commit, each restart-verifi
 
 New scope opened this session: a read-only audit of unlinked/out-of-sync row creation between `wbom_*` and `fpe_*` employee/finance tables, requested separately from the `payroll.html` migration work above. Full audit report (ownership matrix, writer inventory, mismatch report, top-3 root-cause paths, minimal fix plan, direct answer on FPE auto-create from finance flows) delivered in-conversation, not yet filed as its own KB doc — cross-reference this entry if that changes.
 
-**Owner scope lock for this sub-effort (explicit, in writing):** NOT a rename/merge project. Excluded unless separately approved: `wbom_*`→`fpe_*` global renames, `wbom_employees`↔`fpe_employees` merge, `employee_id_phone` uniqueness changes, escort dual-write concurrency work, `accounting.py` semantics changes, `admin_transactions` bypass cleanup. Session goal locked to exactly 3 items: (1) stop unknown/untrusted-sender auto-create, (2) preserve the trusted admin→accountant finance path, (3) add a read-only unresolved/unlinked FPE employee report.
+**Owner scope lock for this sub-effort (explicit, in writing):** NOT a rename/merge project. Excluded unless separately approved: `wbom_*`→`fpe_*` global renames, `fazle_employees_legacy`↔`fazle_employees` merge, `employee_id_phone` uniqueness changes, escort dual-write concurrency work, `accounting.py` semantics changes, `admin_transactions` bypass cleanup. Session goal locked to exactly 3 items: (1) stop unknown/untrusted-sender auto-create, (2) preserve the trusted admin→accountant finance path, (3) add a read-only unresolved/unlinked FPE employee report.
 
-**A separate, adjacent proposal from the Owner** (rename all `wbom_*` tables to `fpe_*`, lock `employee_id_phone` as the unique FK anchor, dedup same-phone/mismatched-name rows by transaction-count) was reviewed for feasibility only, not implemented. Key findings, backed by live read-only queries against `ai-postgres`: `wbom_employees` (216 rows) is FK-anchored by 8 dependent tables, `fpe_employees` (493 rows) by 9 — a rename-only op is safe for non-colliding tables but the `wbom_employees`/`fpe_employees` case is a genuine schema merge (17 total dependent-table FK remap), not a rename. 253 of 493 `fpe_employees` rows (51%) already have `wbom_employee_id IS NULL`. `primary_phone` already carries a real partial `UNIQUE` index; `employee_id_phone` does not and has 39 phone values shared across 2+ employee rows with mismatched names — live evidence for the dedup idea, but the `employee_id_phone`-as-unique-key proposal directly contradicts `CANONICAL_BUSINESS_RULES.md`'s own already-Owner-ratified "Naming Rule" (phone-shaped columns are deliberately not unified) — flagged as an unresolved conflict per that document's own Conflict Resolution Rule, not resolved unilaterally. **None of this rename/merge/uniqueness work was implemented or approved this session** — parked pending an explicit future Owner decision.
+**A separate, adjacent proposal from the Owner** (rename all `wbom_*` tables to `fpe_*`, lock `employee_id_phone` as the unique FK anchor, dedup same-phone/mismatched-name rows by transaction-count) was reviewed for feasibility only, not implemented. Key findings, backed by live read-only queries against `ai-postgres`: `fazle_employees_legacy` (216 rows) is FK-anchored by 8 dependent tables, `fazle_employees` (493 rows) by 9 — a rename-only op is safe for non-colliding tables but the `fazle_employees_legacy`/`fazle_employees` case is a genuine schema merge (17 total dependent-table FK remap), not a rename. 253 of 493 `fazle_employees` rows (51%) already have `wbom_employee_id IS NULL`. `primary_phone` already carries a real partial `UNIQUE` index; `employee_id_phone` does not and has 39 phone values shared across 2+ employee rows with mismatched names — live evidence for the dedup idea, but the `employee_id_phone`-as-unique-key proposal directly contradicts `CANONICAL_BUSINESS_RULES.md`'s own already-Owner-ratified "Naming Rule" (phone-shaped columns are deliberately not unified) — flagged as an unresolved conflict per that document's own Conflict Resolution Rule, not resolved unilaterally. **None of this rename/merge/uniqueness work was implemented or approved this session** — parked pending an explicit future Owner decision.
 
 ### Management Authorization (Session 20, Step 3 — Phase 0)
 
@@ -959,7 +959,7 @@ New scope opened this session: a read-only audit of unlinked/out-of-sync row cre
 
 | ID | Decision | Details | Date |
 |---|---|---|---|
-| S20-09 | Disable unknown-sender auto-create in `_seed_unknown_employee_identity()` | Function previously created a real `wbom_employees` row (and indirectly seeded a linked `fpe_employees` row) whenever `identity_brain.detect_identity()` returned `role="unknown"` **and** the inbound message shape matched `_OPERATIONAL_AUTO_CREATE_INTENTS` (salary_query/payment_due/attendance/leave/escort_duty/slip_submission) or one of several intent-regex checks (advance request, release intent, escort order, etc.) — reachable from literally any phone number, since by construction every sender reaching this function had already failed every trust check the system has (not admin, not accountant, not escort-client, not an existing employee/contact match). This is exactly the "random/unapproved number" auto-create Owner Rule D prohibits. **Disabled**, not deleted: the entire function body replaced with a documented `return identity, False`. `_OPERATIONAL_AUTO_CREATE_INTENTS` is now unused outside this function — flagged in the docstring, intentionally kept (not removed) per Owner's standing "document dead code, don't clean it up inline" rule. | 2026-07-17 |
+| S20-09 | Disable unknown-sender auto-create in `_seed_unknown_employee_identity()` | Function previously created a real `fazle_employees_legacy` row (and indirectly seeded a linked `fazle_employees` row) whenever `identity_brain.detect_identity()` returned `role="unknown"` **and** the inbound message shape matched `_OPERATIONAL_AUTO_CREATE_INTENTS` (salary_query/payment_due/attendance/leave/escort_duty/slip_submission) or one of several intent-regex checks (advance request, release intent, escort order, etc.) — reachable from literally any phone number, since by construction every sender reaching this function had already failed every trust check the system has (not admin, not accountant, not escort-client, not an existing employee/contact match). This is exactly the "random/unapproved number" auto-create Owner Rule D prohibits. **Disabled**, not deleted: the entire function body replaced with a documented `return identity, False`. `_OPERATIONAL_AUTO_CREATE_INTENTS` is now unused outside this function — flagged in the docstring, intentionally kept (not removed) per Owner's standing "document dead code, don't clean it up inline" rule. | 2026-07-17 |
 
 **Files Authorized for Change (Phase 1):**
 
@@ -968,7 +968,7 @@ New scope opened this session: a read-only audit of unlinked/out-of-sync row cre
 | S20-09 | `modules/message_router/__init__.py` | `_seed_unknown_employee_identity()`: entire function body (including a trailing tail block past the point shown in the Phase 1 proposal — discovered and corrected during implementation, see Verification below) replaced with a docstring explaining the disable rationale + `return identity, False`. Function signature and its one call site (`process_message()`) unchanged. `_OPERATIONAL_AUTO_CREATE_INTENTS` (module-level constant) left in place, now unused. |
 | S20-09 | `tests/unit/test_message_router_identity_seed.py` | Rewrote the one test covering this function. Old test asserted the disabled behavior (`seeded is True`, DB rows created) — now asserts the guard is an unconditional no-op: same input that used to trigger creation (unknown role + advance-request-shaped text) now returns the identity dict unchanged with `seeded is False` and zero calls to `fetch_one`/`fetch_val`/`execute`. |
 
-**Trusted paths confirmed unaffected, by construction, not just by testing:** admin (`identity_brain._check_admin_settings`), accountant (`fazle_contact_roles` seed rule), and escort-client (`fazle_contact_roles`/`wbom_contacts` seed) are all resolved inside `detect_identity()` **before** `_seed_unknown_employee_identity()` is ever called — none of those three paths, nor `modules/payment_ingest` (admin→accountant finance) nor `modules/escort::handle_escort_client_message()` (escort allowlist), call this function at all. No code in those modules was touched.
+**Trusted paths confirmed unaffected, by construction, not just by testing:** admin (`identity_brain._check_admin_settings`), accountant (`fazle_contact_roles` seed rule), and escort-client (`fazle_contact_roles`/`fazle_contacts` seed) are all resolved inside `detect_identity()` **before** `_seed_unknown_employee_identity()` is ever called — none of those three paths, nor `modules/fazle_payment_ingest` (admin→accountant finance) nor `modules/escort::handle_escort_client_message()` (escort allowlist), call this function at all. No code in those modules was touched.
 
 **Verification:** implementation caught and fixed its own gap mid-flight — the Phase 1 proposal shown to the Owner for approval was based on a truncated read of the function (missed a ~19-line tail block past what was displayed); applying the approved diff left that tail as orphaned dead code referencing now-undefined variables. Caught immediately via `git diff` review before committing, corrected to remove the full original function body as originally intended (matching the Owner's own explicit checklist item: "the entire function body" replaced). `py_compile` clean. Targeted test suite: 1 test directly covering this function (updated, passes); broader sweep (`-k "message_router or identity or escort or accountant"`, 161 passed) found 2 pre-existing failures (`test_escort_module.py::test_creates_escort_program_and_draft`, `test_escort_source_of_truth_refactor.py::test_draft_updated_by_bridge_confirmation`) and 39 pre-existing schema-setup errors (`password authentication failed for user "postgres"`, the same test-DB-connectivity gap seen throughout this session) — all confirmed present identically on unmodified `main` via `git stash` isolation, none caused by this change. Committed as `47018f7`. **Confirmed LIVE:** `scripts/restart_gate.sh --restart` ran clean (all 7 checks PASS, pre/post health `ok`), `curl localhost:8200/health` returned `"status":"ok"`.
 
@@ -978,15 +978,15 @@ New scope opened this session: a read-only audit of unlinked/out-of-sync row cre
 
 | ID | Decision | Details | Date |
 |---|---|---|---|
-| S20-10 | Add `payout_mobile` fallback search to `_match_or_create_instruction_employee()` | Re-verified Phase 0's finding with exact current code, live DB queries (`fazle_contact_roles` seed rows, `.env` comparison), and a full trace of `parse_admin_cash_shorthand()` → `_match_or_create_instruction_employee()` → `match_employee()`. **Confirmed real gap:** `parse_admin_cash_shorthand()` collapses `employee_id_mobile`/`payout_mobile` into one `lookup_mobile` value (line 464) before `match_employee()` ever runs, so an explicit ID-mobile that misses never falls back to a second search against the payout number — even when the payout number belongs to an already-registered employee, causing a duplicate `wbom_employees`/`fpe_employees` row instead of a match. Owner approved the exact 3-line fix before implementation. | 2026-07-17 |
+| S20-10 | Add `payout_mobile` fallback search to `_match_or_create_instruction_employee()` | Re-verified Phase 0's finding with exact current code, live DB queries (`fazle_contact_roles` seed rows, `.env` comparison), and a full trace of `parse_admin_cash_shorthand()` → `_match_or_create_instruction_employee()` → `match_employee()`. **Confirmed real gap:** `parse_admin_cash_shorthand()` collapses `employee_id_mobile`/`payout_mobile` into one `lookup_mobile` value (line 464) before `match_employee()` ever runs, so an explicit ID-mobile that misses never falls back to a second search against the payout number — even when the payout number belongs to an already-registered employee, causing a duplicate `fazle_employees_legacy`/`fazle_employees` row instead of a match. Owner approved the exact 3-line fix before implementation. | 2026-07-17 |
 
 ### Files Authorized for Change (Session 20, Step 3 — Phase 2)
 
 | ID | File | Change |
 |---|---|---|
-| S20-10 | `modules/payment_ingest/__init__.py` | `_match_or_create_instruction_employee()`: added `if not eid and payout_mobile and payout_mobile != lookup_mobile: eid, _ratio, _mtype = await match_employee(payout_mobile, name)` immediately after the first `match_employee()` call. Two lines. `match_employee()` itself, `modules/payment_ingest/fpe_bridge.py`, and `modules/fazle_payroll_engine/accounting.py` were read for verification but not modified. |
+| S20-10 | `modules/fazle_payment_ingest/__init__.py` | `_match_or_create_instruction_employee()`: added `if not eid and payout_mobile and payout_mobile != lookup_mobile: eid, _ratio, _mtype = await match_employee(payout_mobile, name)` immediately after the first `match_employee()` call. Two lines. `match_employee()` itself, `modules/fazle_payment_ingest/fpe_bridge.py`, and `modules/fazle_payroll_engine/accounting.py` were read for verification but not modified. |
 
-**Explicitly preserved (verified, not just asserted):** auto-create still allowed if both searches miss (fall-through logic below `if eid:` byte-identical to before); no reply to the accountant (no code in the reply path touched); no review-queue routing added (none introduced); transaction completion and ledger write confirmed unaffected — traced `payment_event_from_whatsapp()` (used by this path) hardcodes `transaction_status=TransactionStatus.final`, and `resolve_fpe_employee_for_wbom_employee()`'s return type is `int` (never `None`), so `accounting.py::create_transaction()`'s ledger-upsert condition (`req.employee_id and req.transaction_status.value == "final"`) is always satisfied on this path — both `fpe_cash_transactions` and `fpe_employee_ledger` are written every time, confirmed by code trace, not changed by this fix.
+**Explicitly preserved (verified, not just asserted):** auto-create still allowed if both searches miss (fall-through logic below `if eid:` byte-identical to before); no reply to the accountant (no code in the reply path touched); no review-queue routing added (none introduced); transaction completion and ledger write confirmed unaffected — traced `payment_event_from_whatsapp()` (used by this path) hardcodes `transaction_status=TransactionStatus.final`, and `resolve_fpe_employee_for_wbom_employee()`'s return type is `int` (never `None`), so `accounting.py::create_transaction()`'s ledger-upsert condition (`req.employee_id and req.transaction_status.value == "final"`) is always satisfied on this path — both `fazle_cash_transactions` and `fazle_employee_ledger` are written every time, confirmed by code trace, not changed by this fix.
 
 **Two items explicitly deferred, not bundled into this fix:**
 - `resolution_status` metadata staleness on `resolve_fpe_employee_for_wbom_employee()`'s step-3 INSERT (defaults to `'unresolved'` even though `wbom_employee_id` is set in the same statement) — noted for Phase 3's report-query design only (a naive `resolution_status='unresolved' OR wbom_employee_id IS NULL` filter would over-flag already-linked rows), not fixed here.
@@ -1000,29 +1000,29 @@ New scope opened this session: a read-only audit of unlinked/out-of-sync row cre
 
 | ID | Decision | Details | Date |
 |---|---|---|---|
-| S20-11 | Add `unresolved_fpe_employees` read-only report builder | New builder in `modules/reports/__init__.py`, registered in the existing `_BUILDERS` dict pattern — no new route needed (served automatically via the existing generic `GET /reports/{name}` dispatcher, `app/main.py:2416`, untouched). Investigated `wbom-create-link.html`/`wbom-link-review.html` before writing anything: both currently use a **hardcoded static `CANDIDATES` JavaScript array**, not live data — no report-data hook exists in either file, confirmed via inspection, so neither was touched (per Owner's hard rule). Owner approved the exact function body and registry line before implementation. | 2026-07-17 |
+| S20-11 | Add `unresolved_fazle_employees` read-only report builder | New builder in `modules/reports/__init__.py`, registered in the existing `_BUILDERS` dict pattern — no new route needed (served automatically via the existing generic `GET /reports/{name}` dispatcher, `app/main.py:2416`, untouched). Investigated `wbom-create-link.html`/`wbom-link-review.html` before writing anything: both currently use a **hardcoded static `CANDIDATES` JavaScript array**, not live data — no report-data hook exists in either file, confirmed via inspection, so neither was touched (per Owner's hard rule). Owner approved the exact function body and registry line before implementation. | 2026-07-17 |
 
 ### Files Authorized for Change (Session 20, Step 3 — Phase 3)
 
 | ID | File | Change |
 |---|---|---|
-| S20-11 | `modules/reports/__init__.py` | Added `_b_unresolved_fpe_employees()` (one `fetch_all()` SELECT, zero writes) and one line in `_BUILDERS`: `"unresolved_fpe_employees": _b_unresolved_fpe_employees`. Purely additive — 105 lines added, 0 removed, no other function touched. |
+| S20-11 | `modules/reports/__init__.py` | Added `_b_unresolved_fazle_employees()` (one `fetch_all()` SELECT, zero writes) and one line in `_BUILDERS`: `"unresolved_fazle_employees": _b_unresolved_fazle_employees`. Purely additive — 105 lines added, 0 removed, no other function touched. |
 
-**What the report covers:** `fpe_employees` rows where `resolution_status = 'unresolved' OR wbom_employee_id IS NULL`, split into 3 buckets that are never conflated:
-- `no_wbom_match` — no phone match found in `wbom_employees` at all. Feeds `wbom-create-link.html`'s candidate shape (`fpe_id`, name, phone, salary, joining_date, created_source, txn_count) — needs a human-provided designation, never guessed.
-- `wbom_match_unlinked` — a `wbom_employees` phone match exists (checked against `employee_mobile`/`bkash_number`/`nagad_number`, last-10-digit normalized, same fields already treated as authoritative WBOM phone anchors elsewhere in this codebase) but `wbom_employee_id` isn't set. Feeds `wbom-link-review.html`'s candidate shape, including a `name_mismatch` boolean flag.
+**What the report covers:** `fazle_employees` rows where `resolution_status = 'unresolved' OR wbom_employee_id IS NULL`, split into 3 buckets that are never conflated:
+- `no_wbom_match` — no phone match found in `fazle_employees_legacy` at all. Feeds `wbom-create-link.html`'s candidate shape (`fpe_id`, name, phone, salary, joining_date, created_source, txn_count) — needs a human-provided designation, never guessed.
+- `wbom_match_unlinked` — a `fazle_employees_legacy` phone match exists (checked against `employee_mobile`/`bkash_number`/`nagad_number`, last-10-digit normalized, same fields already treated as authoritative WBOM phone anchors elsewhere in this codebase) but `wbom_employee_id` isn't set. Feeds `wbom-link-review.html`'s candidate shape, including a `name_mismatch` boolean flag.
 - `linked_but_mislabeled` — **separated per the Phase 2 finding (S20-10):** `wbom_employee_id IS NOT NULL` (i.e. genuinely, correctly linked) but `resolution_status` still reads `'unresolved'` because `resolve_fpe_employee_for_wbom_employee()`'s creating INSERT never explicitly sets that column, so it takes the schema default. These rows need **no action** — reporting them in the same bucket as the two above would have wrongly told a human reviewer to "fix" something that isn't broken, exactly the mistake the Phase 2 audit flagged as a risk for this report's design.
 
-**Confirmed LIVE, production read** (not a test-DB run): `GET /reports/unresolved_fpe_employees` returned HTTP 200 with:
+**Confirmed LIVE, production read** (not a test-DB run): `GET /reports/unresolved_fazle_employees` returned HTTP 200 with:
 ```json
 {"no_wbom_match_count": 172, "wbom_match_unlinked_count": 81, "linked_but_mislabeled_count": 153, "total_reviewed": 406}
 ```
-`172 + 81 = 253` — matches the Phase 2 audit's live finding ("253 of 493 `fpe_employees` rows had `wbom_employee_id IS NULL`") exactly, the first time that number has been reproduced end-to-end through the new report rather than a one-off manual query. Spot-checked one row per bucket for shape correctness (`no_wbom_match` row: name defaulted to the phone number itself, a real WhatsApp-auto-create artifact; `wbom_match_unlinked` row: `fpe_name="Unknown"` vs `wbom_match_name="Rabbi"`, `name_mismatch: true`, correctly caught; `linked_but_mislabeled` row: `wbom_employee_id=695` set, correctly excluded from the two actionable buckets). `?fmt=csv` also verified working.
+`172 + 81 = 253` — matches the Phase 2 audit's live finding ("253 of 493 `fazle_employees` rows had `wbom_employee_id IS NULL`") exactly, the first time that number has been reproduced end-to-end through the new report rather than a one-off manual query. Spot-checked one row per bucket for shape correctness (`no_wbom_match` row: name defaulted to the phone number itself, a real WhatsApp-auto-create artifact; `wbom_match_unlinked` row: `fpe_name="Unknown"` vs `wbom_match_name="Rabbi"`, `name_mismatch: true`, correctly caught; `linked_but_mislabeled` row: `wbom_employee_id=695` set, correctly excluded from the two actionable buckets). `?fmt=csv` also verified working.
 
 **Exact routes:**
-- `GET /reports/unresolved_fpe_employees` (JSON)
-- `GET /reports/unresolved_fpe_employees?fmt=csv`
-- `GET /reports/unresolved_fpe_employees?fmt=text`
+- `GET /reports/unresolved_fazle_employees` (JSON)
+- `GET /reports/unresolved_fazle_employees?fmt=csv`
+- `GET /reports/unresolved_fazle_employees?fmt=text`
 
 **Verification:** `git diff` reviewed — confirmed purely additive (105 insertions, 0 deletions), only `modules/reports/__init__.py` touched. `py_compile` clean. Zero write calls (`execute`/`fetch_val`) in the new function — verified via grep, one `fetch_all()` SELECT only. No test file references `modules.reports` at all (repo-wide grep, zero hits) — no test needed updating. Full `tests/unit` sweep: 542 passed, 4 xpassed, 14 xfailed, 4 failed, 242 errors — all 4 failures and all 242 errors confirmed pre-existing via `git stash` isolation (same `password authentication failed for user "postgres"` test-DB-connectivity limitation seen throughout this session; the 2 `test_drafts_router_mounted.py` failures specifically re-verified via stash for this entry, not previously checked this session). Committed as `b0c0057`. **Confirmed LIVE:** `scripts/restart_gate.sh --restart` ran clean (all 7 checks PASS, pre/post health `ok`), `curl localhost:8200/health` returned `"status":"ok"`, and the report itself confirmed working against production data as shown above.
 
@@ -1037,7 +1037,7 @@ New scope opened this session: a read-only audit of unlinked/out-of-sync row cre
 | 0 | Requirements lock — 4-flow call-path trace, MATCHES/PARTIAL/VIOLATES | — (read-only) | `dfc67f1` |
 | 1 | Disable unknown-sender auto-create (`_seed_unknown_employee_identity`) | `47018f7` | `dfc67f1` |
 | 2 | `payout_mobile` fallback search (`_match_or_create_instruction_employee`) | `38dbedd` | `80de8e3` |
-| 3 | `unresolved_fpe_employees` read-only report builder | `b0c0057` | (this entry) |
+| 3 | `unresolved_fazle_employees` read-only report builder | `b0c0057` | (this entry) |
 
 
 ### Session 21, Phase 1B — Contact-Role API Whitelist (2026-07-17)
@@ -1052,7 +1052,7 @@ section, written during Session 19 before the fix, was never updated) — correc
 an isolated documentation fix, no code change needed for that item.
 
 **Call-path verification performed before writing the proposal:** confirmed
-`modules/identity_brain/__init__.py::_lookup_seed()` reads `fazle_contact_roles.role`
+`modules/fazle_identity_brain/__init__.py::_lookup_seed()` reads `fazle_contact_roles.role`
 unfiltered and returns it as `identity_role`, consumed directly by
 `modules/message_router/__init__.py:330,349` for WhatsApp trust decisions (e.g.
 `role_str == "admin"` bypasses the escort-review-draft safety net) — a real trust
@@ -1121,7 +1121,7 @@ is flagged as outstanding — see "Remaining Risks" in the session report.
 for `admin`/`accountant` (Owner chose reject-outright instead), any data migration/
 backfill of the existing forbidden-role rows, any change to `identity_brain` or
 `message_router`'s consumption of this table, deploy/push/restart (local commit only,
-pending Owner review), Phase 1C (`fpe_employees.resolution_status`) or any later phase.
+pending Owner review), Phase 1C (`fazle_employees.resolution_status`) or any later phase.
 
 **Commit:** `aee44bc` (`fix(contact-roles): restrict API-assigned identity roles`) —
 local only, not pushed, not deployed, no restart performed.
@@ -1146,20 +1146,20 @@ that relationship — `client_escort_buyer` was already correctly in the allowed
 **Conclusion: Phase 1B's code is unchanged and correct as committed (Outcome A) — no
 correction needed.**
 
-**Full identity-source trace performed against live code** (`modules/identity_brain/__init__.py`,
+**Full identity-source trace performed against live code** (`modules/fazle_identity_brain/__init__.py`,
 `modules/message_router/__init__.py`, `modules/escort/__init__.py`, `shared/env.py`,
-`app/main.py`, `modules/bridge_poller/__init__.py`):
+`app/main.py`, `modules/fazle_bridge_poller/__init__.py`):
 
 | Source | Implemented | Function | Canonical result reaches identity_brain | Webhook | Poller |
 |---|---|---|---|---|---|
 | A — `ESCORT_CLIENT_PHONES` | Partial — order-parsing gate only, not an identity source | `modules/escort/__init__.py::_is_allowed_escort_client()` (used) vs. `shared/env.py::EscortEnv.is_escort_client()` (dead code, unused — a 2nd divergent implementation) | No — runs *after* identity is already decided | Yes (shared function) | Yes (shared function) |
-| B — contact-name contains "escort" | **Not implemented at all** | None exists; `identity_brain._lookup_contact()`/`_map_relation()` match `wbom_contacts.relation` (a separate, 99.9%-`'unknown'` field), never `display_name` | No | N/A | N/A |
+| B — contact-name contains "escort" | **Not implemented at all** | None exists; `identity_brain._lookup_contact()`/`_map_relation()` match `fazle_contacts.relation` (a separate, 99.9%-`'unknown'` field), never `display_name` | No | N/A | N/A |
 | C — `fazle_contact_roles.role` | Yes | `identity_brain._lookup_seed()`, Step 2 | Yes — directly, highest non-admin/family priority | Yes | Yes |
 
 **Convergence verdict: NOT converged.** Source C is the only reliable identity-assignment
 path. Source A never assigns identity — it only gates whether an *already-classified*
 escort-role sender's message reaches the order parser. Source B was never built,
-contradicting the Owner's stated original intent; `wbom_contacts.relation` sits at
+contradicting the Owner's stated original intent; `fazle_contacts.relation` sits at
 ~0.1% population, making even the implemented relation-string-match path effectively
 dead in practice.
 
@@ -1177,7 +1177,7 @@ dead in practice.
    for escort-order creation.
 2. **Webhook/poller LID parity gap (newly found):** `app/main.py::_handle_bridge_event()`
    only strips `@s.whatsapp.net`/`+` from the sender string — it never resolves an
-   `@lid`-suffixed sender to a real phone number. `modules/bridge_poller/__init__.py::_load_lid_map()`
+   `@lid`-suffixed sender to a real phone number. `modules/fazle_bridge_poller/__init__.py::_load_lid_map()`
    does this resolution (via the bridge's own `whatsmeow_lid_map` SQLite table) before
    calling `process_message()`. Net effect: a LID-only sender is always classified
    `identity_role="unknown"` on the webhook path, regardless of which of the three
@@ -1338,7 +1338,7 @@ Ollama timeout/rate-limit class, unrelated).
 
 **Live production smoke tests, all 7 passed**, using a disposable phone
 (`8801799990001`, confirmed via read-only query to collide with nothing in
-`fazle_contact_roles`/`wbom_contacts`/`wbom_employees`/`fpe_employees`, and
+`fazle_contact_roles`/`fazle_contacts`/`fazle_employees_legacy`/`fazle_employees`, and
 not in `ESCORT_CLIENT_PHONES`/`ACCOUNTANT_PHONE`/admin/FPE-authorized lists):
 `candidate` create (200), whitespace `" vendor "` → stored `vendor` (200),
 `Vendor` → 422 with a clear enum message, role unchanged; `admin` → 422;
@@ -1380,11 +1380,11 @@ instruction that this session covers deployment + proposal, not Phase 1B.2 code.
   a post-identity order-parsing gate, not an identity source. A second, unused,
   divergent implementation exists at `shared/env.py::EscortEnv.is_escort_client()`
   (dead code, zero callers).
-- **Source B — stored role:** `identity_brain._lookup_seed()` (`modules/identity_brain/__init__.py:198-210`),
+- **Source B — stored role:** `identity_brain._lookup_seed()` (`modules/fazle_identity_brain/__init__.py:198-210`),
   Step 2 (line 101) — the only fully-implemented, reliable source.
 - **Source C — contact name:** does not exist. `identity_brain._lookup_contact()`
   (line 320) / `_map_relation()` (line 337), Step 4 (line 152), match
-  `wbom_contacts.relation` — a structured field, 99.9% `'unknown'` — never
+  `fazle_contacts.relation` — a structured field, 99.9% `'unknown'` — never
   `display_name`.
 - **Step 6 fallback** (line 168): keyword-only (`_ESCORT_CONTENT_RE`) classification
   of a never-before-seen sender to `role="repeat_client"`, which
@@ -1392,7 +1392,7 @@ instruction that this session covers deployment + proposal, not Phase 1B.2 code.
   for routing purposes.
 - **Webhook behavior:** `app/main.py::_handle_bridge_event()` (line 1534) strips only
   `@s.whatsapp.net`/`+`; never resolves `@lid`.
-- **Poller behavior:** `modules/bridge_poller/__init__.py::_load_lid_map()`
+- **Poller behavior:** `modules/fazle_bridge_poller/__init__.py::_load_lid_map()`
   (lines 241-252) resolves LID → phone via the bridge's own `whatsmeow_lid_map`
   SQLite table before calling `process_message()`.
 - **LID behavior:** a LID-only sender is `unknown` on webhook, correctly resolved
@@ -1444,10 +1444,10 @@ instruction that this session covers deployment + proposal, not Phase 1B.2 code.
 
 ### 4. Proposed Architecture
 
-- **Canonical resolver location: `modules/identity_brain`.** Not `modules/escort/__init__.py`
+- **Canonical resolver location: `modules/fazle_identity_brain`.** Not `modules/escort/__init__.py`
   — `identity_brain.detect_identity()` is already the single shared entry point both
   webhook (`app/main.py::_handle_bridge_event()`) and poller
-  (`modules/bridge_poller/__init__.py`, via `process_message()`) call before any
+  (`modules/fazle_bridge_poller/__init__.py`, via `process_message()`) call before any
   role-specific handling. Centralizing there gives webhook/poller parity "for
   free" for sources A/B/C, rather than requiring each ingestion path to
   separately re-implement escort-client detection.
@@ -1474,7 +1474,7 @@ instruction that this session covers deployment + proposal, not Phase 1B.2 code.
 
 | File | Proposed change | Reason |
 |---|---|---|
-| `modules/identity_brain/__init__.py` | New canonical escort-client resolution step, priority-ordered per Decision 2; new contact-name "escort" token matcher; Step 6's escort-content branch reclassified as unverified, not a trusted role | Centralizes A/B/C, gives webhook/poller parity, implements Decisions 1-3, 5 |
+| `modules/fazle_identity_brain/__init__.py` | New canonical escort-client resolution step, priority-ordered per Decision 2; new contact-name "escort" token matcher; Step 6's escort-content branch reclassified as unverified, not a trusted role | Centralizes A/B/C, gives webhook/poller parity, implements Decisions 1-3, 5 |
 | `modules/escort/__init__.py` | `_is_allowed_escort_client()` role narrowed to a true parser-stage gate only, consuming the new resolver's `is_verified`/`source` instead of independently re-deriving trust; `handle_escort_client_message()` branches per §14's two-path contract | Decision 4, 5 — separates verified/unverified handling |
 | `shared/env.py` | Remove or clearly deprecate the dead, divergent `is_escort_client()` | Closes the duplicate-implementation gap (§3) |
 | `app/main.py::_handle_bridge_event()` | Add LID resolution (reuse the poller's existing `whatsmeow_lid_map`-based approach or a shared helper) before calling `detect_identity()` | Decision 6 — webhook/poller parity |
@@ -1589,7 +1589,7 @@ decided here.
 ### 14. Owner Approval Gate
 
 **Exact files this would touch (not yet approved for editing):**
-`modules/identity_brain/__init__.py`, `modules/escort/__init__.py`, `shared/env.py`,
+`modules/fazle_identity_brain/__init__.py`, `modules/escort/__init__.py`, `shared/env.py`,
 `app/main.py`, `modules/message_router/__init__.py`.
 
 **Exact behavior changes (not yet approved):** contact-name "escort" token
@@ -1616,7 +1616,7 @@ Implemented, tested, pushed, deployed, and certified in this session.
 
 | Commit | File(s) | Summary |
 |---|---|---|
-| `7313613` | `modules/identity_brain/__init__.py`, `shared/env.py` | New Step 3.7 (env_phone) and Step 4 name-marker check, both additive, priority-ordered per Owner Decision 2; new `resolve_escort_client_identity()` canonical resolver; dead `shared/env.py::is_escort_client()` documented as superseded, not deleted |
+| `7313613` | `modules/fazle_identity_brain/__init__.py`, `shared/env.py` | New Step 3.7 (env_phone) and Step 4 name-marker check, both additive, priority-ordered per Owner Decision 2; new `resolve_escort_client_identity()` canonical resolver; dead `shared/env.py::is_escort_client()` documented as superseded, not deleted |
 | `45d23fa` | `modules/message_router/__init__.py`, `modules/escort/__init__.py` | `_is_verified_escort_identity()` helper; both `handle_escort_client_message()` call sites now pass `is_verified`; unverified admin drafts labeled; `save_escort_programs()` records `source_verified` in remarks; verified senders no longer blocked by the phone-only allowlist gate (a real gap this fix closes) |
 | `24051fe` | `app/main.py` | Webhook `@lid` resolution via the poller's own `_load_lid_map()`, resolved per-bridge from existing settings; unresolved LIDs get the poller's `"unresolved:<lid>"` sentinel, never a fabricated phone |
 | `f8a1d75` | `tests/unit/test_escort_client_identity_convergence.py` (new) | 39 tests |
@@ -1638,7 +1638,7 @@ justified, not arbitrary):
   verified/unverified distinction is carried by `identity_source == "text_hint"`
   instead, recognized explicitly by both `resolve_escort_client_identity()` and
   `message_router._is_verified_escort_identity()`.
-- Contact-name matching checked before the legacy `wbom_contacts.relation`-based
+- Contact-name matching checked before the legacy `fazle_contacts.relation`-based
   classification (which is ~0.1% populated in production and mostly dead in
   practice) — an edge case where a contact's `relation` says e.g. `"family"`
   but its `display_name` also contains "escort" would now classify as
@@ -1844,7 +1844,7 @@ commit `f57def2`):
    draft program's `remarks.source_verified = false`; the admin notification
    is prefixed `"⚠️ UNVERIFIED SENDER"`; no `fazle_contact_roles` row is
    auto-created from message content alone; no client-facing reply.
-4. No attendance, `fpe_cash_transactions`, or elevated `fazle_contact_roles`
+4. No attendance, `fazle_cash_transactions`, or elevated `fazle_contact_roles`
    role created as a side effect of an escort order.
 
 **Real production log trace from the first (pre-incident) run already
@@ -1854,7 +1854,7 @@ e.g. `[identity] 8801766600001 → client_escort_buyer (env_phone)`,
 and for the unverified case `[identity] ... → repeat_client (text_hint, escort content)`
 with the admin body starting `'⚠️ UNVERIFIED SENDER — order-like message...'`.
 The only issues found were in the *test's own* SQL (a wrong column name,
-`wbom_whatsapp_messages.id` instead of the real `message_id`) and two
+`fazle_whatsapp_messages.id` instead of the real `message_id`) and two
 over-fitted parser-output assertions — not the Phase 1B.2 implementation
 itself, which needed no changes.
 
@@ -1971,7 +1971,7 @@ any dimension") AND wbom_employee_id IS NOT NULL
 - `resolution_status = 'auto_created'` (12 rows, all unlinked) — a third,
   distinct status, out of this fix's scope either way (none are linked).
 
-**All writers audited** (grep for every `fpe_employees.wbom_employee_id`
+**All writers audited** (grep for every `fazle_employees.wbom_employee_id`
 assignment repo-wide, not just the originally-cited function):
 
 | # | File:location | Prior behavior | Fix |
@@ -2011,11 +2011,11 @@ currently exist, and costs nothing when they don't.
 Linked-but-not-resolved: **153**. Resolved-but-unlinked: **6** (all
 `admin_manual_create`, confirmed legitimate, not touched). Broken WBOM
 references (`wbom_employee_id` pointing at a non-existent
-`wbom_employees` row): **0**. `created_source` breakdown of the 153:
+`fazle_employees_legacy` row): **0**. `created_source` breakdown of the 153:
 `whatsapp_auto_create` ×152, `payment_ingest_bridge` ×1 — exactly matching
 writers #7 and #1 above, confirming root cause.
 
-**Tests:** 13 new (`tests/unit/test_fpe_employee_resolution_status.py`,
+**Tests:** 13 new (`tests/unit/test_fazle_employee_resolution_status.py`,
 commit `c2671fb`) against the isolated disposable test DB — all pass.
 Broader regression sweep (existing employee/payment_ingest/reports/
 shared-auth-deps tests): 92 passed, 16 failed — all 16 are the same
@@ -2025,7 +2025,7 @@ this change.
 
 **Historical backfill — executed, not deferred.** All 6 safety conditions
 proven before running: every affected row's `wbom_employee_id` references
-a real `wbom_employees` row (0 broken links); no linked-but-unresolved
+a real `fazle_employees_legacy` row (0 broken links); no linked-but-unresolved
 state is legitimate (100% of the 153 map to the two confirmed-defective
 writers, none to the dedup workflow or any other deliberate state);
 original statuses are homogeneous and known (`'unresolved'` for all 153);
@@ -2053,7 +2053,7 @@ exception rows were not touched). Transaction committed.
 
 Zero linked rows remain `unresolved`; the 6 legitimate
 `admin_manual_create` resolved-but-unlinked rows are unchanged; zero
-broken WBOM references. `modules.reports._b_unresolved_fpe_employees`'s
+broken WBOM references. `modules.reports._b_unresolved_fazle_employees`'s
 live output confirms end-to-end: `linked_but_mislabeled_count` **153 → 0**;
 `no_wbom_match_count` (172) and `wbom_match_unlinked_count` (81) unchanged
 — exactly matching the original Session 20 Phase 3 audit numbers,
@@ -2126,7 +2126,7 @@ unrelated cleanup.
 - The exact 16 previously-failing tests: **45/45 pass**
   (`test_contact_roles.py` + `test_shared_auth_deps.py`)
 - `test_webhooks.py` (directly modified): **10/10 pass**
-- `test_identity_brain.py` + `test_fpe_employee_resolution_status.py`
+- `test_identity_brain.py` + `test_fazle_employee_resolution_status.py`
   (unaffected by this change): **30/30 pass**
 - `test_full_workflows.py` (directly modified): the one test exercising
   this fixture (`test_full_escort_lifecycle`) correctly resolved identity
@@ -2159,7 +2159,7 @@ technical debt.**
 
 ### Session 24, Phase 1E — Live Unresolved-Employee Report Integration (2026-07-18)
 
-**API contract confirmed via live read:** `GET /reports/unresolved_fpe_employees`
+**API contract confirmed via live read:** `GET /reports/unresolved_fazle_employees`
 (same `X-Internal-Key` auth both pages already use), flat `rows` array (no
 pagination — 253 rows total, safe for direct frontend use at this size),
 per-row fields: `fpe_id`, `fpe_name`, `resolution_status`, `phone`, `salary`,
@@ -2310,39 +2310,39 @@ pass yet" risk flagged at the end of Phase 1E is resolved.
 |---|---|---|---|
 | `test_full_escort_lifecycle` | `ValueError: release end date/shift is before program start` | The order text's date hint (`"06/05/2026"`) is stored in `remarks.date_hint` but never parsed into `wbom_escort_programs.start_date` (confirmed empirically: stays NULL). `_handle_release_event_tx()` falls back to `program_date`, which defaults to the row's real insertion date — i.e. "today" whenever the test actually runs. The old hardcoded `End Date: 2026-05-05` was therefore never a once-correct date that went stale; it could never have passed on any date. | Updated test: release end date computed as `date.today() + timedelta(days=4)`, shift `N` — verified via direct invocation of `count_shifts()`/`shifts_to_days()` to yield exactly 10 shifts = 5.0 days, matching the test's own `day_count==5.0` assertion. No fixed-date dependency. |
 | `test_advance_request_to_transaction` | `assert draft is not None` (no `fazle_payment_drafts` row created) | `modules.employee_conversation` now runs advance requests as a strict 4-turn state machine (trigger → amount → payout → explicit `"confirm"`); a single combined "trigger + amount" message only satisfies the trigger step, documented & covered by `tests/unit/test_sprint3a_employee_conversation.py::Test4VerificationCompleteDraftCreated`. | Updated test to send the same 4-message sequence through the real `/webhook/mcp1` HTTP path. |
-| `test_advance_deducted_in_payroll` | `TypeError: compute_run() missing period_year` | `compute_run(employee_id, period_year: int, period_month: int, computed_by, ...)` — confirmed against all 3 live production call sites (`modules/admin_commands`, `modules/payroll` x2, `app/main.py`). | Updated test to pass `period_year=2026, period_month=5` as separate ints. **Also uncovered a real production bug — see below.** |
-| `test_full_payroll_state_machine` | same `compute_run()` `TypeError` | same | Same signature fix. Also added a `wbom_employee_id`-linked `fpe_employees` row (`mark_paid()` fails closed without one, 2026-07-15 fix per `knowledge_base/06_developer_system/payroll_module.md`) — the test previously never reached that step. |
+| `test_advance_deducted_in_payroll` | `TypeError: compute_run() missing period_year` | `compute_run(employee_id, period_year: int, period_month: int, computed_by, ...)` — confirmed against all 3 live production call sites (`modules/fazle_admin_commands`, `modules/payroll` x2, `app/main.py`). | Updated test to pass `period_year=2026, period_month=5` as separate ints. **Also uncovered a real production bug — see below.** |
+| `test_full_payroll_state_machine` | same `compute_run()` `TypeError` | same | Same signature fix. Also added a `wbom_employee_id`-linked `fazle_employees` row (`mark_paid()` fails closed without one, 2026-07-15 fix per `knowledge_base/06_developer_system/payroll_module.md`) — the test previously never reached that step. |
 | `test_guard_reports_present_admin_approves` | `TypeError: save_attendance() missing attendance_date` | `attendance_date` is a required, no-default param — confirmed via the real production caller (`modules/attendance/__init__.py:406`) and sibling passing tests in `tests/unit/test_attendance.py`. | Added `attendance_date=date.today()`. |
-| `test_reverse_payment` | `TypeError: finalize_payment() got unexpected kwarg 'amount'` | `finalize_payment(draft_id, approved_amount, method)` — no `admin_phone` param. `reverse_payment(draft_id, admin_phone, reason='')` — now keyed by the payment draft, not a raw transaction id; looks up the canonical transaction via `fazle_payment_drafts.transaction_id`. | Rewrote both calls to the current contracts and rewrote both assertions against `fpe_cash_transactions` (see below). |
+| `test_reverse_payment` | `TypeError: finalize_payment() got unexpected kwarg 'amount'` | `finalize_payment(draft_id, approved_amount, method)` — no `admin_phone` param. `reverse_payment(draft_id, admin_phone, reason='')` — now keyed by the payment draft, not a raw transaction id; looks up the canonical transaction via `fazle_payment_drafts.transaction_id`. | Rewrote both calls to the current contracts and rewrote both assertions against `fazle_cash_transactions` (see below). |
 
 **Separate, systemic finding uncovered during investigation:** the whole
-file still asserted against the legacy `wbom_cash_transactions` table (5
-occurrences) instead of the canonical `fpe_cash_transactions` (Owner
+file still asserted against the legacy `fazle_cash_transactions_archive` table (5
+occurrences) instead of the canonical `fazle_cash_transactions` (Owner
 Directive 2026-06-29, `.claude/CLAUDE.md`) — predates that migration.
 Fixed all 5: escort-payment PAID step, advance-approval, advance-seeding,
 and both sides of the reversal check. Two required matching on
 `employee_phone` rather than `employee_id`, since
-`fpe_cash_transactions.employee_id` FKs to `fpe_employees(id)` — a
-distinct ID space from `wbom_employees.employee_id` (confirmed via
-`\d fpe_cash_transactions` on the disposable test DB).
+`fazle_cash_transactions.employee_id` FKs to `fazle_employees(id)` — a
+distinct ID space from `fazle_employees_legacy.employee_id` (confirmed via
+`\d fazle_cash_transactions` on the disposable test DB).
 
 **CONFIRMED REAL PRODUCTION BUG, NOT FIXED (payroll formula work
 explicitly out of scope this session):** `compute_run()`'s advances query
 (`modules/payroll/__init__.py` ~line 152) filters
-`fpe_cash_transactions WHERE employee_id=$1` using the **WBOM**
+`fazle_cash_transactions WHERE employee_id=$1` using the **WBOM**
 `employee_id` passed into `compute_run`, but that column's FK target is
-`fpe_employees(id)` — confirmed via schema inspection
-(`fpe_cash_transactions_employee_id_fkey FOREIGN KEY (employee_id)
-REFERENCES fpe_employees(id)`). `mark_paid()` in the *same file* resolves
-this correctly, first looking up `fpe_employees WHERE wbom_employee_id=$1`
+`fazle_employees(id)` — confirmed via schema inspection
+(`fazle_cash_transactions_employee_id_fkey FOREIGN KEY (employee_id)
+REFERENCES fazle_employees(id)`). `mark_paid()` in the *same file* resolves
+this correctly, first looking up `fazle_employees WHERE wbom_employee_id=$1`
 before using its `id` (see `_transition()`'s fail-closed check and
 `_post_payroll_ledger_entry()`) — the advances query does not do this
 resolution step. **Practical impact: real advances are silently never
-deducted from payroll unless `fpe_employees.id` happens to numerically
+deducted from payroll unless `fazle_employees.id` happens to numerically
 coincide with the WBOM `employee_id`**, which is not guaranteed and not
 the general case (they are independent `SERIAL` sequences).
 `test_advance_deducted_in_payroll` was rewritten to seed through a real,
-correctly `wbom_employee_id`-linked `fpe_employees` row, with a decoy row
+correctly `wbom_employee_id`-linked `fazle_employees` row, with a decoy row
 inserted first specifically to rule out an ID-coincidence false pass in a
 fresh, truncated test DB (both sequences start at 1) — confirmed this
 matters: without the decoy the test passed coincidentally; with it, it
@@ -2351,7 +2351,7 @@ correctly and reproducibly fails with `total_advances=0.0` instead of
 message pointing to this record, per "do not update tests merely to force
 green results." **Recommend a dedicated Phase 1G.1 (or similar) proposal
 to fix `compute_run()`'s advances query to resolve through
-`fpe_employees.wbom_employee_id`, matching `mark_paid()`'s existing
+`fazle_employees.wbom_employee_id`, matching `mark_paid()`'s existing
 pattern — small, well-scoped, but real-money-affecting, so needs its own
 Owner-approved proposal rather than a silent fix here.**
 
@@ -2418,7 +2418,7 @@ only) and are recorded here for a future dedicated pass:
 - `test_step8_cash_transaction_inserted`,
   `test_cash_transaction_links_to_program`,
   `test_duplicate_payment_finalize_not_allowed` — same legacy
-  `wbom_cash_transactions` vs. canonical `fpe_cash_transactions` drift
+  `fazle_cash_transactions_archive` vs. canonical `fazle_cash_transactions` drift
   fixed in Phase 1G, present in this file too, not yet fixed here.
 - `test_payroll_run_items_are_complete`, `test_advance_deducted_in_payroll`,
   `test_payroll_transitions_write_approval_log`,
@@ -2431,7 +2431,7 @@ only) and are recorded here for a future dedicated pass:
 - `test_duplicate_release_webhook_idempotent`, `test_escort_release_api_full_flow`
   — `POST /escort/release` now returns 409 "Direct release finalization is
   disabled; send an admin [RELEASE CONFIRMED] message" — a deliberate,
-  already-documented 2026-06-19 hardening (`modules/admin_commands/__init__.py`),
+  already-documented 2026-06-19 hardening (`modules/fazle_admin_commands/__init__.py`),
   not a bug; these two tests simply predate that change.
 
 **Certification:** Phase 1H CLOSED. Hang not reproducible; root cause
@@ -2599,7 +2599,7 @@ INSERT-with-RETURNING shape while preserving its original intent
 Phase 1G `compute_run()` advances bug fails (unrelated, pre-existing,
 intentional). `tests/workflows/test_escort_payment_flow.py` full run →
 identical 11/59 pre-existing failures from Phase 1H (route removal, legacy
-`wbom_cash_transactions` drift, the same `compute_run()` bug, one
+`fazle_cash_transactions_archive` drift, the same `compute_run()` bug, one
 deliberately-disabled endpoint), confirmed byte-for-byte identical test
 names and error messages before and after this change — zero new
 regressions anywhere touched by this fix.
@@ -2640,13 +2640,13 @@ resolution only — no formula redesign, no unrelated payment-flow cleanup).
 ### Confirmed defect
 
 `modules/payroll/__init__.py::compute_run()`'s advance-deduction query filtered
-`fpe_cash_transactions.employee_id` directly against the WBOM `employee_id`
+`fazle_cash_transactions.employee_id` directly against the WBOM `employee_id`
 parameter passed into `compute_run`. Schema inspection confirms
-`fpe_cash_transactions_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES
-fpe_employees(id)` — a different, independently-sequenced ID space from
-`wbom_employees.employee_id`. `_transition()`'s "paid" fail-closed check
+`fazle_cash_transactions_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES
+fazle_employees(id)` — a different, independently-sequenced ID space from
+`fazle_employees_legacy.employee_id`. `_transition()`'s "paid" fail-closed check
 elsewhere in the same file already resolves this correctly via
-`fpe_employees WHERE wbom_employee_id=$1 AND status='active'`; the advances
+`fazle_employees WHERE wbom_employee_id=$1 AND status='active'`; the advances
 query never did.
 
 ### Production data audit (read-only, before any code change)
@@ -2669,16 +2669,16 @@ query never did.
 
 ### Same-bug-class functions found, NOT fixed (explicitly out of this fix's scope)
 
-- **`modules/payment_workflow/__init__.py::create_escort_payment_draft()`
+- **`modules/fazle_payment_workflow/__init__.py::create_escort_payment_draft()`
   — HIGH severity, urgent follow-up recommended.** Per
   `CANONICAL_BUSINESS_RULES.md`: "the function that actually computes every
   real escort payment draft on release." Its advance subtraction
   (`net_payable = gross_amount − food_bill + conveyance − advances`) has the
-  *identical* WBOM-id-against-`fpe_cash_transactions` bug, but unlike
+  *identical* WBOM-id-against-`fazle_cash_transactions` bug, but unlike
   `compute_run()` this is a **live, real-money path** — guards may be
   currently overpaid on every release because their prior advances aren't
   being deducted.
-- `modules/payment_workflow/__init__.py::create_advance_request_draft()` —
+- `modules/fazle_payment_workflow/__init__.py::create_advance_request_draft()` —
   same bug in a "paid this month" figure shown to the approving admin, but
   display-only (doesn't gate or cap the transaction) — lower urgency.
 - `modules/payroll_logic/__init__.py::get_payroll_summary()` — 3 queries
@@ -2698,10 +2698,10 @@ it's live money moving today.
 
 ### Fix
 
-Single change to `compute_run()`: resolve the linked, active `fpe_employees`
-row via `wbom_employee_id` first (`SELECT id FROM fpe_employees WHERE
+Single change to `compute_run()`: resolve the linked, active `fazle_employees`
+row via `wbom_employee_id` first (`SELECT id FROM fazle_employees WHERE
 wbom_employee_id=$1 AND status='active'`, the exact pattern already used by
-`_transition()`), then query `fpe_cash_transactions` by the resolved id. No
+`_transition()`), then query `fazle_cash_transactions` by the resolved id. No
 FPE link → advances = 0, the run still computes successfully (not fail
 closed — a missing link is a data-completeness fact, not an error condition,
 per Owner-defined policy for this fix). Everything else in the function is
@@ -2749,7 +2749,7 @@ concurrent-run collision against the shared disposable test DB on the first
 attempt produced spurious schema-corruption errors, re-ran cleanly): the
 same **identical 11/59 pre-existing failures**, confirmed by name and error
 message, before and after this change. None of the 11 are advance-identity
-issues — 3 are legacy `wbom_cash_transactions`-table drift (this file's own
+issues — 3 are legacy `fazle_cash_transactions_archive`-table drift (this file's own
 `test_advance_deducted_in_payroll` and `test_payroll_run_items_are_complete`
 still seed via the legacy table, unrelated to the ID-resolution bug just
 fixed and correctly left untouched per "do not rewrite unrelated
@@ -2778,7 +2778,7 @@ constraint. `POST /payroll/compute` created a new, real, correctly-computed
 draft run (`run_id=714`): `"total_advances": 3500.0`, exactly matching the
 real underlying transactions (before this fix, this would have returned
 `0.0`, since the query would have searched
-`fpe_cash_transactions WHERE employee_id=151`, but the real rows are keyed by
+`fazle_cash_transactions WHERE employee_id=151`, but the real rows are keyed by
 `employee_id=177`). A second identical call correctly hit the idempotency
 path (`"already_exists": true`, same `run_id=714`, no duplicate). Health
 `ok` before and after; no new errors in logs; this new draft run is left in
@@ -2824,7 +2824,7 @@ existing, safe, already-approved transition for that.
 ## Phase 2A — Complete Remaining Money Correctness (2026-07-18)
 
 **Objective:** search the whole repository for the same WBOM-employee_id-used-
-directly-against-fpe_cash_transactions bug fixed in `compute_run()`, and fix
+directly-against-fazle_cash_transactions bug fixed in `compute_run()`, and fix
 every live-money and customer-visible instance.
 
 ### Audit table
@@ -2832,17 +2832,17 @@ every live-money and customer-visible instance.
 | Function | Correct before | Bug | Live money | Customer visible | Action |
 |---|---|---|---|---|---|
 | `modules/payroll/__init__.py::compute_run()` | No | Yes | No (dormant pipeline, see prior entry) | No | Fixed earlier this session |
-| `modules/payment_workflow/__init__.py::create_escort_payment_draft()` | No | Yes | **Yes — computes every real escort payment draft on release** | Indirectly (guard's payout amount) | **Fixed** |
-| `modules/payment_workflow/__init__.py::create_advance_request_draft()` | No | Yes | No (display-only, doesn't gate the transaction) | Admin-facing only | **Fixed** |
+| `modules/fazle_payment_workflow/__init__.py::create_escort_payment_draft()` | No | Yes | **Yes — computes every real escort payment draft on release** | Indirectly (guard's payout amount) | **Fixed** |
+| `modules/fazle_payment_workflow/__init__.py::create_advance_request_draft()` | No | Yes | No (display-only, doesn't gate the transaction) | Admin-facing only | **Fixed** |
 | `modules/payroll_logic/__init__.py::get_payroll_summary()` | No | Yes | No (read-only reply) | **Yes — WhatsApp "কত টাকা পেয়েছি" replies** | **Fixed** (also exposed 2 separate pre-existing KeyError/wrong-column bugs, fixed in the same change) |
 | `modules/admin_employees/__init__.py::get_employee()` | No | Yes | No (cosmetic count) | Admin-facing only | **Fixed** |
 | `modules/social_auto_reply/employee_lookup.py::get_payment_history()`/`get_total_paid()` | No | Yes | No — **dead code, zero callers anywhere** (confirmed via repo-wide search) | No | Not fixed — no live impact, not worth the risk of touching unused code |
 
 ### Fix
 
-Same pattern as `compute_run()`: resolve `SELECT id FROM fpe_employees WHERE
+Same pattern as `compute_run()`: resolve `SELECT id FROM fazle_employees WHERE
 wbom_employee_id=$1 AND status='active'` first, use the resolved id in the
-`fpe_cash_transactions` query, no link → the safe default for that function's
+`fazle_cash_transactions` query, no link → the safe default for that function's
 own contract (zero deduction / zero payment history / draft still created,
 never fail closed). No formula changes, no filter changes beyond the
 employee-id parameter itself.
@@ -3007,14 +3007,14 @@ contract has intentionally changed; leave documented-historical ones alone.
 | Test | Root Cause | Production Bug | Test Drift | Legacy | Action |
 |---|---|---|---|---|---|
 | `test_step3_escort_active_visible_via_api` | `GET /admin/escort-programs` route removed, no replacement | No | No | Yes | Not fixed |
-| `test_step8_cash_transaction_inserted` | Legacy `wbom_cash_transactions` | No | No | Yes | Not fixed |
-| `test_cash_transaction_links_to_program` | Legacy `wbom_cash_transactions` | No | No | Yes | Not fixed |
-| `test_payroll_run_items_are_complete` | Legacy `wbom_cash_transactions` | No | No | Yes | Not fixed |
-| `test_advance_deducted_in_payroll` (this file) | Legacy `wbom_cash_transactions` | No | No | Yes | Not fixed |
+| `test_step8_cash_transaction_inserted` | Legacy `fazle_cash_transactions_archive` | No | No | Yes | Not fixed |
+| `test_cash_transaction_links_to_program` | Legacy `fazle_cash_transactions_archive` | No | No | Yes | Not fixed |
+| `test_payroll_run_items_are_complete` | Legacy `fazle_cash_transactions_archive` | No | No | Yes | Not fixed |
+| `test_advance_deducted_in_payroll` (this file) | Legacy `fazle_cash_transactions_archive` | No | No | Yes | Not fixed |
 | `test_duplicate_release_webhook_idempotent` | `POST /escort/release` intentionally hardened 2026-06-19 | No | No | Yes | Not fixed |
-| `test_duplicate_payment_finalize_not_allowed` | Legacy `wbom_cash_transactions` count check | No | No | Yes | Not fixed |
+| `test_duplicate_payment_finalize_not_allowed` | Legacy `fazle_cash_transactions_archive` count check | No | No | Yes | Not fixed |
 | `test_escort_release_api_full_flow` | Same disabled-endpoint hardening | No | No | Yes | Not fixed |
-| `test_payroll_transitions_write_approval_log` | Missing linked active `fpe_employees` row (2026-07-15 `mark_paid()` fail-closed fix) | No | **Yes** | No | **Fixed** |
+| `test_payroll_transitions_write_approval_log` | Missing linked active `fazle_employees` row (2026-07-15 `mark_paid()` fail-closed fix) | No | **Yes** | No | **Fixed** |
 | `test_two_employees_independent_payrolls` | Unrelated test-data flaw: emp2's `basic_salary` exceeded emp1's basic+program total | No | **Yes** | No | **Fixed** |
 | `test_payroll_transition_api_full_chain` | Same missing-FPE-link issue | No | **Yes** | No | **Fixed** |
 
@@ -3130,7 +3130,7 @@ conflict** — with no special-case code (verified by a dedicated test,
 
 ### Eligibility rule (empirically confirmed, not assumed)
 
-`wbom_employees.status = 'Active' AND designation ILIKE 'Escort'` —
+`fazle_employees_legacy.status = 'Active' AND designation ILIKE 'Escort'` —
 confirmed by sampling 5 real, currently-assigned escort employees from
 production and checking their actual `designation` value directly.
 
@@ -3158,7 +3158,7 @@ canonical field found to support them).
 grouped query (`ANY($1::int[])`) for blocking programs and one aggregate
 query for last-assignment-dates, regardless of result-set size — no
 per-employee query loop. No new index created (none needed at current data
-volume: 217 `wbom_employees` rows, 318 `wbom_escort_programs` rows).
+volume: 217 `fazle_employees_legacy` rows, 318 `wbom_escort_programs` rows).
 
 ### No-write proof
 
@@ -3167,7 +3167,7 @@ matches. `tests/unit/test_dispatch.py::TestDispatchAPI::test_no_database_mutatio
 hits all 3 endpoints then asserts `wbom_escort_programs`/
 `escort_roster_entries` row counts are unchanged. Production verification
 independently confirmed `wbom_escort_programs` (318), `escort_roster_entries`
-(318), and `wbom_employees` (217) row counts identical before and after
+(318), and `fazle_employees_legacy` (217) row counts identical before and after
 live API exercise.
 
 ### UI
@@ -3248,7 +3248,7 @@ click only fills the employee-id field.
 | `cancelled` | No | No | Terminal, per Owner instruction |
 
 A second, independent risk avoided by this same restriction:
-`modules.payment_workflow.create_escort_payment_draft()` overwrites
+`modules.fazle_payment_workflow.create_escort_payment_draft()` overwrites
 `employee_id` on an *existing* draft if re-invoked for the same
 `escort_program_id` — but drafts are only created at release (a terminal
 transition), so restricting assignment to pre-release statuses (`draft`,
@@ -3275,7 +3275,7 @@ possible.
 ### Concurrency design
 
 `pg_advisory_xact_lock`, matching the established precedent in this repo
-(`modules.payment_workflow.create_escort_payment_draft()`, keyed
+(`modules.fazle_payment_workflow.create_escort_payment_draft()`, keyed
 identically by `escort_program_id`). Two locks acquired in a **fixed,
 global order — `escort_employee_id` first, then `program_id`** — every
 code path, so two concurrent assignment calls can never deadlock waiting
@@ -3336,7 +3336,7 @@ false`), stale assignment blocked (409), reassignment with correct
 `expected_current_employee_id` succeeded (200), overlaps endpoint
 unaffected (200). Zero `fazle_payment_drafts` or `wbom_attendance` rows
 created. All 6 table row counts (`wbom_escort_programs`,
-`escort_roster_entries`, `wbom_employees`, `fazle_payment_drafts`,
+`escort_roster_entries`, `fazle_employees_legacy`, `fazle_payment_drafts`,
 `wbom_attendance`, `escort_roster_audit_logs`) were identical before and
 after the synthetic program was created, exercised, and deleted.
 
@@ -3398,7 +3398,7 @@ none of which have been applied.
    non-blocking exactly like `completed`/`cancelled` for bookability/
    attendance/release-target purposes.
 2. `wbom_escort_programs.replaces_program_id` (nullable self-FK) + a
-   partial unique index (`idx_wbom_escort_programs_replaces_active_unique`)
+   partial unique index (`idx_fazle_escort_programs_replaces_active_unique`)
    preventing more than one **non-terminal** replacement per predecessor,
    while allowing multiple historical/terminal replacements to coexist.
 3. Automatic same-vessel classification requires BOTH normalized
@@ -3433,7 +3433,7 @@ none of which have been applied.
 
 ### Schema (Stage 1 — migrations 049, 050, 051)
 
-- `049`: widened `wbom_escort_programs_status_check` to add
+- `049`: widened `fazle_escort_programs_status_check` to add
   `'escort_changed'`.
 - `050`: added `replaces_program_id INTEGER REFERENCES wbom_escort_programs
   (program_id)`, a no-self-reference CHECK, a plain index, and the Decision-2
@@ -3681,7 +3681,7 @@ start of this work.
   additive `skip_intent: bool = False` parameter. Default behavior (used by
   WhatsApp) is byte-for-byte unchanged; `skip_intent=True` returns
   immediately after transcription/confidence/language-detect, skipping the
-  `modules.intent.classify()` / `ai.classify_intent_llm()` step entirely —
+  `modules.fazle_intent.classify()` / `ai.classify_intent_llm()` step entirely —
   so the new web route never triggers an LLM call itself, regardless of
   what `process_voice()` is reused for.
 - **`app/main.py`** — removed the `[voice: ...]` placeholder-rejection
@@ -3856,7 +3856,7 @@ Two parallel audits (not assumed, verified by direct code read):
    call with no side effects. No CSV structured-summary utility and no
    magic-bytes/content-sniffing existed anywhere in the repo. PyMuPDF and
    python-docx were declared in `requirements.txt`; Pillow was an
-   undeclared transitive dependency (used by `modules.image_hash`) —
+   undeclared transitive dependency (used by `modules.fazle_image_hash`) —
    declared explicitly now that Stage D depends on it directly.
 
 ### What changed
@@ -4022,20 +4022,20 @@ should block auto-creation and route to human review instead.
   `modules/escort_roster/db.py`. No migration needed for this part.
 - **Reply/thread linkage** (the spec's Priority 2 preference): not
   technically available — no quoted/reply-to message metadata is captured
-  anywhere in `modules/bridge_poller`'s ingestion pipeline. Admin
+  anywhere in `modules/fazle_bridge_poller`'s ingestion pipeline. Admin
   confirmations are freshly-typed messages, not protocol-level replies to
   the client's original order, so content-based matching is closer to the
   only mechanism that actually exists here, not a corner someone cut.
 - **Dedup identity audit**: found two independent, pre-existing dedup
   tables — `processed_bridge_messages` (inbound webhook/poller race guard)
   and `processed_outgoing_escort_messages` (the bridge-poller's own
-  outgoing-scan guard), both `modules/bridge_poller/__init__.py`, both
+  outgoing-scan guard), both `modules/fazle_bridge_poller/__init__.py`, both
   `PRIMARY KEY (message_id, bridge)`. They guard two *different* ingestion
   paths independently — the same physical admin confirmation could reach
   `handle_admin_escort_completion()` twice across paths (webhook route vs.
   SQLite outgoing scan) without either table catching it. This is a real
   gap the new table's own dedup index closes, not redundant safety.
-- **Message-id availability at call sites**: `modules/bridge_poller/
+- **Message-id availability at call sites**: `modules/fazle_bridge_poller/
   __init__.py`'s outgoing-scan path has `omsg_id` available (currently
   unused past its own `_mark_outgoing_processed` call). `app/main.py`'s
   webhook handler has `msg_id = event.get("id") or event.get("message_id")`
@@ -4053,8 +4053,8 @@ should block auto-creation and route to human review instead.
 New table `wbom_unmatched_confirmations` (see file for full column list
 and rationale comments) — purely additive, no existing table touched.
 Partial unique index on `(source_bridge, source_message_id)` mirrors the
-existing pattern already used for `wbom_cash_transactions`'s own
-WhatsApp-message dedup index (`idx_wbom_transactions_wa_msg_dedup`,
+existing pattern already used for `fazle_cash_transactions_archive`'s own
+WhatsApp-message dedup index (`idx_fazle_transactions_wa_msg_dedup`,
 migration 029) — not a new pattern introduced.
 
 **Validated on a genuinely disposable, throwaway `postgres:17-alpine`
@@ -4148,7 +4148,7 @@ Traced every path that can reach `handle_admin_escort_completion()` and
 threaded an optional `message_id` through all of them, needed for the
 review queue's dedup identity (migration 052):
 
-- `modules/bridge_poller/__init__.py::process_bridge_inbound()` — new
+- `modules/fazle_bridge_poller/__init__.py::process_bridge_inbound()` — new
   `message_id: str = ""` kwarg (this is the *single* unified entry point
   both `_poll_bridge()`'s regular inbound scan and `app/main.py`'s webhook
   handler call, per the function's own docstring — the highest-blast-
@@ -4156,7 +4156,7 @@ review queue's dedup identity (migration 052):
   flows through it, not just escort confirmations). Passed through to its
   own `process_message(phone, text, bridge_name, message_id=message_id or
   None)` call.
-- `modules/bridge_poller/__init__.py`'s `_poll_bridge()` call site — now
+- `modules/fazle_bridge_poller/__init__.py`'s `_poll_bridge()` call site — now
   passes `message_id=str(msg.get("id") or msg.get("message_id") or "")`.
 - `app/main.py`'s webhook handler call site — now passes `message_id=
   msg_id` (the same `msg_id` P15-03's dedup guard already computes a few
@@ -4164,7 +4164,7 @@ review queue's dedup identity (migration 052):
 - `modules/message_router/__init__.py::process_message()` — new keyword-
   only `message_id: Optional[str] = None` param, threaded into its
   `handle_admin_escort_completion(..., message_id=message_id)` call.
-- `modules/bridge_poller/__init__.py`'s *separate* outgoing-scan call site
+- `modules/fazle_bridge_poller/__init__.py`'s *separate* outgoing-scan call site
   (reads admin's own sent messages directly from bridge SQLite, does not
   go through `process_message()` at all) — passes its own `omsg_id`
   directly as `message_id=omsg_id`.
@@ -4509,7 +4509,7 @@ resource today).
 
 **Status: code complete and unit-tested, NOT YET committed/pushed/deployed.**
 Fixes the confirmed root cause of the MV Horda incident (Stage 5 decision
-package): `modules/bridge_poller/__init__.py`'s outgoing-message scan
+package): `modules/fazle_bridge_poller/__init__.py`'s outgoing-message scan
 could misread the system's own auto-generated admin review notifications
 as authoritative admin confirmations, because it only checked whether the
 outgoing text *looked like* a completed draft, never who or what actually
@@ -4558,7 +4558,7 @@ the existing marker was found to already solve the problem without it.
 
 - `modules/message_router/__init__.py`: new `SYSTEM_NOTIFICATION_TITLE_PREFIXES`
   constant (6 known titles), documented as the single source of truth.
-- `modules/bridge_poller/__init__.py`: new `_is_system_generated_notification()`
+- `modules/fazle_bridge_poller/__init__.py`: new `_is_system_generated_notification()`
   (marker check first, prefix-denylist fallback second); guard applied at
   the escort-completion branch of the outgoing scan, before
   `handle_admin_escort_completion()` is ever called — scoped to exactly
@@ -4625,7 +4625,7 @@ roster.
 
 ### What changed
 
-`modules/bridge_poller/__init__.py`, `+9` lines, one call site: inside
+`modules/fazle_bridge_poller/__init__.py`, `+9` lines, one call site: inside
 the `if is_release_confirmation(otext):` branch (`_poll_bridge()`, the
 outgoing scan), a call to the same `_is_system_generated_notification()`
 used for the escort-completion branch, immediately before
@@ -4803,7 +4803,7 @@ authorization/confirmation control — none of those gates were touched.
 - **Two existing, partially-overlapping systems found and reconciled, not
   duplicated:** `modules/conversation_layer` (Session 9, "Full Activation")
   is an LLM+KB+RAG recruitment *reply* generator using `get_recent_history()`
-  (last 5 raw message bodies, `wbom_whatsapp_messages`) as ambient context —
+  (last 5 raw message bodies, `fazle_whatsapp_messages`) as ambient context —
   architecturally unrelated to structured field extraction. `fazle_recruitment_sessions`
   + `modules.recruitment_flow.intake_message()` is a real, working,
   fixed-column, step-by-step multi-message collector for recruitment
@@ -4812,7 +4812,7 @@ authorization/confirmation control — none of those gates were touched.
   instead). **Owner decision: coexist, not consolidate** — escort gets the
   new generic engine; recruitment keeps its own existing mechanism
   unchanged.
-- `wbom_whatsapp_messages` reused as the raw message-event source (Part
+- `fazle_whatsapp_messages` reused as the raw message-event source (Part
   5.1) — no new message-event table.
 
 ### Schema (migration 053)
@@ -4825,7 +4825,7 @@ threads never collide), JSONB `fields` with per-field
 shape, not a merged text blob), `state` machine matching the spec's 9 states
 exactly (CHECK-enforced), `expires_at`, `conflict_flags`, `related_object_type`/`related_object_id`.
 Plus `processed_conversation_messages`, the identical `(message_id, bridge)`
-dedup shape already used twice in `modules/bridge_poller`. `system_generated`
+dedup shape already used twice in `modules/fazle_bridge_poller`. `system_generated`
 is deliberately NOT a stored column — computed on read via the already-deployed
 `_is_system_generated_notification()` (Root Cause 7), avoiding a second,
 driftable source of truth. Validated on 3 separate disposable `postgres:17-alpine`
@@ -4929,7 +4929,7 @@ All 4 required checks passed before touching production `.env`:
    `test_exception_inside_observation_never_propagates`).
 2. **System-generated exclusion** — added an explicit, defense-in-depth
    check inside `_observe()` itself
-   (`modules.bridge_poller._is_system_generated_notification()`), not
+   (`modules.fazle_bridge_poller._is_system_generated_notification()`), not
    just relying on the message_router call site. New test:
    `test_system_generated_marker_on_inbound_text_is_refused`.
 3. **Unauthorized-sender exclusion** — same pattern, added
@@ -4939,7 +4939,7 @@ All 4 required checks passed before touching production `.env`:
    schema: `fazle_conversation_threads.fields` stores only short
    extracted business values (vessel name, mobile, destination) plus a
    `source_message_id` pointer, never raw message bodies. Raw text stays
-   only in `wbom_whatsapp_messages`, under whatever retention already
+   only in `fazle_whatsapp_messages`, under whatever retention already
    governs that table. Threads never hard-delete — they transition to
    `expired`/`abandoned`, matching this repo's existing non-destructive
    pattern (escort program status transitions).
@@ -5126,9 +5126,9 @@ worktree is authorized.
 files touched, substantial diffs concentrated in `app/main.py` (+1096),
 `app/static/dashboard.html` (+2592), `README.md` (+887),
 `modules/message_router/__init__.py` (+355),
-`modules/bridge_poller/__init__.py` (+295),
-`modules/admin_commands/__init__.py` (+373), plus smaller changes across
-`app/config.py`, `app/ollama.py`, `modules/intent/__init__.py`,
+`modules/fazle_bridge_poller/__init__.py` (+295),
+`modules/fazle_admin_commands/__init__.py` (+373), plus smaller changes across
+`app/config.py`, `app/ollama.py`, `modules/fazle_intent/__init__.py`,
 `modules/recruitment_flow/__init__.py`, `modules/scheduler/__init__.py`,
 `requirements.txt`, CI config, and docs. Given the base commit predates
 essentially all of this session's work by roughly six weeks of
@@ -5188,7 +5188,7 @@ aligning with the repo's own declared single source of truth.
 record for the complete matrix):** the bug is narrowly confined to these
 two functions' internal inconsistency with each other.
 `modules.escort_roster.routes._escort_client_phone_list()` (a separate
-function) and `modules.identity_brain._matches_env_escort_phone()` both
+function) and `modules.fazle_identity_brain._matches_env_escort_phone()` both
 independently use 880-format self-consistently against their own
 880-format normalizers — not affected, not touched.
 `modules.client_billing.profiles._validate_contact_mobile()` likewise
@@ -5295,7 +5295,7 @@ Elapsed: ~9.5 hours.
 Verified directly against production: zero rows in
 `fazle_conversation_shadow_comparisons`, zero rows in
 `fazle_conversation_threads`, and zero inbound (`direction='in'`) rows in
-`wbom_whatsapp_messages` of ANY role since baseline — not specific to
+`fazle_whatsapp_messages` of ANY role since baseline — not specific to
 escort clients. Root cause is absence of real inbound traffic in this
 window, not a code defect (the fix was independently verified end-to-end
 against a disposable DB before this window began).
@@ -5326,22 +5326,22 @@ canned templates from `social_auto_reply`'s 25-bucket keyword classifier.
 **What changed (all deployed and verified live, 2026-07-21T02:08:51+02:00
 restart, `scripts/restart_gate.sh --restart`, 0 warnings):**
 
-- `modules.identity_brain`: added `escort`, `security_guard`, and
-  `internal_coordinator` roles. `wbom_employees.designation` now drives the
+- `modules.fazle_identity_brain`: added `escort`, `security_guard`, and
+  `internal_coordinator` roles. `fazle_employees_legacy.designation` now drives the
   escort/guard split. Read-only former/on-leave lifecycle heuristic (status +
   `wbom_attendance` recency, no new columns) carried as Route B context only.
 - `modules.route_b` (new): Ollama-only reply handler for escort/
   security_guard/candidate/unknown senders — bypasses KB/templates, calls
   `app.ollama.generate_reply()` directly (no Groq/GitHub fallback). Read-only
-  context from `wbom_whatsapp_messages`, `wbom_contacts`, and the per-bridge
-  `whatsmeow_contacts` SQLite store; never queries `wbom_employees`,
-  `fpe_cash_transactions`, `wbom_escort_programs`, `escort_roster_entries`,
+  context from `fazle_whatsapp_messages`, `fazle_contacts`, and the per-bridge
+  `whatsmeow_contacts` SQLite store; never queries `fazle_employees_legacy`,
+  `fazle_cash_transactions`, `wbom_escort_programs`, `escort_roster_entries`,
   or attendance tables directly — that signal only arrives pre-filtered
   through `identity_brain`.
 - `modules.message_router`: Route B wired in as a branch inside the existing
   `process_message()` — placed after the escort-order safety net and after
   the mature Sprint-3A advance-request catchall, so neither is preempted.
-- `modules.bridge_poller` + `app/main.py` (meta, mcp1, mcp2 webhooks): the
+- `modules.fazle_bridge_poller` + `app/main.py` (meta, mcp1, mcp2 webhooks): the
   `SOCIAL_AUTO_REPLY_SINGLE_ENGINE` fork to `social_auto_reply` is removed
   for these three WhatsApp entry points. `social_auto_reply` itself is
   **not** modified or removed — it remains the live, unmodified engine for
@@ -5349,10 +5349,10 @@ restart, `scripts/restart_gate.sh --restart`, 0 warnings):**
   (`_handle_messenger_message`, `_handle_fb_comment`); those call sites were
   untouched.
 - `fazle_contact_roles`: seed row `+8801817201596` → `internal_coordinator`,
-  overriding a bogus auto-created `wbom_employees` stub without modifying
+  overriding a bogus auto-created `fazle_employees_legacy` stub without modifying
   that table.
-- Phone normalization: `modules.identity_brain._normalize_phone()` and
-  `modules.payment_ingest._norm_mobile()` now delegate to the two documented
+- Phone normalization: `modules.fazle_identity_brain._normalize_phone()` and
+  `modules.fazle_payment_ingest._norm_mobile()` now delegate to the two documented
   canonical roots instead of re-implementing digit parsing (no new
   normalizer created).
 - Office/deposit text consolidated to one canonical version across
@@ -5404,7 +5404,7 @@ Not fixed as part of this decision; pending Owner review.
 
 ## Daily Phone-Contact-Book Sync + Contact-Identity Deduplication (2026-07-22)
 
-**Decision:** Implement the Owner's daily phone-contact-book ↔ `wbom_contacts` sync
+**Decision:** Implement the Owner's daily phone-contact-book ↔ `fazle_contacts` sync
 policy (soft-delete on first miss, hard-delete after N consecutive misses, phone-book
 name canonical over WhatsApp profile name), then — on the Owner's follow-up instruction —
 find and clean up existing same-mobile-number duplicate contact-identity rows and close
@@ -5436,7 +5436,7 @@ the actual code first, per standing policy):**
   `fazle_contact_hard_delete_log` (audit trail written before every hard-delete),
   migration `056_contact_sync_presence_tracking.sql`, applied directly and recorded in
   `schema_migrations` (not via `db/migrate.py`'s full run — see note below).
-  `wbom_contacts.is_active`/`marked_for_delete_at` (pre-existing columns) drive the
+  `fazle_contacts.is_active`/`marked_for_delete_at` (pre-existing columns) drive the
   soft-delete; `is_protected=true` contacts are never touched by either step.
 - New scheduler job `daily_contact_sync` (`modules.scheduler`, `CronTrigger` 04:00
   Asia/Dhaka default, `CONTACT_SYNC_HOUR` env-tunable) — the actual "at least once daily"
@@ -5527,7 +5527,7 @@ matched. Fixed to check both lists (a real union), not either/or.
 - New backstop at the Route B branch (§4.2 of the workflow doc): re-checks
   `identity_brain`'s own resolved `display_name` against the same keyword
   pattern immediately before `handle_route_b_message()` is called, for the
-  case a brand-new contact hasn't reached `wbom_contacts` yet (daily sync,
+  case a brand-new contact hasn't reached `fazle_contacts` yet (daily sync,
   see the entry above) but `identity_brain` already saw a name via the
   bridge. If matched: Escort-named + order-shaped → routed to the existing
   `handle_escort_client_message()` (same structured-draft pipeline the
@@ -5563,7 +5563,7 @@ Handling" proposal from another session, and after this session's own design
 proposal (identifying that the proposal's "put generic Employee in Route B"
 suggestion would have been a regression — Tier 10's mature, DB-backed
 verification/payroll/advance flows already correctly handle every phone
-registered in `wbom_employees`, active or inactive, before Route B ever
+registered in `fazle_employees_legacy`, active or inactive, before Route B ever
 runs), the Owner approved a narrower, additive capability instead: let Route
 B hand a conversation off to an *existing* canonical workflow once identity/
 intent becomes clear, implemented in strict stages, master-flagged off.
@@ -5572,7 +5572,7 @@ intent becomes clear, implemented in strict stages, master-flagged off.
 `{escort, security_guard, candidate, unknown}` — `employee` was explicitly
 NOT added, per Owner Decision 1 of the approval. Tier 10 (verification,
 payroll-backed salary answers, advance/slip state machines) is byte-for-byte
-unchanged. A phone already on file in `wbom_employees` — Active or Inactive
+unchanged. A phone already on file in `fazle_employees_legacy` — Active or Inactive
 — still never reaches Route B at all; that fact is what makes the Stage 2
 employee-claim design safe (see below).
 
@@ -5596,7 +5596,7 @@ employee-claim design safe (see below).
 - **Stage 2 (employee/former-employee claim), built + tested, same flag:**
   because of the phone-registration fact above, a claim reaching Route B is
   by construction always a phone `resolve_employee_identity()` cannot
-  verify via phone/ID match against a live wbom_employees row — the safe
+  verify via phone/ID match against a live fazle_employees_legacy row — the safe
   design decision (Owner-approved) is that this handoff type **never**
   grants Tier 10 access, verified or not, active or former. It always
   produces an admin-review draft (`fazle_draft_replies`,
@@ -5619,7 +5619,7 @@ employee-claim design safe (see below).
   full escort/message_router test suites plus a new dedicated delegation
   test before the handoff work was built on top of it). Checks the current
   message, then — if incomplete — the governed conversation history
-  (`wbom_whatsapp_messages`, never Ollama's own output) combined with it,
+  (`fazle_whatsapp_messages`, never Ollama's own output) combined with it,
   for fields spread across turns. Complete → the existing unverified-sender
   structured-draft path (`handle_escort_client_message(..., is_verified=False)`),
   same as Tier 9 already uses. Incomplete → no handoff.
@@ -5697,7 +5697,7 @@ group-sourced drafts never expire in the first place).
 **Section 2 — no-reply gate employee exemption:** `identity_brain.is_registered_employee_phone()`
 (new, thin wrapper over the existing `_lookup_employee()`) is now checked
 in `message_router._should_silent_skip()` BEFORE the protected-name-token
-match — a phone verified in `wbom_employees`/`fpe_employees` (active or
+match — a phone verified in `fazle_employees_legacy`/`fazle_employees` (active or
 inactive) is never silenced by a saved contact name like "Escort Rahim."
 Flagged, not changed: the live token list also includes `tcis`/`gms`/`dalal`
 alongside the 8 documented terms (Client/Escort/Office/Operation/
@@ -5784,7 +5784,7 @@ reopening auto-create, and (2) fix bugs in the isolated worktree first,
 stop before any deployment/restart/flag-enable step, deliver as one batch
 for review. Nothing pushed, migrated, deployed, or flag-enabled.
 
-**Cross references:** `modules/identity_brain/__init__.py`,
+**Cross references:** `modules/fazle_identity_brain/__init__.py`,
 `modules/message_router/__init__.py`, `modules/recruitment_flow/__init__.py`,
 `modules/route_b/__init__.py`, `shared/reply_policy.py`, `app/ollama.py`,
 `tests/unit/test_final_instruction_fixes.py`.
@@ -5813,14 +5813,14 @@ source of truth:
   constants, since `get_settings()` constructs a real `Settings()` (requires
   `DATABASE_URL`), which must never run at bare module-import time.
 - `app/ollama.py`, `app/groq_provider.py`, `app/github_models.py`,
-  `app/main.py` (dashboard HTML title), `modules/admin_commands/__init__.py`:
+  `app/main.py` (dashboard HTML title), `modules/fazle_admin_commands/__init__.py`:
   now interpolate `settings.company_name` (all already had `get_settings()`
   in scope at the call site).
 - `modules/social_auto_reply/reply_rules.py`: `COMPANY_NAME` now reads
   `get_settings().company_name` instead of its own hardcoded literal (module-
   level call, consistent with the existing `app/ollama.py:_settings = get_settings()`
   pattern already used elsewhere in this codebase).
-- `modules/admin_commands/nl_outbound.py` (8 template closers),
+- `modules/fazle_admin_commands/nl_outbound.py` (8 template closers),
   `modules/reply_templates/__init__.py`, `modules/social_auto_reply/intelligent_generator.py`,
   `modules/knowledge_base/__init__.py` (`_FALLBACK` entries),
   `modules/conversation_layer/playbooks.py` (`CANONICAL_FACTS["office_location"]`/`["trust"]`):
@@ -5916,16 +5916,16 @@ Owner-authorized, phased (Audit → Architecture/File Plan → Implementation �
 
 1. **`db/migrations/059_admin_directives.sql`** (new) — `fazle_admin_directives` table: `directive_text`, `category`/`created_by_channel`/`status` all DB-CHECK-constrained (following `escort_roster_change_requests`' migration-026 pattern, per `CANONICAL_BUSINESS_RULES.md`'s own recommendation that every other approval-style table in this codebase lacks), `subject_type`/`subject_key` optional scoping, soft-revoke fields. Purely additive, no FK into any Critical table, no ALTER on any existing table.
 2. **`modules/admin_directives/__init__.py`** (new) — CRUD: `save_directive`/`list_directives`/`get_directive`/`revoke_directive`, using `app.database`'s `fetch_val`/`fetch_all`/`fetch_one` (the codebase's dominant DB-access style, not `ollama_memory`'s isolated raw-asyncpg style — deliberately not reusing `ollama_memory`, which is documented as the AI's own self-memory only).
-3. **`modules/bridge_poller/__init__.py`** — `_is_draft_always(phone, role, display_name)` converted `def` → `async def`, gained one new check at the top: `fazle_runtime_settings` key `phone_block.{phone}` (already written by the pre-existing `POST /api/wa/contacts/{phone}/block|unblock`, but never read by anything) now short-circuits to `True` before the pre-existing static `DRAFT_ALWAYS_PHONES`/role/name-prefix checks. 9 insertions, 2 deletions — the smallest change that could actually work (an `async def` + one call-site `await`, since the DB read is inherently async and the call site is already inside `async def process_bridge_inbound`).
+3. **`modules/fazle_bridge_poller/__init__.py`** — `_is_draft_always(phone, role, display_name)` converted `def` → `async def`, gained one new check at the top: `fazle_runtime_settings` key `phone_block.{phone}` (already written by the pre-existing `POST /api/wa/contacts/{phone}/block|unblock`, but never read by anything) now short-circuits to `True` before the pre-existing static `DRAFT_ALWAYS_PHONES`/role/name-prefix checks. 9 insertions, 2 deletions — the smallest change that could actually work (an `async def` + one call-site `await`, since the DB read is inherently async and the call site is already inside `async def process_bridge_inbound`).
 4. **`modules/ai_console/registry.py` + `live_adapters.py`** — 3 new tools, additive only (0 deletions in either file, confirmed via diff): `RT-015` (`error_log`, reads `fazle_error_log` via new `modules.observability.db_queries.get_recent_errors()`; `min_role: office_assistant` metadata is descriptive-only, since `ReadonlyRuntimeAdapter.fetch()` has no per-tool RBAC check at all — a pre-existing limitation shared by all `RT-*` tools, not newly introduced), `BUS-015` (`admin_directive_read`, `min_role: admin`), `BUS-016` (`admin_directive_write`, `min_role: admin` — the first `ai_console` business-family tool that performs any write, scoped exclusively to `fazle_admin_directives`, never a Critical table).
-5. **`modules/admin_directives/router.py`** (new) — WhatsApp command dispatch: `is_admin_ai_command`/`process_admin_ai_command`, 5 explicit-trigger commands (`AI`/`এআই <question>`, `AUTOREPLY ON|OFF|STATUS <phone>`, `REMEMBER <text>`, `FORGET <id>`, `SEND <phone> | <message>`), a 5-second-per-admin-phone in-process rate limiter (`AI` query only), output sanitizer (`_sanitize_ai_reply` — prefix-warns, never strips, dangerous-looking LLM replies; 3500-char cap with spillover note). Every command calls `rbac.check_permission()` first, fails closed on any exception, audits every attempt via `rbac.record_audit()`. None of the 5 command names are registered in `rbac.COMMAND_ROLE` — all fall back to `DEFAULT_REQUIRED_ROLE = "admin"`, which already matches every required tier, so `modules/rbac/__init__.py` was never touched. Kept separate from `modules.admin_commands.nl_router` deliberately, since that module's own docstring is a hard "NO LLM" contract and `AI` does call one.
+5. **`modules/admin_directives/router.py`** (new) — WhatsApp command dispatch: `is_admin_ai_command`/`process_admin_ai_command`, 5 explicit-trigger commands (`AI`/`এআই <question>`, `AUTOREPLY ON|OFF|STATUS <phone>`, `REMEMBER <text>`, `FORGET <id>`, `SEND <phone> | <message>`), a 5-second-per-admin-phone in-process rate limiter (`AI` query only), output sanitizer (`_sanitize_ai_reply` — prefix-warns, never strips, dangerous-looking LLM replies; 3500-char cap with spillover note). Every command calls `rbac.check_permission()` first, fails closed on any exception, audits every attempt via `rbac.record_audit()`. None of the 5 command names are registered in `rbac.COMMAND_ROLE` — all fall back to `DEFAULT_REQUIRED_ROLE = "admin"`, which already matches every required tier, so `modules/rbac/__init__.py` was never touched. Kept separate from `modules.fazle_admin_commands.nl_router` deliberately, since that module's own docstring is a hard "NO LLM" contract and `AI` does call one.
 6. **`modules/message_router/__init__.py`** — the single wiring point: one import + one `if is_admin_ai_command(text): ...` block, inserted after `is_nl_admin_query()`'s block and before the three bare-substring fallback checks (`draft`/`payment`/`attendance`) and the hardcoded-help fallback. 14 insertions, 0 deletions. Verified via direct execution (not just code-tracing) that non-admin routing, `PAID`, `chat_history`, and the hardcoded-help fallback are all unaffected — `is_admin_ai_command()` mock's `.called` was `False` in both the `PAID` and `chat_history` cases, proving the new block is never even reached when an earlier check wins.
 7. **`app/static/open-chat.html`** — Stage A-C's mic/voice flow (2026-07-19) re-verified present and correct, no changes needed. New: browser-native TTS (`window.speechSynthesis`, no backend call, no new dependency) — `speakText()`/`renderTTSButton()`, one call site inside the single existing bot-bubble render function (`appendMessage()`), 2 new CSS rules in the existing `<style>` block. 50 insertions, 0 deletions.
 8. **`app/main.py`** — 3 new routes, `GET /admin/directives`, `POST /admin/directives`, `POST /admin/directives/{id}/revoke`, added at the end of the existing Batch-19 admin/RBAC route section, matching the codebase's established `require_command(...)` + `payload: dict` + `_rbac_actor_from_key(key)` conventions exactly (no new auth pattern introduced). Command names `admin_directive_read`/`admin_directive_write` fall back to `DEFAULT_REQUIRED_ROLE = "admin"`, same as the WhatsApp commands.
 
 ### Regression found and fixed (not caught until the final full-suite run)
 
-`modules/social_auto_reply/planner_worker.py:131` — `_is_draft_always_sender()` (already `async def`) called the newly-async `bridge_poller._is_draft_always()` **without `await`**. A coroutine object is truthy, so this silently made the function always return `True`, which would have forced the social-auto-reply planner's real-send path to route every message to a draft. Missed during the `bridge_poller` change because the verification grep was scoped to `bridge_poller/__init__.py` itself, not repo-wide — `planner_worker.py` legitimately reuses the same private function (documented in its own docstring: "Reuses modules.bridge_poller._is_draft_always() ... rather than re-implementing the match rules"). Caught only when the *full* `tests/unit/` suite was run and diffed against a `git stash -u` clean baseline (targeted regression suites after each prior step didn't touch `planner_worker.py` at all). Fixed with one added `await`. Confirmed: `test_social_planner_draft_routing.py` 6/6 passing (was 3/6), and the full-suite `FAILED`/`ERROR` test-name diff against the clean baseline is now exit-code 0 (byte-identical) on both lists. **Lesson, recorded for future sync→async conversions in this codebase:** grep the function name repo-wide, not file-local, before assuming every caller has been found.
+`modules/social_auto_reply/planner_worker.py:131` — `_is_draft_always_sender()` (already `async def`) called the newly-async `bridge_poller._is_draft_always()` **without `await`**. A coroutine object is truthy, so this silently made the function always return `True`, which would have forced the social-auto-reply planner's real-send path to route every message to a draft. Missed during the `bridge_poller` change because the verification grep was scoped to `bridge_poller/__init__.py` itself, not repo-wide — `planner_worker.py` legitimately reuses the same private function (documented in its own docstring: "Reuses modules.fazle_bridge_poller._is_draft_always() ... rather than re-implementing the match rules"). Caught only when the *full* `tests/unit/` suite was run and diffed against a `git stash -u` clean baseline (targeted regression suites after each prior step didn't touch `planner_worker.py` at all). Fixed with one added `await`. Confirmed: `test_social_planner_draft_routing.py` 6/6 passing (was 3/6), and the full-suite `FAILED`/`ERROR` test-name diff against the clean baseline is now exit-code 0 (byte-identical) on both lists. **Lesson, recorded for future sync→async conversions in this codebase:** grep the function name repo-wide, not file-local, before assuming every caller has been found.
 
 ### Verification performed
 
@@ -5945,7 +5945,7 @@ Phased plan (Audit/Architecture/Implementation/Testing) explicitly approved at e
 
 ### Cross references
 
-`docs/ADMIN_AI_ENGINE.md`, `docs/DEVELOPER_GUIDE.md` §L, `docs/MODULE_MAP.md` (`modules.admin_directives`, `modules.observability`, updated `modules.bridge_poller`/`modules.message_router`/`modules.ai_console` entries), `knowledge_base/06_developer_system/admin_ai_engine.md`, `CANONICAL_BUSINESS_RULES.md` §Roles, `.claude/CLAUDE.md`.
+`docs/ADMIN_AI_ENGINE.md`, `docs/DEVELOPER_GUIDE.md` §L, `docs/MODULE_MAP.md` (`modules.admin_directives`, `modules.observability`, updated `modules.fazle_bridge_poller`/`modules.message_router`/`modules.ai_console` entries), `knowledge_base/06_developer_system/admin_ai_engine.md`, `CANONICAL_BUSINESS_RULES.md` §Roles, `.claude/CLAUDE.md`.
 
 ## Canonical Cash Ledger AI-Read Rule + ai_read_cash_transactions View (2026-08-02)
 
@@ -5957,15 +5957,15 @@ assistant-platform (a separate app, `/home/azim/assistant-platform/`, reads fazl
 
 ### What was found (audit, read-only — no fazle-core code or schema touched)
 
-1. **Two real, populated tables**: `fpe_cash_transactions` and `wbom_cash_transactions`. Confirmed directly via `\d` (schema only, no row data read) rather than guessed.
-2. **The canonical-table question was already answered in this codebase**, just not visible from assistant-platform's side: `modules/payment_ingest/wbom_fpe_sync.py`'s own docstring cites **Owner Directive (2026-06-29)** — `fpe_cash_transactions` is the sole canonical table, `wbom_cash_transactions` is legacy archive/reference only, never written to. `CANONICAL_BUSINESS_RULES.md`'s `## Cash Transaction` section already documented this write-path rule in full detail (including the `reverse_transaction()` direct-insert exception) — this was **not new information**, just not previously connected to assistant-platform's read-access question.
+1. **Two real, populated tables**: `fazle_cash_transactions` and `fazle_cash_transactions_archive`. Confirmed directly via `\d` (schema only, no row data read) rather than guessed.
+2. **The canonical-table question was already answered in this codebase**, just not visible from assistant-platform's side: `modules/fazle_data_sync/__init__.py`'s own docstring cites **Owner Directive (2026-06-29)** — `fazle_cash_transactions` is the sole canonical table, `fazle_cash_transactions_archive` is legacy archive/reference only, never written to. `CANONICAL_BUSINESS_RULES.md`'s `## Cash Transaction` section already documented this write-path rule in full detail (including the `reverse_transaction()` direct-insert exception) — this was **not new information**, just not previously connected to assistant-platform's read-access question.
 3. **A genuine, pre-existing KB drift**, unrelated to the above but found while reading the same doc: `knowledge_base/06_developer_system/ai_readonly_data_access.md` said "9 views" and didn't list `ai_read_billing_outstanding`, which has existed in production as a 10th view for some time. Nobody had updated this doc when that view was added.
 4. **`CANONICAL_BUSINESS_RULES.md`'s own `## AI Console` section's "Canonical Database Tables" list was also stale** — named only 5 of the (then) 9/10 approved views, independent of anything in this entry.
 
 ### What was decided (Owner-confirmed)
 
-- `fpe_cash_transactions` remains, and is reconfirmed, the sole canonical cash ledger — this entry does not change that rule, it extends it to the **AI-read** dimension specifically: no live financial AI answer (Chat, Hermes, `modules/ai_readonly_tools`, `modules/ai_console`, or any future AI tool) may read from `wbom_cash_transactions`, and none may mix/aggregate both tables — double-counting / wrong-ledger risk. `wbom_cash_transactions` may still be read for explicitly-labeled historical migration analysis, never presented as a current answer.
-- A new `ai_read_cash_transactions` view is approved, scoped to `fpe_cash_transactions` only, following the exact same curation pattern as the existing `ai_read_billing_outstanding` view (amounts/dates/status via a friendly `LEFT JOIN`, no raw audit columns, no phone numbers, no jsonb payload/metadata). Full proposal, 6-part KB-first structure, DDL, and the application-side code changes: `assistant-platform/proposal_ai_read_cash_transactions_20260802.md`.
+- `fazle_cash_transactions` remains, and is reconfirmed, the sole canonical cash ledger — this entry does not change that rule, it extends it to the **AI-read** dimension specifically: no live financial AI answer (Chat, Hermes, `modules/ai_readonly_tools`, `modules/ai_console`, or any future AI tool) may read from `fazle_cash_transactions_archive`, and none may mix/aggregate both tables — double-counting / wrong-ledger risk. `fazle_cash_transactions_archive` may still be read for explicitly-labeled historical migration analysis, never presented as a current answer.
+- A new `ai_read_cash_transactions` view is approved, scoped to `fazle_cash_transactions` only, following the exact same curation pattern as the existing `ai_read_billing_outstanding` view (amounts/dates/status via a friendly `LEFT JOIN`, no raw audit columns, no phone numbers, no jsonb payload/metadata). Full proposal, 6-part KB-first structure, DDL, and the application-side code changes: `assistant-platform/proposal_ai_read_cash_transactions_20260802.md`.
 
 ### What was actually changed (this entry)
 
@@ -5982,7 +5982,7 @@ Explicit, this session: canonical-source confirmation, the AI-read/no-mixing rul
 
 ### Cross references
 
-`assistant-platform/proposal_ai_read_cash_transactions_20260802.md`, `knowledge_base/06_developer_system/ai_readonly_data_access.md`, `CANONICAL_BUSINESS_RULES.md` §Cash Transaction, §AI Console, `modules/payment_ingest/wbom_fpe_sync.py`, `.claude/CLAUDE.md` (already stated this same canonical-table rule independently).
+`assistant-platform/proposal_ai_read_cash_transactions_20260802.md`, `knowledge_base/06_developer_system/ai_readonly_data_access.md`, `CANONICAL_BUSINESS_RULES.md` §Cash Transaction, §AI Console, `modules/fazle_data_sync/__init__.py`, `.claude/CLAUDE.md` (already stated this same canonical-table rule independently).
 
 ## Bridge3 (8801805529211 / REC2) — Current State & Decision (2026-08-03)
 
@@ -6029,15 +6029,15 @@ this decision.
 - `modules/outbound/__init__.py`'s `_send_with_channel()` did a **binary**
   bridge2-or-bridge1 dispatch — any `source_bridge="bridge3"` row would have
   silently sent via bridge1 (the HR number) instead. Same binary pattern
-  existed in `modules/bridge_poller/__init__.py`'s customer-reply fallback
+  existed in `modules/fazle_bridge_poller/__init__.py`'s customer-reply fallback
   selection. Both fixed as part of this change (see below) — required for
   correctness, not scope creep, since bridge3 would otherwise misroute.
-- All five relevant tables (`wbom_whatsapp_messages`, `fazle_conversation_threads`,
+- All five relevant tables (`fazle_whatsapp_messages`, `fazle_conversation_threads`,
   `processed_conversation_messages`, `fazle_draft_replies`, `fazle_outbound_queue`)
   already accept a `"bridge3"` value with no CHECK-constraint changes needed —
   no migration required.
 - Loop prevention (Hermes's own reply must never re-enter as a new Admin
-  command) is already structural: `modules/bridge_poller._fetch_new_messages()`
+  command) is already structural: `modules/fazle_bridge_poller._fetch_new_messages()`
   filters `WHERE is_from_me = 0` and is the single shared, bridge-agnostic
   function every `BRIDGE_CONFIGS` entry's poller calls — bridge3 inherits
   this with zero new code, confirmed by a direct SQLite-backed unit test.
@@ -6051,11 +6051,11 @@ existing RT-013 `bridges` diagnostic tool — deliberately **excluded** from
 `BRIDGE_PRIORITY`/`ADMIN_BRIDGE_NAME`, which stays `"bridge2"` unchanged,
 since that pool exists to reach bridge2's own admin self-chat number via
 alternate bridges, a different concern from bridge3 reachability),
-`modules/bridge_poller/__init__.py` (bridge3 added to `BRIDGE_CONFIGS`,
+`modules/fazle_bridge_poller/__init__.py` (bridge3 added to `BRIDGE_CONFIGS`,
 send-control startup enable, `_source_to_receiver` map; customer-reply
 fallback fixed to a 3-way map with bridge3 → no fallback, intentionally,
 to avoid an Admin-directed reply silently going out from a different
-WhatsApp number), `modules/identity_brain/__init__.py` (`admin_bridge3_number`
+WhatsApp number), `modules/fazle_identity_brain/__init__.py` (`admin_bridge3_number`
 added to `_check_admin_settings()`'s check list), `modules/outbound/__init__.py`
 (3-way dispatch fix), `.env` (`8801805529211` added to `ADMIN_NUMBERS`).
 No new application, message pipeline, conversation-memory system, intent
@@ -6105,7 +6105,7 @@ against real production DB/logs/live requests, not mocks.
 
 1. Live trace of 4 real Admin WhatsApp messages (`Hi`, `AI গতকাল কত টাকা
    পেমেন্ট করা হয়?`, `এই মাসে মোট cash received কত?`, `গতকাল কয়জনের কাছে
-   টাকা পাঠানো হয়েছে...`) via `wbom_whatsapp_messages`/`fazle_message_queue`/
+   টাকা পাঠানো হয়েছে...`) via `fazle_whatsapp_messages`/`fazle_message_queue`/
    `fazle_draft_replies`/log correlation showed the full pipeline (identity
    → RBAC → AI Console → tool → LLM) working correctly end-to-end, but
    `AI_SAFE_MODE` (a customer-facing safety gate) was diverting every
@@ -6114,7 +6114,7 @@ against real production DB/logs/live requests, not mocks.
    when one was already open — net effect: real answers generated,
    nothing delivered.
 2. Root cause: `AI_SAFE_MODE`/`DRAFT_ALWAYS`/financial-draft-gate/poison-
-   filter/length-guard in `modules/bridge_poller/__init__.py`'s `if reply:`
+   filter/length-guard in `modules/fazle_bridge_poller/__init__.py`'s `if reply:`
    block exist to protect EXTERNAL/customer sends, not the Admin's own
    conversation with Hermes (the Admin is already the approver). Fixed:
    admin-role replies now send directly via a new `if id_role == "admin":`
@@ -6127,8 +6127,8 @@ against real production DB/logs/live requests, not mocks.
    `data["answer"]` field (same pattern already used for 3 other tools).
 4. Deeper cause found while verifying #3: `get_daily_payments()`/
    `get_employee_month_payments()` in `modules/ai_readonly_tools/__init__.py`
-   queried `fpe_cash_transactions` directly with a bad column reference
-   (`fpe_employees.employee_id` doesn't exist — confirmed via the real FK
+   queried `fazle_cash_transactions` directly with a bad column reference
+   (`fazle_employees.employee_id` doesn't exist — confirmed via the real FK
    constraint, the actual PK is `.id`) AND the `fazle_ai_reader` role
    production actually uses has **no SELECT grant on that raw table at
    all** (confirmed via `has_table_privilege()`), only on the sanctioned
@@ -6222,7 +6222,7 @@ adjacent dispatch-order issue, noted for a future session).
 
 ### What was changed (minimal, Owner-approved)
 
-`modules/bridge_poller/__init__.py`, inside the Part 3 admin-direct-send
+`modules/fazle_bridge_poller/__init__.py`, inside the Part 3 admin-direct-send
 branch: before enqueueing, check whether the resolved recipient phone
 equals another bridge's own number (excluding the bridge the reply is
 going out on, so genuine same-bridge self-chat, e.g. bridge2's existing
@@ -6281,7 +6281,7 @@ decision above (same day, earlier session): bridge3/REC2 (8801805529211)
 is no longer a human Admin identity — it remains a live, tracked technical
 WhatsApp bridge only. Bridge2 (8801880446111) is confirmed the canonical
 Super Admin identity. Separately, the WhatsApp contact-book
-(`wbom_contacts`) was rebuilt from an Owner-provided CSV export, which is
+(`fazle_contacts`) was rebuilt from an Owner-provided CSV export, which is
 now the authoritative contact source going forward.
 
 ### What was found (pre-implementation audit)
@@ -6292,7 +6292,7 @@ now the authoritative contact source going forward.
   happened as a direct consequence of bridge2 and bridge3 both being
   admin-recognized numbers the Owner personally controls.
 - `admin_bridge3_number` was read in exactly one production location
-  (`modules/identity_brain/__init__.py`'s `_check_admin_settings()`); no
+  (`modules/fazle_identity_brain/__init__.py`'s `_check_admin_settings()`); no
   other production code depended on bridge3 having admin status.
 - Bridge2's `fazle_admins` row already held the `superadmin` RBAC role
   (unchanged by any of this session's work) — "Bridge2 = Super Admin" was
@@ -6302,14 +6302,14 @@ now the authoritative contact source going forward.
   bootstrap) also held `superadmin` — left as dormant/contradictory state
   if not addressed, since `identity_brain` gates message-router access to
   RBAC entirely and no other reachable path uses that row.
-- `wbom_contacts` (2,654 rows) had exactly 3 code-enforced `is_protected`
+- `fazle_contacts` (2,654 rows) had exactly 3 code-enforced `is_protected`
   rows (Owner's own bridge2 number, the company's HR/bridge1 number, the
   Magnus Marine business number) and 2 distinct `contact_id`s still
   FK-referenced (`ON DELETE NO ACTION`) by 39 live `wbom_escort_programs`
   rows — both categories were confirmed as the only real blockers to a
   bulk clear.
 - The daily `daily_contact_sync` scheduler job (bridge-phone-book →
-  `wbom_contacts`) was live and next-scheduled within 24h; left running it
+  `fazle_contacts`) was live and next-scheduled within 24h; left running it
   would have silently repopulated the just-cleared contact book from each
   bridge's own phone address book, undermining "CSV is authoritative."
 
@@ -6499,7 +6499,7 @@ that documentation).
     delivered via `outbound.enqueue(sender_phone, ..., source_bridge="bridge2")`
     where `sender_phone` is verified equal to bridge2's own number before
     the background task is ever scheduled — structurally identical to the
-    "same-bridge self-chat" pattern `modules/bridge_poller/__init__.py`'s
+    "same-bridge self-chat" pattern `modules/fazle_bridge_poller/__init__.py`'s
     own loop-guard comment already documents as established and safe
     (the existing `AI <question>` feature's own pattern); the separate
     cross-bridge loop guard only fires on a MISMATCH between recipient and
@@ -6570,23 +6570,23 @@ new `get_bridge_message_stats`/`audit_lookup_whatsapp_messages` tools).
 55 messages (bridge1: 18 image + 13 text + 2 audio = 33; bridge2: 20 text
 + 2 image = 22), all from 2026-07-09 to 2026-07-12, across 12 distinct
 sender phone numbers, permanently orphaned:
-`wbom_whatsapp_messages.is_processed=false`,
+`fazle_whatsapp_messages.is_processed=false`,
 `fazle_message_queue.status='processing'` with `attempts=0` (never
 retried), and already marked in `processed_bridge_messages` (permanently
 skipped by the poller's own dedup check — no self-healing possible).
 
-**Root cause (confirmed):** `modules/identity_brain._lookup_contact()`
-queried `wbom_contacts` with wrong column names
+**Root cause (confirmed):** `modules/fazle_identity_brain._lookup_contact()`
+queried `fazle_contacts` with wrong column names
 (`contact_name`/`contact_type` instead of the real `display_name`/
 `relation`), raising an uncaught `asyncpg.UndefinedColumnError` for any
-sender whose phone existed in `wbom_contacts` but not the employee/escort
+sender whose phone existed in `fazle_contacts` but not the employee/escort
 tables (ordinary external clients/vendors/VIPs — matches all 12 affected
 senders). Fixed in commit `47a9c8e` ("fix: identity_brain._lookup_contact()
 wrong column names"), 2026-07-11 22:30:33. The ~16h tail of stuck messages
 past that commit (through 2026-07-12 14:58) is consistent with the fix
 sitting committed-but-undeployed until the next service restart.
 
-**Why permanently orphaned, not just delayed:** `modules.bridge_poller`
+**Why permanently orphaned, not just delayed:** `modules.fazle_bridge_poller`
 calls `_mark_processed()` (permanent bridge-side dedup marker) *before*
 `detect_identity()` → `_lookup_contact()`. When that call threw, the
 exception propagated past the per-message `for` loop entirely to the poll
@@ -7357,7 +7357,7 @@ conversation context. Every LLM response was generated without these facts.
 ### Integration point
 File: modules/message_router/__init__.py
 Function: get_contact_context(phone: str) -> str
-After the existing wbom_contacts and wbom_employees lookups, query user_memory using
+After the existing fazle_contacts and fazle_employees_legacy lookups, query user_memory using
 _phone_variants(phone) and append up to 5 recent facts labeled as context only.
 
 ### Files changed
@@ -7532,7 +7532,7 @@ state. No migration and no service restart happened in either turn.)*
    rejected — proves the role claim is verified, not trusted blindly),
    genuine admin 200. Backend suite: 52/52. Frontend build: passes.
 4. **Identity/role trust: verified sound, no gap found.**
-   `modules.identity_brain.detect_identity()` resolves role purely from
+   `modules.fazle_identity_brain.detect_identity()` resolves role purely from
    phone (settings/DB) except two low-trust text-hint fallbacks
    (`candidate` conf=50, `repeat_client` conf=40) — text can never produce
    `admin`/`employee`/`supervisor`. Proved directly (not by inspection
@@ -7552,7 +7552,7 @@ state. No migration and no service restart happened in either turn.)*
    with a new test, one silent-drop gap documented with 3 new tests.**
    Text/image/audio(voice)/document: real processing exists (OCR, STT, PDF/
    doc extraction) on both the Meta webhook path
-   (`modules/media_normalization`) and the bridge-poller path (richer:
+   (`modules/fazle_media_normalization`) and the bridge-poller path (richer:
    2-step image classification, STT-failure/doc-failure admin drafts).
    Video: download succeeds but there is no processing branch at all —
    always falls through to `"[video message] <caption>"` — proved by a new
@@ -7900,7 +7900,7 @@ conversational-safety work earlier the same day.
 
 ### What is already production-capable
 
-- **Inbound pipeline** (`app/main.py` Meta webhook + `modules/bridge_poller`
+- **Inbound pipeline** (`app/main.py` Meta webhook + `modules/fazle_bridge_poller`
   for bridge1/bridge2/bridge3): identity-first routing, real media
   processing for text/image/audio/document, unified across all four
   channels since 2026-07-21.

@@ -3,13 +3,13 @@
 DEPRECATED — One-time historical import script.
 
 Import missing advance transactions from WhatsApp bridge2 SQLite DB
-into wbom_cash_transactions.
+into fazle_cash_transactions_archive.
 
 This script was used for a one-time backfill of missing data from Jan/Apr 2026.
-It writes to wbom_cash_transactions (legacy table). Per Owner Directive
-(2026-06-29), fpe_cash_transactions is the ONLY canonical table. This script
+It writes to fazle_cash_transactions_archive (legacy table). Per Owner Directive
+(2026-06-29), fazle_cash_transactions is the ONLY canonical table. This script
 should NOT be run again — use wbom_fpe_sync.py to migrate any remaining
-wbom_cash_transactions rows into fpe_cash_transactions.
+fazle_cash_transactions_archive rows into fazle_cash_transactions.
 
 Missing periods:
   - Jan 22–31 2026  (10 days, ~166,888 BDT never loaded)
@@ -169,7 +169,7 @@ async def find_employee(pool, phone: Optional[str], name: str) -> Optional[int]:
     if phone:
         last10 = phone[-10:]
         row = await fetch_one(
-            "SELECT employee_id FROM wbom_employees WHERE RIGHT(employee_mobile,10)=$1 LIMIT 1",
+            "SELECT employee_id FROM fazle_employees_legacy WHERE RIGHT(employee_mobile,10)=$1 LIMIT 1",
             last10,
         )
         if row:
@@ -180,7 +180,7 @@ async def find_employee(pool, phone: Optional[str], name: str) -> Optional[int]:
         row = await fetch_one(
             """SELECT employee_id, employee_name,
                       similarity(LOWER(employee_name), LOWER($1)) AS s
-               FROM wbom_employees
+               FROM fazle_employees_legacy
                WHERE similarity(LOWER(employee_name), LOWER($1)) >= 0.3
                ORDER BY s DESC LIMIT 1""",
             name,
@@ -195,7 +195,7 @@ async def already_imported(pool, employee_id: int, txdate: date, amount: int, me
     """Check if an identical transaction was already imported (idempotency)."""
     from app.database import fetch_one
     row = await fetch_one(
-        """SELECT 1 FROM wbom_cash_transactions
+        """SELECT 1 FROM fazle_cash_transactions_archive
            WHERE employee_id=$1
              AND transaction_date=$2
              AND amount=$3
@@ -215,7 +215,7 @@ async def insert_transaction(pool, tx: dict, employee_id: int, dry_run: bool) ->
         return True
 
     await execute(
-        """INSERT INTO wbom_cash_transactions
+        """INSERT INTO fazle_cash_transactions_archive
              (employee_id, transaction_type, amount, payment_method, payment_mobile,
               transaction_date, source, remarks, is_reversed)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)""",
@@ -339,7 +339,7 @@ async def run(dry_run: bool = False, filter_date: Optional[str] = None):
         for start, end in MISSING_RANGES:
             row = await fetch_one(
                 """SELECT COUNT(*) as n, COALESCE(SUM(amount),0) as total
-                   FROM wbom_cash_transactions
+                   FROM fazle_cash_transactions_archive
                    WHERE transaction_date BETWEEN $1 AND $2
                      AND source='whatsapp_import'""",
                 date.fromisoformat(start),

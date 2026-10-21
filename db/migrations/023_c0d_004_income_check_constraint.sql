@@ -6,10 +6,10 @@
 -- This migration is IDEMPOTENT — drops and recreates the constraint.
 --
 -- Rollback:
---   ALTER TABLE fpe_income_transactions DROP CONSTRAINT IF EXISTS fpe_income_transactions_amount_check;
+--   ALTER TABLE fpe_income_transactions DROP CONSTRAINT IF EXISTS fazle_income_transactions_amount_check;
 
 ALTER TABLE fpe_income_transactions
-    DROP CONSTRAINT IF EXISTS fpe_income_transactions_amount_check;
+    DROP CONSTRAINT IF EXISTS fazle_income_transactions_amount_check;
 
 ALTER TABLE fpe_income_transactions
-    ADD CONSTRAINT fpe_income_transactions_amount_check CHECK (amount > 0);
+    ADD CONSTRAINT fazle_income_transactions_amount_check CHECK (amount > 0);

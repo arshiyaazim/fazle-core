@@ -55,7 +55,7 @@ Each item is:
 ### CONFLICT-5: Escort Daily Rate ৳800 vs ৳1,200 (FINANCIAL CRITICAL — Management Authorization Required)
 **Action:** Management MUST decide the authoritative escort daily pay rate:
 - `modules/payroll/__init__.py: DEFAULT_PER_PROGRAM_RATE = 800.0`
-- `modules/payment_workflow/__init__.py: DEFAULT_DAILY_RATE = 1200.0`
+- `modules/fazle_payment_workflow/__init__.py: DEFAULT_DAILY_RATE = 1200.0`
 - If **৳800**: Update `payment_workflow/__init__.py` constant and all KB references.
 - If **৳1,200**: Update `payroll/__init__.py` constant and all KB references.
 - If **DB-driven** (no hardcoded default): Remove both constants, add DB lookup.

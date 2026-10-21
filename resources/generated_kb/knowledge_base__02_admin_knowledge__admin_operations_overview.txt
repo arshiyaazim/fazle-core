@@ -144,7 +144,7 @@ All 37 WhatsApp admin commands, their syntax, required RBAC role, and action.
 | SCHEDULE STATUS | `SCHEDULE STATUS` | viewer | Show all 15 scheduled job statuses |
 | RUN JOB | `RUN JOB <job_name>` | admin | Manually trigger a scheduled job immediately |
 
-**Source Module:** `modules/admin_commands`, `modules/rbac`, `modules/scheduler`
+**Source Module:** `modules/fazle_admin_commands`, `modules/rbac`, `modules/scheduler`
 **PKCA Report:** 12_command_coverage_report.md
 **Management Authority:** Production evidence; documented 2026-06-22
 
@@ -179,9 +179,9 @@ All 37 WhatsApp admin commands, their syntax, required RBAC role, and action.
 
 **Mobile immutability:** `employee_mobile` is the identity anchor and is **never editable after creation**. `EmployeeUpdate` does not include `employee_mobile`. Changing mobile requires creating a new employee record.
 
-**FPE auto-seed:** After every successful `POST /api/admin/employees`, `match_or_create_employee()` from `fazle_payroll_engine.employee` is called to pre-seed the FPE employee record. This call is **non-fatal** — FPE seed failure is logged but does not roll back the `wbom_employees` insert.
+**FPE auto-seed:** After every successful `POST /api/admin/employees`, `match_or_create_employee()` from `fazle_payroll_engine.employee` is called to pre-seed the FPE employee record. This call is **non-fatal** — FPE seed failure is logged but does not roll back the `fazle_employees_legacy` insert.
 
-**Soft deactivation:** Setting `status='Inactive'` via `PATCH /api/admin/employees/{id}` propagates to `fpe_employees` (by phone lookup). Physical deletion never occurs.
+**Soft deactivation:** Setting `status='Inactive'` via `PATCH /api/admin/employees/{id}` propagates to `fazle_employees` (by phone lookup). Physical deletion never occurs.
 
 **Duplicate guard:** If a record with the same `employee_mobile` already exists → HTTP 409 Conflict.
 

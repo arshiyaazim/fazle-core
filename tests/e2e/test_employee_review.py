@@ -38,7 +38,7 @@ API_KEY = os.getenv("TEST_API_KEY", "test-internal-key")
 
 LINK_REVIEW_PATH = "/static/wbom-link-review.html"
 CREATE_LINK_PATH = "/static/wbom-create-link.html"
-REPORT_PATTERN = "**/reports/unresolved_fpe_employees"
+REPORT_PATTERN = "**/reports/unresolved_fazle_employees"
 LINK_FPE_PATTERN = "**/api/admin/employees/link-fpe"
 CREATE_LINK_PATTERN = "**/api/admin/employees/create-and-link"
 

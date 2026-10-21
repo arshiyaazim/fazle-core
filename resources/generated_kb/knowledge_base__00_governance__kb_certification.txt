@@ -3,7 +3,6 @@ SHA256: 91b188b0dc9eac7c6219385e8299466c78d72a4b9b8d549119daa63ecce3a34a
 Version: 91b188b0dc9e
 
 # Knowledge Base Certification
-
 Certification confirms that the active Knowledge Base is fit for runtime AI use.
 
 ## Certification Checks

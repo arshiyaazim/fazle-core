@@ -7,6 +7,10 @@ runtime_index: true
 ---
 
 # Claude Session 3 — Independent Audit Report
+
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **Report ID:** AUDIT-SESSION3-2026-06-23
 **Audit Date:** 2026-06-23
 **Auditor:** GitHub Copilot (read-only, independent)

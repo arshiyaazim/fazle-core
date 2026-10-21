@@ -274,7 +274,7 @@ async def test_ambiguous_identity_is_denied_not_resolved_by_picking_one(test_db_
                 SELECT 1 FROM pg_indexes
                  WHERE schemaname = 'public'
                    AND tablename = 'wbom_identity_links'
-                   AND indexname = 'idx_wbom_identity_platform_user'
+                   AND indexname = 'idx_fazle_identity_platform_user'
             )
             """
         )
@@ -285,7 +285,7 @@ async def test_ambiguous_identity_is_denied_not_resolved_by_picking_one(test_db_
 
         # Reproduce the legacy/unrepaired shape by dropping the index inside
         # this test only, then proving the resolver still fails closed.
-        await conn.execute("DROP INDEX IF EXISTS idx_wbom_identity_platform_user")
+        await conn.execute("DROP INDEX IF EXISTS idx_fazle_identity_platform_user")
         try:
             first = await _subject(conn)
             second = await _subject(conn)
@@ -303,7 +303,7 @@ async def test_ambiguous_identity_is_denied_not_resolved_by_picking_one(test_db_
                 "DELETE FROM wbom_identity_links WHERE platform_user_id = $1", OTHER_PHONE
             )
             await conn.execute(
-                "CREATE UNIQUE INDEX IF NOT EXISTS idx_wbom_identity_platform_user "
+                "CREATE UNIQUE INDEX IF NOT EXISTS idx_fazle_identity_platform_user "
                 "ON wbom_identity_links (platform, platform_user_id) WHERE active"
             )
 

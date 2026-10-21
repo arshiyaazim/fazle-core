@@ -1,4 +1,4 @@
-"""Unit tests — modules/bridge_poller._is_system_generated_notification()
+"""Unit tests — modules/fazle_bridge_poller._is_system_generated_notification()
 
 Escort-pipeline audit, Root Cause 7 (2026-07-19): a system-generated admin
 review notification (modules.message_router._admin_review_note() and the
@@ -55,12 +55,12 @@ GENUINE_ADMIN_CONFIRMATION = (
 
 
 def test_real_incident_text_is_recognized_as_system_generated():
-    from modules.bridge_poller import _is_system_generated_notification
+    from modules.fazle_bridge_poller import _is_system_generated_notification
     assert _is_system_generated_notification(REAL_INCIDENT_TEXT) is True
 
 
 def test_genuine_admin_confirmation_is_not_flagged():
-    from modules.bridge_poller import _is_system_generated_notification
+    from modules.fazle_bridge_poller import _is_system_generated_notification
     assert _is_system_generated_notification(GENUINE_ADMIN_CONFIRMATION) is False
 
 
@@ -76,7 +76,7 @@ def test_notification_with_no_known_prefix_is_not_caught():
     left -- every new admin-notification template MUST add its own prefix
     to that list in the same change (see the maintenance note above the
     list definition in modules/message_router/__init__.py)."""
-    from modules.bridge_poller import _is_system_generated_notification
+    from modules.fazle_bridge_poller import _is_system_generated_notification
 
     text_with_no_known_prefix = (
         "Some brand-new notification wording that matches none of the "
@@ -128,7 +128,7 @@ async def test_real_bridge_client_send_appends_nothing():
     "⚠️ ALERT:",
 ])
 def test_every_known_notification_title_is_caught(prefix):
-    from modules.bridge_poller import _is_system_generated_notification
+    from modules.fazle_bridge_poller import _is_system_generated_notification
     assert _is_system_generated_notification(f"{prefix}\nSender: x\n\nsome body text") is True
 
 
@@ -141,7 +141,7 @@ def test_circuit_open_alert_is_recognized_regardless_of_bridge_name():
     SYSTEM_NOTIFICATION_TITLE_PREFIXES, a circuit-open alert relied only
     on the (now-removed) invisible origin marker for loop protection, not
     this dedicated guard (real 2026-07-26 bridge3 incident)."""
-    from modules.bridge_poller import _is_system_generated_notification
+    from modules.fazle_bridge_poller import _is_system_generated_notification
 
     for bridge in ("bridge1", "bridge2", "bridge3"):
         text = f"⚠️ ALERT: {bridge} circuit OPEN. Outbound paused 60s. Investigate."
@@ -149,12 +149,12 @@ def test_circuit_open_alert_is_recognized_regardless_of_bridge_name():
 
 
 def test_leading_whitespace_does_not_bypass_the_guard():
-    from modules.bridge_poller import _is_system_generated_notification
+    from modules.fazle_bridge_poller import _is_system_generated_notification
     assert _is_system_generated_notification("   \n⚠️ ESCORT REVIEW DRAFT — ORDER নয়\nbody") is True
 
 
 def test_empty_text_is_not_flagged():
-    from modules.bridge_poller import _is_system_generated_notification
+    from modules.fazle_bridge_poller import _is_system_generated_notification
     assert _is_system_generated_notification("") is False
     assert _is_system_generated_notification(None) is False
 
@@ -175,7 +175,7 @@ def test_guard_call_precedes_handle_admin_escort_completion_in_source():
     to drive), matching this repo's existing "SELECT-only proof"-style
     source-inspection tests."""
     import inspect
-    import modules.bridge_poller as bp
+    import modules.fazle_bridge_poller as bp
 
     source = inspect.getsource(bp)
     guard_call = source.index("_is_system_generated_notification(otext)")
@@ -236,7 +236,7 @@ def test_release_review_required_text_also_passes_is_release_confirmation():
 
 
 def test_release_review_required_notification_is_recognized_as_system_generated():
-    from modules.bridge_poller import _is_system_generated_notification
+    from modules.fazle_bridge_poller import _is_system_generated_notification
     assert _is_system_generated_notification(RELEASE_REVIEW_REQUIRED_TEXT) is True
 
 
@@ -248,7 +248,7 @@ def test_other_automated_message_with_no_known_prefix_is_not_caught():
     than silently losing coverage. Any real notification template in this
     shape must be given a registered prefix in
     SYSTEM_NOTIFICATION_TITLE_PREFIXES, in the same change that adds it."""
-    from modules.bridge_poller import _is_system_generated_notification
+    from modules.fazle_bridge_poller import _is_system_generated_notification
     from modules.message_router import SYSTEM_NOTIFICATION_TITLE_PREFIXES
 
     text = OTHER_AUTOMATED_MESSAGE_WITH_RELEASE_SHAPED_TEXT
@@ -262,7 +262,7 @@ def test_genuine_release_confirmation_is_not_flagged():
     """A real human admin's release confirmation must still be recognized
     as release-confirmation-shaped and NOT rejected by the guard."""
     from modules.escort_lifecycle import is_release_confirmation
-    from modules.bridge_poller import _is_system_generated_notification
+    from modules.fazle_bridge_poller import _is_system_generated_notification
 
     assert is_release_confirmation(GENUINE_RELEASE_CONFIRMATION) is True
     assert _is_system_generated_notification(GENUINE_RELEASE_CONFIRMATION) is False
@@ -273,7 +273,7 @@ def test_guard_call_precedes_handle_admin_release_confirmation_in_source():
     strictly before the handler call -- same pattern as the escort-
     completion branch's equivalent test above."""
     import inspect
-    import modules.bridge_poller as bp
+    import modules.fazle_bridge_poller as bp
 
     source = inspect.getsource(bp)
     # Find the release branch specifically (the module also contains the
@@ -290,6 +290,6 @@ def test_guard_call_precedes_handle_admin_release_confirmation_in_source():
 def test_existing_escort_confirmation_protection_still_passes():
     """Regression guard: the release-branch addition must not have
     disturbed the escort-completion branch's own guard."""
-    from modules.bridge_poller import _is_system_generated_notification
+    from modules.fazle_bridge_poller import _is_system_generated_notification
     assert _is_system_generated_notification(REAL_INCIDENT_TEXT) is True
     assert _is_system_generated_notification(GENUINE_ADMIN_CONFIRMATION) is False

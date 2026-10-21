@@ -8,6 +8,9 @@ runtime_index: false
 
 # PKCA Report 06: Database Behavior Coverage Report
 
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **Date:** 2026-06-22
 **Mode:** Read-Only Analysis
 
@@ -19,13 +22,13 @@ runtime_index: false
 
 | Table | Purpose | Key Operations | KB Coverage |
 |---|---|---|---|
-| `wbom_whatsapp_messages` | All inbound/outbound messages (with canonical_phone, message_hash columns) | INSERT always, SELECT for history | 0% |
-| `wbom_employees` | Employee registry | SELECT by mobile (multiple variants), INSERT/UPDATE soft-delete | 0% |
+| `fazle_whatsapp_messages` | All inbound/outbound messages (with canonical_phone, message_hash columns) | INSERT always, SELECT for history | 0% |
+| `fazle_employees_legacy` | Employee registry | SELECT by mobile (multiple variants), INSERT/UPDATE soft-delete | 0% |
 | `wbom_escort_programs` | Vessel escort programs | INSERT (draft), UPDATE (status/close), SELECT (active lookup), remarks JSON | 0% |
 | `wbom_attendance` | Daily attendance | INSERT ON CONFLICT UPDATE on (employee_id, attendance_date) | 0% |
-| `wbom_cash_transactions` | All cash/payment records | INSERT with idempotency_key, SELECT advance sum | 0% |
-| `wbom_contacts` | Contact directory | SELECT for identity resolution, ON CONFLICT DO UPDATE | 0% |
-| `wbom_relation_types` | Contact relation categories | JOIN with wbom_contacts | 0% |
+| `fazle_cash_transactions_archive` | All cash/payment records | INSERT with idempotency_key, SELECT advance sum | 0% |
+| `fazle_contacts` | Contact directory | SELECT for identity resolution, ON CONFLICT DO UPDATE | 0% |
+| `wbom_relation_types` | Contact relation categories | JOIN with fazle_contacts | 0% |
 | `wbom_staging_payments` | Unmatched payment staging | INSERT, UPDATE matched_employee_id | 0% |
 | `wbom_salary_records` | Salary records | SELECT by employee | 0% |
 
@@ -98,8 +101,8 @@ runtime_index: false
 |---|---|---|---|
 | `fpe_wa_messages` | FPE WhatsApp message store | INSERT per ingested message | 0% |
 | `fpe_message_processing_state` | FPE processing pipeline state | UPSERT per message | 0% |
-| `fpe_cash_transactions` | FPE transaction records (separate from wbom_cash_transactions) | INSERT, UPDATE (reversal), SELECT | 0% |
-| `fpe_employees` | FPE employee registry (synced from wbom_employees) | INSERT ON CONFLICT UPDATE | 0% |
+| `fazle_cash_transactions` | FPE transaction records (separate from fazle_cash_transactions_archive) | INSERT, UPDATE (reversal), SELECT | 0% |
+| `fazle_employees` | FPE employee registry (synced from fazle_employees_legacy) | INSERT ON CONFLICT UPDATE | 0% |
 
 ### User Memory Tables
 
@@ -120,9 +123,9 @@ runtime_index: false
 | Attendance dedup | UNIQUE(employee_id, attendance_date) → ON CONFLICT UPDATE | 0% |
 | Message dedup | processed_bridge_messages ON CONFLICT DO NOTHING | 0% |
 | Advisory locks | Concurrent payment writes use Postgres advisory locks | 0% |
-| Soft delete | wbom_employees uses status='Inactive' never hard-delete | 0% |
-| FPE dual-table | wbom_cash_transactions (live) vs fpe_cash_transactions (FPE) are separate | 0% |
-| Message hash | wbom_whatsapp_messages has UNIQUE INDEX on message_hash | 0% |
+| Soft delete | fazle_employees_legacy uses status='Inactive' never hard-delete | 0% |
+| FPE dual-table | fazle_cash_transactions_archive (live) vs fazle_cash_transactions (FPE) are separate | 0% |
+| Message hash | fazle_whatsapp_messages has UNIQUE INDEX on message_hash | 0% |
 | Draft architecture | fazle_draft_replies (conversational) vs fazle_payment_drafts (financial) split-by-purpose | 5% |
 
 ---

@@ -201,7 +201,7 @@ These items are operational rules embedded in code that are **not** in the knowl
 | ID | Duplicate | Location A | Location B | Recommendation |
 |---|---|---|---|---|
 | DUP-01 | Office address | `modules/message_router` (hardcoded fallback) | `modules/social_auto_reply/reply_rules.py` | Merge into KB `office_info.txt` as single source |
-| DUP-02 | Escort content keywords | `modules/message_router._looks_like_escort_order` | `modules/identity_brain._ESCORT_CONTENT_RE` | Already aligned; document as dual-purpose pattern |
+| DUP-02 | Escort content keywords | `modules/message_router._looks_like_escort_order` | `modules/fazle_identity_brain._ESCORT_CONTENT_RE` | Already aligned; document as dual-purpose pattern |
 | DUP-03 | Phone normalization | `modules/phone_normalizer` | `modules/number_identity` | Two separate modules with similar function; document as intentional (variants vs normalize) |
 | DUP-04 | Recruitment trigger keywords | `modules/recruitment_flow.INTAKE_KEYWORDS` | `modules/message_router` inline check | Document as intentional: router uses recruitment_flow function |
 | DUP-05 | Attendance handler | `modules/attendance` | `modules/attendance_parser` | Two modules: attendance = simple present/absent; attendance_parser = structured shift/date format. Document both purposes. |
@@ -246,10 +246,10 @@ The following knowledge exists in production code but has **no corresponding KB 
 | MIS-17 | Identity Resolution Evidence Sources | `identity_brain` | MEDIUM |
 | MIS-18 | Reviewed Reply Memory (admin-curated reply learning) | `modules/reviewed_reply_memory` | MEDIUM |
 | MIS-19 | Social Auto-Reply Platform (Facebook/Messenger) | `modules/social_auto_reply` | MEDIUM |
-| MIS-20 | Accountant Payment Ingest Flow | `modules/payment_ingest` | MEDIUM |
+| MIS-20 | Accountant Payment Ingest Flow | `modules/fazle_payment_ingest` | MEDIUM |
 | MIS-21 | Advance Payment Request Keyword List | `payment_workflow.ADVANCE_KEYWORDS` | MEDIUM |
 | MIS-22 | Voice Message Processing | `modules/voice_processor` | LOW |
-| MIS-23 | Image Hash Deduplication | `modules/image_hash` | LOW |
+| MIS-23 | Image Hash Deduplication | `modules/fazle_image_hash` | LOW |
 
 ---
 
@@ -266,7 +266,7 @@ INBOUND MESSAGE (WhatsApp / Meta)
 │     ├─ Dedup check (processed_bridge_messages)
 │     ├─ OCR if image without text
 │     ├─ Voice transcription if audio/ptt
-│     ├─ Persist to wbom_whatsapp_messages (ALL DMs, always)
+│     ├─ Persist to fazle_whatsapp_messages (ALL DMs, always)
 │     └─ Call process_message()
 │
 ├─► Silent-Skip Check
@@ -424,7 +424,7 @@ ADMIN sends command via WhatsApp
 │     REJECT <id>    → update draft status
 │     EDIT <id> <text> → update draft text
 │     PAID <id> <amount> <method> → finalize_payment() → accountant_msg
-│     ADVANCE <id> <amount> <method> → record advance in wbom_cash_transactions
+│     ADVANCE <id> <amount> <method> → record advance in fazle_cash_transactions_archive
 │     RELEASE <program_id> <date> <shift> <point> → handle_release_event()
 │     ESCORTCONFIRM → assign escort to program
 │     PAYROLL COMPUTE/SUBMIT/APPROVE/LOCK/PAID/CANCEL
@@ -552,10 +552,10 @@ active → disabled (user_remove command)
 | Completed Draft Detector | `modules/escort` | Admin text | CompletedDraft | `_CD_ESCORT_NAME_RE`, `_CD_ESCORT_MOB_RE`, `_CD_SHIFT_RE`, `_CD_MV_RE`, `_CD_LV_RE` |
 | Attendance Parser | `modules/attendance_parser` | WhatsApp text | attendance dict | `_DATE_PATTERNS`, `_SHIFT_RE`, `_MOBILE_RE`, `_NAME_LABEL_RE` |
 | Release Confirmation Parser | `modules/escort_lifecycle` | Admin text with [RELEASE CONFIRMED] | release fields dict | `_RC_DATE_RE`, `_RC_SHIFT_RE`, `_RC_POINT_RE`, `_RC_DAYS_RE`, `_RC_CONV_RE`, `_RC_FOOD_RE` |
-| Payment SMS Parser | `modules/payment_ingest` | Accountant SMS/text | payment record | `looks_like_payment_sms()` |
-| Admin Cash Shorthand | `modules/payment_ingest` | Accountant shorthand | cash entry | `is_admin_cash_shorthand()` |
+| Payment SMS Parser | `modules/fazle_payment_ingest` | Accountant SMS/text | payment record | `looks_like_payment_sms()` |
+| Admin Cash Shorthand | `modules/fazle_payment_ingest` | Accountant shorthand | cash entry | `is_admin_cash_shorthand()` |
 | RAG Tokenizer | `modules/rag` | Bangla + English text | token list | `_TOKEN_RE`: `[A-Za-z0-9\u0980-\u09FF]+` |
-| Intent Classifier | `modules/intent` | Any text | intent string | Deterministic keyword matching (fallback to LLM) |
+| Intent Classifier | `modules/fazle_intent` | Any text | intent string | Deterministic keyword matching (fallback to LLM) |
 
 ---
 
@@ -709,11 +709,11 @@ active → disabled (user_remove command)
 ### Identity Sources (Checked in Order)
 1. **settings** — Admin phone number from ADMIN_NUMBERS environment variable
 2. **seed_rule** — `fazle_contact_roles` table (highest trust, explicit manual assignment)
-3. **db_employee** — `wbom_employees.employee_mobile` direct match
-4. **cash_payment** — `wbom_cash_transactions` joined to `wbom_employees`
-5. **attendance** — `wbom_attendance` joined to `wbom_employees`
+3. **db_employee** — `fazle_employees_legacy.employee_mobile` direct match
+4. **cash_payment** — `fazle_cash_transactions_archive` joined to `fazle_employees_legacy`
+5. **attendance** — `wbom_attendance` joined to `fazle_employees_legacy`
 6. **escort_roster** — `wbom_escort_programs` (escort_mobile → employee, master_mobile → repeat_client)
-7. **db_contact** — `wbom_contacts` joined to `wbom_relation_types`
+7. **db_contact** — `fazle_contacts` joined to `wbom_relation_types`
 8. **text_hint** — Keyword analysis of message text (candidate detection)
 
 ### Candidate Keyword List
@@ -727,13 +727,13 @@ active → disabled (user_remove command)
 
 | Table | Purpose | Key Operations |
 |---|---|---|
-| `wbom_whatsapp_messages` | All inbound/outbound message store | INSERT on every DM, SELECT for history/context |
-| `wbom_employees` | Employee registry | SELECT by mobile (multiple variants) |
+| `fazle_whatsapp_messages` | All inbound/outbound message store | INSERT on every DM, SELECT for history/context |
+| `fazle_employees_legacy` | Employee registry | SELECT by mobile (multiple variants) |
 | `wbom_escort_programs` | Vessel escort programs | INSERT (new order), UPDATE (status/close), SELECT (active lookup) |
 | `wbom_attendance` | Daily attendance records | INSERT ON CONFLICT UPDATE |
-| `wbom_cash_transactions` | All cash/payment records | INSERT with idempotency_key, SELECT for advance sum |
-| `wbom_contacts` | Contact directory | SELECT for identity resolution |
-| `wbom_relation_types` | Contact relation categories | JOIN with wbom_contacts |
+| `fazle_cash_transactions_archive` | All cash/payment records | INSERT with idempotency_key, SELECT for advance sum |
+| `fazle_contacts` | Contact directory | SELECT for identity resolution |
+| `wbom_relation_types` | Contact relation categories | JOIN with fazle_contacts |
 | `fazle_draft_replies` | General message drafts | INSERT, UPDATE status, SELECT pending |
 | `fazle_payment_drafts` | Payment-specific drafts | INSERT, UPDATE, SELECT by program_id |
 | `fazle_contact_roles` | Seed identity rules | SELECT by phone + is_active |
@@ -796,7 +796,7 @@ active → disabled (user_remove command)
 
 ### Intent Classification
 - AI is **authoritative** for intent
-- Deterministic rule-based classifier (`modules/intent.classify`) is the **availability fallback**
+- Deterministic rule-based classifier (`modules/fazle_intent.classify`) is the **availability fallback**
 - If AI intent = 'unknown', deterministic rules run
 
 ### AI Safety Mode (`AI_SAFE_MODE=true`)
@@ -935,7 +935,7 @@ All scheduler notifications use idempotency keys to prevent duplicate alerts:
 ```
 CANDIDATE ──────────► RECRUITMENT FUNNEL ──────► EMPLOYEE
                            │                         │
-                     (scored session)         (wbom_employees)
+                     (scored session)         (fazle_employees_legacy)
                                                       │
                        ┌───────────────────────────────┤
                        │               │               │
@@ -953,7 +953,7 @@ CANDIDATE ──────────► RECRUITMENT FUNNEL ─────�
               (wbom_payroll_approval_log)
                        │
                       CASH ──────────────────────── LEDGER
-              (wbom_cash_transactions)                  │
+              (fazle_cash_transactions_archive)                  │
                        │                         (reports)
                        │
                     REPORTS ◄─── SCHEDULER (daily_admin_digest)
@@ -980,7 +980,7 @@ ESCORT CLIENT ──► ESCORT ORDER ──► wbom_escort_programs (draft)
                                                            │
                                           ACCOUNTANT NOTIFICATION
                                                            │
-                                             wbom_cash_transactions
+                                             fazle_cash_transactions_archive
 
 
 INBOUND MESSAGE ──► IDENTITY BRAIN ──► MESSAGE ROUTER ──► REPLY

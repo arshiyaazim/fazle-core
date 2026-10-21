@@ -66,7 +66,7 @@ draft → reviewed → approved → locked → paid
 
 **Business Rule:** All PAYROLL commands require at minimum accountant role. Viewer can list but cannot change state.
 
-**Source Module:** `modules/admin_commands`
+**Source Module:** `modules/fazle_admin_commands`
 **PKCA Report:** 12_command_coverage_report.md
 
 ---

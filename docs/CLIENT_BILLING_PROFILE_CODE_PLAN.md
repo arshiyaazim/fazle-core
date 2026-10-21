@@ -59,7 +59,7 @@ async def create_client_billing_profile(
     """
     Validates contact_person_mobile (above), validates every numeric field
     is non-negative (reject otherwise), validates contact_id (if given)
-    resolves to a real wbom_contacts row (a clearer error than letting the
+    resolves to a real fazle_contacts row (a clearer error than letting the
     raw FK violation surface), then INSERTs. Returns the created row as a
     dict. Raises HTTPException(400) on any validation failure,
     HTTPException(409) if contact_person_mobile is already registered to
@@ -129,7 +129,7 @@ One line: `app.include_router(client_billing_router)` — mirroring how `drafts_
 2. `client_name`: required, non-empty after `.strip()`.
 3. Every rate/wage/VAT/Tax/Other-Charges field: reject if negative (`< 0`); `None`/omitted is allowed (means "not set").
 4. `contact_person_mobile` uniqueness: DB unique index is the source of truth; API catches the resulting `UniqueViolationError` and re-raises as `HTTPException(409, "This mobile number is already registered to another client profile")` rather than leaking a raw DB error.
-5. `contact_id`, if provided: verify it resolves via a `SELECT 1 FROM wbom_contacts WHERE contact_id=$1` before the INSERT, to raise a clear `HTTPException(400, "contact_id does not exist")` instead of a raw FK violation.
+5. `contact_id`, if provided: verify it resolves via a `SELECT 1 FROM fazle_contacts WHERE contact_id=$1` before the INSERT, to raise a clear `HTTPException(400, "contact_id does not exist")` instead of a raw FK violation.
 6. No field is ever silently defaulted to a guessed value — `NULL` stays `NULL` until an admin sets it.
 
 ---

@@ -106,7 +106,7 @@ class TestIsAdvanceRecordQuery:
         "record advance 01811223344 3500 bkash",
     ])
     def test_positive_triggers(self, text):
-        from modules.admin_commands.nl_advance_record import is_advance_record_query
+        from modules.fazle_admin_commands.nl_advance_record import is_advance_record_query
         assert is_advance_record_query(text) is True, f"Should trigger: {text!r}"
 
     @pytest.mark.parametrize("text", [
@@ -119,7 +119,7 @@ class TestIsAdvanceRecordQuery:
         "",
     ])
     def test_negative_triggers(self, text):
-        from modules.admin_commands.nl_advance_record import is_advance_record_query
+        from modules.fazle_admin_commands.nl_advance_record import is_advance_record_query
         assert is_advance_record_query(text) is False, f"Should NOT trigger: {text!r}"
 
 
@@ -130,20 +130,20 @@ class TestAdvanceRecordParsing:
     """Test internal parser helpers for advance records."""
 
     def test_parse_emp_id(self):
-        from modules.admin_commands.nl_advance_record import _parse_emp_id
+        from modules.fazle_admin_commands.nl_advance_record import _parse_emp_id
         assert _parse_emp_id("advance দিলাম ID 45 5000 bkash") == 45
         assert _parse_emp_id("ID: 123 advance 3000") == 123
         assert _parse_emp_id("কর্মী নম্বর 78 advance 2000") == 78
         assert _parse_emp_id("no id here 5000") is None
 
     def test_parse_phone(self):
-        from modules.admin_commands.nl_advance_record import _parse_phone
+        from modules.fazle_admin_commands.nl_advance_record import _parse_phone
         assert _parse_phone("01712345678 advance 5000") == "8801712345678"
         assert _parse_phone("+8801912345678 3000 cash") == "8801912345678"
         assert _parse_phone("no phone here") is None
 
     def test_parse_amount(self):
-        from modules.admin_commands.nl_advance_record import _parse_amount
+        from modules.fazle_admin_commands.nl_advance_record import _parse_amount
         assert _parse_amount("advance দিলাম ID 45 5000 bkash") == 5000.0
         assert _parse_amount("ID 123 3,500 nagad") == 3500.0
         assert _parse_amount("advance ৫,০০০ টাকা") == 5000.0  # Bengali digits
@@ -152,7 +152,7 @@ class TestAdvanceRecordParsing:
         assert result == 1500.0
 
     def test_parse_method(self):
-        from modules.admin_commands.nl_advance_record import _parse_method
+        from modules.fazle_admin_commands.nl_advance_record import _parse_method
         assert _parse_method("advance দিলাম 5000 bkash") == "bkash"
         assert _parse_method("advance 3000 nagad") == "nagad"
         assert _parse_method("advance 2000 রকেট") == "rocket"
@@ -173,7 +173,7 @@ class TestLooksLikePaymentSms:
         "টাকা পেয়েছি ৳5000 bkash TRXID ABC123456",
     ])
     def test_payment_sms_detected(self, text):
-        from modules.payment_ingest import looks_like_payment_sms
+        from modules.fazle_payment_ingest import looks_like_payment_sms
         assert looks_like_payment_sms(text) is True
 
     @pytest.mark.parametrize("text", [
@@ -185,7 +185,7 @@ class TestLooksLikePaymentSms:
         "ডিউটি করুন ৫০০০ টাকা",       # random Bengali with digits, no payment keyword
     ])
     def test_non_sms_not_detected(self, text):
-        from modules.payment_ingest import looks_like_payment_sms
+        from modules.fazle_payment_ingest import looks_like_payment_sms
         assert looks_like_payment_sms(text) is False
 
 
@@ -201,7 +201,7 @@ class TestIngestPaymentSms:
         import app.database as db_module
         db_module._pool = test_db_pool
         eid = await test_db_pool.fetchval(
-            """INSERT INTO wbom_employees
+            """INSERT INTO fazle_employees_legacy
                    (employee_mobile, employee_name, designation, basic_salary,
                     bkash_number)
                VALUES ('8801712345678', 'Karim Mia', 'Security Guard', 12000, '01712345678')
@@ -213,7 +213,7 @@ class TestIngestPaymentSms:
     async def test_bkash_sms_staged(self, emp, test_db_pool):
         import app.database as db_module
         db_module._pool = test_db_pool
-        from modules.payment_ingest import ingest_payment_sms
+        from modules.fazle_payment_ingest import ingest_payment_sms
         sms = (
             "BKash: You have received Tk 5000.00 from 01712345678 "
             "TxnID AB12345678 on 05/07/2026"
@@ -229,7 +229,7 @@ class TestIngestPaymentSms:
         """Same SMS ingested twice must return duplicate status, not create 2 rows."""
         import app.database as db_module
         db_module._pool = test_db_pool
-        from modules.payment_ingest import ingest_payment_sms
+        from modules.fazle_payment_ingest import ingest_payment_sms
         sms = (
             "BKash: You have received Tk 3500.00 from 01712345678 "
             "TxnID ZZ99887766 on 05/07/2026"
@@ -251,7 +251,7 @@ class TestIngestPaymentSms:
     async def test_unparseable_sms_returns_error(self, test_db_pool):
         import app.database as db_module
         db_module._pool = test_db_pool
-        from modules.payment_ingest import ingest_payment_sms
+        from modules.fazle_payment_ingest import ingest_payment_sms
         result = await ingest_payment_sms("hello world no payment info here")
         assert result["ok"] is False
         assert result["status"] == "unparsed"
@@ -261,7 +261,7 @@ class TestIngestPaymentSms:
         """Valid bKash SMS but employee phone unknown → staged with status=unmatched."""
         import app.database as db_module
         db_module._pool = test_db_pool
-        from modules.payment_ingest import ingest_payment_sms
+        from modules.fazle_payment_ingest import ingest_payment_sms
         sms = (
             "BKash: You have received Tk 1500.00 from 01999999999 "
             "TxnID QQ11223344 on 05/07/2026"
@@ -274,7 +274,7 @@ class TestIngestPaymentSms:
     async def test_admin_accountant_instruction_finalizes_direct_transaction(self, test_db_pool):
         import app.database as db_module
         db_module._pool = test_db_pool
-        from modules.payment_ingest import ingest_admin_cash_entry
+        from modules.fazle_payment_ingest import ingest_admin_cash_entry
 
         result = await ingest_admin_cash_entry(
             "ID: 01795122311 Manik Mea 01789123456(B) 5000/-",
@@ -286,7 +286,7 @@ class TestIngestPaymentSms:
         assert result["status"] == "finalized"
         assert result["employee_mobile"] == "01795122311"
         txn = await test_db_pool.fetchrow(
-            "SELECT * FROM fpe_cash_transactions WHERE id=$1",
+            "SELECT * FROM fazle_cash_transactions WHERE id=$1",
             result["transaction_id"],
         )
         assert txn is not None
@@ -312,11 +312,11 @@ class TestMalformedMessages:
         assert is_accountant_summary("   ") is False
 
     def test_empty_string_sms(self):
-        from modules.payment_ingest import looks_like_payment_sms
+        from modules.fazle_payment_ingest import looks_like_payment_sms
         assert looks_like_payment_sms("") is False
 
     def test_empty_advance_record(self):
-        from modules.admin_commands.nl_advance_record import is_advance_record_query
+        from modules.fazle_admin_commands.nl_advance_record import is_advance_record_query
         assert is_advance_record_query("") is False
 
     @pytest.mark.asyncio
@@ -327,13 +327,13 @@ class TestMalformedMessages:
         # Create employee 45 so we don't hit 'not found' first
         await test_db_pool.execute(
             """
-            INSERT INTO wbom_employees
+            INSERT INTO fazle_employees_legacy
                    (employee_id, employee_mobile, employee_name, designation, basic_salary)
                VALUES (45, '8801700000045', 'Amount Test Worker', 'Guard', 10000)
                ON CONFLICT (employee_id) DO NOTHING
             """
         )
-        from modules.admin_commands.nl_advance_record import intent_advance_record
+        from modules.fazle_admin_commands.nl_advance_record import intent_advance_record
         reply = await intent_advance_record(
             "advance দিলাম ID 45 bkash",   # no amount
             admin_phone="8801844836824",
@@ -351,7 +351,7 @@ class TestMalformedMessages:
         """Employee ID 99999 does not exist → friendly error, no DB insert."""
         import app.database as db_module
         db_module._pool = test_db_pool
-        from modules.admin_commands.nl_advance_record import intent_advance_record
+        from modules.fazle_admin_commands.nl_advance_record import intent_advance_record
         reply = await intent_advance_record(
             "advance দিলাম ID 99999 5000 bkash",
             admin_phone="8801844836824",
@@ -397,7 +397,7 @@ class TestAccountantMessageRouterRouting:
     async def test_advance_record_routes_to_handler(self, _patch_heavy_deps):
         """Accountant NL advance record → intent_advance_record() called, NOT AI."""
         with patch(
-            "modules.admin_commands.nl_advance_record.intent_advance_record",
+            "modules.fazle_admin_commands.nl_advance_record.intent_advance_record",
             new=AsyncMock(return_value="অগ্রিম রেকর্ড হয়েছে।"),
         ) as mock_adv:
             from modules.message_router import process_message
@@ -417,7 +417,7 @@ class TestAccountantMessageRouterRouting:
     async def test_payment_sms_routes_to_ingest(self, _patch_heavy_deps):
         """Accountant forwards bKash SMS → ingest_payment_sms() called, NOT AI."""
         with patch(
-            "modules.payment_ingest.ingest_payment_sms",
+            "modules.fazle_payment_ingest.ingest_payment_sms",
             new=AsyncMock(return_value={
                 "ok": True, "status": "pending",
                 "staging_id": 1, "amount": 5000.0, "method": "bkash",
@@ -475,7 +475,7 @@ class TestAccountantMessageRouterRouting:
 # ─────────────────────────────────────────────────────────────────────────────
 class TestPayrollConsistencyAfterAdvance:
     """
-    After recording an advance in wbom_cash_transactions, the payroll
+    After recording an advance in fazle_cash_transactions_archive, the payroll
     calculation must deduct it from net salary.
     """
 
@@ -484,9 +484,9 @@ class TestPayrollConsistencyAfterAdvance:
         import app.database as db_module
         db_module._pool = test_db_pool
 
-        # Record an advance of 3000 in canonical fpe_cash_transactions
+        # Record an advance of 3000 in canonical fazle_cash_transactions
         await test_db_pool.execute(
-            """INSERT INTO fpe_cash_transactions
+            """INSERT INTO fazle_cash_transactions
                    (txn_ref, employee_id, amount, txn_category, payout_method,
                     txn_date, source, transaction_status)
                VALUES ('test-adv-1', $1, 3000, 'advance', 'cash',
@@ -497,7 +497,7 @@ class TestPayrollConsistencyAfterAdvance:
         # Payroll: total advances for this employee should be 3000
         total_advances = await test_db_pool.fetchval(
             """SELECT COALESCE(SUM(amount), 0)
-               FROM fpe_cash_transactions
+               FROM fazle_cash_transactions
                WHERE employee_id = $1 AND txn_category = 'advance'
                  AND transaction_status = 'final'""",
             seed_fpe_employee["id"],
@@ -515,7 +515,7 @@ class TestPayrollConsistencyAfterAdvance:
 
         for i, amount in enumerate([2000, 1500, 500]):
             await test_db_pool.execute(
-                """INSERT INTO fpe_cash_transactions
+                """INSERT INTO fazle_cash_transactions
                        (txn_ref, employee_id, amount, txn_category, payout_method,
                         txn_date, source, transaction_status)
                    VALUES ($1, $2, $3, 'advance', 'bkash', CURRENT_DATE, 'admin_nl', 'final')""",
@@ -523,7 +523,7 @@ class TestPayrollConsistencyAfterAdvance:
             )
 
         total = await test_db_pool.fetchval(
-            "SELECT SUM(amount) FROM fpe_cash_transactions WHERE employee_id=$1 AND transaction_status='final'",
+            "SELECT SUM(amount) FROM fazle_cash_transactions WHERE employee_id=$1 AND transaction_status='final'",
             seed_fpe_employee["id"],
         )
         assert float(total) == 4000.0
@@ -532,11 +532,11 @@ class TestPayrollConsistencyAfterAdvance:
     async def test_wbom_cash_transactions_updated_by_intent_advance_record(
         self, test_db_pool, seed_employee, seed_fpe_employee
     ):
-        """End-to-end: intent_advance_record() writes to fpe_cash_transactions."""
+        """End-to-end: intent_advance_record() writes to fazle_cash_transactions."""
         import app.database as db_module
         db_module._pool = test_db_pool
 
-        from modules.admin_commands.nl_advance_record import intent_advance_record
+        from modules.fazle_admin_commands.nl_advance_record import intent_advance_record
         reply = await intent_advance_record(
             f"advance দিলাম ID {seed_employee['employee_id']} 4500 bkash",
             admin_phone="8801844836824",
@@ -545,7 +545,7 @@ class TestPayrollConsistencyAfterAdvance:
 
         row = await test_db_pool.fetchrow(
             "SELECT amount, txn_category, payout_method, source "
-            "FROM fpe_cash_transactions WHERE employee_id=$1",
+            "FROM fazle_cash_transactions WHERE employee_id=$1",
             seed_fpe_employee["id"],
         )
         assert row is not None

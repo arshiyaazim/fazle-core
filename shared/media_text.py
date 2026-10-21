@@ -2,7 +2,7 @@
 Fazle Core — Media placeholder vs. genuine text.
 ================================================
 
-``modules.bridge_poller._fetch_new_messages`` fills a synthetic placeholder
+``modules.fazle_bridge_poller._fetch_new_messages`` fills a synthetic placeholder
 ``text = "[media:<type>]"`` (e.g. ``[media:audio]``, ``[media:image]``,
 ``[media:document]``, ``[media:video]``) for an inbound media message that
 carries no real caption/``content`` and no bridge-side OCR/STT

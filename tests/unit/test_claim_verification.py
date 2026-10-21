@@ -1,5 +1,5 @@
 """
-Regression tests for modules.identity_brain.claim_verification (2026-08-20,
+Regression tests for modules.fazle_identity_brain.claim_verification (2026-08-20,
 Owner directive). See that module's own docstring for the full reasoning
 rule this enforces: a third-party name/role claim in message content
 ("Karim is supervisor") must be resolved against Fazle Core before being
@@ -8,7 +8,7 @@ message content alone.
 """
 import pytest
 
-from modules.identity_brain.claim_verification import verify_employee_claim
+from modules.fazle_identity_brain.claim_verification import verify_employee_claim
 
 pytestmark = pytest.mark.integration
 
@@ -57,7 +57,7 @@ class TestVerifyEmployeeClaimOutcomes:
     async def test_inactive_employee_distinguished_from_active(self, clean_tables, test_db_pool):
         async with test_db_pool.acquire() as conn:
             row = await conn.fetchrow("""
-                INSERT INTO fpe_employees
+                INSERT INTO fazle_employees
                     (full_name, name_normalized, primary_phone, designation, status)
                 VALUES
                     ('Karim Uddin', 'karim uddin', '01833333399', 'Ghat Supervisor', 'inactive')
@@ -99,7 +99,7 @@ class TestClaimVerificationDoesNotAffectUnrelatedFlows:
     unrelated sender-identity/recruitment/KB pipeline."""
 
     async def test_known_employee_own_identity_resolution_unaffected(self, clean_tables, seed_employee):
-        from modules.identity_brain import detect_identity
+        from modules.fazle_identity_brain import detect_identity
         result = await detect_identity(seed_employee["employee_mobile"], "আমার তথ্য কী?")
         assert result["role"] in ("employee", "security_guard", "escort")
 

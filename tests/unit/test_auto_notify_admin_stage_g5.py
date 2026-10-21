@@ -9,7 +9,7 @@ canonical history) -- these roles fall through message_router's employee/
 _ESCORT_ROLES/ROUTE_B_ROLES checks straight to the generic KB/AI-fallback
 branch. Fixed in app/config.py's draft_always_roles default AND the live
 .env DRAFT_ALWAYS_ROLES value (the actual effective source, env always
-overrides the class default). modules.bridge_poller._save_draft() gained
+overrides the class default). modules.fazle_bridge_poller._save_draft() gained
 auto_notify_admin, wired at the DRAFT_ALWAYS_GATE call site only, gated
 by modules.authority_lanes.resolve_authority_lane().
 """
@@ -19,7 +19,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-import modules.bridge_poller as bp
+import modules.fazle_bridge_poller as bp
 
 pytestmark = pytest.mark.asyncio
 

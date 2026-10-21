@@ -25,7 +25,7 @@
 |--------|-------|----------|
 | WhatsApp operations, payroll, attendance, escort, recruitment, AI replies | **fazle-core** | Primary operational source of truth |
 | SMS onboarding, employee app identity, GPS/location, Firebase integration | **LocationWhere** | App-local, outbound sync only |
-| Shared operational employee roster (`wbom_employees`) | **fazle-core** | Do not write from outside fazle-core except via documented sync contract |
+| Shared operational employee roster (`fazle_employees_legacy`) | **fazle-core** | Do not write from outside fazle-core except via documented sync contract |
 | Employee sync from onboarding to roster | **Integration contract** | LocationWhere → fazle-core, opt-in, explicit |
 | APK distribution for Android apps | **nginx static** | `/var/www/locationwhere.iamazim.com/downloads/` |
 | Infrastructure (Postgres, Redis, Ollama, Qdrant, monitoring) | **Shared** | Both apps use shared containers; see Section E |
@@ -38,24 +38,24 @@
 
 **What it does:**
 When a new employee is created via SMS onboarding in LocationWhere, the service calls
-`syncEmployeeToFazleCore()` which writes directly into fazle-core's `wbom_employees` table
+`syncEmployeeToFazleCore()` which writes directly into fazle-core's `fazle_employees_legacy` table
 on the shared Postgres using the same DB credentials.
 
 **Source:** [location_where/backend/src/modules/employee/employee.service.ts:15-115]
 
 **Sync logic:**
 - `FAZLE_CORE_SYNC_ENABLED=true` (default in `.env.locationwhere.example:32`)
-- Target table: controlled by `FAZLE_CORE_EMPLOYEE_TABLE` (default: `wbom_employees`)
+- Target table: controlled by `FAZLE_CORE_EMPLOYEE_TABLE` (default: `fazle_employees_legacy`)
 - Fields synced: `employee_mobile`, `employee_name`, `status=ACTIVE`, `joining_date`, `created_at`, `updated_at`
 - Schema-aware: checks `information_schema.columns` before writing; skips gracefully if table or columns are missing
 - Upsert pattern: SELECT → UPDATE if mobile exists, INSERT if not
 - Failure mode: logs warning `fazle_core_sync_failed`, does NOT block LocationWhere onboarding
 
 **Ownership rules:**
-- fazle-core owns the `wbom_employees` schema. Any column addition or removal must check LocationWhere sync consumer.
-- LocationWhere is a write consumer of `public.wbom_employees`, not the owner.
-- The sync crosses Prisma schema boundaries: LocationWhere's Prisma uses `schema=locationwhere` for its own models but writes to `public.wbom_employees` via `$executeRawUnsafe`.
-- Do not add NOT NULL columns to `wbom_employees` without updating the sync logic.
+- fazle-core owns the `fazle_employees_legacy` schema. Any column addition or removal must check LocationWhere sync consumer.
+- LocationWhere is a write consumer of `public.fazle_employees_legacy`, not the owner.
+- The sync crosses Prisma schema boundaries: LocationWhere's Prisma uses `schema=locationwhere` for its own models but writes to `public.fazle_employees_legacy` via `$executeRawUnsafe`.
+- Do not add NOT NULL columns to `fazle_employees_legacy` without updating the sync logic.
 
 **To disable sync:** Set `FAZLE_CORE_SYNC_ENABLED=false` in LocationWhere `.env`. No code change required.
 
@@ -65,7 +65,7 @@ on the shared Postgres using the same DB credentials.
 
 | Data Object | Primary Owner | Secondary Access | Coupling Type | File |
 |-------------|---------------|------------------|---------------|------|
-| `wbom_employees` | fazle-core | LocationWhere writes on new SMS onboarding | Direct cross-schema SQL write | [employee.service.ts:36-115] |
+| `fazle_employees_legacy` | fazle-core | LocationWhere writes on new SMS onboarding | Direct cross-schema SQL write | [employee.service.ts:36-115] |
 | LocationWhere employee records | LocationWhere | None in fazle-core | App-local | [employee.service.ts] |
 | Onboarding gateway payload | LocationWhere | Android SMS gateway | HTTP contract | [gateway.routes.ts:59-119] |
 | APK download URL | nginx static | Sent in onboarding SMS reply | Static file reference | `.env.locationwhere.example:28` |
@@ -126,7 +126,7 @@ Aligning defaults prevents accidental wrong config on a fresh deploy or after `.
 
 | Service | Container | fazle-core uses | LocationWhere uses | Isolation |
 |---------|-----------|-----------------|-------------------|-----------|
-| PostgreSQL | `ai-postgres` at `172.20.x` | `public` schema, all tables | `locationwhere` schema (Prisma) + writes to `public.wbom_employees` | Separate schemas, same user — NOT fully isolated |
+| PostgreSQL | `ai-postgres` at `172.20.x` | `public` schema, all tables | `locationwhere` schema (Prisma) + writes to `public.fazle_employees_legacy` | Separate schemas, same user — NOT fully isolated |
 | Redis | `ai-redis` at `172.20.x` | DB 9 (app), DB 3 (agent) | DB 15 | Separate DB index — isolated |
 | Ollama | `ollama` container | `qwen3:8b`, `nomic-embed-text` | Not used | fazle-core only |
 | Qdrant | `qdrant` at `127.0.0.1:6333` | Not yet integrated | Not used | Unused — R9 future task |

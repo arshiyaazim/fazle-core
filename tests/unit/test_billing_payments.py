@@ -13,7 +13,7 @@ def _use_pool(test_db_pool):
 
 async def _make_contact(conn, phone="8801670500001"):
     return await conn.fetchval(
-        "INSERT INTO wbom_contacts (whatsapp_number) VALUES ($1) RETURNING contact_id", phone
+        "INSERT INTO fazle_contacts (whatsapp_number) VALUES ($1) RETURNING contact_id", phone
     )
 
 

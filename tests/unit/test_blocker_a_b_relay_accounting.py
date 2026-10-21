@@ -45,7 +45,7 @@ def _queue_row(qid, body, meta=None):
 
 async def _count_txns(conn, prefix):
     return await conn.fetchval(
-        "SELECT count(*) FROM fpe_cash_transactions WHERE source_message_id LIKE $1",
+        "SELECT count(*) FROM fazle_cash_transactions WHERE source_message_id LIKE $1",
         prefix + "%",
     )
 
@@ -71,7 +71,7 @@ async def _insert_manual_txn(conn, *, emp_id, amount, method="bkash", category="
     import json as _j
     from datetime import date as _d
     tid = await conn.fetchval(
-        """INSERT INTO fpe_cash_transactions
+        """INSERT INTO fazle_cash_transactions
                (txn_ref, employee_id, employee_name_raw, amount, payout_phone,
                 payout_method, txn_date, txn_category, accounting_period, created_by,
                 source, source_channel, source_message_id, transaction_status,
@@ -84,11 +84,11 @@ async def _insert_manual_txn(conn, *, emp_id, amount, method="bkash", category="
         _j.dumps({"admin_api": True, "employee_id_phone": "01881894579"}),
     )
     await conn.execute(
-        """INSERT INTO fpe_employee_ledger (employee_id, accounting_period, total_paid, txn_count)
+        """INSERT INTO fazle_employee_ledger (employee_id, accounting_period, total_paid, txn_count)
            VALUES ($1,'2026-08',$2,1)
            ON CONFLICT (employee_id, accounting_period)
-           DO UPDATE SET total_paid = fpe_employee_ledger.total_paid + $2,
-                         txn_count = fpe_employee_ledger.txn_count + 1""",
+           DO UPDATE SET total_paid = fazle_employee_ledger.total_paid + $2,
+                         txn_count = fazle_employee_ledger.txn_count + 1""",
         emp_id, amount,
     )
     return tid
@@ -96,7 +96,7 @@ async def _insert_manual_txn(conn, *, emp_id, amount, method="bkash", category="
 
 async def _seed_active_emp(conn, *, phone, name):
     return await conn.fetchval(
-        """INSERT INTO fpe_employees
+        """INSERT INTO fazle_employees
                (full_name, name_normalized, primary_phone, employee_id_phone,
                 status, created_source, resolution_status, basic_salary)
            VALUES ($1,$2,$3,$3,'active','whatsapp_auto_create','resolved',10000)
@@ -123,7 +123,7 @@ async def test_link_zero_new_txns_and_reconciler_skips(test_db_pool):
         txn = await _insert_manual_txn(conn, emp_id=emp, amount=400)
         await _insert_sent_queue_row(conn, 96738, body, datetime.now(timezone.utc),
                                      inbound_message_id="3EB0A967FF6CED3A904318")
-        total_before = await conn.fetchval("SELECT count(*) FROM fpe_cash_transactions")
+        total_before = await conn.fetchval("SELECT count(*) FROM fazle_cash_transactions")
 
     res = await link_existing_transaction_to_relay_queue(
         txn_id=txn, queue_id=96738, inbound_message_ref="3EB0A967FF6CED3A904318",
@@ -138,7 +138,7 @@ async def test_link_zero_new_txns_and_reconciler_skips(test_db_pool):
     assert r1["results"][0]["status"] == "reconciled_existing_transaction"
     assert r1["reconciled_existing_txn_id"] == txn
     async with test_db_pool.acquire() as conn:
-        total_after = await conn.fetchval("SELECT count(*) FROM fpe_cash_transactions")
+        total_after = await conn.fetchval("SELECT count(*) FROM fazle_cash_transactions")
         assert total_after == total_before, "no new financial row may be created"
         assert await _count_txns(conn, "payment-relay-send:96738:") == 0
 
@@ -162,12 +162,12 @@ async def test_link_repeated_reconciler_passes_still_zero(test_db_pool):
         reason="test", approved_by="Shah Azim")
 
     async with test_db_pool.acquire() as conn:
-        before = await conn.fetchval("SELECT count(*) FROM fpe_cash_transactions")
+        before = await conn.fetchval("SELECT count(*) FROM fazle_cash_transactions")
     for _ in range(4):
         await on_relay_send_success(_queue_row(96739, body))
         await reconcile_pending_relay_accounting()
     async with test_db_pool.acquire() as conn:
-        after = await conn.fetchval("SELECT count(*) FROM fpe_cash_transactions")
+        after = await conn.fetchval("SELECT count(*) FROM fazle_cash_transactions")
         assert after == before
 
 
@@ -231,7 +231,7 @@ async def test_unlinked_queue_6725_style_books_normally(test_db_pool):
     body = "ID: 01849258074 Saiful Operation 01849258074(N) 300/-"
     async with test_db_pool.acquire() as conn:
         emp = await conn.fetchval(
-            """INSERT INTO fpe_employees
+            """INSERT INTO fazle_employees
                    (full_name, name_normalized, primary_phone, employee_id_phone,
                     status, created_source, resolution_status, basic_salary)
                VALUES ('Saiful Islam','saiful islam','01849258074','01849258074',
@@ -240,13 +240,13 @@ async def test_unlinked_queue_6725_style_books_normally(test_db_pool):
     assert res["booked"] == 1
     async with test_db_pool.acquire() as conn:
         t = await conn.fetchrow(
-            "SELECT employee_id, amount, transaction_status FROM fpe_cash_transactions "
+            "SELECT employee_id, amount, transaction_status FROM fazle_cash_transactions "
             "WHERE source_message_id='payment-relay-send:96725:0'")
         assert t["employee_id"] == emp and t["amount"] == Decimal("300.00")
         assert t["transaction_status"] == "final"
-        assert await conn.fetchval("SELECT status FROM fpe_employees WHERE id=$1", emp) == "active"
+        assert await conn.fetchval("SELECT status FROM fazle_employees WHERE id=$1", emp) == "active"
         assert await conn.fetchval(
-            "SELECT count(*) FROM fpe_employees WHERE primary_phone='01849258074'") == 1
+            "SELECT count(*) FROM fazle_employees WHERE primary_phone='01849258074'") == 1
 
 
 async def test_link_preserves_all_original_provenance_and_ledger(test_db_pool):
@@ -261,9 +261,9 @@ async def test_link_preserves_all_original_provenance_and_ledger(test_db_pool):
         txn = await _insert_manual_txn(conn, emp_id=emp, amount=400, method="bkash", category="advance")
         before = dict(await conn.fetchrow(
             "SELECT amount, txn_category, employee_id, source, source_channel, "
-            "source_message_id, created_by, is_reversal FROM fpe_cash_transactions WHERE id=$1", txn))
+            "source_message_id, created_by, is_reversal FROM fazle_cash_transactions WHERE id=$1", txn))
         led_before = await conn.fetchval(
-            "SELECT total_paid FROM fpe_employee_ledger WHERE employee_id=$1", emp)
+            "SELECT total_paid FROM fazle_employee_ledger WHERE employee_id=$1", emp)
 
     await link_existing_transaction_to_relay_queue(
         txn_id=txn, queue_id=96743, inbound_message_ref="3EB0A967FF6CED3A904318",
@@ -272,9 +272,9 @@ async def test_link_preserves_all_original_provenance_and_ledger(test_db_pool):
     async with test_db_pool.acquire() as conn:
         after = dict(await conn.fetchrow(
             "SELECT amount, txn_category, employee_id, source, source_channel, "
-            "source_message_id, created_by, is_reversal, metadata FROM fpe_cash_transactions WHERE id=$1", txn))
+            "source_message_id, created_by, is_reversal, metadata FROM fazle_cash_transactions WHERE id=$1", txn))
         led_after = await conn.fetchval(
-            "SELECT total_paid FROM fpe_employee_ledger WHERE employee_id=$1", emp)
+            "SELECT total_paid FROM fazle_employee_ledger WHERE employee_id=$1", emp)
         for k in ("amount", "txn_category", "employee_id", "source", "source_channel",
                   "source_message_id", "created_by", "is_reversal"):
             assert before[k] == after[k], f"{k} changed: {before[k]!r} -> {after[k]!r}"
@@ -328,13 +328,13 @@ async def test_link_refuses_reversal_and_deleted(test_db_pool):
     async with test_db_pool.acquire() as conn:
         emp = await _seed_active_emp(conn, phone="01881894579", name="Billal Mia")
         rev = await conn.fetchval(
-            """INSERT INTO fpe_cash_transactions
+            """INSERT INTO fazle_cash_transactions
                    (txn_ref, employee_id, amount, txn_date, txn_category,
                     accounting_period, created_by, source, transaction_status, is_reversal)
                VALUES ('fpe-rev-x',$1,-400,'2026-08-30','advance','2026-08','sys',
                        'manual','final',TRUE) RETURNING id""", emp)
         deleted = await conn.fetchval(
-            """INSERT INTO fpe_cash_transactions
+            """INSERT INTO fazle_cash_transactions
                    (txn_ref, employee_id, amount, txn_date, txn_category,
                     accounting_period, created_by, source, transaction_status,
                     is_reversal, deleted_at, deleted_by)
@@ -384,7 +384,7 @@ async def test_A_new_relay_event_identical_body_two_txns(test_db_pool):
         assert await _count_txns(conn, "payment-relay-send:93201:") == 1
         assert await _count_txns(conn, "payment-relay-send:93202:") == 1
         total = await conn.fetchval(
-            "SELECT count(*) FROM fpe_cash_transactions "
+            "SELECT count(*) FROM fazle_cash_transactions "
             "WHERE source_channel=$1 AND source_message_id LIKE 'payment-relay-send:932%'",
             RELAY_PURPOSE,
         )
@@ -404,7 +404,7 @@ async def test_A_proof1_same_original_stanza_id_is_suppressed(test_db_pool):
 
     async with test_db_pool.acquire() as conn:
         ref = await conn.fetchval(
-            "SELECT metadata->>'relay_inbound_message_ref' FROM fpe_cash_transactions "
+            "SELECT metadata->>'relay_inbound_message_ref' FROM fazle_cash_transactions "
             "WHERE source_message_id='payment-relay-send:93301:0'")
         assert ref == "WAMID93301"
         # the FPE worker later re-sees the owner's original message: same stanza id
@@ -475,7 +475,7 @@ async def test_A_proof6_sent_queue_row_but_not_booked_not_suppressed(test_db_poo
                        'bridge2:8801844836824','payment-relay:bridge2:WAMID93601')""",
             body, RELAY_PURPOSE, now,
         )
-        # no fpe_cash_transactions row for 93601
+        # no fazle_cash_transactions row for 93601
         assert await is_relay_payment_already_accounted(
             body, conn=conn, stanza_id="WAMID93601", message_ts=now + timedelta(seconds=3)) is False
 
@@ -514,7 +514,7 @@ async def test_B_rollback_removes_just_created_employee(test_db_pool, monkeypatc
 
     async with test_db_pool.acquire() as conn:
         before = await conn.fetchval(
-            "SELECT count(*) FROM fpe_employees WHERE primary_phone=$1 OR employee_id_phone=$1", phone)
+            "SELECT count(*) FROM fazle_employees WHERE primary_phone=$1 OR employee_id_phone=$1", phone)
     assert before == 0
 
     boom = AsyncMock(side_effect=RuntimeError("deliberate failure before commit"))
@@ -527,7 +527,7 @@ async def test_B_rollback_removes_just_created_employee(test_db_pool, monkeypatc
 
     async with test_db_pool.acquire() as conn:
         after = await conn.fetchval(
-            "SELECT count(*) FROM fpe_employees WHERE primary_phone=$1 OR employee_id_phone=$1", phone)
+            "SELECT count(*) FROM fazle_employees WHERE primary_phone=$1 OR employee_id_phone=$1", phone)
         assert after == 0, "auto-created employee row must NOT survive the rollback"
         assert await _count_txns(conn, "payment-relay-send:93601:") == 0
         assert await conn.fetchval(
@@ -543,7 +543,7 @@ async def test_B_success_commits_all_effects_atomically(test_db_pool):
     # seed an INACTIVE employee so activation is one of the effects
     async with test_db_pool.acquire() as conn:
         emp_id = await conn.fetchval(
-            """INSERT INTO fpe_employees
+            """INSERT INTO fazle_employees
                    (full_name, name_normalized, primary_phone, employee_id_phone,
                     status, created_source, resolution_status, basic_salary)
                VALUES ('Atomic Worker','atomic worker',$1,$1,'inactive',
@@ -557,12 +557,12 @@ async def test_B_success_commits_all_effects_atomically(test_db_pool):
 
     async with test_db_pool.acquire() as conn:
         txn = await conn.fetchrow(
-            "SELECT id, employee_id, amount FROM fpe_cash_transactions "
+            "SELECT id, employee_id, amount FROM fazle_cash_transactions "
             "WHERE source_message_id='payment-relay-send:93701:0'")
         assert txn and txn["employee_id"] == emp_id and txn["amount"] == Decimal("900.00")
-        assert await conn.fetchval("SELECT status FROM fpe_employees WHERE id=$1", emp_id) == "active"
+        assert await conn.fetchval("SELECT status FROM fazle_employees WHERE id=$1", emp_id) == "active"
         assert await conn.fetchval(
-            "SELECT txn_count FROM fpe_employee_ledger WHERE employee_id=$1", emp_id) == 1
+            "SELECT txn_count FROM fazle_employee_ledger WHERE employee_id=$1", emp_id) == 1
         assert await conn.fetchval(
             "SELECT count(*) FROM fpe_accounting_audit_logs "
             "WHERE entity_id=$1 AND action='activate_on_payment'", emp_id) == 1
@@ -580,4 +580,4 @@ async def test_B_existing_caller_without_conn_still_creates(test_db_pool):
     assert r is not None and r.match_type == "auto_created"
     async with test_db_pool.acquire() as conn:
         assert await conn.fetchval(
-            "SELECT count(*) FROM fpe_employees WHERE primary_phone='01715559003'") == 1
+            "SELECT count(*) FROM fazle_employees WHERE primary_phone='01715559003'") == 1

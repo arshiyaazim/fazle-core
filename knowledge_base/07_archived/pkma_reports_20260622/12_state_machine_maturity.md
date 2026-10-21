@@ -78,7 +78,7 @@ Assess the maturity of every state machine identified in the Fazle AI Platform. 
 |---|---|
 | States | 4 documented: pending, sent, rejected, expired |
 | Transitions | 3 documented: PAID/ADVANCE → sent; REJECT → rejected; 24h TTL → expired |
-| Source | `modules/payment_workflow`, `modules/outbound` |
+| Source | `modules/fazle_payment_workflow`, `modules/outbound` |
 | Expiry Mechanism | combined_draft_cleanup scheduler job (hourly) |
 | Production Verified | Yes (Wave-1) |
 | Management Decision | HK-43 (advance keywords force draft); CON-01/02 (payment formula at sent transition) |
@@ -162,7 +162,7 @@ Assess the maturity of every state machine identified in the Fazle AI Platform. 
 |---|---|
 | States | 6 states: pending, approved, rejected, rejected_quality, rejected_fallback, expired |
 | Coverage | rejected_quality and rejected_fallback (new states from draft_quality module) not yet in KB |
-| Source | `modules/drafts`, `modules/draft_quality`, `modules/admin_commands` |
+| Source | `modules/drafts`, `modules/draft_quality`, `modules/fazle_admin_commands` |
 | Production Verified | Partially (draft_quality states added post-audit but not fully documented) |
 | Management Decision | None for draft quality gate |
 | PKCA Report | 09_state_machine_coverage_report.md (SM-07) |

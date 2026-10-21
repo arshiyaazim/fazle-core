@@ -60,7 +60,7 @@ async def main():
 
     # Pick employee
     emp = await fetch_one(
-        "SELECT employee_id, employee_name, employee_mobile FROM wbom_employees "
+        "SELECT employee_id, employee_name, employee_mobile FROM fazle_employees_legacy "
         "WHERE employee_mobile IS NOT NULL ORDER BY employee_id LIMIT 1"
     )
     eid = emp["employee_id"]

@@ -1,4 +1,8 @@
 # Sprint-C0B: Runtime Column Usage Audit Report
+
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 ## Which Columns Are Actually Used in Code vs Dead Columns
 
 **Date:** 2026-06-28  

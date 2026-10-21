@@ -58,7 +58,7 @@ async def _maybe_enrich_full_name(
 ) -> None:
     """Safe profile enrichment (FIX 4 of spec).
 
-    ONLY updates fpe_employees.full_name (and name_normalized) when:
+    ONLY updates fazle_employees.full_name (and name_normalized) when:
       - incoming_name is a valid human name
       - current_name is missing OR phone-like / invalid placeholder.
     Never touches accounting rows. Idempotent.
@@ -72,7 +72,7 @@ async def _maybe_enrich_full_name(
         return  # don't overwrite a good existing name
     name_norm = normalize_name(incoming_name)
     await execute(
-        "UPDATE fpe_employees "
+        "UPDATE fazle_employees "
         "SET full_name = $1, name_normalized = COALESCE($2, name_normalized), updated_at = NOW() "
         "WHERE id = $3",
         incoming_name.strip(), name_norm, employee_id, conn=conn,
@@ -141,7 +141,7 @@ async def match_or_create_employee(
     #     the identity.
     #   * A phone that belongs to an existing row matches it regardless of
     #     active / inactive status (an active row wins when both exist). This
-    #     removes the idx_fpe_emp_phone_unique duplicate-key crash.
+    #     removes the idx_fazle_emp_phone_unique duplicate-key crash.
     #   * A previously unseen identity phone is a NEW person even if the name
     #     matches an existing employee — different canonical phones mean
     #     different people; name spelling never creates or merges a second
@@ -179,7 +179,7 @@ async def match_or_create_employee(
         # 1. Direct column match on the identity phone (id-phone or primary).
         row = await _f1(
             "SELECT id, employee_code, full_name, primary_phone, canonical_employee_id "
-            "FROM fpe_employees "
+            "FROM fazle_employees "
             "WHERE employee_id_phone = ANY($1::text[]) OR primary_phone = ANY($1::text[]) "
             "ORDER BY (status = 'active') DESC, id ASC LIMIT 1",
             identity_variants,
@@ -195,7 +195,7 @@ async def match_or_create_employee(
             SELECT e.id, e.employee_code, e.full_name, e.primary_phone,
                    e.canonical_employee_id
             FROM fpe_employee_aliases a
-            JOIN fpe_employees e ON e.id = a.employee_id
+            JOIN fazle_employees e ON e.id = a.employee_id
             WHERE a.alias_type = 'phone' AND a.alias_value = ANY($1::text[])
             ORDER BY (e.status = 'active') DESC, e.id ASC LIMIT 1
             """,
@@ -207,10 +207,10 @@ async def match_or_create_employee(
             return _make_result(alias_row, "alias_phone")
 
         # 3. WBOM cross-system lookup on the identity phone — bridges a number
-        #    known in wbom_employees but not yet linked into FPE.
+        #    known in fazle_employees_legacy but not yet linked into FPE.
         wbom_row = await _f1(
             "SELECT employee_id, employee_name, employee_mobile "
-            "FROM wbom_employees "
+            "FROM fazle_employees_legacy "
             "WHERE (employee_mobile = ANY($1::text[]) OR bkash_number = ANY($1::text[]) "
             "       OR nagad_number = ANY($1::text[])) "
             "  AND LOWER(status) != 'inactive' "
@@ -221,7 +221,7 @@ async def match_or_create_employee(
             fpe_row = await _f1(
                 "SELECT id, employee_code, full_name, primary_phone, "
                 "canonical_employee_id, wbom_employee_id "
-                "FROM fpe_employees "
+                "FROM fazle_employees "
                 "WHERE employee_id_phone = ANY($1::text[]) OR primary_phone = ANY($1::text[]) "
                 "ORDER BY (status = 'active') DESC, id ASC LIMIT 1",
                 identity_variants,
@@ -232,7 +232,7 @@ async def match_or_create_employee(
                 if not fpe_row.get("wbom_employee_id"):
                     try:
                         await _ex(
-                            """UPDATE fpe_employees
+                            """UPDATE fazle_employees
                                SET wbom_employee_id = $1,
                                    resolution_status = CASE WHEN resolution_status = 'unresolved'
                                                              THEN 'resolved' ELSE resolution_status END
@@ -260,7 +260,7 @@ async def match_or_create_employee(
                     cand = await _f1(
                         """
                         SELECT id, similarity(name_normalized, $1) AS sim
-                        FROM fpe_employees
+                        FROM fazle_employees
                         WHERE name_normalized IS NOT NULL AND status = 'active'
                           AND id <> $2
                           AND similarity(name_normalized, $1) >= 0.80
@@ -291,7 +291,7 @@ async def match_or_create_employee(
         if name_norm:
             row = await _f1(
                 "SELECT id, employee_code, full_name, primary_phone, canonical_employee_id "
-                "FROM fpe_employees "
+                "FROM fazle_employees "
                 "WHERE name_normalized = $1 AND status = 'active'",
                 name_norm,
             )
@@ -302,7 +302,7 @@ async def match_or_create_employee(
             all_emps = await _fa(
                 "SELECT id, employee_code, full_name, name_normalized, "
                 "primary_phone, canonical_employee_id "
-                "FROM fpe_employees WHERE status = 'active'"
+                "FROM fazle_employees WHERE status = 'active'"
             )
             scored = []
             for emp in all_emps:
@@ -364,7 +364,7 @@ async def _resolve_canonical(row: dict, *, conn: Optional[object] = None) -> dic
         canon = await fetch_one(
             "SELECT id, employee_code, full_name, primary_phone, "
             "canonical_employee_id, name_normalized "
-            "FROM fpe_employees WHERE id = $1",
+            "FROM fazle_employees WHERE id = $1",
             canon_id, conn=conn,
         )
         if not canon:
@@ -390,7 +390,7 @@ async def add_alias(employee_id: int, alias_type: str, alias_value: str) -> None
 
 async def get_employee_by_id(employee_id: int) -> Optional[dict]:
     return await fetch_one(
-        "SELECT * FROM fpe_employees WHERE id = $1",
+        "SELECT * FROM fazle_employees WHERE id = $1",
         employee_id,
     )
 
@@ -434,7 +434,7 @@ async def create_employee_manual(
                 """
                 SELECT id, employee_code, full_name, primary_phone, employee_id_phone,
                        canonical_employee_id, status, department, created_source
-                FROM fpe_employees
+                FROM fazle_employees
                 WHERE employee_id_phone = $1 OR primary_phone = $1
                 LIMIT 1
                 """,
@@ -445,7 +445,7 @@ async def create_employee_manual(
 
             new_id = await con.fetchval(
                 """
-                INSERT INTO fpe_employees
+                INSERT INTO fazle_employees
                     (full_name, name_normalized, primary_phone, employee_id_phone,
                      department, status, created_source, resolution_status, basic_salary)
                 VALUES ($1, $2, $3, $4, $5, $6, 'admin_manual_create', 'resolved', 10000)
@@ -460,7 +460,7 @@ async def create_employee_manual(
             )
             code = f"EMP-{new_id:05d}"
             await con.execute(
-                "UPDATE fpe_employees SET employee_code = $1, updated_at = NOW() WHERE id = $2",
+                "UPDATE fazle_employees SET employee_code = $1, updated_at = NOW() WHERE id = $2",
                 code,
                 new_id,
             )
@@ -478,7 +478,7 @@ async def create_employee_manual(
                     name_norm,
                 )
 
-    row = await fetch_one("SELECT * FROM fpe_employees WHERE id = $1", new_id)
+    row = await fetch_one("SELECT * FROM fazle_employees WHERE id = $1", new_id)
     if not row:
         raise ValueError("employee creation failed")
     return dict(row)
@@ -505,7 +505,7 @@ async def _auto_create_employee(
     conn: Optional[object] = None,
 ) -> EmployeeMatchResult:
     """
-    Create a new fpe_employees record and assign EMP-XXXXX code.
+    Create a new fazle_employees record and assign EMP-XXXXX code.
 
     Concurrency: wrapped in a transactional advisory lock keyed on the most
     stable identifier (employee_id_phone → payout_phone → normalized name).
@@ -556,13 +556,13 @@ async def _auto_create_employee(
         if eid_phone:
             # 2026-08-30 (Owner rule): match an existing employee row for
             # this phone regardless of active/inactive status so we never
-            # collide with idx_fpe_emp_phone_unique on an inactive row.
+            # collide with idx_fazle_emp_phone_unique on an inactive row.
             # Match every phone-format variant so a legacy 880-form row is
             # found rather than duplicated.
             existing = await con.fetchrow(
                 "SELECT id, employee_code, full_name, primary_phone, "
                 "canonical_employee_id "
-                "FROM fpe_employees "
+                "FROM fazle_employees "
                 "WHERE (employee_id_phone = ANY($1::text[]) OR primary_phone = ANY($1::text[])) "
                 "ORDER BY (status = 'active') DESC, id ASC LIMIT 1",
                 _eid_variants,
@@ -576,7 +576,7 @@ async def _auto_create_employee(
             existing = await con.fetchrow(
                 "SELECT id, employee_code, full_name, primary_phone, "
                 "canonical_employee_id "
-                "FROM fpe_employees "
+                "FROM fazle_employees "
                 "WHERE name_normalized = $1 AND status = 'active' LIMIT 1",
                 name_norm,
             )
@@ -586,7 +586,7 @@ async def _auto_create_employee(
 
         new_id = await con.fetchval(
             """
-            INSERT INTO fpe_employees
+            INSERT INTO fazle_employees
                 (full_name, name_normalized, primary_phone, employee_id_phone,
                  status, created_source, resolution_status, basic_salary)
             VALUES ($1, $2, $3, $4, 'active', 'whatsapp_auto_create',
@@ -600,23 +600,23 @@ async def _auto_create_employee(
         )
         code_ = f"EMP-{new_id:05d}"
         await con.execute(
-            "UPDATE fpe_employees SET employee_code = $1, "
+            "UPDATE fazle_employees SET employee_code = $1, "
             "updated_at = NOW() WHERE id = $2",
             code_, new_id,
         )
 
         # Link to an existing WBOM record if this phone already has one
         # (mirrors _seed_fpe()'s WBOM->FPE link, reverse direction) --
-        # never creates a new wbom_employees row here, only links to one
+        # never creates a new fazle_employees_legacy row here, only links to one
         # that already exists, to avoid the payroll-eligibility/bot-
         # identity risks a fabricated stub row would carry.
         wbom_match = await con.fetchrow(
-            "SELECT employee_id FROM wbom_employees WHERE employee_mobile = ANY($1::text[]) LIMIT 1",
+            "SELECT employee_id FROM fazle_employees_legacy WHERE employee_mobile = ANY($1::text[]) LIMIT 1",
             _all_phone_variants,
         )
         if wbom_match:
             await con.execute(
-                """UPDATE fpe_employees
+                """UPDATE fazle_employees
                    SET wbom_employee_id = $1,
                        resolution_status = CASE WHEN resolution_status = 'unresolved'
                                                  THEN 'resolved' ELSE resolution_status END

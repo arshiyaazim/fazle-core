@@ -1,3 +1,4 @@
+
 """
 Fazle Payroll Engine — Sync checkpoint management.
 

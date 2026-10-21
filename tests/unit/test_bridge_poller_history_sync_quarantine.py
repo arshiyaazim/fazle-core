@@ -25,7 +25,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from modules.bridge_poller import (
+from modules.fazle_bridge_poller import (
     _fetch_new_messages,
     _bridge_pairing_state,
     _bridge_outbound_held,
@@ -378,7 +378,7 @@ def test_hold_and_f6_branches_continue_before_routing():
     ordering (they sit between the @g.us guard and the media block) and by
     the branch bodies containing no routing call."""
     import inspect
-    from modules import bridge_poller as bp
+    from modules import fazle_bridge_poller as bp
 
     src = inspect.getsource(bp)
     start = src.index('if _held:')

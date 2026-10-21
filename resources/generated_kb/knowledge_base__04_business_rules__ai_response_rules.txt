@@ -40,7 +40,7 @@ If the sender is the configured `ACCOUNTANT_PHONE`, the message is silently skip
 **Condition 3 — Blocked role:**
 If `fazle_contact_roles` contains `role='blocked'` for this phone, the message is silently skipped before any other check.
 
-**Business Rule:** Silent-skip means: no reply, no draft, no AI call, no log to the customer. The message is still saved to `wbom_whatsapp_messages`.
+**Business Rule:** Silent-skip means: no reply, no draft, no AI call, no log to the customer. The message is still saved to `fazle_whatsapp_messages`.
 
 **Example:** A message from "Al-Aqsa Operations Group" display name will never receive an auto-reply.
 

@@ -20,7 +20,7 @@ SELECT
     (CURRENT_DATE - b.bill_date) AS days_outstanding
 FROM wbom_billing_records b
 LEFT JOIN wbom_client_billing_profiles cbp ON cbp.contact_id = b.contact_id
-LEFT JOIN wbom_contacts c ON c.contact_id = b.contact_id
+LEFT JOIN fazle_contacts c ON c.contact_id = b.contact_id
 WHERE b.payment_status = 'Pending'
 ORDER BY b.bill_date ASC;
 

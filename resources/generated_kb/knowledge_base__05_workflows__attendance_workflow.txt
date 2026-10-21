@@ -44,7 +44,7 @@ pending → approved (admin APPROVE <id>) → wbom_attendance saved (ON CONFLICT
 
 **Business Rule:** Attendance is only saved to `wbom_attendance` after admin approval. Duplicate attendance for the same employee on the same date uses `ON CONFLICT UPDATE` (the new record replaces the old one).
 
-**Source Module:** `modules/attendance`, `modules/admin_commands`, `modules/scheduler`
+**Source Module:** `modules/attendance`, `modules/fazle_admin_commands`, `modules/scheduler`
 **Source Function:** `save_attendance()`, `_cmd_approve()`, `expire_stale_drafts()`
 **PKCA Report:** 09_state_machine_coverage_report.md (SM-05)
 **Management Authority:** Production evidence; documented 2026-06-22
@@ -69,7 +69,7 @@ The attendance parser extracts structured data from free-form WhatsApp text mess
 - `25-06-2026` (DD-MM-YYYY)
 - `2026-06-25` (YYYY-MM-DD)
 
-**Business Rule:** If name cannot be extracted, the system attempts to match the sender phone against `wbom_employees`. If no match is found, the draft goes to manual review.
+**Business Rule:** If name cannot be extracted, the system attempts to match the sender phone against `fazle_employees_legacy`. If no match is found, the draft goes to manual review.
 
 **Source Module:** `modules/attendance_parser`
 **Source Function:** `_DATE_PATTERNS`, `_SHIFT_RE`, `_MOBILE_RE`, `_NAME_LABEL_RE`
@@ -96,6 +96,6 @@ The attendance parser extracts structured data from free-form WhatsApp text mess
 
 **Required Role:** operator
 
-**Source Module:** `modules/admin_commands`
+**Source Module:** `modules/fazle_admin_commands`
 **Source Function:** `_cmd_approve()`, `_APPROVE_RE`, `_BN_DIGITS`
 **PKCA Report:** 12_command_coverage_report.md (HK-38, HK-39)

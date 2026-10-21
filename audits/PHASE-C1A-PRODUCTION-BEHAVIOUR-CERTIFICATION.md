@@ -1,5 +1,9 @@
 # Phase-C1A — Canonical Transaction Discovery & Production Behaviour Certification
 
+
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 > **Sprint Type:** Production Behaviour Discovery, Mapping, Verification & Certification ONLY
 > **Status:** COMPLETE
 > **Date:** 2026-06-29
@@ -363,7 +367,7 @@ Ledger Total = Employee Total = Dashboard Total = Transaction Count = Audit Coun
 ### Test Suite Status (from Sprint-C0D)
 
 - **75 tests passed** (DB + unit tests)
-- **2 pre-existing failures** (test_fpe_employee.py — mock/patch mismatch, NOT related to C0D or C1A)
+- **2 pre-existing failures** (test_fazle_employee.py — mock/patch mismatch, NOT related to C0D or C1A)
 - **~373 ERRORs** from missing `apscheduler` module (pre-existing environment issue)
 
 ### Regression Risk Assessment
@@ -386,7 +390,7 @@ Ledger Total = Employee Total = Dashboard Total = Transaction Count = Audit Coun
 
 ### Hidden Path 1: `wbom_fpe_sync.py` — Broken Sync Bridge
 
-**File:** `core/modules/payment_ingest/wbom_fpe_sync.py`
+**File:** `core/modules/fazle_data_sync/__init__.py`
 
 **Evidence:** The module calls `create_transaction()` at line 121 with keyword arguments:
 ```python

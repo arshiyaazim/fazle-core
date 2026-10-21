@@ -1,10 +1,10 @@
 -- Migration 053: Phase B — Conversation Memory Engine (Stage 1)
 --
--- Reuses wbom_whatsapp_messages as the raw message-event source (Part 5.1
+-- Reuses fazle_whatsapp_messages as the raw message-event source (Part 5.1
 -- of the Phase B spec) -- it already has whatsapp_msg_id, direction,
 -- sender_number, received_at, identity_role, metadata_json,
 -- related_program_id. No new message-event table. system_generated is
--- computed on read via the already-deployed modules.bridge_poller.
+-- computed on read via the already-deployed modules.fazle_bridge_poller.
 -- _is_system_generated_notification() (Root Cause 7 fix, commit
 -- 10ee387/0dc2e78), not stored -- it's a pure function of text + the
 -- existing _AUTOMATED_SUFFIX_ANCHOR marker; storing it would just be a
@@ -20,7 +20,7 @@
 --
 -- Idempotency dedup table follows the exact existing pattern already used
 -- twice (processed_bridge_messages, processed_outgoing_escort_messages,
--- both modules/bridge_poller/__init__.py) rather than a new mechanism.
+-- both modules/fazle_bridge_poller/__init__.py) rather than a new mechanism.
 --
 -- Scope decision (Owner-approved 2026-07-19): coexists with, does not
 -- replace, fazle_recruitment_sessions/intake_message() -- that mechanism

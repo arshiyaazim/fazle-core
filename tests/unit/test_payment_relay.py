@@ -7,7 +7,7 @@ Proves the exact rule and its boundaries:
   bridge  = bridge2         (pinned, no failover)
   body    = verbatim original inbound body
   Hermes / LLM decision  = none
-  direct fpe_cash_transactions / employee-ledger mutation = none
+  direct fazle_cash_transactions / employee-ledger mutation = none
   dedup   = transport-level (inbound bridge + inbound message id)
 """
 from __future__ import annotations
@@ -264,7 +264,7 @@ async def test_no_direct_fpe_or_ledger_mutation(monkeypatch, fake_enqueue):
     monkeypatch.setattr(db, "fetch_all", _boom)
     monkeypatch.setattr(db, "fetch_val", _boom)
 
-    import modules.payment_ingest.fpe_bridge as fb
+    import modules.fazle_payment_ingest.fpe_bridge as fb
 
     async def _boom_fpe(*a, **k):  # pragma: no cover
         raise AssertionError("relay created an FPE transaction")
@@ -302,7 +302,7 @@ def test_relay_module_code_has_no_fpe_or_hermes_writes():
     all_refs = imported | names
     forbidden = {
         "create_fpe_transaction_from_ingest", "create_transaction",
-        "fpe_cash_transactions", "employee_ledger", "generate_reply",
+        "fazle_cash_transactions", "employee_ledger", "generate_reply",
         "ingest_admin_cash_entry", "ingest_payment_sms",
     }
     assert not (forbidden & all_refs), f"payment_relay references {forbidden & all_refs}"
@@ -310,7 +310,7 @@ def test_relay_module_code_has_no_fpe_or_hermes_writes():
     assert not any(i.split(".")[0] in {"app"} and "llm" in i for i in imported), imported
     # the ONLY cross-module write surface it may touch is the outbound queue
     assert "modules.outbound" in imported
-    assert "modules.payment_ingest" in imported  # boolean shape detector only
+    assert "modules.fazle_payment_ingest" in imported  # boolean shape detector only
 
 
 # ── No Hermes / LLM call ────────────────────────────────────────────────────

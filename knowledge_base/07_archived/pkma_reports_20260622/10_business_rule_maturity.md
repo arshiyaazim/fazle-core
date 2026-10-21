@@ -97,10 +97,10 @@ Deep assessment of business rule knowledge maturity: are the rules that govern m
 
 | Rule | Value | KB Location | Production Source | Maturity |
 |---|---|---|---|---|
-| Payment formula for advance | 12000/30 × days | payment_business_rules.md | modules/payment_workflow | L3 |
+| Payment formula for advance | 12000/30 × days | payment_business_rules.md | modules/fazle_payment_workflow | L3 |
 | Payment draft TTL | 24h | payment_business_rules.md | combined_draft_cleanup | L2 |
 | Duty day calculation | release_date - boarding_date | release_slip_workflow.md | `_calc_duty_days()` | L2 |
-| ESCORTCONFIRM syntax | `ESCORTCONFIRM <order_id> [CONFIRMED/REJECTED]` | escort_workflow.md | modules/admin_commands | L2 |
+| ESCORTCONFIRM syntax | `ESCORTCONFIRM <order_id> [CONFIRMED/REJECTED]` | escort_workflow.md | modules/fazle_admin_commands | L2 |
 | Payroll state machine | 6 states + ALLOWED_TRANSITIONS | salary_workflow.md | modules/payroll | L3 |
 | Escort state machine | 6 states: draft → completed / cancelled | escort_workflow.md | modules/escort_lifecycle | L3 |
 | Attendance on-conflict | ON CONFLICT UPDATE (upsert) | attendance_workflow.md | modules/attendance | L2 |

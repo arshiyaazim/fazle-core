@@ -1,5 +1,8 @@
 # Fazle Core — Full Audit, Safety Report & Implementation Planning (2026-07-17)
 
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **Read-only audit. No code, schema, or production data was modified while producing this report.** Scope: git history from commit `3582821` (Session 18, 2026-07-16) to `HEAD` (identical commit — no new commits since), full `modules/`/`app/`/`app/static/` tree, and live production DB (read-only `SELECT`s only, via a throwaway Python/asyncpg script since no `psql` client is installed locally).
 
 **Housekeeping note, disclosed for transparency:** early in this session a `bash` command intended to redact `.env` secrets only redacted keys named literally PASSWORD or PASS, missed the differently-named `DATABASE_URL_TEMPLATE` key, and the live Postgres password was echoed once into this session's transcript. No production changes resulted from that mistake, but if this transcript is retained anywhere, treat that password as exposed and consider rotating it again out of caution — same class of issue as the already-remediated 2026-07-12 incident, just self-inflicted this time and caught immediately.
@@ -69,7 +72,7 @@ This was tracked in `knowledge_base/00_governance/escort_destination_field_leak_
 | 906 | `Escort Name: Md Rubel` | true |
 | **938** | `Escort Name: Anik Nath` | **false** *(previously uncounted, and NOT auto_created — see below)* |
 
-**Source messages found** (`wbom_whatsapp_messages`), e.g. message_id 10678 (→ row 900):
+**Source messages found** (`fazle_whatsapp_messages`), e.g. message_id 10678 (→ row 900):
 ```
 Mother Vessel: MV Dubai Eco
 Lighter Vessel: MV HABIBULLAH
@@ -125,7 +128,7 @@ If this number is ever rotated in config, these silently drift out of sync with 
 
 ## 1F. DB schema vs. code consistency
 
-🟢 **No column mismatches found.** Checked live schema against every column referenced in raw SQL for `escort_roster_entries` (29 cols, including `calc_version`, `net_payable`, `advance_deduction` — all present), `wbom_whatsapp_messages` (36 cols, including `sender_number`, `canonical_phone`, `phone_last10` — all present, confirming the 2026-07-13 `sender_number`-vs-`phone` fix holds), `fpe_cash_transactions` (35 cols), `fpe_employees` (18 cols, including `joining_date`, `basic_salary`, `designation`, `wbom_employee_id` — all present, confirming S13-04/S15-01's fixes have matching live columns), `wbom_employees` (15 cols), and `chat_history` (14 cols — matches `sync.py`'s `INSERT_SQL` column list exactly). Last applied migration confirmed live: **`048_chat_history.sql`**; `047` correctly absent (rejected, per `db/MIGRATION_INVENTORY.md`).
+🟢 **No column mismatches found.** Checked live schema against every column referenced in raw SQL for `escort_roster_entries` (29 cols, including `calc_version`, `net_payable`, `advance_deduction` — all present), `fazle_whatsapp_messages` (36 cols, including `sender_number`, `canonical_phone`, `phone_last10` — all present, confirming the 2026-07-13 `sender_number`-vs-`phone` fix holds), `fazle_cash_transactions` (35 cols), `fazle_employees` (18 cols, including `joining_date`, `basic_salary`, `designation`, `wbom_employee_id` — all present, confirming S13-04/S15-01's fixes have matching live columns), `fazle_employees_legacy` (15 cols), and `chat_history` (14 cols — matches `sync.py`'s `INSERT_SQL` column list exactly). Last applied migration confirmed live: **`048_chat_history.sql`**; `047` correctly absent (rejected, per `db/MIGRATION_INVENTORY.md`).
 
 ---
 
@@ -133,7 +136,7 @@ If this number is ever rotated in config, these silently drift out of sync with 
 
 ## Step 1 — Dual-write concurrency hang
 
-**Is the reverted (safe) code in place?** 🟢 Yes, confirmed by direct read of `modules/escort_lifecycle/__init__.py:359-387` — a single atomic `INSERT INTO escort_roster_entries (...) SELECT ... FROM wbom_escort_programs p JOIN wbom_employees e ... JOIN fazle_payment_drafts d ... WHERE p.program_id=$1 AND d.id=$4 ON CONFLICT (program_id) DO UPDATE SET ...` — exactly the pre-refactor shape the queue doc describes.
+**Is the reverted (safe) code in place?** 🟢 Yes, confirmed by direct read of `modules/escort_lifecycle/__init__.py:359-387` — a single atomic `INSERT INTO escort_roster_entries (...) SELECT ... FROM wbom_escort_programs p JOIN fazle_employees_legacy e ... JOIN fazle_payment_drafts d ... WHERE p.program_id=$1 AND d.id=$4 ON CONFLICT (program_id) DO UPDATE SET ...` — exactly the pre-refactor shape the queue doc describes.
 
 **Has any out-of-queue commit touched this file since the revert?** No — Part 1A's out-of-queue commit scan did not flag `modules/escort_lifecycle/__init__.py`.
 
@@ -179,7 +182,7 @@ Already fully investigated in §1C above — **confirmed reproducible, root caus
 
 **UPDATE (2026-07-17, later same day, recorded in `management_decisions.md` Session 19 Step 4 correction):** this section's premise — that the service was undeployed and blocked on sudo — turned out to be wrong. When the install commands below were run, `chat-sync.service` was discovered **already `active (running)` since 2026-07-15 23:28:28**, installed outside any recorded session, with `chat_history` already holding 9,156 healthy rows spanning the full ~2-day gap and zero errors in its journal. The commands below are kept as-written for historical accuracy (this is what the audit recommended at the time); see the governance doc for the corrected timeline and evidence.
 
-**What `sync.py` does** (read in full, `~/chat_sync_staging/sync.py`): a standalone, non-fazle-core-importing daemon. Every 15-30s (`CHAT_SYNC_POLL_INTERVAL_S`, default 20s) it reads new rows from `wbom_whatsapp_messages` (inbound only, cursor = `MAX(source_id)` already synced) and `fazle_outbound_queue` (outbound, status `sent`/`failed`/`dlq` only — deliberately never reads outbound from `wbom_whatsapp_messages`, to avoid double-counting against the auto-send path), and `INSERT ... ON CONFLICT (source_table, source_id) DO NOTHING` into `chat_history`. Purely additive; the file's own docstring states it never writes anywhere else.
+**What `sync.py` does** (read in full, `~/chat_sync_staging/sync.py`): a standalone, non-fazle-core-importing daemon. Every 15-30s (`CHAT_SYNC_POLL_INTERVAL_S`, default 20s) it reads new rows from `fazle_whatsapp_messages` (inbound only, cursor = `MAX(source_id)` already synced) and `fazle_outbound_queue` (outbound, status `sent`/`failed`/`dlq` only — deliberately never reads outbound from `fazle_whatsapp_messages`, to avoid double-counting against the auto-send path), and `INSERT ... ON CONFLICT (source_table, source_id) DO NOTHING` into `chat_history`. Purely additive; the file's own docstring states it never writes anywhere else.
 
 **Exact sudo commands to install:**
 ```bash
@@ -192,7 +195,7 @@ sudo systemctl status chat-sync.service
 journalctl -u chat-sync.service -f   # watch first sync cycle
 ```
 
-**Risk to existing payroll/escort/social-reply flows: 🟢 low.** It only ever `SELECT`s from `wbom_whatsapp_messages`/`fazle_outbound_queue` and `INSERT`s into `chat_history` — a table confirmed live (14 columns, matches `sync.py`'s insert list exactly, §1F) that no other running code path writes to or reads from (it exists solely as this sync's write target, per the file's own docstring and `db/MIGRATION_INVENTORY.md`'s note that "`chat_history`... is not read or written by any fazle-core application code"). No shared-table contention with the main app.
+**Risk to existing payroll/escort/social-reply flows: 🟢 low.** It only ever `SELECT`s from `fazle_whatsapp_messages`/`fazle_outbound_queue` and `INSERT`s into `chat_history` — a table confirmed live (14 columns, matches `sync.py`'s insert list exactly, §1F) that no other running code path writes to or reads from (it exists solely as this sync's write target, per the file's own docstring and `db/MIGRATION_INVENTORY.md`'s note that "`chat_history`... is not read or written by any fazle-core application code"). No shared-table contention with the main app.
 
 **Rollback:**
 ```bash
@@ -337,8 +340,8 @@ Inbound message → _handle_bridge_event()/_poll_bridge()
 | Table | Primary owner (writer) | Other writers | Readers-only |
 |---|---|---|---|
 | `escort_roster_entries` | `modules/escort_roster/db.py` (`sync_program_to_roster`, `create_roster_entry`) | `modules/escort_lifecycle/__init__.py` (raw duplicate INSERT) | `escort_roster/routes.py` (counts/summaries) |
-| `wbom_whatsapp_messages` | `modules/bridge_poller` (`_save_message`) | — | `modules/admin_commands/nl_search.py`, `modules/recruitment_detector`, `chat_sync` (staged, not yet live) |
-| `fpe_cash_transactions` | `modules/fazle_payroll_engine` | `modules/payroll` (`mark_paid()`, S13-02) | `modules/ai_readonly_tools` |
+| `fazle_whatsapp_messages` | `modules/fazle_bridge_poller` (`_save_message`) | — | `modules/admin_commands/nl_search.py`, `modules/recruitment_detector`, `chat_sync` (staged, not yet live) |
+| `fazle_cash_transactions` | `modules/fazle_payroll_engine` | `modules/payroll` (`mark_paid()`, S13-02) | `modules/ai_readonly_tools` |
 | `escort_roster_entries`/`wbom_escort_programs` | (see above) | one-off Session 16-18 cleanup scripts (governance-logged) | — |
 | `chat_history` | `~/chat_sync_staging/sync.py` (staged, not yet deployed) | none | none (no fazle-core code reads it yet) |
 

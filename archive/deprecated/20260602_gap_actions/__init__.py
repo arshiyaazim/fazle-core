@@ -173,7 +173,7 @@ async def _pending_draft_for_recipient(recipient: str) -> int | None:
           AND COALESCE(d.status, 'pending') IN ('pending', 'approved')
           AND NOT EXISTS (
               SELECT 1
-              FROM wbom_whatsapp_messages m
+              FROM fazle_whatsapp_messages m
               WHERE m.canonical_phone = $1
                 AND m.direction = 'inbound'
                 AND m.received_at > d.created_at

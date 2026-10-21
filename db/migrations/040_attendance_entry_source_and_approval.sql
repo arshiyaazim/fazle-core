@@ -48,26 +48,26 @@ ALTER TABLE wbom_attendance ADD COLUMN IF NOT EXISTS source_draft_id INTEGER;
 
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'wbom_attendance_entry_source_check') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fazle_attendance_entry_source_check') THEN
         ALTER TABLE wbom_attendance
-            ADD CONSTRAINT wbom_attendance_entry_source_check
+            ADD CONSTRAINT fazle_attendance_entry_source_check
             CHECK (entry_source IN ('manual_office','message_parser','whatsapp_escort','escort_release','system','legacy'));
     END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'wbom_attendance_approval_channel_check') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fazle_attendance_approval_channel_check') THEN
         ALTER TABLE wbom_attendance
-            ADD CONSTRAINT wbom_attendance_approval_channel_check
+            ADD CONSTRAINT fazle_attendance_approval_channel_check
             CHECK (approval_channel IS NULL OR approval_channel IN ('manual_direct','whatsapp_message','frontend_review_queue','system'));
     END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'wbom_attendance_source_draft_id_fkey') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fazle_attendance_source_draft_id_fkey') THEN
         ALTER TABLE wbom_attendance
-            ADD CONSTRAINT wbom_attendance_source_draft_id_fkey
+            ADD CONSTRAINT fazle_attendance_source_draft_id_fkey
             FOREIGN KEY (source_draft_id) REFERENCES fazle_draft_replies(id);
     END IF;
 END $$;
 
 -- Confirmed pre-existing (not created here, just documented): UNIQUE
 -- (employee_id, attendance_date) already exists in production as
--- wbom_attendance_employee_id_attendance_date_key, which is exactly the
+-- fazle_attendance_employee_id_attendance_date_key, which is exactly the
 -- duplicate-prevention rule needed (one attendance result per employee per
 -- date) -- save_attendance()'s existing ON CONFLICT clause already relies
 -- on it. No new constraint added; this migration does not touch it.

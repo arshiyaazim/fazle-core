@@ -2,12 +2,12 @@
 -- Applied live: 2026-06-19 (VPS direct ALTER — column was missing, causing
 --   asyncpg.exceptions.UndefinedColumnError that generated 29 MB of error logs)
 -- Root cause: escort_roster_entries stored escort_name/escort_mobile as text
---   but had no FK back to wbom_employees; payroll and lifecycle modules expected
+--   but had no FK back to fazle_employees_legacy; payroll and lifecycle modules expected
 --   the FK to exist.
 
 ALTER TABLE escort_roster_entries
     ADD COLUMN IF NOT EXISTS escort_employee_id INTEGER
-        REFERENCES wbom_employees(employee_id)
+        REFERENCES fazle_employees_legacy(employee_id)
         ON DELETE SET NULL ON UPDATE CASCADE;
 
 CREATE INDEX IF NOT EXISTS idx_ere_escort_employee

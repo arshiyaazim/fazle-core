@@ -320,7 +320,7 @@ async def test_H_accountant_report_never_reaches_semantic_gate(monkeypatch, flag
     gate_mock = AsyncMock(return_value=SemanticDecision(domain="no_match"))
     admin_mock = AsyncMock(return_value="report handled")
     with (
-        patch("modules.admin_commands.is_report_command", MagicMock(return_value=True)),
+        patch("modules.fazle_admin_commands.is_report_command", MagicMock(return_value=True)),
         patch.object(router, "process_admin_command", admin_mock),
         patch("modules.hermes_dispatch.semantic_gate", gate_mock),
         patch("modules.preflight_guard.is_feature_active", _flags(task13_recruitment_authoritative=flag_on, task13_employee_authoritative=flag_on)),
@@ -554,7 +554,7 @@ async def test_P_no_double_reply_when_authoritative_path_succeeds(monkeypatch):
     ):
         # NOTE: intentionally reusing test_A's exact literal message text
         # (rather than a shortened variant) -- the deterministic rule
-        # classifier (modules.intent.classify(), consulted at §5 whenever
+        # classifier (modules.fazle_intent.classify(), consulted at §5 whenever
         # ai.classify_intent_llm() returns "unknown", exactly as mocked
         # here) classifies a *shorter* variant of this message as
         # intent="recruitment", which trips the PRE-EXISTING, Task-13-

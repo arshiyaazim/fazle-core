@@ -16,7 +16,7 @@ _is_system_generated_notification()) remains the caller's responsibility,
 unchanged, upstream of anything in this module.
 
 Reuses rather than duplicates:
-- wbom_whatsapp_messages as the raw message source (no new message-event
+- fazle_whatsapp_messages as the raw message source (no new message-event
   table -- see migration 053's own header comment).
 - modules.escort._normalize_mobile for BD phone normalization (not a
   third normalization implementation).
@@ -61,7 +61,7 @@ def _ttl_for_domain(business_domain: str) -> timedelta:
 
 async def is_message_processed(message_id: str, bridge: str) -> bool:
     """Idempotency check -- same (message_id, bridge) pattern as
-    modules.bridge_poller's own processed_*_messages tables."""
+    modules.fazle_bridge_poller's own processed_*_messages tables."""
     if not message_id:
         return False
     val = await fetch_val(

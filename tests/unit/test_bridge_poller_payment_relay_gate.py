@@ -1,4 +1,4 @@
-"""Unit tests — modules.bridge_poller.process_bridge_inbound wiring of the
+"""Unit tests — modules.fazle_bridge_poller.process_bridge_inbound wiring of the
 deterministic owner->accountant payment relay.
 
 Proves:
@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import pytest
 
-import modules.bridge_poller as bp
+import modules.fazle_bridge_poller as bp
 import modules.payment_relay as pr
 import modules.outbound as outbound
 

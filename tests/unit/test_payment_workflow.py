@@ -1,4 +1,4 @@
-"""Unit tests — modules/payment_workflow"""
+"""Unit tests — modules/fazle_payment_workflow"""
 from __future__ import annotations
 
 import pytest
@@ -24,7 +24,7 @@ class TestIsAdvanceRequest:
         "বিপদে পড়েছি",
     ])
     def test_advance_keywords_detected(self, text):
-        from modules.payment_workflow import is_advance_request
+        from modules.fazle_payment_workflow import is_advance_request
         assert is_advance_request(text) is True
 
     @pytest.mark.parametrize("text", [
@@ -35,7 +35,7 @@ class TestIsAdvanceRequest:
         "আমি ভালো আছি",
     ])
     def test_non_advance_not_detected(self, text):
-        from modules.payment_workflow import is_advance_request
+        from modules.fazle_payment_workflow import is_advance_request
         assert is_advance_request(text) is False
 
 
@@ -48,7 +48,7 @@ class TestCreateEscortPaymentDraft:
         import app.database as db_module
         db_module._pool = test_db_pool
 
-        from modules.payment_workflow import create_escort_payment_draft
+        from modules.fazle_payment_workflow import create_escort_payment_draft
 
         program_id = seed_escort_program["program_id"]
         employee_id = seed_employee["employee_id"]
@@ -86,7 +86,7 @@ class TestCreateEscortPaymentDraft:
     ):
         import app.database as db_module
         db_module._pool = test_db_pool
-        from modules.payment_workflow import create_escort_payment_draft
+        from modules.fazle_payment_workflow import create_escort_payment_draft
 
         employee_id = seed_employee["employee_id"]
         fpe_employee_id = seed_fpe_employee["id"]
@@ -97,7 +97,7 @@ class TestCreateEscortPaymentDraft:
             # create_escort_payment_draft()'s advances resolution reads
             # (2026-07-18 fix). Link it explicitly.
             await conn.execute(
-                "UPDATE fpe_employees SET wbom_employee_id=$1 WHERE id=$2",
+                "UPDATE fazle_employees SET wbom_employee_id=$1 WHERE id=$2",
                 employee_id, fpe_employee_id,
             )
             await conn.execute(
@@ -108,7 +108,7 @@ class TestCreateEscortPaymentDraft:
                 program_id,
             )
             await conn.execute(
-                """INSERT INTO fpe_cash_transactions
+                """INSERT INTO fazle_cash_transactions
                        (txn_ref, employee_id, program_id, txn_category, amount,
                         payout_method, txn_date, transaction_status, source, source_channel)
                    VALUES ($1, $2, $3, 'advance', 300, 'cash', CURRENT_DATE, 'final', 'test', 'test')""",
@@ -132,7 +132,7 @@ class TestCreateEscortPaymentDraft:
         import app.database as db_module
         db_module._pool = test_db_pool
 
-        from modules.payment_workflow import create_escort_payment_draft
+        from modules.fazle_payment_workflow import create_escort_payment_draft
 
         employee_id = seed_employee["employee_id"]
         fpe_employee_id = seed_fpe_employee["id"]
@@ -143,11 +143,11 @@ class TestCreateEscortPaymentDraft:
             # seed_fpe_employee sets canonical_employee_id, not
             # wbom_employee_id -- link it explicitly (2026-07-18 fix).
             await conn.execute(
-                "UPDATE fpe_employees SET wbom_employee_id=$1 WHERE id=$2",
+                "UPDATE fazle_employees SET wbom_employee_id=$1 WHERE id=$2",
                 employee_id, fpe_employee_id,
             )
             await conn.execute("""
-                INSERT INTO fpe_cash_transactions
+                INSERT INTO fazle_cash_transactions
                     (txn_ref, employee_id, program_id, txn_category, amount, payout_method,
                      txn_date, transaction_status, source, source_channel)
                 VALUES ($1, $2, $3, 'advance', 500.00, 'cash', CURRENT_DATE, 'final', 'test', 'test')
@@ -176,7 +176,7 @@ class TestCreateEscortPaymentDraft:
 
 
 class TestFinalizePayment:
-    """Test payment finalization: writes to fpe_cash_transactions."""
+    """Test payment finalization: writes to fazle_cash_transactions."""
 
     async def test_finalize_creates_transaction(
         self, test_db_pool, seed_employee, seed_fpe_employee, seed_payment_draft
@@ -184,7 +184,7 @@ class TestFinalizePayment:
         import app.database as db_module
         db_module._pool = test_db_pool
 
-        from modules.payment_workflow import finalize_payment
+        from modules.fazle_payment_workflow import finalize_payment
 
         draft_id = seed_payment_draft["id"]
         result = await finalize_payment(
@@ -199,7 +199,7 @@ class TestFinalizePayment:
         # Check canonical transaction was inserted
         async with test_db_pool.acquire() as conn:
             txn = await conn.fetchrow(
-                "SELECT * FROM fpe_cash_transactions WHERE employee_id=$1 LIMIT 1",
+                "SELECT * FROM fazle_cash_transactions WHERE employee_id=$1 LIMIT 1",
                 seed_fpe_employee["id"],
             )
         assert txn is not None
@@ -213,7 +213,7 @@ class TestFinalizePayment:
         import app.database as db_module
         db_module._pool = test_db_pool
 
-        from modules.payment_workflow import finalize_payment
+        from modules.fazle_payment_workflow import finalize_payment
 
         draft_id = seed_payment_draft["id"]
         await finalize_payment(
@@ -236,14 +236,14 @@ class TestFinalizePayment:
     ):
         import app.database as db_module
         db_module._pool = test_db_pool
-        from modules.payment_workflow import finalize_payment
+        from modules.fazle_payment_workflow import finalize_payment
 
         draft_id = seed_payment_draft["id"]
         await finalize_payment(draft_id, 1500, "cash")
         second = await finalize_payment(draft_id, 1500, "cash")
         async with test_db_pool.acquire() as conn:
             count = await conn.fetchval(
-                "SELECT COUNT(*) FROM fpe_cash_transactions WHERE source_message_id=$1",
+                "SELECT COUNT(*) FROM fazle_cash_transactions WHERE source_message_id=$1",
                 f"payment-draft:{draft_id}",
             )
         assert second["already_finalized"] is True
@@ -253,7 +253,7 @@ class TestFinalizePayment:
         import app.database as db_module
         db_module._pool = test_db_pool
 
-        from modules.payment_workflow import finalize_payment
+        from modules.fazle_payment_workflow import finalize_payment
 
         result = await finalize_payment(
             draft_id=99999,
@@ -271,7 +271,7 @@ class TestCreateAdvanceRequestDraft:
         import app.database as db_module
         db_module._pool = test_db_pool
 
-        from modules.payment_workflow import create_advance_request_draft
+        from modules.fazle_payment_workflow import create_advance_request_draft
 
         result = await create_advance_request_draft(
             employee_id=seed_employee["employee_id"],

@@ -26,7 +26,7 @@ from modules.conversation_canonical import (
 async def provenance_db(test_db_pool, monkeypatch):
     """Real disposable PostgreSQL; every transport/provider is mocked."""
     import app.database as db
-    from modules import outbound, bridge_poller as bp
+    from modules import outbound, fazle_bridge_poller as bp
     monkeypatch.setattr(db, "_pool", test_db_pool)
     monkeypatch.setattr(outbound, "_pairing_held", AsyncMock(return_value=(False, "")))
     from modules.identity_role_authorization import AuthorizationDecision
@@ -38,7 +38,7 @@ async def provenance_db(test_db_pool, monkeypatch):
 
 
 async def _provenance_inbound(source="bridge1", reference="source-1", text="hello", phone="8801700999000"):
-    from modules.bridge_poller import _save_raw_core_copy
+    from modules.fazle_bridge_poller import _save_raw_core_copy
     mid = await _save_raw_core_copy(source, {"id": reference, "content": text, "type": "text"}, phone, text)
     assert mid is not None
     return mid
@@ -64,7 +64,7 @@ async def test_inbound_provenance_multiple_actions_and_replay(provenance_db, sou
         q2 = await enqueue("8801700999003", "admin notice", source_bridge=source, purpose="admin-notify")
     async with inbound_execution(mid, source, "source-1") as duplicate:
         assert duplicate is None
-    row = dict(await provenance_db.fetchrow("SELECT message_id, metadata_json->'provenance' AS provenance FROM wbom_whatsapp_messages WHERE message_id=$1", mid))
+    row = dict(await provenance_db.fetchrow("SELECT message_id, metadata_json->'provenance' AS provenance FROM fazle_whatsapp_messages WHERE message_id=$1", mid))
     view = (await attach_message_provenance([row]))[0]
     assert view["provenance"]["processing_outcome"] == "done"
     assert {d["id"] for d in view["drafts"]} == {draft}
@@ -157,7 +157,7 @@ async def test_queue_retry_and_dead_letter_preserve_processing(provenance_db, mo
     assert (await outbound.sweep_once())["dlq"] == 1
     row = dict(await provenance_db.fetchrow("SELECT * FROM fazle_outbound_queue WHERE id=$1", qid))
     assert outbound.delivery_details(row)["definitively_failed"]
-    assert await provenance_db.fetchval("SELECT metadata_json->'provenance'->>'processing_outcome' FROM wbom_whatsapp_messages WHERE message_id=$1", mid) == "done"
+    assert await provenance_db.fetchval("SELECT metadata_json->'provenance'->>'processing_outcome' FROM fazle_whatsapp_messages WHERE message_id=$1", mid) == "done"
 
 
 @pytest.mark.asyncio
@@ -169,14 +169,14 @@ async def test_queue_retry_and_dead_letter_preserve_processing(provenance_db, mo
     ("8801700999000", "hello", "", True, "pairing_hold"),
 ])
 async def test_provenance_suppression_never_routes(provenance_db, monkeypatch, phone, text, chat, held, reason):
-    from modules import bridge_poller as bp, outbound
+    from modules import fazle_bridge_poller as bp, outbound
     router = AsyncMock()
     monkeypatch.setattr(bp, "process_message", router)
     monkeypatch.setattr(outbound, "_pairing_held", AsyncMock(return_value=(held, "held")))
     mid = await _provenance_inbound(text=text, phone=phone)
     await bp.process_bridge_inbound("bridge1", phone, text, message_id="source-1", core_message_id=mid, chat_jid=chat)
     router.assert_not_awaited()
-    stored = json.loads(await provenance_db.fetchval("SELECT metadata_json->'provenance' FROM wbom_whatsapp_messages WHERE message_id=$1", mid))
+    stored = json.loads(await provenance_db.fetchval("SELECT metadata_json->'provenance' FROM fazle_whatsapp_messages WHERE message_id=$1", mid))
     assert stored["processing_outcome"] == "skipped"
     assert stored["actions"] == [{"kind": "suppression", "reason": reason}]
     assert await provenance_db.fetchval("SELECT count(*) FROM fazle_outbound_queue") == 0
@@ -194,7 +194,7 @@ async def test_failure_cannot_replay_partial_business_actions(provenance_db):
     async with inbound_execution(mid, "bridge1", "source-1") as replay:
         assert replay is None
     assert await provenance_db.fetchval("SELECT count(*) FROM wbom_candidates") == 1
-    assert await provenance_db.fetchval("SELECT metadata_json->'provenance'->>'processing_outcome' FROM wbom_whatsapp_messages WHERE message_id=$1", mid) == "failed"
+    assert await provenance_db.fetchval("SELECT metadata_json->'provenance'->>'processing_outcome' FROM fazle_whatsapp_messages WHERE message_id=$1", mid) == "failed"
 
 
 @pytest.mark.asyncio
@@ -229,7 +229,7 @@ async def test_concurrent_replay_claims_once_and_detached_reply_keeps_source(pro
     assert claimed == [mid]
     release.set()
     qid = await deferred[0]
-    row = dict(await provenance_db.fetchrow("SELECT message_id, metadata_json->'provenance' AS provenance FROM wbom_whatsapp_messages WHERE message_id=$1", mid))
+    row = dict(await provenance_db.fetchrow("SELECT message_id, metadata_json->'provenance' AS provenance FROM fazle_whatsapp_messages WHERE message_id=$1", mid))
     viewed = (await attach_message_provenance([row]))[0]
     assert [q["id"] for q in viewed["outbound"]] == [qid]
     assert viewed["provenance"]["processing_outcome"] == "done"
@@ -244,7 +244,7 @@ async def test_failed_queue_insert_is_audited_without_false_reference(provenance
     with pytest.raises(RuntimeError, match="queue unavailable"):
         async with inbound_execution(mid, "bridge1", "source-1"):
             await outbound.enqueue("8801700999000", "reply", source_bridge="bridge1")
-    stored = json.loads(await provenance_db.fetchval("SELECT metadata_json->'provenance' FROM wbom_whatsapp_messages WHERE message_id=$1", mid))
+    stored = json.loads(await provenance_db.fetchval("SELECT metadata_json->'provenance' FROM fazle_whatsapp_messages WHERE message_id=$1", mid))
     assert stored["processing_outcome"] == "failed"
     assert stored["actions"][0]["outcome"] == "enqueue_failed"
     assert not stored["actions"][0].get("queue_id")
@@ -255,7 +255,7 @@ async def test_poller_finalizes_media_and_suppression_before_router(provenance_d
     import asyncio
     from datetime import datetime, timezone, timedelta
     from app.bridge import BridgeClient
-    from modules import bridge_poller as bp
+    from modules import fazle_bridge_poller as bp
     from httpx import Response
     now = datetime.now(timezone.utc)
     phone = "8801700999000"
@@ -272,8 +272,8 @@ async def test_poller_finalizes_media_and_suppression_before_router(provenance_d
     monkeypatch.setattr(bp, "_fetch_new_messages", lambda *a: (messages + messages, now))
     monkeypatch.setattr(bp, "_set_cursor", AsyncMock(side_effect=asyncio.CancelledError))
     monkeypatch.setattr(bp, "_bridge_outbound_held", AsyncMock(return_value=(False, "")))
-    monkeypatch.setattr("modules.group_identity.list_approved_group_jids", AsyncMock(return_value=["123@g.us"]))
-    monkeypatch.setattr("modules.identity_brain.detect_identity", AsyncMock(return_value={
+    monkeypatch.setattr("modules.fazle_group_identity.list_approved_group_jids", AsyncMock(return_value=["123@g.us"]))
+    monkeypatch.setattr("modules.fazle_identity_brain.detect_identity", AsyncMock(return_value={
         "identity_role": "unknown", "identity_confidence": 0, "display_name": ""}))
     monkeypatch.setattr("modules.ocr_processor.process_document", AsyncMock(return_value={
         "doc_type": "candidate_cv", "auto_send_safe": True, "reply": "Document received.",
@@ -290,7 +290,7 @@ async def test_poller_finalizes_media_and_suppression_before_router(provenance_d
     await bp._poll_bridge({"name": "bridge1", "messages_db": str(tmp_path / "messages.db"),
                            "whatsapp_db": str(tmp_path / "whatsapp.db"), "get_bridge": lambda: bridge})
     route.assert_not_awaited()
-    rows = await provenance_db.fetch("SELECT source_message_ref, metadata_json FROM wbom_whatsapp_messages WHERE direction='inbound'")
+    rows = await provenance_db.fetch("SELECT source_message_ref, metadata_json FROM fazle_whatsapp_messages WHERE direction='inbound'")
     assert len(rows) == 5
     outcomes = {r["source_message_ref"]: json.loads(r["metadata_json"])["provenance"] for r in rows}
     assert all(outcomes[key]["processing_outcome"] == "skipped" for key in ("group", "system", "media", "lid"))
@@ -330,7 +330,7 @@ async def test_finalization_failure_is_reconciled_without_replay(provenance_db, 
     assert recovered["replayed"] is False
     row = await provenance_db.fetchrow(
         "SELECT is_processed, metadata_json->'provenance' AS provenance "
-        "FROM wbom_whatsapp_messages WHERE message_id=$1",
+        "FROM fazle_whatsapp_messages WHERE message_id=$1",
         mid,
     )
     provenance = row["provenance"]
@@ -364,7 +364,6 @@ async def test_meta_receipt_zero_or_duplicate_provider_id_is_ignored(provenance_
         assert "delivery_receipt" not in meta
 
 # --- classify_actor priority order ---
-
 def test_priority_1_explicit_actor_type_meta_json():
     """Priority 1: explicit actor_type in meta_json wins with confidence=1.0."""
     label, conf = classify_actor({

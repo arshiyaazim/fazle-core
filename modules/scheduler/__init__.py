@@ -146,7 +146,7 @@ async def job_daily_payroll() -> dict:
     creates no wbom_payroll_runs rows, no cash transactions, no ledger
     entries, and does not call compute_all_for_period at all. Escort payroll
     is entirely unaffected either way -- this job has never computed escort
-    release pay (that is modules.payment_workflow's separate, real-time
+    release pay (that is modules.fazle_payment_workflow's separate, real-time
     flow triggered on release, not this scheduled job).
     """
     from app.config import get_settings
@@ -344,7 +344,7 @@ async def job_payment_reconciliation() -> dict:
                 continue
             tail = digits[-11:]
             emp = await fetch_one(
-                "SELECT employee_id FROM wbom_employees "
+                "SELECT employee_id FROM fazle_employees_legacy "
                 "WHERE regexp_replace(employee_mobile,'\\D','','g') LIKE '%'||$1 "
                 "   OR regexp_replace(COALESCE(bkash_number,''),'\\D','','g') LIKE '%'||$1 "
                 "   OR regexp_replace(COALESCE(nagad_number,''),'\\D','','g') LIKE '%'||$1 "
@@ -511,7 +511,7 @@ async def job_daily_memory_review() -> dict:
     """
     rows = await fetch_all(
         """SELECT DISTINCT ON (sender_number) sender_number
-           FROM wbom_whatsapp_messages
+           FROM fazle_whatsapp_messages
            WHERE direction = 'inbound'
              AND sender_number IS NOT NULL
              AND received_at > NOW() - INTERVAL '24 hours'
@@ -531,7 +531,7 @@ async def job_daily_memory_review() -> dict:
         # Last 6 messages (3 turns) for this sender, oldest-first
         msgs = await fetch_all(
             """SELECT message_body, direction
-               FROM wbom_whatsapp_messages
+               FROM fazle_whatsapp_messages
                WHERE sender_number = $1
                ORDER BY received_at DESC
                LIMIT 6""",
@@ -625,7 +625,7 @@ def start_scheduler() -> Optional[AsyncIOScheduler]:
     except Exception as e:
         log.warning(f"[scheduler] Stage G report jobs unavailable: {e}")
 
-    # 2026-07-22 — daily phone-contact-book <-> wbom_contacts sync
+    # 2026-07-22 — daily phone-contact-book <-> fazle_contacts sync
     try:
         from modules.contact_sync import job_daily_contact_sync
         register_job("daily_contact_sync", job_daily_contact_sync)
@@ -734,7 +734,7 @@ def start_scheduler() -> Optional[AsyncIOScheduler]:
                            id="payment_inactivity_sweep", replace_existing=True)
 
     # DEPRECATED 2026-08-04 (Owner decision): the daily bridge-phone-book ->
-    # wbom_contacts sync is disabled. The uploaded CSV is now the authoritative
+    # fazle_contacts sync is disabled. The uploaded CSV is now the authoritative
     # contact-book source (see knowledge_base/00_governance/management_decisions.md);
     # this scheduled job would silently recreate deleted/CSV-not-present contacts
     # from each bridge's own phone address book on its next run. The job stays

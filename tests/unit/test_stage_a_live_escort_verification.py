@@ -65,7 +65,7 @@ Wheat
         # ── A6: identity classification ──
         async with test_db_pool.acquire() as conn:
             msg_row = await conn.fetchrow(
-                "SELECT sender_number, identity_role FROM wbom_whatsapp_messages "
+                "SELECT sender_number, identity_role FROM fazle_whatsapp_messages "
                 "WHERE message_body LIKE $1 ORDER BY message_id DESC LIMIT 1",
                 f"%{unique_marker}%",
             )
@@ -151,7 +151,7 @@ Wheat
 
         async with test_db_pool.acquire() as conn:
             msgs = await conn.fetch(
-                "SELECT message_id FROM wbom_whatsapp_messages WHERE message_body LIKE $1",
+                "SELECT message_id FROM fazle_whatsapp_messages WHERE message_body LIKE $1",
                 f"%{unique_marker}%",
             )
             programs = await conn.fetch(
@@ -205,7 +205,7 @@ Wheat
 
         async with test_db_pool.acquire() as conn:
             msg_row = await conn.fetchrow(
-                "SELECT identity_role FROM wbom_whatsapp_messages "
+                "SELECT identity_role FROM fazle_whatsapp_messages "
                 "WHERE message_body LIKE $1 ORDER BY message_id DESC LIMIT 1",
                 f"%{unique_marker}%",
             )
@@ -277,11 +277,11 @@ Wheat
         async with test_db_pool.acquire() as conn:
             attendance = await conn.fetch(
                 "SELECT 1 FROM wbom_attendance WHERE employee_id IN "
-                "(SELECT employee_id FROM wbom_employees WHERE employee_mobile = $1)",
+                "(SELECT employee_id FROM fazle_employees_legacy WHERE employee_mobile = $1)",
                 sender,
             )
             fpe_txn = await conn.fetch(
-                "SELECT 1 FROM fpe_cash_transactions WHERE employee_phone = $1", sender,
+                "SELECT 1 FROM fazle_cash_transactions WHERE employee_phone = $1", sender,
             )
             contact_role = await conn.fetchrow(
                 "SELECT role FROM fazle_contact_roles WHERE phone = $1", sender,

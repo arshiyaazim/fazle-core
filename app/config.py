@@ -447,7 +447,7 @@ class Settings(BaseSettings):
     # internal_operation, employee_internal (Office/Internal, Stage G6's
     # supervised-draft lane) and security_service_client (Client, Stage G5)
     # were NOT in this list -- confirmed live in canonical history
-    # (wbom_whatsapp_messages) that internal_coordinator-classified senders
+    # (fazle_whatsapp_messages) that internal_coordinator-classified senders
     # had received 25 real autonomous AI-generated outbound replies
     # (workflow_triggered values like 'greeting'/'office_location'/'join' --
     # the exact vocabulary the automated pipeline stamps on its own

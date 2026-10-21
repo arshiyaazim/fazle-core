@@ -24,7 +24,7 @@ All verifications performed by direct source code read (2026-06-23). Each row is
 
 | KB Claim | Article | Code Value | Source File | Status |
 |---|---|---|---|---|
-| `DEFAULT_DAILY_RATE = 400` | payment_business_rules.md | `DEFAULT_DAILY_RATE = 400` | `modules/payment_workflow/__init__.py:36` | ✅ EXACT |
+| `DEFAULT_DAILY_RATE = 400` | payment_business_rules.md | `DEFAULT_DAILY_RATE = 400` | `modules/fazle_payment_workflow/__init__.py:36` | ✅ EXACT |
 | `DEFAULT_PER_PROGRAM_RATE = 400.0` | payroll_module.md | `DEFAULT_PER_PROGRAM_RATE = 400.0` | `modules/payroll/__init__.py:26` | ✅ EXACT |
 | PAY-04 food = ৳150/day | payment_business_rules.md | `food_est = (duty_days * 150)` | `modules/escort_lifecycle/__init__.py:529` | ✅ EXACT |
 | PAY-03 Mongla transport management=৳800 vs code=৳700 | payment_business_rules.md | `(["faridpur", "mongla"], 700)` | `modules/escort_lifecycle/__init__.py:387` | ✅ GAP DOCUMENTED ACCURATELY |
@@ -35,11 +35,11 @@ All verifications performed by direct source code read (2026-06-23). Each row is
 
 | KB Claim | Article | Code Value | Source File | Status |
 |---|---|---|---|---|
-| `BRIDGE_POLL_MIN_S = 1.0` | bridge_poller.md | `BRIDGE_POLL_MIN_S = 1.0` | `modules/bridge_poller/__init__.py:51` | ✅ EXACT |
-| `BRIDGE_POLL_MAX_S = 30.0` | bridge_poller.md | `BRIDGE_POLL_MAX_S = 30.0` | `modules/bridge_poller/__init__.py:52` | ✅ EXACT |
-| `BRIDGE_POLL_BACKOFF = 1.5×` | bridge_poller.md | `BRIDGE_POLL_BACKOFF = 1.5` | `modules/bridge_poller/__init__.py:53` | ✅ EXACT |
-| `REPLY_COOLDOWN = 60s` | bridge_poller.md | `REPLY_COOLDOWN = 60` | `modules/bridge_poller/__init__.py:48` | ✅ EXACT |
-| Ingest policy: DMs persisted, groups skipped | bridge_poller.md | SQL WHERE clause excludes `%@g.us`, `%@newsletter`, `status@broadcast` | `modules/bridge_poller/__init__.py:SQL filter` | ✅ CONFIRMED |
+| `BRIDGE_POLL_MIN_S = 1.0` | bridge_poller.md | `BRIDGE_POLL_MIN_S = 1.0` | `modules/fazle_bridge_poller/__init__.py:51` | ✅ EXACT |
+| `BRIDGE_POLL_MAX_S = 30.0` | bridge_poller.md | `BRIDGE_POLL_MAX_S = 30.0` | `modules/fazle_bridge_poller/__init__.py:52` | ✅ EXACT |
+| `BRIDGE_POLL_BACKOFF = 1.5×` | bridge_poller.md | `BRIDGE_POLL_BACKOFF = 1.5` | `modules/fazle_bridge_poller/__init__.py:53` | ✅ EXACT |
+| `REPLY_COOLDOWN = 60s` | bridge_poller.md | `REPLY_COOLDOWN = 60` | `modules/fazle_bridge_poller/__init__.py:48` | ✅ EXACT |
+| Ingest policy: DMs persisted, groups skipped | bridge_poller.md | SQL WHERE clause excludes `%@g.us`, `%@newsletter`, `status@broadcast` | `modules/fazle_bridge_poller/__init__.py:SQL filter` | ✅ CONFIRMED |
 
 ---
 
@@ -72,12 +72,12 @@ All verifications performed by direct source code read (2026-06-23). Each row is
 
 | KB Claim | Article | Code Value | Source File | Status |
 |---|---|---|---|---|
-| `MAX_INLINE_CHARS = 3500` | admin_commands_detail.md | `MAX_INLINE_CHARS = 3500` | `modules/admin_commands/nl_router.py:33` | ✅ EXACT |
-| `_BN_DIGITS = str.maketrans("০১২৩৪৫৬৭৮৯", "0123456789")` | admin_commands_detail.md | Exact match | `modules/admin_commands/__init__.py:29` | ✅ EXACT |
+| `MAX_INLINE_CHARS = 3500` | admin_commands_detail.md | `MAX_INLINE_CHARS = 3500` | `modules/fazle_admin_commands/nl_router.py:33` | ✅ EXACT |
+| `_BN_DIGITS = str.maketrans("০১২৩৪৫৬৭৮৯", "0123456789")` | admin_commands_detail.md | Exact match | `modules/fazle_admin_commands/__init__.py:29` | ✅ EXACT |
 | SHA-256 for API keys: `hashlib.sha256(key.encode()).hexdigest()` | admin_commands_detail.md | `return hashlib.sha256(key.encode("utf-8")).hexdigest()` | `modules/rbac/__init__.py:81` | ✅ EXACT |
-| Command dedup TTL = 30 seconds | admin_commands_detail.md | `_DEDUP_TTL_S = 30.0` | `modules/admin_commands/__init__.py:37` | ✅ EXACT |
-| NL router ships 2 intents: chat_history, last_contact | admin_commands_detail.md | `_HANDLERS = {"chat_history": ..., "last_contact": ...}` | `modules/admin_commands/nl_router.py:163` | ✅ EXACT |
-| BD week starts Saturday | admin_commands_detail.md | `"""Week starts Saturday in BD (banking convention)."""` | `modules/admin_commands/date_parser.py:57` | ✅ EXACT |
+| Command dedup TTL = 30 seconds | admin_commands_detail.md | `_DEDUP_TTL_S = 30.0` | `modules/fazle_admin_commands/__init__.py:37` | ✅ EXACT |
+| NL router ships 2 intents: chat_history, last_contact | admin_commands_detail.md | `_HANDLERS = {"chat_history": ..., "last_contact": ...}` | `modules/fazle_admin_commands/nl_router.py:163` | ✅ EXACT |
+| BD week starts Saturday | admin_commands_detail.md | `"""Week starts Saturday in BD (banking convention)."""` | `modules/fazle_admin_commands/date_parser.py:57` | ✅ EXACT |
 
 ---
 
@@ -106,7 +106,7 @@ All verifications performed by direct source code read (2026-06-23). Each row is
 
 | KB Claim | Article | Code Value | Source File | Status |
 |---|---|---|---|---|
-| UNIQUE constraint: (employee_id, accounting_period) | fpe_overview.md | `CONSTRAINT fpe_ledger_unique UNIQUE (employee_id, accounting_period)` | `fazle_payroll_engine/migrations/001_fpe_schema.sql` | ✅ EXACT |
+| UNIQUE constraint: (employee_id, accounting_period) | fpe_overview.md | `CONSTRAINT fazle_ledger_unique UNIQUE (employee_id, accounting_period)` | `fazle_payroll_engine/migrations/001_fpe_schema.sql` | ✅ EXACT |
 | Column: accounting_period TEXT format YYYY-MM | fpe_overview.md | `accounting_period TEXT NOT NULL` + comment `-- YYYY-MM` | `001_fpe_schema.sql` | ✅ EXACT |
 | 10 columns (id through last_updated) | fpe_overview.md | Count = 10 (id, employee_id, accounting_period, opening_balance, total_earned, total_paid, total_advance, closing_balance, txn_count, last_updated) | `001_fpe_schema.sql` | ✅ EXACT |
 

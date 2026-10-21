@@ -8,6 +8,9 @@ runtime_index: false
 
 # PKCA Report 02: Module Coverage Report
 
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **Date:** 2026-06-22
 **Mode:** Read-Only Analysis
 
@@ -175,7 +178,7 @@ runtime_index: false
 - TxnCategory enum: salary, advance, bonus, deduction, correction, income
 - ProcessingStatus: pending→parsing→parsed→accounting→done/failed/skipped
 - Employee matching: 4 rules (A: id_phone exact, B: payout_phone, C: fuzzy name >0.95, D: auto-create)
-- fpe_cash_transactions table (distinct from wbom_cash_transactions)
+- fazle_cash_transactions table (distinct from fazle_cash_transactions_archive)
 - fpe_wa_messages table, fpe_message_processing_state table
 - Historical sync: syncs conversation history from bridge SQLite into FPE
 - Gap scan: detects payment messages that were missed

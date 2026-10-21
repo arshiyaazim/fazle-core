@@ -1,3 +1,4 @@
+
 {
   "predicate": "wbom_employee_id IS NOT NULL AND resolution_status = 'unresolved'",
   "affected_count": 153,

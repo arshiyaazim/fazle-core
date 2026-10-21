@@ -11,7 +11,7 @@ know. If a row is genuinely ambiguous, it returns ("unknown", 0.0) so
 the Tier B decision can fail closed.
 
 This module has NO database dependency. The caller passes the row dict
-(typically a row from wbom_whatsapp_messages).
+(typically a row from fazle_whatsapp_messages).
 """
 from __future__ import annotations
 

@@ -81,7 +81,7 @@ async def compute_reconciliation(
 
     ledger_sum_q = f"""
         SELECT COALESCE(SUM(amount), 0)
-        FROM fpe_cash_transactions
+        FROM fazle_cash_transactions
         WHERE NOT is_reversal
         {where_period_txn}
     """

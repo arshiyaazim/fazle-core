@@ -10,11 +10,11 @@ Design principle (per the recovery-pass directive): reuse every existing
 live-pipeline component rather than building a second, parallel routing/
 messaging system --
 
-  - modules.intent.classify                          (lightweight intent hint)
-  - modules.identity_brain.detect_identity            (identity)
+  - modules.fazle_intent.classify                          (lightweight intent hint)
+  - modules.fazle_identity_brain.detect_identity            (identity)
   - modules.owner_contact_registry.is_owner_managed_contact  (protection)
   - modules.recruitment_flow.recruitment_eligibility  (eligibility, UNCHANGED)
-  - modules.bridge_poller._is_draft_always            (protected-workflow/risk gate)
+  - modules.fazle_bridge_poller._is_draft_always            (protected-workflow/risk gate)
   - shared.draft.should_generate_draft                (admin-already-replied guard)
   - modules.message_router.get_recent_history / get_contact_context (history/context)
   - modules.hermes_dispatch.generate_recruitment_reply /
@@ -22,7 +22,7 @@ messaging system --
     function the live interactive path calls)
   - modules.hermes_dispatch.generate_reply /
     build_employee_context_with_directives              (employee reply -- SAME)
-  - modules.bridge_poller._save_draft                  (draft creation)
+  - modules.fazle_bridge_poller._save_draft                  (draft creation)
   - modules.outbound.enqueue                            (idempotent send)
 
 No new intent classification, no new domain-routing logic, no new reply
@@ -71,11 +71,11 @@ _EMPLOYEE_ROLES = ("employee", "supervisor")
 # Root cause of the observed defect (candidate 8801744835680 asked for their
 # name at 06:06 UTC despite giving it at 00:38 UTC, 7 total sends to one
 # recipient): _decide_and_reply()'s live-send branch called outbound.
-# enqueue() but never modules.bridge_poller._save_message(..., "outbound",
+# enqueue() but never modules.fazle_bridge_poller._save_message(..., "outbound",
 # ...) afterward -- every OTHER live send site in this codebase (bridge_
 # poller's own customer-reply and admin-hermes-reply paths) pairs enqueue()
 # with that write-back; this module's sweep branch never did. Without it,
-# wbom_whatsapp_messages -- the exact table _find_stale_unanswered()'s own
+# fazle_whatsapp_messages -- the exact table _find_stale_unanswered()'s own
 # NOT EXISTS check reads -- never reflected the sweep's own prior sends, so
 # every ~30min tick re-selected the same "unanswered" trigger message
 # forever. Separately confirmed: shared.draft.should_generate_draft()'s own
@@ -393,7 +393,7 @@ async def _recovery_safety_gate(
 
 async def _find_stale_unanswered(limit: int) -> list[dict]:
     """Latest inbound per sender, where no outbound to that sender exists
-    after it, within the lookback window. Read-only, wbom_whatsapp_messages
+    after it, within the lookback window. Read-only, fazle_whatsapp_messages
     only (the same table modules.conversation_canonical already reads)."""
     now = datetime.now(timezone.utc)
     since = now - timedelta(hours=_LOOKBACK_HOURS)
@@ -403,12 +403,12 @@ async def _find_stale_unanswered(limit: int) -> list[dict]:
         SELECT DISTINCT ON (i.sender_number)
             i.sender_number, i.message_id, i.received_at, i.message_body,
             i.workflow_triggered, i.platform
-        FROM wbom_whatsapp_messages i
+        FROM fazle_whatsapp_messages i
         WHERE i.direction = 'inbound'
           AND i.received_at > $1
           AND i.received_at < $2
           AND NOT EXISTS (
-              SELECT 1 FROM wbom_whatsapp_messages o
+              SELECT 1 FROM fazle_whatsapp_messages o
               WHERE o.sender_number = i.sender_number
                 AND o.direction = 'outbound'
                 AND o.received_at > i.received_at
@@ -429,9 +429,9 @@ async def _decide_and_reply(row: dict, *, live_send: bool) -> dict:
     text = (row.get("message_body") or "").strip()
     msg_id = row.get("message_id")
     received_at = row.get("received_at")
-    # 2026-08-25 live-restart-caught bug fix: wbom_whatsapp_messages has
+    # 2026-08-25 live-restart-caught bug fix: fazle_whatsapp_messages has
     # no source_bridge column -- the bridge name is stored in `platform`
-    # (see modules.bridge_poller._save_raw_core_copy's own INSERT).
+    # (see modules.fazle_bridge_poller._save_raw_core_copy's own INSERT).
     source_bridge = row.get("platform") or "bridge3"
     decision: dict[str, Any] = {"phone": phone, "message_id": msg_id, "action": "skip"}
     if not phone or not text:
@@ -446,7 +446,7 @@ async def _decide_and_reply(row: dict, *, live_send: bool) -> dict:
     # independently REFUSES a held-bridge enqueue, so this sweep can never
     # actually deliver to a held bridge regardless. Defense-in-depth only.
     try:
-        from modules.bridge_poller import _bridge_pairing_state, PAIRING_OUTBOUND_OWNER_APPROVED
+        from modules.fazle_bridge_poller import _bridge_pairing_state, PAIRING_OUTBOUND_OWNER_APPROVED
         _sweep_state = await _bridge_pairing_state(source_bridge)
         if _sweep_state and _sweep_state != PAIRING_OUTBOUND_OWNER_APPROVED:
             decision["reason"] = f"bridge_pairing_hold:{source_bridge}:{_sweep_state}"
@@ -455,7 +455,7 @@ async def _decide_and_reply(row: dict, *, live_send: bool) -> dict:
         pass
 
     try:
-        from modules.identity_brain import detect_identity
+        from modules.fazle_identity_brain import detect_identity
         identity = await detect_identity(phone, text)
         role = identity.get("identity_role") or "unknown"
         display_name = (identity.get("display_name") or "").strip()
@@ -469,7 +469,7 @@ async def _decide_and_reply(row: dict, *, live_send: bool) -> dict:
             decision["reason"] = f"role_not_in_sweep_scope:{role}"
             return decision
 
-        from modules.bridge_poller import _is_draft_always
+        from modules.fazle_bridge_poller import _is_draft_always
         draft_always = await _is_draft_always(phone, role, display_name)
 
         from shared.draft import should_generate_draft
@@ -508,7 +508,7 @@ async def _decide_and_reply(row: dict, *, live_send: bool) -> dict:
             decision["reason"] = "already_replied"
             return decision
 
-        from modules.intent import classify as classify_intent
+        from modules.fazle_intent import classify as classify_intent
         intent = classify_intent(text)
 
         from modules.message_router import get_recent_history
@@ -592,7 +592,7 @@ async def _decide_and_reply(row: dict, *, live_send: bool) -> dict:
             decision["queue_id"] = qid
             if qid:
                 # Owner directive (2026-08-27, safety-review pass): the
-                # wbom_whatsapp_messages write-back does NOT happen here
+                # fazle_whatsapp_messages write-back does NOT happen here
                 # (enqueue-time) any more -- outbound.enqueue() only
                 # guarantees the row was ACCEPTED into fazle_outbound_
                 # queue, not that transport delivery ever succeeds
@@ -614,7 +614,7 @@ async def _decide_and_reply(row: dict, *, live_send: bool) -> dict:
                         candidate_id, objective=_guess_reply_objective(reply), topic=intent,
                     )
         else:
-            from modules.bridge_poller import _save_draft
+            from modules.fazle_bridge_poller import _save_draft
             await _save_draft(
                 source_bridge, phone, reply, intent,
                 sender_name=display_name, sender_message=text,
@@ -635,7 +635,7 @@ async def _decide_and_reply(row: dict, *, live_send: bool) -> dict:
 # (sweep_once() retries up to max_attempts=3 with exponential backoff,
 # ~1+2+4 min, before a permanently-undeliverable row lands in 'dlq', which
 # already happens routinely in this system -- confirmed live, 82 rows).
-# Writing the wbom_whatsapp_messages "outbound" record at enqueue time
+# Writing the fazle_whatsapp_messages "outbound" record at enqueue time
 # (this module's own original fix, and the pre-existing pattern every
 # OTHER live send site in this codebase already used) would therefore
 # permanently mark a candidate/employee as "already answered" even for a
@@ -645,7 +645,7 @@ async def _decide_and_reply(row: dict, *, live_send: bool) -> dict:
 # Fix: the write-back now happens HERE, once per sweep run, ONLY for
 # fazle_outbound_queue rows fazle_outbound_queue ITSELF confirms
 # status='sent' -- never for 'pending'/'sending'/'failed'/'dlq'. No
-# schema change: matched to wbom_whatsapp_messages by recipient + exact
+# schema change: matched to fazle_whatsapp_messages by recipient + exact
 # body text + received_at >= the queue row's created_at (no queue_id FK
 # needed -- the alternative, a schema migration, is explicitly out of
 # scope for this deployment). Covers BOTH this module's own
@@ -665,7 +665,7 @@ _RECONCILE_BATCH_LIMIT = 200
 
 
 async def _reconcile_confirmed_sends() -> int:
-    """Writes the missing wbom_whatsapp_messages outbound record for every
+    """Writes the missing fazle_whatsapp_messages outbound record for every
     confirmed-sent (status='sent') recovery/admin-send queue row from the
     last _RECONCILE_WINDOW_HOURS that doesn't already have one. Returns
     the number of rows reconciled. Never raises -- best-effort, but this
@@ -680,7 +680,7 @@ async def _reconcile_confirmed_sends() -> int:
               AND q.status = 'sent'
               AND q.sent_at > NOW() - ($1 * INTERVAL '1 hour')
               AND NOT EXISTS (
-                  SELECT 1 FROM wbom_whatsapp_messages m
+                  SELECT 1 FROM fazle_whatsapp_messages m
                   WHERE m.sender_number = q.recipient
                     AND m.direction = 'outbound'
                     AND m.message_body = q.body
@@ -695,7 +695,7 @@ async def _reconcile_confirmed_sends() -> int:
         log.warning("[recovery_sweep] reconciliation query failed: %s", exc)
         return 0
 
-    from modules.bridge_poller import _save_message
+    from modules.fazle_bridge_poller import _save_message
     reconciled = 0
     for row in rows:
         try:
@@ -710,7 +710,7 @@ async def _reconcile_confirmed_sends() -> int:
                 row["id"], row["recipient"], exc,
             )
     if reconciled:
-        log.info("[recovery_sweep] reconciled %d confirmed-sent row(s) into wbom_whatsapp_messages", reconciled)
+        log.info("[recovery_sweep] reconciled %d confirmed-sent row(s) into fazle_whatsapp_messages", reconciled)
     return reconciled
 
 
@@ -727,7 +727,7 @@ async def run_recovery_sweep() -> dict:
     live_send = is_feature_active("recruitment_recovery_sweep_live_send", default=False)
 
     # Owner directive (2026-08-27, safety-review pass): reconcile
-    # confirmed-sent rows into wbom_whatsapp_messages BEFORE selecting
+    # confirmed-sent rows into fazle_whatsapp_messages BEFORE selecting
     # this run's candidates, so _find_stale_unanswered()'s own NOT EXISTS
     # check sees every send that has actually been confirmed delivered
     # since the last tick -- see _reconcile_confirmed_sends()'s own

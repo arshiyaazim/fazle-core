@@ -1,7 +1,7 @@
 """
 Fazle Core — Office-Payroll Eligibility (Owner decision, 2026-07-10/11)
 
-Centralized classification of which wbom_employees rows may participate in
+Centralized classification of which fazle_employees_legacy rows may participate in
 monthly office payroll. This is the single source of truth for that
 question — do not duplicate this logic in routes, payroll jobs, tests, or
 frontend code.
@@ -34,7 +34,7 @@ OFFICE_DESIGNATIONS = {
 }
 
 # Best-effort placeholder/bookkeeping/test-record detector (Section 1.1.5).
-# wbom_employees has no dedicated "is this a real person" flag, so this is
+# fazle_employees_legacy has no dedicated "is this a real person" flag, so this is
 # a disclosed heuristic, not a guarantee — flagged for Owner refinement.
 # Concrete production evidence this was built against: "OfficeExpance"
 # (a bookkeeping row, designation=Labor, salary=0) and "Phase18B Test" (a
@@ -44,7 +44,7 @@ PLACEHOLDER_NAME_HINTS = ("test", "phase", "sample", "demo", "expense", "expance
 
 def classify_office_staff(employee: dict) -> dict:
     """
-    Structural office-payroll eligibility for one wbom_employees row.
+    Structural office-payroll eligibility for one fazle_employees_legacy row.
 
     Returns {"eligible": bool, "is_office_staff": Optional[bool], "reason": Optional[str]}
     `reason` is populated only when eligible is False, using one of the

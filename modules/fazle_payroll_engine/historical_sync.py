@@ -41,7 +41,7 @@ log = logging.getLogger("fazle.fpe.hsync")
 def _bridge_configs() -> list[dict]:
     """FPE sync targets, resolved fresh from central settings on every call
     (``app/config.py``, overridable via ``.env``) — never a hardcoded store
-    path. Mirrors ``modules.bridge_poller.BRIDGE_CONFIGS`` so historical_sync /
+    path. Mirrors ``modules.fazle_bridge_poller.BRIDGE_CONFIGS`` so historical_sync /
     gap_scan always read the same authoritative bridge stores as the live
     poller (a re-pair or store move only has to be reflected in ``.env``).
 

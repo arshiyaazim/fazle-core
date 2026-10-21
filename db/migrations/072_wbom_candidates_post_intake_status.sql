@@ -48,7 +48,7 @@ ALTER TABLE wbom_candidates
 -- no separate index is needed for that lookup. This index instead supports
 -- an eventual admin/report query ("list candidates currently
 -- awaiting_agreement") without a full-table scan; harmless if never used.
-CREATE INDEX IF NOT EXISTS idx_wbom_candidates_post_intake_status
+CREATE INDEX IF NOT EXISTS idx_fazle_candidates_post_intake_status
     ON wbom_candidates (post_intake_status) WHERE post_intake_status IS NOT NULL;
 
 -- No backfill: candidates already at funnel_stage='scored' before this

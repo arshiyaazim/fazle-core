@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 """Audit Knowledge Base structure, metadata, duplicates, and stale content."""
 from __future__ import annotations

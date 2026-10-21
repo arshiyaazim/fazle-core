@@ -74,7 +74,7 @@ CREATE TABLE IF NOT EXISTS wbom_identity_links (
     identity_key       VARCHAR(255) NOT NULL,
     platform           VARCHAR(40) NOT NULL,
     platform_user_id   VARCHAR(255) NOT NULL,
-    contact_id         INTEGER REFERENCES wbom_contacts(contact_id) ON DELETE SET NULL,
+    contact_id         INTEGER REFERENCES fazle_contacts(contact_id) ON DELETE SET NULL,
     confidence         NUMERIC(5,4) NOT NULL DEFAULT 1.0000
         CHECK (confidence >= 0 AND confidence <= 1),
     linked_by          VARCHAR(100) NOT NULL DEFAULT 'system',
@@ -103,10 +103,10 @@ BEGIN
           FROM pg_constraint c
           JOIN pg_class t ON t.oid = c.conrelid
          WHERE t.relname = 'wbom_identity_links'
-           AND c.conname = 'wbom_identity_links_identity_fk'
+           AND c.conname = 'fazle_identity_links_identity_fk'
     ) THEN
         ALTER TABLE wbom_identity_links
-            ADD CONSTRAINT wbom_identity_links_identity_fk
+            ADD CONSTRAINT fazle_identity_links_identity_fk
             FOREIGN KEY (identity_id) REFERENCES fazle_identity_subjects(identity_id)
             ON DELETE RESTRICT;
     END IF;
@@ -116,10 +116,10 @@ BEGIN
           FROM pg_constraint c
           JOIN pg_class t ON t.oid = c.conrelid
          WHERE t.relname = 'wbom_identity_links'
-           AND c.conname = 'wbom_identity_links_verified_admin_fk'
+           AND c.conname = 'fazle_identity_links_verified_admin_fk'
     ) THEN
         ALTER TABLE wbom_identity_links
-            ADD CONSTRAINT wbom_identity_links_verified_admin_fk
+            ADD CONSTRAINT fazle_identity_links_verified_admin_fk
             FOREIGN KEY (verified_by_admin_id) REFERENCES fazle_admins(id)
             ON DELETE SET NULL;
     END IF;
@@ -129,10 +129,10 @@ BEGIN
           FROM pg_constraint c
           JOIN pg_class t ON t.oid = c.conrelid
          WHERE t.relname = 'wbom_identity_links'
-           AND c.conname = 'wbom_identity_links_verification_state_ck'
+           AND c.conname = 'fazle_identity_links_verification_state_ck'
     ) THEN
         ALTER TABLE wbom_identity_links
-            ADD CONSTRAINT wbom_identity_links_verification_state_ck
+            ADD CONSTRAINT fazle_identity_links_verification_state_ck
             CHECK (verification_state IS NULL OR verification_state IN
                    ('unverified', 'pending', 'verified', 'revoked'));
     END IF;
@@ -153,20 +153,20 @@ BEGIN
       JOIN pg_namespace n ON n.oid = c.relnamespace
       JOIN pg_index i ON i.indexrelid = c.oid
      WHERE n.nspname = 'public'
-       AND c.relname = 'idx_wbom_identity_platform_user';
+       AND c.relname = 'idx_fazle_identity_platform_user';
 
     IF FOUND AND (NOT v_is_unique OR NOT v_is_partial) THEN
-        DROP INDEX public.idx_wbom_identity_platform_user;
+        DROP INDEX public.idx_fazle_identity_platform_user;
     END IF;
 END;
 $$;
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_wbom_identity_platform_user
+CREATE UNIQUE INDEX IF NOT EXISTS idx_fazle_identity_platform_user
     ON wbom_identity_links (platform, platform_user_id)
     WHERE active;
-CREATE INDEX IF NOT EXISTS idx_wbom_identity_links_subject_active
+CREATE INDEX IF NOT EXISTS idx_fazle_identity_links_subject_active
     ON wbom_identity_links (identity_id, active);
-CREATE INDEX IF NOT EXISTS idx_wbom_identity_links_identifier
+CREATE INDEX IF NOT EXISTS idx_fazle_identity_links_identifier
     ON wbom_identity_links (identifier_type, platform, platform_user_id);
 
 CREATE TABLE IF NOT EXISTS fazle_identity_role_assignments (

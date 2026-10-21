@@ -32,39 +32,39 @@ class QuerySpec:
 
 _DATASETS: dict[str, QuerySpec] = {
     "employee": QuerySpec(
-        "SELECT * FROM wbom_employees", "employee_name,employee_id",
+        "SELECT * FROM fazle_employees_legacy", "employee_name,employee_id",
         {"employee_id": "employee_id", "status": "status", "phone": "employee_mobile"},
         ("employee_name", "employee_mobile"),
     ),
     "attendance": QuerySpec(
         "SELECT a.attendance_id,a.employee_id,e.employee_name,a.attendance_date,a.status,a.location,"
         "a.check_in_time,a.check_out_time,a.remarks,a.recorded_by FROM wbom_attendance a "
-        "JOIN wbom_employees e ON e.employee_id=a.employee_id", "attendance_date DESC,attendance_id DESC",
+        "JOIN fazle_employees_legacy e ON e.employee_id=a.employee_id", "attendance_date DESC,attendance_id DESC",
         {"employee_id": "employee_id", "status": "status", "date_from": "attendance_date__gte", "date_to": "attendance_date__lte"},
         ("employee_name",),
     ),
     "duty": QuerySpec(
-        "SELECT p.*,e.employee_name FROM wbom_escort_programs p LEFT JOIN wbom_employees e "
+        "SELECT p.*,e.employee_name FROM wbom_escort_programs p LEFT JOIN fazle_employees_legacy e "
         "ON e.employee_id=p.escort_employee_id", "program_date DESC,program_id DESC",
         {"employee_id": "escort_employee_id", "program_id": "program_id", "status": "status", "date_from": "program_date__gte", "date_to": "program_date__lte"},
         ("employee_name", "mother_vessel", "lighter_vessel", "destination"),
     ),
     "payroll": QuerySpec(
-        "SELECT r.*,e.employee_name,e.designation FROM wbom_payroll_runs r JOIN wbom_employees e "
+        "SELECT r.*,e.employee_name,e.designation FROM wbom_payroll_runs r JOIN fazle_employees_legacy e "
         "ON e.employee_id=r.employee_id", "period_year DESC,period_month DESC,run_id DESC",
         {"employee_id": "employee_id", "status": "status", "year": "period_year", "month": "period_month"},
         ("employee_name",),
     ),
     "salary": QuerySpec(
         "SELECT employee_id,employee_name,employee_mobile,designation,status,basic_salary,joining_date "
-        "FROM wbom_employees", "employee_name,employee_id",
+        "FROM fazle_employees_legacy", "employee_name,employee_id",
         {"employee_id": "employee_id", "status": "status", "phone": "employee_mobile"},
         ("employee_name",),
     ),
     "advances": QuerySpec(
         "SELECT t.*,t.txn_ref AS transaction_ref,t.txn_date AS transaction_date,"
         "t.txn_category AS category,COALESCE(e.full_name,t.employee_name_raw) AS employee_name "
-        "FROM fpe_cash_transactions t LEFT JOIN fpe_employees e ON e.id=t.employee_id "
+        "FROM fazle_cash_transactions t LEFT JOIN fazle_employees e ON e.id=t.employee_id "
         "WHERE t.deleted_at IS NULL AND t.txn_category='advance'",
         "transaction_date DESC,transaction_ref", {"employee_id": "employee_id", "status": "transaction_status", "date_from": "transaction_date__gte", "date_to": "transaction_date__lte"},
         ("employee_name_raw", "transaction_ref"),
@@ -72,13 +72,13 @@ _DATASETS: dict[str, QuerySpec] = {
     "payments": QuerySpec(
         "SELECT t.*,t.txn_ref AS transaction_ref,t.txn_date AS transaction_date,"
         "t.txn_category AS category,COALESCE(e.full_name,t.employee_name_raw) AS employee_name "
-        "FROM fpe_cash_transactions t LEFT JOIN fpe_employees e ON e.id=t.employee_id "
+        "FROM fazle_cash_transactions t LEFT JOIN fazle_employees e ON e.id=t.employee_id "
         "WHERE t.deleted_at IS NULL", "transaction_date DESC,transaction_ref",
         {"employee_id": "employee_id", "status": "transaction_status", "category": "category", "date_from": "transaction_date__gte", "date_to": "transaction_date__lte"},
         ("employee_name_raw", "transaction_ref"),
     ),
     "escort_programs": QuerySpec(
-        "SELECT p.*,e.employee_name FROM wbom_escort_programs p LEFT JOIN wbom_employees e "
+        "SELECT p.*,e.employee_name FROM wbom_escort_programs p LEFT JOIN fazle_employees_legacy e "
         "ON e.employee_id=p.escort_employee_id", "program_date DESC,program_id DESC",
         {"employee_id": "escort_employee_id", "program_id": "program_id", "status": "status", "date_from": "program_date__gte", "date_to": "program_date__lte"},
         ("employee_name", "mother_vessel", "lighter_vessel", "destination"),
@@ -91,7 +91,7 @@ _DATASETS: dict[str, QuerySpec] = {
         ("actor", "reason"),
     ),
     "clients_contacts": QuerySpec(
-        "SELECT * FROM wbom_contacts",
+        "SELECT * FROM fazle_contacts",
         "display_name,contact_id", {"contact_id": "contact_id", "status": "is_active", "phone": "whatsapp_number"},
         ("display_name", "company_name", "whatsapp_number", "relation"),
     ),
@@ -103,7 +103,7 @@ _DATASETS: dict[str, QuerySpec] = {
     "bills_invoices": QuerySpec(
         "SELECT b.*,COALESCE(bp.client_name,c.display_name) AS client_name FROM wbom_billing_records b "
         "LEFT JOIN wbom_client_billing_profiles bp ON bp.contact_id=b.contact_id "
-        "LEFT JOIN wbom_contacts c ON c.contact_id=b.contact_id", "bill_date DESC,bill_id DESC",
+        "LEFT JOIN fazle_contacts c ON c.contact_id=b.contact_id", "bill_date DESC,bill_id DESC",
         {"contact_id": "contact_id", "program_id": "program_id", "status": "payment_status", "date_from": "bill_date__gte", "date_to": "bill_date__lte"},
         ("client_name", "bill_number", "remarks"),
     ),
@@ -178,7 +178,7 @@ _DATASETS: dict[str, QuerySpec] = {
                 ) = 'inbound'
                THEN 'outbound_to_adjacent_inbound'
              END AS adjacent_pair_basis
-           FROM wbom_whatsapp_messages m
+           FROM fazle_whatsapp_messages m
            LEFT JOIN LATERAL (
              SELECT q.status, q.attempts, q.last_error
                FROM fazle_outbound_queue q

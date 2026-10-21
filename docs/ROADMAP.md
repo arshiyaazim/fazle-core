@@ -75,11 +75,11 @@ seen on day-1 of live traffic where the pending queue filled with garbage.
 
 | Hotfix | Module | Behaviour |
 |---|---|---|
-| **H1** | `modules/admin_commands` | In-process LRU dedup of admin commands (sha1(text+phone), 30s TTL, max 256). Stops duplicate `STATUS`/`PENDING` outputs. Metric: `admin_command_dedup_total`. |
+| **H1** | `modules/fazle_admin_commands` | In-process LRU dedup of admin commands (sha1(text+phone), 30s TTL, max 256). Stops duplicate `STATUS`/`PENDING` outputs. Metric: `admin_command_dedup_total`. |
 | **H2** | `modules/draft_quality` (new) | Single quality gate wired into both `_save_draft` callsites. EXACT-match LLM-fallback rejection (never broad LIKE). Bad-pattern list: `file://`, `/home/azim`, `Created [](`, `Traceback`, triple-backtick, `<\|`, `/scripts/`, `/venv/`. Rejected drafts persisted with `status='rejected_quality'` or `'rejected_fallback'` and `meta.quality_reason` — never appear in pending list. Kill-switch: env `DRAFT_QUALITY_GATE=false`. Metric: `drafts_rejected_total{reason,source}`. |
 | **H3** | `app/ollama.py` | Softer LLM timeout fallback (`আপনার বার্তা পেয়েছি…`) + `llm_fallback_total` metric. New string also EXACT-matched by quality gate. |
 | **H4** | `modules/message_router` | Admin role + unknown text → return inline help, no LLM fallthrough. Stops the apology-draft feedback loop. |
-| **H5** | `modules/admin_commands` | `APPROVE`/`REJECT` now accept multi-ID (`APPROVE 165 162` or comma-separated) and Bengali digits (`APPROVE ১৬৫`). |
+| **H5** | `modules/fazle_admin_commands` | `APPROVE`/`REJECT` now accept multi-ID (`APPROVE 165 162` or comma-separated) and Bengali digits (`APPROVE ১৬৫`). |
 
 **One-shot cleanup (reversible via `meta.hidden_by_cleanup=true`):** marked
 1 path-leak draft as `rejected_quality` and 109 EXACT-match LLM fallbacks as

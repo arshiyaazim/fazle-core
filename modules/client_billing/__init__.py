@@ -3,7 +3,7 @@ Fazle Core — Client Billing Profiles (Phase 2B)
 
 Client Settings: rate/wage/VAT/Tax configuration per client company,
 managed via a frontend UI (Payroll Page -> Admin Tab). Kept separate from
-modules.billing (which owns invoice numbering only) and from wbom_contacts
+modules.billing (which owns invoice numbering only) and from fazle_contacts
 (WhatsApp-contact identity) -- see
 docs/CANONICAL_CLIENT_DOMAIN.md "Client Tier, Client Status, and is_active"
 and docs/CLIENT_BILLING_PROFILE_IMPLEMENTATION_PLAN.md for the full

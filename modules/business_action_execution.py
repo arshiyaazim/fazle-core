@@ -10,7 +10,7 @@ of this stage's smallest-justified-change scope. Of the two existing
 Stage F action types:
   - "business_reply_draft": executing it means delivering the referenced
     draft through the EXISTING, already-gated draft-approval pipeline
-    (modules.draft_approval / modules.admin_commands._cmd_approve) --
+    (modules.fazle_draft_approval / modules.fazle_admin_commands._cmd_approve) --
     this module does not send anything itself, it only triggers that
     existing, already-tested path.
   - "business_record_review": has no mutation to execute by definition
@@ -116,7 +116,7 @@ async def _current_state_for_reference(kind: str, ref_id: str) -> dict:
     if kind == "cash_txn":
         row = await fetch_one(
             "SELECT id, transaction_status, employee_id, amount, txn_ref, deleted_at "
-            "FROM fpe_cash_transactions WHERE id = $1",
+            "FROM fazle_cash_transactions WHERE id = $1",
             int(ref_id),
         )
         return dict(row) if row else {}
@@ -129,7 +129,7 @@ async def _current_state_for_reference(kind: str, ref_id: str) -> dict:
     if kind == "conversation":
         row = await fetch_one(
             "SELECT COUNT(*) AS message_count, MAX(received_at) AS last_received_at "
-            "FROM wbom_whatsapp_messages WHERE conversation_key = $1",
+            "FROM fazle_whatsapp_messages WHERE conversation_key = $1",
             ref_id,
         )
         return dict(row) if row and row["message_count"] else {}
@@ -243,7 +243,7 @@ async def execute_approved_business_action(action_id: int, executor: str = "syst
     elif action_type == "business_reply_draft":
         if kind != "draft":
             raise BusinessExecutionError(f"business_reply_draft action #{action_id} has a non-draft business_reference ({business_reference!r})")
-        from modules.admin_commands import _cmd_approve
+        from modules.fazle_admin_commands import _cmd_approve
         confirm_text = await _cmd_approve(int(ref_id), executor)
         result = {"executed": True, "draft_id": int(ref_id), "confirm_text": confirm_text}
     else:  # pragma: no cover -- unreachable, EXECUTABLE_ACTION_TYPES gate above already excludes this
@@ -281,7 +281,7 @@ async def audit_proposal_references() -> list[dict]:
         executable = kind in _KNOWN_REFERENCE_KINDS if kind else False
         # Migratable: a legacy reference this bridge doesn't recognize as
         # typed, but whose raw string is EXACTLY a live conversation_key
-        # (verified against wbom_whatsapp_messages, never inferred from
+        # (verified against fazle_whatsapp_messages, never inferred from
         # shape/regex -- H5.13's explicit "do not infer object type from
         # numeric shape or domain text"). Covers both "no colon at all"
         # (UNTYPED) and "colon present but the kind prefix is unrecognized"
@@ -290,7 +290,7 @@ async def audit_proposal_references() -> list[dict]:
         migratable = False
         if not executable and ref:
             match = await fetch_one(
-                "SELECT 1 FROM wbom_whatsapp_messages WHERE conversation_key = $1 LIMIT 1", ref,
+                "SELECT 1 FROM fazle_whatsapp_messages WHERE conversation_key = $1 LIMIT 1", ref,
             )
             migratable = bool(match)
 

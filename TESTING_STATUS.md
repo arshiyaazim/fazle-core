@@ -2,6 +2,10 @@
 
 # Testing Status — Fazle Core
 
+
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **Checkpoint:** pre-chaos-stable-2026-05-07
 **Last full validation:** 2026-05-07
 **Validated by:** automated test suites + manual verification

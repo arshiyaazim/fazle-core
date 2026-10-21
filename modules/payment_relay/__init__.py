@@ -12,7 +12,7 @@ ONE narrow rule. This is NOT a general automation and must not grow into one.
       phone number that appears inside the message body,
       == RELAY_SOURCE_NUMBER  (8801817201596)
     → message body has the owner's established cash-payment SHAPE
-      (modules.payment_ingest.is_admin_cash_shorthand — used as a pure
+      (modules.fazle_payment_ingest.is_admin_cash_shorthand — used as a pure
       boolean; the body is opaque payload, no field is extracted for any
       decision)
     → enqueue the ORIGINAL inbound body, byte-for-byte, to
@@ -46,7 +46,7 @@ Deliberately NOT done here:
   * parse / extract business data for a decision
   * validate employee existence, payout-number ownership, balance, or
     whether the payment already exists
-  * create / update / reverse fpe_cash_transactions
+  * create / update / reverse fazle_cash_transactions
   * create / update any employee ledger entry
   * call Hermes / any LLM / any tool reasoning / any confirmation prompt
 
@@ -113,7 +113,7 @@ def is_payment_shape(body: str) -> bool:
     """Boolean shape check ONLY — never extracts a field for a decision.
 
     Delegates to the established owner cash-payment detector
-    (modules.payment_ingest.is_admin_cash_shorthand). Used purely as
+    (modules.fazle_payment_ingest.is_admin_cash_shorthand). Used purely as
     True/False; the body stays opaque to this module.
 
     Fail-closed to "no match" on any error: a genuine non-payment operational
@@ -124,7 +124,7 @@ def is_payment_shape(body: str) -> bool:
     if not body or not body.strip():
         return False
     try:
-        from modules.payment_ingest import is_admin_cash_shorthand
+        from modules.fazle_payment_ingest import is_admin_cash_shorthand
         return bool(is_admin_cash_shorthand(body))
     except Exception as exc:  # noqa: BLE001 — fail closed to "no match"
         log.warning("[payment_relay] shape check errored, treating as no-match: %s", exc)

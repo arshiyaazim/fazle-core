@@ -122,7 +122,7 @@ class TestForeignKeyValidation:
 
         async with test_db_pool.acquire() as conn:
             contact = await conn.fetchrow(
-                "INSERT INTO wbom_contacts (whatsapp_number) VALUES ($1) RETURNING contact_id",
+                "INSERT INTO fazle_contacts (whatsapp_number) VALUES ($1) RETURNING contact_id",
                 AUTHORIZED,
             )
 

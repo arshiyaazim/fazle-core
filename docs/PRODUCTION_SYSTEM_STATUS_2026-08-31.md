@@ -91,7 +91,7 @@
 | Recurring outreach | **LIVE** | `AGENT_PROACTIVE_OUTBOUND_ENABLED=true`. |
 | HR Officer accounts (`HROFFICER_01_NAME`, `HROFFICER_02_NAME`) | **DEAD** | `.env` explicitly notes the API keys/passwords were removed `2026-07-10`; hash mismatch, never read by any code path. Names kept for historical attribution only. |
 | `ux-preview.html`, `ux-preview-v2.html` | **DEAD/OBSOLETE** | Files exist in `app/static/` but no route in `main.py` and no nav links from any other page. Mentioned only in `docs/DEVELOPER_GUIDE.md` §124 and `docs/AUDIT_REPORT_2026-07-17.md`. |
-| `wbom-create-link.html`, `wbom-link-review.html` | **LIVE** (one-time cleanup) | Both routed at `/wbom-create-link` and `/wbom-link-review`; consume `/reports/unresolved_fpe_employees` and call `admin_employees/link-fpe` + `admin_employees/create-and-link`. |
+| `wbom-create-link.html`, `wbom-link-review.html` | **LIVE** (one-time cleanup) | Both routed at `/wbom-create-link` and `/wbom-link-review`; consume `/reports/unresolved_fazle_employees` and call `admin_employees/link-fpe` + `admin_employees/create-and-link`. |
 | `dashboard.html` (legacy tile-only) | **LIVE** (legacy) | `/dashboard/legacy` produces the simple grid; primary dashboard is `dashboard.html`. |
 | `/static/service-worker.js` + `/manifest.json` | **LIVE** (PWA) | PWA registration in `payroll.html` `registerPayrollPwa()`. |
 
@@ -105,7 +105,7 @@
 | WhatsApp image → OCR → release slip extraction | **LIVE** | `modules/escort_slip_extractor/extract_escort_slip()`; bridge_poller `_extract_slip()`; `/api/dispatch/release-slips/upload` (multipart). |
 | Release-slip OCR → `handle_ocr_release_slip()` admin review draft | **LIVE** | `fazle_draft_replies` populated with `intent='release_slip_ocr'`. **Does NOT close the program.** |
 | Release-slip admin UI → `approve_release_slip()` → `close_program()` | **LIVE** | `/api/dispatch/release-slips/{extraction_id}/approve` (operator+); calls `close_program()` from `escort_lifecycle`. |
-| `[RELEASE CONFIRMED]` admin message → `handle_admin_release_confirmation()` → `close_program()` | **LIVE** | `modules/bridge_poller/__init__.py` lines 1546, 1635. |
+| `[RELEASE CONFIRMED]` admin message → `handle_admin_release_confirmation()` → `close_program()` | **LIVE** | `modules/fazle_bridge_poller/__init__.py` lines 1546, 1635. |
 | Dispatch UI `/dispatch` — 9 endpoints | **LIVE** | availability / check-conflict / suggestions / overlaps / assign / assign-override / replace-escort / unassign / complete / incomplete-drafts / release-slips/pending / release-slips/{id}/candidates / release-slips/{id}/approve / release-slips/upload / overlaps/review / same-vessel-review. |
 | Unmatched-confirmations queue `/unmatched-confirmations` | **LIVE** | 5 routes (`GET list`, `GET item`, `POST link-existing`, `POST confirm-new`, `POST reject`, `POST defer`). |
 | `/payroll/transactions/{employee_id}` and other payroll sub-routes | **UI_ONLY stub** | All return the same `payroll.html` page; tab switch is JS-side (`tabFromPath()`). |
@@ -122,7 +122,7 @@
 | Office Attendance (`/admin/attendance/*`) | **LIVE** | 11 routes; payroll.html attendance-office tab. |
 | Employee edit requests (`/employees/edit-requests*`) | **LIVE** | payroll.html `tab-empeditreq`; FPE operator → admin approval flow. |
 | Operator pending (`/operator/pending|submit|approve|reject`) | **LIVE** | payroll.html `tab-operator`; HR officer submit → admin approve/reject. |
-| Cash ledger (`/cash*`, `/staging-payments*`) | **LIVE** | payroll.html `tab-cash`; `fpe_cash_transactions` row is canonical. |
+| Cash ledger (`/cash*`, `/staging-payments*`) | **LIVE** | payroll.html `tab-cash`; `fazle_cash_transactions` row is canonical. |
 | Income ledger (`/income*`) | **LIVE** | payroll.html `tab-income`; manual + system-sourced. |
 | Reconciliation / eligibility / dry-run (`/admin/payroll/*`) | **LIVE** | payroll.html `tab-admin` (admin-only). |
 | Salary apply-uniform (`/admin/salary/apply-uniform`) | **LIVE** | admin-only. |
@@ -186,7 +186,7 @@
 
 | Subsystem | Status | Evidence |
 |---|---|---|
-| Reports (`/reports`, `/reports/{name}`) | **LIVE (backend)** | Dispatched by name; only `dashboard.html` tab "Reports" calls it (and `wbom-create-link` / `wbom-link-review` call `/reports/unresolved_fpe_employees` directly). |
+| Reports (`/reports`, `/reports/{name}`) | **LIVE (backend)** | Dispatched by name; only `dashboard.html` tab "Reports" calls it (and `wbom-create-link` / `wbom-link-review` call `/reports/unresolved_fazle_employees` directly). |
 | Backup (`/backup/{status,list,run,rotate}`) | **LIVE** | `dashboard.html` tab. |
 | Scheduler (`/scheduler/{status,run/{job_name}}`) | **LIVE** | `dashboard.html` tab; `SCHEDULER_ENABLED=true`. |
 | Observability (`/observability/{errors,summary}`, `/metrics`, `/metrics/json`) | **LIVE** | `dashboard.html` tab. |

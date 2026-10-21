@@ -1,4 +1,8 @@
 # Recruitment Pipeline Audit — 2026-06-15
+
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **Post-fix edition — verified live state as of 17:20 CEST**
 
 ---
@@ -96,7 +100,7 @@ async def _should_recruitment_autoreply(sender_clean: str, text: str) -> bool:
     # Step 1: identity lookup — degrade gracefully to 'unknown' on any error.
     role = "unknown"
     try:
-        from modules.identity_brain import detect_identity
+        from modules.fazle_identity_brain import detect_identity
         identity = await detect_identity(sender_clean, text)
         role = identity.get("identity_role") or identity.get("role") or "unknown"
     except Exception as e:
@@ -107,7 +111,7 @@ async def _should_recruitment_autoreply(sender_clean: str, text: str) -> bool:
 
     # Step 2: eligibility — explicit keywords still fire when identity is unknown.
     try:
-        from modules.intent import classify as classify_intent
+        from modules.fazle_intent import classify as classify_intent
         from modules.recruitment_flow import recruitment_eligibility
         decision = await recruitment_eligibility(
             sender_clean, text, role=role, intent=classify_intent(text),

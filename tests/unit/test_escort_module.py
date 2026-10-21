@@ -215,7 +215,7 @@ class TestSecondarySignalsPositionIndependent:
 class TestMotherVesselFieldBoundaryRegression:
     """Regression coverage for the 2026-07-26 mother-vessel/importer
     field-boundary bug. The two real messages below are verbatim from
-    wbom_whatsapp_messages (sender 8801670535255, message_id 12815 and
+    fazle_whatsapp_messages (sender 8801670535255, message_id 12815 and
     12809) -- the actual production input that produced the reported bad
     admin drafts ("Mother Vessel: MV AT-O/A", "Importer: ity 1400Mts").
 
@@ -414,7 +414,7 @@ class TestContactIdResolution:
 
         async with test_db_pool.acquire() as conn:
             contact_id = await conn.fetchval(
-                "INSERT INTO wbom_contacts (whatsapp_number) VALUES ($1) RETURNING contact_id",
+                "INSERT INTO fazle_contacts (whatsapp_number) VALUES ($1) RETURNING contact_id",
                 "8801711000111",
             )
 
@@ -433,7 +433,7 @@ class TestContactIdResolution:
 
         async with test_db_pool.acquire() as conn:
             contact_id = await conn.fetchval(
-                "INSERT INTO wbom_contacts (whatsapp_number) VALUES ($1) RETURNING contact_id",
+                "INSERT INTO fazle_contacts (whatsapp_number) VALUES ($1) RETURNING contact_id",
                 "8801722000222",
             )
 
@@ -473,11 +473,11 @@ class TestContactIdResolution:
 
         async with test_db_pool.acquire() as conn:
             original_contact = await conn.fetchval(
-                "INSERT INTO wbom_contacts (whatsapp_number) VALUES ($1) RETURNING contact_id",
+                "INSERT INTO fazle_contacts (whatsapp_number) VALUES ($1) RETURNING contact_id",
                 "8801733000333",
             )
             other_contact = await conn.fetchval(
-                "INSERT INTO wbom_contacts (whatsapp_number) VALUES ($1) RETURNING contact_id",
+                "INSERT INTO fazle_contacts (whatsapp_number) VALUES ($1) RETURNING contact_id",
                 "8801744000444",
             )
             pid = await conn.fetchval(

@@ -290,7 +290,7 @@ async def _fetch_recent_messages(full_scan: bool) -> list[dict[str, Any]]:
                COALESCE(message_body, '') AS body,
                platform,
                identity_role
-        FROM wbom_whatsapp_messages
+        FROM fazle_whatsapp_messages
         WHERE canonical_phone = ANY($1::text[])
           AND COALESCE(source_timestamp, received_at) >= $2
         ORDER BY canonical_phone ASC, COALESCE(source_timestamp, received_at) ASC, message_id ASC
@@ -307,7 +307,7 @@ async def _bridge_health_alert() -> GapAlert | None:
     last_insert = await fetch_one(
         """
         SELECT MAX(received_at) AS last_insert
-        FROM wbom_whatsapp_messages
+        FROM fazle_whatsapp_messages
         WHERE direction = 'inbound'
           AND message_body NOT LIKE '%SYSTEM HEALTH ALERT%'
         """
@@ -320,7 +320,7 @@ async def _bridge_health_alert() -> GapAlert | None:
             gap_seconds=999999,
             last_ts=_now(),
             severity="critical",
-            details="No message rows found in wbom_whatsapp_messages.",
+            details="No message rows found in fazle_whatsapp_messages.",
             role="system",
             last_message_direction="system",
             priority=100,

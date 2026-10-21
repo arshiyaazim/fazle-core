@@ -1,7 +1,7 @@
 -- Migration 046: fpe_employee_edit_requests (Employee Edit approval queue)
 --
 -- Backs the payroll.html Employees tab's role-gated edit flow: admin/
--- superadmin edits write directly to fpe_employees/wbom_employees as before;
+-- superadmin edits write directly to fazle_employees/fazle_employees_legacy as before;
 -- any other role's edit is stored here as a pending request for an admin to
 -- approve or reject.
 --
@@ -29,7 +29,7 @@
 
 CREATE TABLE IF NOT EXISTS fpe_employee_edit_requests (
     id                  SERIAL PRIMARY KEY,
-    employee_id         INTEGER NOT NULL REFERENCES fpe_employees(id),
+    employee_id         INTEGER NOT NULL REFERENCES fazle_employees(id),
     wbom_employee_id     INTEGER,
     requested_by         VARCHAR(50) NOT NULL,
     changes              JSONB NOT NULL,
@@ -40,5 +40,5 @@ CREATE TABLE IF NOT EXISTS fpe_employee_edit_requests (
     reviewed_at          TIMESTAMPTZ
 );
 
-CREATE INDEX IF NOT EXISTS idx_fpe_employee_edit_requests_employee_id ON fpe_employee_edit_requests(employee_id);
-CREATE INDEX IF NOT EXISTS idx_fpe_employee_edit_requests_status ON fpe_employee_edit_requests(status);
+CREATE INDEX IF NOT EXISTS idx_fazle_employee_edit_requests_employee_id ON fpe_employee_edit_requests(employee_id);
+CREATE INDEX IF NOT EXISTS idx_fazle_employee_edit_requests_status ON fpe_employee_edit_requests(status);

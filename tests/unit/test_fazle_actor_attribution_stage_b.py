@@ -4,14 +4,14 @@ genuine inbound intent persistence.
 
 Covers:
   B1 -- migration 073's actor_type/actor_id columns, consumed via
-        modules.bridge_poller._save_message()'s new optional params.
+        modules.fazle_bridge_poller._save_message()'s new optional params.
   B2 -- _deliver_hermes_reply() now also persists a canonical
-        wbom_whatsapp_messages row, idempotent on retry.
+        fazle_whatsapp_messages row, idempotent on retry.
   B3 -- the Bridge2 self-chat outgoing scanner now persists the
         device-originated Admin message itself (direction='outbound',
         actor_type='human_device'), independent of and never able to
         affect command processing.
-  B4 -- every existing writer of wbom_whatsapp_messages passes an
+  B4 -- every existing writer of fazle_whatsapp_messages passes an
         explicit actor_type at its own call site (source-inspection
         coverage check, matching this repo's own established pattern for
         proving a loop/call-site is actually wired, not just defined).
@@ -23,7 +23,7 @@ Covers:
 
 _save_message() and the self-chat scanner both need a live Postgres
 connection to exercise their real INSERT/UPDATE end to end -- this file
-mocks modules.bridge_poller.fetch_one/execute directly (this repo's own
+mocks modules.fazle_bridge_poller.fetch_one/execute directly (this repo's own
 established pattern, see tests/unit/test_recruitment_recovery_sweep.py)
 rather than requiring a live DB, and uses source-inspection for the parts
 of the outgoing scan loop that need a live bridge SQLite session to drive
@@ -38,7 +38,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-import modules.bridge_poller as bp
+import modules.fazle_bridge_poller as bp
 
 pytestmark = pytest.mark.unit
 
@@ -51,7 +51,7 @@ class TestSaveMessageIdempotency:
         must still insert with message_hash=NULL, byte-identical to this
         function's behavior before the parameter existed."""
         fake_row = {"message_id": 42}
-        with patch("modules.bridge_poller.fetch_one", new=AsyncMock(return_value=fake_row)) as mock_fetch:
+        with patch("modules.fazle_bridge_poller.fetch_one", new=AsyncMock(return_value=fake_row)) as mock_fetch:
             result = await bp._save_message("bridge3", "8801700000000", "hi", "outbound", actor_type="automation")
         assert result == 42
         args = mock_fetch.call_args.args
@@ -59,7 +59,7 @@ class TestSaveMessageIdempotency:
 
     async def test_source_message_ref_produces_deterministic_hash(self):
         """Same source_message_ref -> same message_hash both times, so the
-        table's own pre-existing unique index (uq_wbom_messages_hash) can
+        table's own pre-existing unique index (uq_fazle_messages_hash) can
         actually catch a retry."""
         captured_hashes = []
 
@@ -67,7 +67,7 @@ class TestSaveMessageIdempotency:
             captured_hashes.append(args[-1])
             return {"message_id": 1}
 
-        with patch("modules.bridge_poller.fetch_one", new=AsyncMock(side_effect=_capture)):
+        with patch("modules.fazle_bridge_poller.fetch_one", new=AsyncMock(side_effect=_capture)):
             await bp._save_message(
                 "bridge1", "8801880446111", "body", "outbound",
                 actor_type="hermes", source_message_ref="hermes_relay_reply:999",
@@ -86,7 +86,7 @@ class TestSaveMessageIdempotency:
         index and RETURNING produces no row -- fetch_one returns None,
         and _save_message must surface that as None (no new row), never
         raise, never fabricate a second message_id."""
-        with patch("modules.bridge_poller.fetch_one", new=AsyncMock(side_effect=[{"message_id": 7}, None])):
+        with patch("modules.fazle_bridge_poller.fetch_one", new=AsyncMock(side_effect=[{"message_id": 7}, None])):
             first = await bp._save_message(
                 "bridge1", "8801880446111", "body", "outbound",
                 actor_type="hermes", source_message_ref="hermes_relay_reply:1000",
@@ -99,7 +99,7 @@ class TestSaveMessageIdempotency:
         assert second is None
 
     async def test_sql_includes_on_conflict_do_nothing_and_actor_columns(self):
-        with patch("modules.bridge_poller.fetch_one", new=AsyncMock(return_value=None)) as mock_fetch:
+        with patch("modules.fazle_bridge_poller.fetch_one", new=AsyncMock(return_value=None)) as mock_fetch:
             await bp._save_message("bridge2", "x", "y", "outbound", actor_type="human_device")
         sql = mock_fetch.call_args.args[0]
         assert "ON CONFLICT (message_hash) DO NOTHING" in sql
@@ -122,7 +122,7 @@ class TestHermesReplyCanonicalPersistence:
         enqueue_mock = AsyncMock(return_value=5750)
         monkeypatch.setattr(router.outbound, "enqueue", enqueue_mock)
         save_message_mock = AsyncMock(return_value=123)
-        monkeypatch.setattr("modules.bridge_poller._save_message", save_message_mock)
+        monkeypatch.setattr("modules.fazle_bridge_poller._save_message", save_message_mock)
 
         await router._deliver_hermes_reply("what's my status", "8801880446111", source_bridge="bridge1")
 
@@ -152,7 +152,7 @@ class TestHermesReplyCanonicalPersistence:
         monkeypatch.setattr(router, "_remember_hermes_session", lambda *a, **k: None)
         monkeypatch.setattr(router.outbound, "enqueue", AsyncMock(return_value=5750))
         save_message_mock = AsyncMock(return_value=None)
-        monkeypatch.setattr("modules.bridge_poller._save_message", save_message_mock)
+        monkeypatch.setattr("modules.fazle_bridge_poller._save_message", save_message_mock)
 
         await router._deliver_hermes_reply("q", "8801880446111", source_bridge="bridge1")
         await router._deliver_hermes_reply("q", "8801880446111", source_bridge="bridge1")
@@ -171,7 +171,7 @@ class TestHermesReplyCanonicalPersistence:
         monkeypatch.setattr(router, "_remember_hermes_session", lambda *a, **k: None)
         monkeypatch.setattr(router.outbound, "enqueue", AsyncMock(return_value=None))
         save_message_mock = AsyncMock()
-        monkeypatch.setattr("modules.bridge_poller._save_message", save_message_mock)
+        monkeypatch.setattr("modules.fazle_bridge_poller._save_message", save_message_mock)
 
         await router._deliver_hermes_reply("q", "8801880446111", source_bridge="bridge1")
 
@@ -188,7 +188,7 @@ class TestHermesReplyCanonicalPersistence:
         monkeypatch.setattr(router, "_remember_hermes_session", lambda *a, **k: None)
         monkeypatch.setattr(router.outbound, "enqueue", AsyncMock(return_value=5751))
         monkeypatch.setattr(
-            "modules.bridge_poller._save_message",
+            "modules.fazle_bridge_poller._save_message",
             AsyncMock(side_effect=RuntimeError("db down")),
         )
 
@@ -199,7 +199,7 @@ class TestHermesReplyCanonicalPersistence:
         source = inspect.getsource(__import__(
             "modules.admin_directives.router", fromlist=["_deliver_hermes_reply"]
         )._deliver_hermes_reply)
-        idx = source.index('from modules.bridge_poller import _save_message')
+        idx = source.index('from modules.fazle_bridge_poller import _save_message')
         block = source[idx:idx + 400]
         assert "except Exception as _persist_exc:" in block
 
@@ -331,7 +331,7 @@ class TestB5InboundIntentPersistence:
 
     def test_intent_update_is_conditional_and_non_destructive(self):
         source = inspect.getsource(bp)
-        idx = source.index("UPDATE wbom_whatsapp_messages SET intent_detected")
+        idx = source.index("UPDATE fazle_whatsapp_messages SET intent_detected")
         block = source[idx:idx + 200]
         assert "AND intent_detected IS NULL" in block
 

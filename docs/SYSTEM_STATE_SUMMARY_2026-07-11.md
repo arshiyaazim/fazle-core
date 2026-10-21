@@ -21,7 +21,7 @@ honest about gaps.
 
 ```
 WhatsApp message arrives (bridge1 / bridge2 / Meta webhook)
-  → bridge_poller reads it (SQLite bridge DB → Postgres wbom_whatsapp_messages)
+  → bridge_poller reads it (SQLite bridge DB → Postgres fazle_whatsapp_messages)
   → media_type check: text | image | audio/ptt | document/pdf
       → non-text: OCR / ASR / doc-extraction (see §2), result becomes text
   → message_router.process_message(sender, text, source)
@@ -59,20 +59,20 @@ All three converters below hit a live sidecar process (`shared/media/media-proce
 
 ## 3. Role & Intent Routing
 
-**Identity resolution** (`modules/identity_brain/__init__.py`) is an 11-step, phone-only, first-match-wins lookup:
+**Identity resolution** (`modules/fazle_identity_brain/__init__.py`) is an 11-step, phone-only, first-match-wins lookup:
 
 ```
 admin (env ADMIN_NUMBERS/bridge numbers, checked first, always wins)
 → seed rules (fazle_contact_roles: family/accountant/vip_client/client_escort_buyer/vendor/supervisor)
-→ repeat_client (payment history) → employee (wbom_employees, 3 phone variants + 4 secondary evidence sources:
+→ repeat_client (payment history) → employee (fazle_employees_legacy, 3 phone variants + 4 secondary evidence sources:
   cash transactions, attendance, escort roster, contact DB) → contact DB → text-hint candidate → unknown
 ```
 
 Two important, verified facts about this: (1) **the "blocked" role no longer exists** — removed entirely on 2026-07-11 (migration 042), a sender is now strictly "known role" or "unknown," nothing else; (2) **employee lookup is phone-only, no name fallback** — an employee texting from a genuinely new number is treated exactly like a stranger.
 
-**Bug found and fixed, same day**: step 4 (contact DB lookup, `_lookup_contact()`) was querying two columns that don't exist on `wbom_contacts` (`contact_name`/`contact_type` — real columns are `display_name`/`relation`), raising an uncaught `asyncpg.UndefinedColumnError` for any sender who isn't an admin/employee/escort-roster match but does have a `wbom_contacts` row (2,086 such rows at time of fix — clients, vendors, VIPs). Zero occurrences were found in the error log before the fix, so this was verified as a real, dormant bug rather than one observed actively firing in production. Fixed as a 2-column rename, nothing else touched.
+**Bug found and fixed, same day**: step 4 (contact DB lookup, `_lookup_contact()`) was querying two columns that don't exist on `fazle_contacts` (`contact_name`/`contact_type` — real columns are `display_name`/`relation`), raising an uncaught `asyncpg.UndefinedColumnError` for any sender who isn't an admin/employee/escort-roster match but does have a `fazle_contacts` row (2,086 such rows at time of fix — clients, vendors, VIPs). Zero occurrences were found in the error log before the fix, so this was verified as a real, dormant bug rather than one observed actively firing in production. Fixed as a 2-column rename, nothing else touched.
 
-**Intent classification**: LLM-first (`ai.classify_intent_llm`), falling back to keyword-rule classification (`modules/intent`) only if the LLM returns `"unknown"`.
+**Intent classification**: LLM-first (`ai.classify_intent_llm`), falling back to keyword-rule classification (`modules/fazle_intent`) only if the LLM returns `"unknown"`.
 
 **RBAC (dashboard/API access, distinct from the above)**: `fazle_roles` hierarchy —
 ```
@@ -92,7 +92,7 @@ viewer(10) < office_assistant(20) < operator(30) < accountant(50) < admin(70) �
 
 ## 5. Contact Book (`modules/contact_sync`) — ⚠️ Partially Dead Code
 
-The docstring claims merging bridge1 + bridge2 + Meta into `wbom_contacts` as "the central table." Verified reality: **Meta has no reader implemented**; the hourly sync loop (`start_contact_sync_loop`) and the on-message upsert hook (`upsert_contact_from_message`) are both **defined but never called anywhere** — dead code. The only live trigger is a manual admin API call (`POST /api/wa/contacts/sync`). Practical implication: `wbom_contacts` is likely stale relative to live traffic unless someone is manually triggering sync. Dedup is phone+platform only — there's no join key to `wbom_employees`/`fpe_employees`, so the same real person can legitimately exist as unrelated rows across these tables today.
+The docstring claims merging bridge1 + bridge2 + Meta into `fazle_contacts` as "the central table." Verified reality: **Meta has no reader implemented**; the hourly sync loop (`start_contact_sync_loop`) and the on-message upsert hook (`upsert_contact_from_message`) are both **defined but never called anywhere** — dead code. The only live trigger is a manual admin API call (`POST /api/wa/contacts/sync`). Practical implication: `fazle_contacts` is likely stale relative to live traffic unless someone is manually triggering sync. Dedup is phone+platform only — there's no join key to `fazle_employees_legacy`/`fazle_employees`, so the same real person can legitimately exist as unrelated rows across these tables today.
 
 ---
 
@@ -100,18 +100,18 @@ The docstring claims merging bridge1 + bridge2 + Meta into `wbom_contacts` as "t
 
 You asked that all search/lookup be linked to `employee_id_phone`, one employee_id_phone = one unique employee. **Current reality is more fragmented than that goal:**
 
-- There are **two employee tables**: `wbom_employees` (the original, escort/attendance-facing) and `fpe_employees` (the payroll-engine's own, with `employee_id_phone`, alias table, fuzzy-name matching, canonical-duplicate soft-links). A cross-lookup bridges them by phone (`modules/fazle_payroll_engine/employee.py`'s step 3b), but they are not one unified table.
-- Within `fpe_employees`, `employee_id_phone` **is** the intended unique identity key, and as of the 2026-07-10/11 investigation this session, the matching priority was fixed so `employee_id_phone` is checked *before* payout phone (previously backwards — a real misattribution bug, since fixed).
-- `wbom_contacts` (the general contact book) has no join key to either employee table beyond raw phone string matching.
+- There are **two employee tables**: `fazle_employees_legacy` (the original, escort/attendance-facing) and `fazle_employees` (the payroll-engine's own, with `employee_id_phone`, alias table, fuzzy-name matching, canonical-duplicate soft-links). A cross-lookup bridges them by phone (`modules/fazle_payroll_engine/employee.py`'s step 3b), but they are not one unified table.
+- Within `fazle_employees`, `employee_id_phone` **is** the intended unique identity key, and as of the 2026-07-10/11 investigation this session, the matching priority was fixed so `employee_id_phone` is checked *before* payout phone (previously backwards — a real misattribution bug, since fixed).
+- `fazle_contacts` (the general contact book) has no join key to either employee table beyond raw phone string matching.
 
-**Honest assessment**: the "one employee_id_phone, one employee" invariant is enforced *within* `fpe_employees`, but not yet as a single cross-system identity — `wbom_employees`/`wbom_contacts`/`fpe_employees` are three tables reconciled by phone-matching heuristics at read time, not by a shared foreign key. Unifying this fully would be a real, scoped project, not a quick fix.
+**Honest assessment**: the "one employee_id_phone, one employee" invariant is enforced *within* `fazle_employees`, but not yet as a single cross-system identity — `fazle_employees_legacy`/`fazle_contacts`/`fazle_employees` are three tables reconciled by phone-matching heuristics at read time, not by a shared foreign key. Unifying this fully would be a real, scoped project, not a quick fix.
 
 ---
 
 ## 7. Cash Transactions, Ledger, Employee Creation
 
-- **Ledger table**: `fpe_employee_ledger` (running per-period totals), updated by `modules/fazle_payroll_engine/accounting.py::create_transaction()` — the single, idempotent (via `txn_ref` hash) entry point that also writes the immutable `fpe_cash_transactions` row.
-- **Auto-create-on-payment**: `match_or_create_employee()` (`modules/fazle_payroll_engine/employee.py`) creates a new `fpe_employees` row when no existing match is found *and* at least one phone is present — never on name alone (a phone-less, name-less match returns `None` rather than creating a phantom record).
+- **Ledger table**: `fazle_employee_ledger` (running per-period totals), updated by `modules/fazle_payroll_engine/accounting.py::create_transaction()` — the single, idempotent (via `txn_ref` hash) entry point that also writes the immutable `fazle_cash_transactions` row.
+- **Auto-create-on-payment**: `match_or_create_employee()` (`modules/fazle_payroll_engine/employee.py`) creates a new `fazle_employees` row when no existing match is found *and* at least one phone is present — never on name alone (a phone-less, name-less match returns `None` rather than creating a phantom record).
 - **entry_source governance**: `wbom_attendance.entry_source` is a hard CHECK-constrained vocabulary (`manual_office | message_parser | whatsapp_escort | escort_release | system | legacy`) — this is a payroll-*eligibility* category, not a full provenance log. Full provenance (which exact draft, which module) is preserved via `source_draft_id → fazle_draft_replies.meta`.
 
 ---
@@ -137,9 +137,9 @@ confirmed → running: modules/escort_lifecycle::mark_program_running_on_attenda
 running → released/closed: modules/escort_lifecycle::close_program(),
   triggered by release-intent detection in the conversation.
 
-Release → payment: create_escort_payment_draft() (modules/payment_workflow)
+Release → payment: create_escort_payment_draft() (modules/fazle_payment_workflow)
   → admin approval → finalize_payment() → match_or_create_employee()
-  → create_transaction() → fpe_cash_transactions + fpe_employee_ledger.
+  → create_transaction() → fazle_cash_transactions + fazle_employee_ledger.
 ```
 
 ---
@@ -202,7 +202,7 @@ The hybrid Qdrant/embedding path's **code default is still `HYBRID_SEARCH_ENABLE
 | "Blocked number" concept | ❌ Removed entirely (2026-07-11) |
 | RBAC hierarchy incl. office_assistant | ✅ Real, live, freshly audited |
 | Contact sync (`contact_sync`) | ⚠️ Manual-trigger only; scheduled + on-message hooks are dead code |
-| Employee identity unification (`employee_id_phone`) | ⚠️ Enforced within `fpe_employees` only, not cross-table |
+| Employee identity unification (`employee_id_phone`) | ⚠️ Enforced within `fazle_employees` only, not cross-table |
 | Escort order intake/confirm/release/payment | ✅ Real, live, including the bridge2-direct-confirm bypass |
 | Employee "verification" (financial, not identity) | ✅ Real, live — not an AI identity-recheck |
 | Recruitment funnel + AI reply | ✅ Real, live (keyword trigger + 3-layer detector as of 2026-07-11, LLM reply) |
@@ -239,7 +239,7 @@ Test suite after all three commits: 583 passed, 330 skipped, 14 xfailed, 4 xpass
 
 Re-verified against the live host on 2026-07-12 04:47 CEST. The code and DB-side facts in §1–§13 were still correct as *committed/indexed* state, but two runtime claims needed correcting at the time:
 
-**(a) The process serving production traffic had not actually loaded the 22:12–22:39 commits from §13.** `fazle-core.service` (PID 2449634) had been running continuously since **2026-07-11 20:31:03** with no restart since (`systemctl show -p ExecMainStartTimestamp`; `DEBUG=false` in `.env` means `uvicorn`'s `reload=s.debug` is off, so there is no hot-reload). But the three feature/fix commits this document's §13 describes as "live" were made *after* that restart: `47a9c8e` (identity_brain fix, 22:30:33), `a0b2c38` (RAG stability fixes, 22:33:39), `07687b1` (recruitment detector/Bangla/conversation-history, 22:39:43) — confirmed by file mtimes on `modules/identity_brain/__init__.py` (22:12), `modules/rag/__init__.py` and `modules/message_router/__init__.py` (22:34), `modules/recruitment_flow/__init__.py` (22:12), all later than the 20:31:02 process start. **Resolved 2026-07-12 21:26:32 CEST**: service restarted (Owner-directed, `sudo systemctl restart fazle-core.service`), new `ExecMainStartTimestamp` confirmed postdating all three commits. Post-restart `/health` confirmed all probes `ok` including `qdrant.points_count: 8878` (RAG index intact across the restart, as expected since it's external DB state). §1–§13's "live" claims for those three commits are now actually true of the running process.
+**(a) The process serving production traffic had not actually loaded the 22:12–22:39 commits from §13.** `fazle-core.service` (PID 2449634) had been running continuously since **2026-07-11 20:31:03** with no restart since (`systemctl show -p ExecMainStartTimestamp`; `DEBUG=false` in `.env` means `uvicorn`'s `reload=s.debug` is off, so there is no hot-reload). But the three feature/fix commits this document's §13 describes as "live" were made *after* that restart: `47a9c8e` (identity_brain fix, 22:30:33), `a0b2c38` (RAG stability fixes, 22:33:39), `07687b1` (recruitment detector/Bangla/conversation-history, 22:39:43) — confirmed by file mtimes on `modules/fazle_identity_brain/__init__.py` (22:12), `modules/rag/__init__.py` and `modules/message_router/__init__.py` (22:34), `modules/recruitment_flow/__init__.py` (22:12), all later than the 20:31:02 process start. **Resolved 2026-07-12 21:26:32 CEST**: service restarted (Owner-directed, `sudo systemctl restart fazle-core.service`), new `ExecMainStartTimestamp` confirmed postdating all three commits. Post-restart `/health` confirmed all probes `ok` including `qdrant.points_count: 8878` (RAG index intact across the restart, as expected since it's external DB state). §1–§13's "live" claims for those three commits are now actually true of the running process.
 
 **(b) `AI_CONSOLE_CHAT_ENABLED=true` had been live in production `.env` since at least 2026-07-09**, confirmed via `.env.bak.pre-rotation-20260709_073455` and `.env.bak.pre-hrofficer-cleanup-20260710_100008` (both show `true`), with no `fazle_runtime_settings` row for `ai_console.chat_enabled` existing at the time to make that explicit. This meant §12/§13's "recommended to stay `false` until this batch is stable for 72h" was never actually the deployed reality — the effective flag had been `true` since before 2026-07-11, not off-by-default as described. **Resolved 2026-07-12: Owner confirmed this is intentional**, not stale drift — the `.env` value is the Owner's actual decision, not an accident (contrast with the earlier genuine `AUTO_REPLY_ENABLED` doc-vs-`.env` mismatch, which *was* accidental). An explicit `fazle_runtime_settings` row (`key='ai_console.chat_enabled', value='true'`) was added the same day so the decision is DB-governed going forward rather than an implicit `.env`-fallback default — `_is_ai_console_chat_enabled()` in `app/main.py` checks the DB row first, so this row is now authoritative. **The AI Console orchestrator (`modules.ai_console`, not the simpler `admin_chat_lab` default) is confirmed the live `/chat/message` handler as of the restart in (a).** §12's "gated by a feature flag ... default off" framing is now stale — the flag is on, by Owner decision, both in `.env` and explicitly in the DB.
 

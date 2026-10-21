@@ -235,10 +235,10 @@ class TestEmployeeLookup:
 
         async with test_db_pool.acquire() as conn:
             await conn.execute(
-                "UPDATE wbom_employees SET employee_name='Same Name' WHERE employee_id=$1", seed_employee["employee_id"]
+                "UPDATE fazle_employees_legacy SET employee_name='Same Name' WHERE employee_id=$1", seed_employee["employee_id"]
             )
             await conn.execute(
-                "UPDATE wbom_employees SET employee_name='Same Name' WHERE employee_id=$1", seed_employee2["employee_id"]
+                "UPDATE fazle_employees_legacy SET employee_name='Same Name' WHERE employee_id=$1", seed_employee2["employee_id"]
             )
         results = await suggest_employees_by_name("Same Name")
         ids = {r["employee_id"] for r in results}
@@ -246,14 +246,14 @@ class TestEmployeeLookup:
         assert seed_employee2["employee_id"] in ids
 
     async def test_lookup_by_id_attaches_employee_id_phone_via_fk_link(self, test_db_pool, seed_employee):
-        """2026-07-13 audit Fix #3: employee_id_phone comes from fpe_employees,
+        """2026-07-13 audit Fix #3: employee_id_phone comes from fazle_employees,
         preferring the clean wbom_employee_id FK link when it exists."""
         _use_pool(test_db_pool)
         from modules.attendance.crud import lookup_employee_by_id
 
         async with test_db_pool.acquire() as conn:
             await conn.execute(
-                "INSERT INTO fpe_employees (full_name, name_normalized, employee_id_phone, wbom_employee_id) "
+                "INSERT INTO fazle_employees (full_name, name_normalized, employee_id_phone, wbom_employee_id) "
                 "VALUES ('Karim', 'karim', '01899999999', $1)",
                 seed_employee["employee_id"],
             )
@@ -268,7 +268,7 @@ class TestEmployeeLookup:
 
         async with test_db_pool.acquire() as conn:
             await conn.execute(
-                "INSERT INTO fpe_employees (full_name, name_normalized, primary_phone, employee_id_phone) "
+                "INSERT INTO fazle_employees (full_name, name_normalized, primary_phone, employee_id_phone) "
                 "VALUES ('Karim', 'karim', '8801811111111', '01888888888')"
             )
         result = await lookup_employee_by_id(seed_employee["employee_id"])
@@ -287,7 +287,7 @@ class TestEmployeeLookup:
 
         async with test_db_pool.acquire() as conn:
             await conn.execute(
-                "INSERT INTO fpe_employees (full_name, name_normalized, employee_id_phone, wbom_employee_id) "
+                "INSERT INTO fazle_employees (full_name, name_normalized, employee_id_phone, wbom_employee_id) "
                 "VALUES ('Karim', 'karim', '01899999999', $1)",
                 seed_employee["employee_id"],
             )

@@ -11,7 +11,7 @@
 -- (see the accompanying implementation report), 3 MORE undocumented tables
 -- were discovered — wbom_business_types, wbom_relation_types, and
 -- wbom_message_templates — required as live foreign-key targets from
--- wbom_contacts and wbom_whatsapp_messages respectively. Same gap, same fix,
+-- fazle_contacts and fazle_whatsapp_messages respectively. Same gap, same fix,
 -- included below. The true count of "no schema source of truth" tables was
 -- 27, not 24 — this is reported honestly rather than silently expanded.
 --
@@ -27,8 +27,8 @@
 --   * Every PRIMARY KEY / UNIQUE / FOREIGN KEY / CHECK constraint added via
 --     ALTER TABLE is wrapped in a guarded DO block that checks pg_constraint
 --     first, so it is also a no-op against the current database.
---   * One trigger (wbom_whatsapp_messages) depends on a function,
---     wbom_msg_autofill(), which was ALSO found to have no prior migration
+--   * One trigger (fazle_whatsapp_messages) depends on a function,
+--     fazle_msg_autofill(), which was ALSO found to have no prior migration
 --     source anywhere in this repo — its definition (captured live via
 --     pg_get_functiondef) is included below for the same reason. CREATE OR
 --     REPLACE FUNCTION is inherently idempotent; the trigger is preceded by
@@ -43,12 +43,12 @@
 -- database. Verified end-to-end against a disposable scratch database
 -- before being added here (see the accompanying implementation report).
 
--- Required by idx_wbom_employees_name_trgm below (production already has
+-- Required by idx_fazle_employees_legacy_name_trgm below (production already has
 -- this enabled; a fresh/disaster-recovery environment would not).
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 -- Dependency tables discovered during verification of this migration
--- (wbom_contacts has live FK constraints referencing both of these; neither
+-- (fazle_contacts has live FK constraints referencing both of these; neither
 -- has any prior migration source anywhere in this repo either — same gap
 -- as the 24 tables above, found by validating this file against a fresh
 -- scratch database rather than assuming the 24-table list was complete).
@@ -69,45 +69,45 @@ CREATE TABLE IF NOT EXISTS public.wbom_relation_types (
     is_active boolean DEFAULT true
 );
 
-CREATE SEQUENCE IF NOT EXISTS public.wbom_business_types_business_type_id_seq
+CREATE SEQUENCE IF NOT EXISTS public.fazle_business_types_business_type_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
     NO MAXVALUE
     CACHE 1;
-ALTER SEQUENCE public.wbom_business_types_business_type_id_seq OWNED BY public.wbom_business_types.business_type_id;
-ALTER TABLE ONLY public.wbom_business_types ALTER COLUMN business_type_id SET DEFAULT nextval('public.wbom_business_types_business_type_id_seq'::regclass);
+ALTER SEQUENCE public.fazle_business_types_business_type_id_seq OWNED BY public.wbom_business_types.business_type_id;
+ALTER TABLE ONLY public.wbom_business_types ALTER COLUMN business_type_id SET DEFAULT nextval('public.fazle_business_types_business_type_id_seq'::regclass);
 
-CREATE SEQUENCE IF NOT EXISTS public.wbom_relation_types_relation_type_id_seq
+CREATE SEQUENCE IF NOT EXISTS public.fazle_relation_types_relation_type_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
     NO MAXVALUE
     CACHE 1;
-ALTER SEQUENCE public.wbom_relation_types_relation_type_id_seq OWNED BY public.wbom_relation_types.relation_type_id;
-ALTER TABLE ONLY public.wbom_relation_types ALTER COLUMN relation_type_id SET DEFAULT nextval('public.wbom_relation_types_relation_type_id_seq'::regclass);
+ALTER SEQUENCE public.fazle_relation_types_relation_type_id_seq OWNED BY public.wbom_relation_types.relation_type_id;
+ALTER TABLE ONLY public.wbom_relation_types ALTER COLUMN relation_type_id SET DEFAULT nextval('public.fazle_relation_types_relation_type_id_seq'::regclass);
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_business_types_pkey'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_business_types_pkey'
     ) THEN
-        ALTER TABLE public.wbom_business_types ADD CONSTRAINT wbom_business_types_pkey PRIMARY KEY (business_type_id);
+        ALTER TABLE public.wbom_business_types ADD CONSTRAINT fazle_business_types_pkey PRIMARY KEY (business_type_id);
     END IF;
 END $$;
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_relation_types_pkey'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_relation_types_pkey'
     ) THEN
-        ALTER TABLE public.wbom_relation_types ADD CONSTRAINT wbom_relation_types_pkey PRIMARY KEY (relation_type_id);
+        ALTER TABLE public.wbom_relation_types ADD CONSTRAINT fazle_relation_types_pkey PRIMARY KEY (relation_type_id);
     END IF;
 END $$;
 
--- One more dependency found the same way: wbom_whatsapp_messages has a live
+-- One more dependency found the same way: fazle_whatsapp_messages has a live
 -- FK to wbom_message_templates, also with no prior migration source anywhere.
 CREATE TABLE IF NOT EXISTS public.wbom_message_templates (
     template_id integer NOT NULL,
@@ -121,22 +121,22 @@ CREATE TABLE IF NOT EXISTS public.wbom_message_templates (
     created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
-CREATE SEQUENCE IF NOT EXISTS public.wbom_message_templates_template_id_seq
+CREATE SEQUENCE IF NOT EXISTS public.fazle_message_templates_template_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
     NO MAXVALUE
     CACHE 1;
-ALTER SEQUENCE public.wbom_message_templates_template_id_seq OWNED BY public.wbom_message_templates.template_id;
-ALTER TABLE ONLY public.wbom_message_templates ALTER COLUMN template_id SET DEFAULT nextval('public.wbom_message_templates_template_id_seq'::regclass);
+ALTER SEQUENCE public.fazle_message_templates_template_id_seq OWNED BY public.wbom_message_templates.template_id;
+ALTER TABLE ONLY public.wbom_message_templates ALTER COLUMN template_id SET DEFAULT nextval('public.fazle_message_templates_template_id_seq'::regclass);
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_message_templates_pkey'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_message_templates_pkey'
     ) THEN
-        ALTER TABLE public.wbom_message_templates ADD CONSTRAINT wbom_message_templates_pkey PRIMARY KEY (template_id);
+        ALTER TABLE public.wbom_message_templates ADD CONSTRAINT fazle_message_templates_pkey PRIMARY KEY (template_id);
     END IF;
 END $$;
 
@@ -164,10 +164,10 @@ CREATE TABLE IF NOT EXISTS public.wbom_attendance (
 );
 
 --
--- Name: wbom_employees; Type: TABLE; Schema: public; Owner: -
+-- Name: fazle_employees_legacy; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE IF NOT EXISTS public.wbom_employees (
+CREATE TABLE IF NOT EXISTS public.fazle_employees_legacy (
     employee_id integer NOT NULL,
     employee_mobile character varying(20) NOT NULL,
     employee_name character varying(100) NOT NULL,
@@ -186,10 +186,10 @@ CREATE TABLE IF NOT EXISTS public.wbom_employees (
 );
 
 --
--- Name: wbom_contacts; Type: TABLE; Schema: public; Owner: -
+-- Name: fazle_contacts; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE IF NOT EXISTS public.wbom_contacts (
+CREATE TABLE IF NOT EXISTS public.fazle_contacts (
     contact_id integer NOT NULL,
     whatsapp_number character varying(50) NOT NULL,
     display_name character varying(200) DEFAULT ''::character varying NOT NULL,
@@ -300,10 +300,10 @@ CREATE TABLE IF NOT EXISTS public.wbom_payroll_runs (
 );
 
 --
--- Name: wbom_whatsapp_messages; Type: TABLE; Schema: public; Owner: -
+-- Name: fazle_whatsapp_messages; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE IF NOT EXISTS public.wbom_whatsapp_messages (
+CREATE TABLE IF NOT EXISTS public.fazle_whatsapp_messages (
     message_id integer NOT NULL,
     whatsapp_msg_id character varying(100),
     contact_id integer,
@@ -614,10 +614,10 @@ CREATE SEQUENCE IF NOT EXISTS public.llm_conversation_log_id_seq
 ALTER SEQUENCE public.llm_conversation_log_id_seq OWNED BY public.llm_conversation_log.id;
 
 --
--- Name: wbom_attendance_attendance_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: fazle_attendance_attendance_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
-CREATE SEQUENCE IF NOT EXISTS public.wbom_attendance_attendance_id_seq
+CREATE SEQUENCE IF NOT EXISTS public.fazle_attendance_attendance_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -626,10 +626,10 @@ CREATE SEQUENCE IF NOT EXISTS public.wbom_attendance_attendance_id_seq
     CACHE 1;
 
 --
--- Name: wbom_attendance_attendance_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: fazle_attendance_attendance_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
-ALTER SEQUENCE public.wbom_attendance_attendance_id_seq OWNED BY public.wbom_attendance.attendance_id;
+ALTER SEQUENCE public.fazle_attendance_attendance_id_seq OWNED BY public.wbom_attendance.attendance_id;
 
 --
 -- Name: wbom_cases; Type: TABLE; Schema: public; Owner: -
@@ -665,10 +665,10 @@ CREATE TABLE IF NOT EXISTS public.wbom_cases (
 );
 
 --
--- Name: wbom_cases_case_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: fazle_cases_case_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
-CREATE SEQUENCE IF NOT EXISTS public.wbom_cases_case_id_seq
+CREATE SEQUENCE IF NOT EXISTS public.fazle_cases_case_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -676,16 +676,16 @@ CREATE SEQUENCE IF NOT EXISTS public.wbom_cases_case_id_seq
     CACHE 1;
 
 --
--- Name: wbom_cases_case_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: fazle_cases_case_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
-ALTER SEQUENCE public.wbom_cases_case_id_seq OWNED BY public.wbom_cases.case_id;
+ALTER SEQUENCE public.fazle_cases_case_id_seq OWNED BY public.wbom_cases.case_id;
 
 --
--- Name: wbom_cash_transactions; Type: TABLE; Schema: public; Owner: -
+-- Name: fazle_cash_transactions_archive; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE IF NOT EXISTS public.wbom_cash_transactions (
+CREATE TABLE IF NOT EXISTS public.fazle_cash_transactions_archive (
     transaction_id integer NOT NULL,
     employee_id integer NOT NULL,
     program_id integer,
@@ -712,22 +712,22 @@ CREATE TABLE IF NOT EXISTS public.wbom_cash_transactions (
 );
 
 --
--- Name: COLUMN wbom_cash_transactions.approved_by; Type: COMMENT; Schema: public; Owner: -
+-- Name: COLUMN fazle_cash_transactions_archive.approved_by; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.wbom_cash_transactions.approved_by IS 'DEPRECATED — 0 rows, no active writer. Not part of Business Constitution. Scheduled for removal in future sprint.';
+COMMENT ON COLUMN public.fazle_cash_transactions_archive.approved_by IS 'DEPRECATED — 0 rows, no active writer. Not part of Business Constitution. Scheduled for removal in future sprint.';
 
 --
--- Name: COLUMN wbom_cash_transactions.approved_at; Type: COMMENT; Schema: public; Owner: -
+-- Name: COLUMN fazle_cash_transactions_archive.approved_at; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.wbom_cash_transactions.approved_at IS 'DEPRECATED — 0 rows, no active writer. Not part of Business Constitution. Scheduled for removal in future sprint.';
+COMMENT ON COLUMN public.fazle_cash_transactions_archive.approved_at IS 'DEPRECATED — 0 rows, no active writer. Not part of Business Constitution. Scheduled for removal in future sprint.';
 
 --
--- Name: wbom_cash_transactions_transaction_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: fazle_cash_transactions_archive_transaction_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
-CREATE SEQUENCE IF NOT EXISTS public.wbom_cash_transactions_transaction_id_seq
+CREATE SEQUENCE IF NOT EXISTS public.fazle_cash_transactions_archive_transaction_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -736,16 +736,16 @@ CREATE SEQUENCE IF NOT EXISTS public.wbom_cash_transactions_transaction_id_seq
     CACHE 1;
 
 --
--- Name: wbom_cash_transactions_transaction_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: fazle_cash_transactions_archive_transaction_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
-ALTER SEQUENCE public.wbom_cash_transactions_transaction_id_seq OWNED BY public.wbom_cash_transactions.transaction_id;
+ALTER SEQUENCE public.fazle_cash_transactions_archive_transaction_id_seq OWNED BY public.fazle_cash_transactions_archive.transaction_id;
 
 --
--- Name: wbom_contacts_contact_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: fazle_contacts_contact_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
-CREATE SEQUENCE IF NOT EXISTS public.wbom_contacts_contact_id_seq
+CREATE SEQUENCE IF NOT EXISTS public.fazle_contacts_contact_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -754,10 +754,10 @@ CREATE SEQUENCE IF NOT EXISTS public.wbom_contacts_contact_id_seq
     CACHE 1;
 
 --
--- Name: wbom_contacts_contact_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: fazle_contacts_contact_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
-ALTER SEQUENCE public.wbom_contacts_contact_id_seq OWNED BY public.wbom_contacts.contact_id;
+ALTER SEQUENCE public.fazle_contacts_contact_id_seq OWNED BY public.fazle_contacts.contact_id;
 
 --
 -- Name: wbom_employee_requests; Type: TABLE; Schema: public; Owner: -
@@ -777,10 +777,10 @@ CREATE TABLE IF NOT EXISTS public.wbom_employee_requests (
 );
 
 --
--- Name: wbom_employee_requests_request_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: fazle_employee_requests_request_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
-CREATE SEQUENCE IF NOT EXISTS public.wbom_employee_requests_request_id_seq
+CREATE SEQUENCE IF NOT EXISTS public.fazle_employee_requests_request_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -789,16 +789,16 @@ CREATE SEQUENCE IF NOT EXISTS public.wbom_employee_requests_request_id_seq
     CACHE 1;
 
 --
--- Name: wbom_employee_requests_request_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: fazle_employee_requests_request_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
-ALTER SEQUENCE public.wbom_employee_requests_request_id_seq OWNED BY public.wbom_employee_requests.request_id;
+ALTER SEQUENCE public.fazle_employee_requests_request_id_seq OWNED BY public.wbom_employee_requests.request_id;
 
 --
--- Name: wbom_employees_employee_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: fazle_employees_legacy_employee_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
-CREATE SEQUENCE IF NOT EXISTS public.wbom_employees_employee_id_seq
+CREATE SEQUENCE IF NOT EXISTS public.fazle_employees_legacy_employee_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -807,16 +807,16 @@ CREATE SEQUENCE IF NOT EXISTS public.wbom_employees_employee_id_seq
     CACHE 1;
 
 --
--- Name: wbom_employees_employee_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: fazle_employees_legacy_employee_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
-ALTER SEQUENCE public.wbom_employees_employee_id_seq OWNED BY public.wbom_employees.employee_id;
+ALTER SEQUENCE public.fazle_employees_legacy_employee_id_seq OWNED BY public.fazle_employees_legacy.employee_id;
 
 --
--- Name: wbom_escort_programs_program_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: fazle_escort_programs_program_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
-CREATE SEQUENCE IF NOT EXISTS public.wbom_escort_programs_program_id_seq
+CREATE SEQUENCE IF NOT EXISTS public.fazle_escort_programs_program_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -825,10 +825,10 @@ CREATE SEQUENCE IF NOT EXISTS public.wbom_escort_programs_program_id_seq
     CACHE 1;
 
 --
--- Name: wbom_escort_programs_program_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: fazle_escort_programs_program_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
-ALTER SEQUENCE public.wbom_escort_programs_program_id_seq OWNED BY public.wbom_escort_programs.program_id;
+ALTER SEQUENCE public.fazle_escort_programs_program_id_seq OWNED BY public.wbom_escort_programs.program_id;
 
 --
 -- Name: wbom_payroll_approval_log; Type: TABLE; Schema: public; Owner: -
@@ -847,10 +847,10 @@ CREATE TABLE IF NOT EXISTS public.wbom_payroll_approval_log (
 );
 
 --
--- Name: wbom_payroll_approval_log_log_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: fazle_payroll_approval_log_log_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
-CREATE SEQUENCE IF NOT EXISTS public.wbom_payroll_approval_log_log_id_seq
+CREATE SEQUENCE IF NOT EXISTS public.fazle_payroll_approval_log_log_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -858,10 +858,10 @@ CREATE SEQUENCE IF NOT EXISTS public.wbom_payroll_approval_log_log_id_seq
     CACHE 1;
 
 --
--- Name: wbom_payroll_approval_log_log_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: fazle_payroll_approval_log_log_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
-ALTER SEQUENCE public.wbom_payroll_approval_log_log_id_seq OWNED BY public.wbom_payroll_approval_log.log_id;
+ALTER SEQUENCE public.fazle_payroll_approval_log_log_id_seq OWNED BY public.wbom_payroll_approval_log.log_id;
 
 --
 -- Name: wbom_payroll_run_items; Type: TABLE; Schema: public; Owner: -
@@ -882,10 +882,10 @@ CREATE TABLE IF NOT EXISTS public.wbom_payroll_run_items (
 );
 
 --
--- Name: wbom_payroll_run_items_item_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: fazle_payroll_run_items_item_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
-CREATE SEQUENCE IF NOT EXISTS public.wbom_payroll_run_items_item_id_seq
+CREATE SEQUENCE IF NOT EXISTS public.fazle_payroll_run_items_item_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -893,16 +893,16 @@ CREATE SEQUENCE IF NOT EXISTS public.wbom_payroll_run_items_item_id_seq
     CACHE 1;
 
 --
--- Name: wbom_payroll_run_items_item_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: fazle_payroll_run_items_item_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
-ALTER SEQUENCE public.wbom_payroll_run_items_item_id_seq OWNED BY public.wbom_payroll_run_items.item_id;
+ALTER SEQUENCE public.fazle_payroll_run_items_item_id_seq OWNED BY public.wbom_payroll_run_items.item_id;
 
 --
--- Name: wbom_payroll_runs_run_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: fazle_payroll_runs_run_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
-CREATE SEQUENCE IF NOT EXISTS public.wbom_payroll_runs_run_id_seq
+CREATE SEQUENCE IF NOT EXISTS public.fazle_payroll_runs_run_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -910,10 +910,10 @@ CREATE SEQUENCE IF NOT EXISTS public.wbom_payroll_runs_run_id_seq
     CACHE 1;
 
 --
--- Name: wbom_payroll_runs_run_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: fazle_payroll_runs_run_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
-ALTER SEQUENCE public.wbom_payroll_runs_run_id_seq OWNED BY public.wbom_payroll_runs.run_id;
+ALTER SEQUENCE public.fazle_payroll_runs_run_id_seq OWNED BY public.wbom_payroll_runs.run_id;
 
 --
 -- Name: wbom_salary_records; Type: TABLE; Schema: public; Owner: -
@@ -937,10 +937,10 @@ CREATE TABLE IF NOT EXISTS public.wbom_salary_records (
 );
 
 --
--- Name: wbom_salary_records_salary_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: fazle_salary_records_salary_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
-CREATE SEQUENCE IF NOT EXISTS public.wbom_salary_records_salary_id_seq
+CREATE SEQUENCE IF NOT EXISTS public.fazle_salary_records_salary_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -949,10 +949,10 @@ CREATE SEQUENCE IF NOT EXISTS public.wbom_salary_records_salary_id_seq
     CACHE 1;
 
 --
--- Name: wbom_salary_records_salary_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: fazle_salary_records_salary_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
-ALTER SEQUENCE public.wbom_salary_records_salary_id_seq OWNED BY public.wbom_salary_records.salary_id;
+ALTER SEQUENCE public.fazle_salary_records_salary_id_seq OWNED BY public.wbom_salary_records.salary_id;
 
 --
 -- Name: wbom_staging_payments; Type: TABLE; Schema: public; Owner: -
@@ -978,10 +978,10 @@ CREATE TABLE IF NOT EXISTS public.wbom_staging_payments (
 );
 
 --
--- Name: wbom_staging_payments_staging_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: fazle_staging_payments_staging_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
-CREATE SEQUENCE IF NOT EXISTS public.wbom_staging_payments_staging_id_seq
+CREATE SEQUENCE IF NOT EXISTS public.fazle_staging_payments_staging_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -990,16 +990,16 @@ CREATE SEQUENCE IF NOT EXISTS public.wbom_staging_payments_staging_id_seq
     CACHE 1;
 
 --
--- Name: wbom_staging_payments_staging_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: fazle_staging_payments_staging_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
-ALTER SEQUENCE public.wbom_staging_payments_staging_id_seq OWNED BY public.wbom_staging_payments.staging_id;
+ALTER SEQUENCE public.fazle_staging_payments_staging_id_seq OWNED BY public.wbom_staging_payments.staging_id;
 
 --
--- Name: wbom_whatsapp_messages_message_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: fazle_whatsapp_messages_message_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
-CREATE SEQUENCE IF NOT EXISTS public.wbom_whatsapp_messages_message_id_seq
+CREATE SEQUENCE IF NOT EXISTS public.fazle_whatsapp_messages_message_id_seq
     AS integer
     START WITH 1
     INCREMENT BY 1
@@ -1008,10 +1008,10 @@ CREATE SEQUENCE IF NOT EXISTS public.wbom_whatsapp_messages_message_id_seq
     CACHE 1;
 
 --
--- Name: wbom_whatsapp_messages_message_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+-- Name: fazle_whatsapp_messages_message_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
-ALTER SEQUENCE public.wbom_whatsapp_messages_message_id_seq OWNED BY public.wbom_whatsapp_messages.message_id;
+ALTER SEQUENCE public.fazle_whatsapp_messages_message_id_seq OWNED BY public.fazle_whatsapp_messages.message_id;
 
 --
 -- Name: fazle_admin_audit id; Type: DEFAULT; Schema: public; Owner: -
@@ -1053,79 +1053,79 @@ ALTER TABLE ONLY public.llm_conversation_log ALTER COLUMN id SET DEFAULT nextval
 -- Name: wbom_attendance attendance_id; Type: DEFAULT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.wbom_attendance ALTER COLUMN attendance_id SET DEFAULT nextval('public.wbom_attendance_attendance_id_seq'::regclass);
+ALTER TABLE ONLY public.wbom_attendance ALTER COLUMN attendance_id SET DEFAULT nextval('public.fazle_attendance_attendance_id_seq'::regclass);
 
 --
 -- Name: wbom_cases case_id; Type: DEFAULT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.wbom_cases ALTER COLUMN case_id SET DEFAULT nextval('public.wbom_cases_case_id_seq'::regclass);
+ALTER TABLE ONLY public.wbom_cases ALTER COLUMN case_id SET DEFAULT nextval('public.fazle_cases_case_id_seq'::regclass);
 
 --
--- Name: wbom_cash_transactions transaction_id; Type: DEFAULT; Schema: public; Owner: -
+-- Name: fazle_cash_transactions_archive transaction_id; Type: DEFAULT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.wbom_cash_transactions ALTER COLUMN transaction_id SET DEFAULT nextval('public.wbom_cash_transactions_transaction_id_seq'::regclass);
+ALTER TABLE ONLY public.fazle_cash_transactions_archive ALTER COLUMN transaction_id SET DEFAULT nextval('public.fazle_cash_transactions_archive_transaction_id_seq'::regclass);
 
 --
--- Name: wbom_contacts contact_id; Type: DEFAULT; Schema: public; Owner: -
+-- Name: fazle_contacts contact_id; Type: DEFAULT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.wbom_contacts ALTER COLUMN contact_id SET DEFAULT nextval('public.wbom_contacts_contact_id_seq'::regclass);
+ALTER TABLE ONLY public.fazle_contacts ALTER COLUMN contact_id SET DEFAULT nextval('public.fazle_contacts_contact_id_seq'::regclass);
 
 --
 -- Name: wbom_employee_requests request_id; Type: DEFAULT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.wbom_employee_requests ALTER COLUMN request_id SET DEFAULT nextval('public.wbom_employee_requests_request_id_seq'::regclass);
+ALTER TABLE ONLY public.wbom_employee_requests ALTER COLUMN request_id SET DEFAULT nextval('public.fazle_employee_requests_request_id_seq'::regclass);
 
 --
--- Name: wbom_employees employee_id; Type: DEFAULT; Schema: public; Owner: -
+-- Name: fazle_employees_legacy employee_id; Type: DEFAULT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.wbom_employees ALTER COLUMN employee_id SET DEFAULT nextval('public.wbom_employees_employee_id_seq'::regclass);
+ALTER TABLE ONLY public.fazle_employees_legacy ALTER COLUMN employee_id SET DEFAULT nextval('public.fazle_employees_legacy_employee_id_seq'::regclass);
 
 --
 -- Name: wbom_escort_programs program_id; Type: DEFAULT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.wbom_escort_programs ALTER COLUMN program_id SET DEFAULT nextval('public.wbom_escort_programs_program_id_seq'::regclass);
+ALTER TABLE ONLY public.wbom_escort_programs ALTER COLUMN program_id SET DEFAULT nextval('public.fazle_escort_programs_program_id_seq'::regclass);
 
 --
 -- Name: wbom_payroll_approval_log log_id; Type: DEFAULT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.wbom_payroll_approval_log ALTER COLUMN log_id SET DEFAULT nextval('public.wbom_payroll_approval_log_log_id_seq'::regclass);
+ALTER TABLE ONLY public.wbom_payroll_approval_log ALTER COLUMN log_id SET DEFAULT nextval('public.fazle_payroll_approval_log_log_id_seq'::regclass);
 
 --
 -- Name: wbom_payroll_run_items item_id; Type: DEFAULT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.wbom_payroll_run_items ALTER COLUMN item_id SET DEFAULT nextval('public.wbom_payroll_run_items_item_id_seq'::regclass);
+ALTER TABLE ONLY public.wbom_payroll_run_items ALTER COLUMN item_id SET DEFAULT nextval('public.fazle_payroll_run_items_item_id_seq'::regclass);
 
 --
 -- Name: wbom_payroll_runs run_id; Type: DEFAULT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.wbom_payroll_runs ALTER COLUMN run_id SET DEFAULT nextval('public.wbom_payroll_runs_run_id_seq'::regclass);
+ALTER TABLE ONLY public.wbom_payroll_runs ALTER COLUMN run_id SET DEFAULT nextval('public.fazle_payroll_runs_run_id_seq'::regclass);
 
 --
 -- Name: wbom_salary_records salary_id; Type: DEFAULT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.wbom_salary_records ALTER COLUMN salary_id SET DEFAULT nextval('public.wbom_salary_records_salary_id_seq'::regclass);
+ALTER TABLE ONLY public.wbom_salary_records ALTER COLUMN salary_id SET DEFAULT nextval('public.fazle_salary_records_salary_id_seq'::regclass);
 
 --
 -- Name: wbom_staging_payments staging_id; Type: DEFAULT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.wbom_staging_payments ALTER COLUMN staging_id SET DEFAULT nextval('public.wbom_staging_payments_staging_id_seq'::regclass);
+ALTER TABLE ONLY public.wbom_staging_payments ALTER COLUMN staging_id SET DEFAULT nextval('public.fazle_staging_payments_staging_id_seq'::regclass);
 
 --
--- Name: wbom_whatsapp_messages message_id; Type: DEFAULT; Schema: public; Owner: -
+-- Name: fazle_whatsapp_messages message_id; Type: DEFAULT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.wbom_whatsapp_messages ALTER COLUMN message_id SET DEFAULT nextval('public.wbom_whatsapp_messages_message_id_seq'::regclass);
+ALTER TABLE ONLY public.fazle_whatsapp_messages ALTER COLUMN message_id SET DEFAULT nextval('public.fazle_whatsapp_messages_message_id_seq'::regclass);
 
 --
 -- Name: fazle_admin_audit fazle_admin_audit_pkey; Type: CONSTRAINT; Schema: public; Owner: -
@@ -1310,249 +1310,249 @@ BEGIN
 END $$;
 
 --
--- Name: wbom_employees uq_wbom_employees_mobile; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: fazle_employees_legacy uq_fazle_employees_legacy_mobile; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'uq_wbom_employees_mobile'
+        SELECT 1 FROM pg_constraint WHERE conname = 'uq_fazle_employees_legacy_mobile'
     ) THEN
-        ALTER TABLE public.wbom_employees ADD CONSTRAINT uq_wbom_employees_mobile UNIQUE (employee_mobile);
+        ALTER TABLE public.fazle_employees_legacy ADD CONSTRAINT uq_fazle_employees_legacy_mobile UNIQUE (employee_mobile);
     END IF;
 END $$;
 
 --
--- Name: wbom_attendance wbom_attendance_employee_id_attendance_date_key; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: wbom_attendance fazle_attendance_employee_id_attendance_date_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_attendance_employee_id_attendance_date_key'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_attendance_employee_id_attendance_date_key'
     ) THEN
-        ALTER TABLE public.wbom_attendance ADD CONSTRAINT wbom_attendance_employee_id_attendance_date_key UNIQUE (employee_id, attendance_date);
+        ALTER TABLE public.wbom_attendance ADD CONSTRAINT fazle_attendance_employee_id_attendance_date_key UNIQUE (employee_id, attendance_date);
     END IF;
 END $$;
 
 --
--- Name: wbom_attendance wbom_attendance_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: wbom_attendance fazle_attendance_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_attendance_pkey'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_attendance_pkey'
     ) THEN
-        ALTER TABLE public.wbom_attendance ADD CONSTRAINT wbom_attendance_pkey PRIMARY KEY (attendance_id);
+        ALTER TABLE public.wbom_attendance ADD CONSTRAINT fazle_attendance_pkey PRIMARY KEY (attendance_id);
     END IF;
 END $$;
 
 --
--- Name: wbom_cases wbom_cases_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: wbom_cases fazle_cases_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_cases_pkey'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_cases_pkey'
     ) THEN
-        ALTER TABLE public.wbom_cases ADD CONSTRAINT wbom_cases_pkey PRIMARY KEY (case_id);
+        ALTER TABLE public.wbom_cases ADD CONSTRAINT fazle_cases_pkey PRIMARY KEY (case_id);
     END IF;
 END $$;
 
 --
--- Name: wbom_cash_transactions wbom_cash_transactions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: fazle_cash_transactions_archive fazle_cash_transactions_archive_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_cash_transactions_pkey'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_cash_transactions_archive_pkey'
     ) THEN
-        ALTER TABLE public.wbom_cash_transactions ADD CONSTRAINT wbom_cash_transactions_pkey PRIMARY KEY (transaction_id);
+        ALTER TABLE public.fazle_cash_transactions_archive ADD CONSTRAINT fazle_cash_transactions_archive_pkey PRIMARY KEY (transaction_id);
     END IF;
 END $$;
 
 --
--- Name: wbom_contacts wbom_contacts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: fazle_contacts fazle_contacts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_contacts_pkey'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_contacts_pkey'
     ) THEN
-        ALTER TABLE public.wbom_contacts ADD CONSTRAINT wbom_contacts_pkey PRIMARY KEY (contact_id);
+        ALTER TABLE public.fazle_contacts ADD CONSTRAINT fazle_contacts_pkey PRIMARY KEY (contact_id);
     END IF;
 END $$;
 
 --
--- Name: wbom_contacts wbom_contacts_whatsapp_platform_uniq; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: fazle_contacts fazle_contacts_whatsapp_platform_uniq; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_contacts_whatsapp_platform_uniq'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_contacts_whatsapp_platform_uniq'
     ) THEN
-        ALTER TABLE public.wbom_contacts ADD CONSTRAINT wbom_contacts_whatsapp_platform_uniq UNIQUE (whatsapp_number, platform);
+        ALTER TABLE public.fazle_contacts ADD CONSTRAINT fazle_contacts_whatsapp_platform_uniq UNIQUE (whatsapp_number, platform);
     END IF;
 END $$;
 
 --
--- Name: wbom_employee_requests wbom_employee_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: wbom_employee_requests fazle_employee_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_employee_requests_pkey'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_employee_requests_pkey'
     ) THEN
-        ALTER TABLE public.wbom_employee_requests ADD CONSTRAINT wbom_employee_requests_pkey PRIMARY KEY (request_id);
+        ALTER TABLE public.wbom_employee_requests ADD CONSTRAINT fazle_employee_requests_pkey PRIMARY KEY (request_id);
     END IF;
 END $$;
 
 --
--- Name: wbom_employees wbom_employees_employee_mobile_key; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: fazle_employees_legacy fazle_employees_legacy_employee_mobile_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_employees_employee_mobile_key'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_employees_legacy_employee_mobile_key'
     ) THEN
-        ALTER TABLE public.wbom_employees ADD CONSTRAINT wbom_employees_employee_mobile_key UNIQUE (employee_mobile);
+        ALTER TABLE public.fazle_employees_legacy ADD CONSTRAINT fazle_employees_legacy_employee_mobile_key UNIQUE (employee_mobile);
     END IF;
 END $$;
 
 --
--- Name: wbom_employees wbom_employees_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: fazle_employees_legacy fazle_employees_legacy_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_employees_pkey'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_employees_legacy_pkey'
     ) THEN
-        ALTER TABLE public.wbom_employees ADD CONSTRAINT wbom_employees_pkey PRIMARY KEY (employee_id);
+        ALTER TABLE public.fazle_employees_legacy ADD CONSTRAINT fazle_employees_legacy_pkey PRIMARY KEY (employee_id);
     END IF;
 END $$;
 
 --
--- Name: wbom_escort_programs wbom_escort_programs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: wbom_escort_programs fazle_escort_programs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_escort_programs_pkey'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_escort_programs_pkey'
     ) THEN
-        ALTER TABLE public.wbom_escort_programs ADD CONSTRAINT wbom_escort_programs_pkey PRIMARY KEY (program_id);
+        ALTER TABLE public.wbom_escort_programs ADD CONSTRAINT fazle_escort_programs_pkey PRIMARY KEY (program_id);
     END IF;
 END $$;
 
 --
--- Name: wbom_payroll_approval_log wbom_payroll_approval_log_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: wbom_payroll_approval_log fazle_payroll_approval_log_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_payroll_approval_log_pkey'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_payroll_approval_log_pkey'
     ) THEN
-        ALTER TABLE public.wbom_payroll_approval_log ADD CONSTRAINT wbom_payroll_approval_log_pkey PRIMARY KEY (log_id);
+        ALTER TABLE public.wbom_payroll_approval_log ADD CONSTRAINT fazle_payroll_approval_log_pkey PRIMARY KEY (log_id);
     END IF;
 END $$;
 
 --
--- Name: wbom_payroll_run_items wbom_payroll_run_items_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: wbom_payroll_run_items fazle_payroll_run_items_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_payroll_run_items_pkey'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_payroll_run_items_pkey'
     ) THEN
-        ALTER TABLE public.wbom_payroll_run_items ADD CONSTRAINT wbom_payroll_run_items_pkey PRIMARY KEY (item_id);
+        ALTER TABLE public.wbom_payroll_run_items ADD CONSTRAINT fazle_payroll_run_items_pkey PRIMARY KEY (item_id);
     END IF;
 END $$;
 
 --
--- Name: wbom_payroll_runs wbom_payroll_runs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: wbom_payroll_runs fazle_payroll_runs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_payroll_runs_pkey'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_payroll_runs_pkey'
     ) THEN
-        ALTER TABLE public.wbom_payroll_runs ADD CONSTRAINT wbom_payroll_runs_pkey PRIMARY KEY (run_id);
+        ALTER TABLE public.wbom_payroll_runs ADD CONSTRAINT fazle_payroll_runs_pkey PRIMARY KEY (run_id);
     END IF;
 END $$;
 
 --
--- Name: wbom_salary_records wbom_salary_records_employee_id_month_year_key; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: wbom_salary_records fazle_salary_records_employee_id_month_year_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_salary_records_employee_id_month_year_key'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_salary_records_employee_id_month_year_key'
     ) THEN
-        ALTER TABLE public.wbom_salary_records ADD CONSTRAINT wbom_salary_records_employee_id_month_year_key UNIQUE (employee_id, month, year);
+        ALTER TABLE public.wbom_salary_records ADD CONSTRAINT fazle_salary_records_employee_id_month_year_key UNIQUE (employee_id, month, year);
     END IF;
 END $$;
 
 --
--- Name: wbom_salary_records wbom_salary_records_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: wbom_salary_records fazle_salary_records_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_salary_records_pkey'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_salary_records_pkey'
     ) THEN
-        ALTER TABLE public.wbom_salary_records ADD CONSTRAINT wbom_salary_records_pkey PRIMARY KEY (salary_id);
+        ALTER TABLE public.wbom_salary_records ADD CONSTRAINT fazle_salary_records_pkey PRIMARY KEY (salary_id);
     END IF;
 END $$;
 
 --
--- Name: wbom_staging_payments wbom_staging_payments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: wbom_staging_payments fazle_staging_payments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_staging_payments_pkey'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_staging_payments_pkey'
     ) THEN
-        ALTER TABLE public.wbom_staging_payments ADD CONSTRAINT wbom_staging_payments_pkey PRIMARY KEY (staging_id);
+        ALTER TABLE public.wbom_staging_payments ADD CONSTRAINT fazle_staging_payments_pkey PRIMARY KEY (staging_id);
     END IF;
 END $$;
 
 --
--- Name: wbom_whatsapp_messages wbom_whatsapp_messages_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: fazle_whatsapp_messages fazle_whatsapp_messages_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_whatsapp_messages_pkey'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_whatsapp_messages_pkey'
     ) THEN
-        ALTER TABLE public.wbom_whatsapp_messages ADD CONSTRAINT wbom_whatsapp_messages_pkey PRIMARY KEY (message_id);
+        ALTER TABLE public.fazle_whatsapp_messages ADD CONSTRAINT fazle_whatsapp_messages_pkey PRIMARY KEY (message_id);
     END IF;
 END $$;
 
 --
--- Name: wbom_whatsapp_messages wbom_whatsapp_messages_whatsapp_msg_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: fazle_whatsapp_messages fazle_whatsapp_messages_whatsapp_msg_id_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_whatsapp_messages_whatsapp_msg_id_key'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_whatsapp_messages_whatsapp_msg_id_key'
     ) THEN
-        ALTER TABLE public.wbom_whatsapp_messages ADD CONSTRAINT wbom_whatsapp_messages_whatsapp_msg_id_key UNIQUE (whatsapp_msg_id);
+        ALTER TABLE public.fazle_whatsapp_messages ADD CONSTRAINT fazle_whatsapp_messages_whatsapp_msg_id_key UNIQUE (whatsapp_msg_id);
     END IF;
 END $$;
 
@@ -1638,7 +1638,7 @@ CREATE INDEX IF NOT EXISTS idx_db_backups_status ON public.fazle_db_backups USIN
 -- Name: idx_employees_status; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS idx_employees_status ON public.wbom_employees USING btree (status);
+CREATE INDEX IF NOT EXISTS idx_employees_status ON public.fazle_employees_legacy USING btree (status);
 
 --
 -- Name: idx_fazle_admins_login_token_hash; Type: INDEX; Schema: public; Owner: -
@@ -1776,277 +1776,277 @@ CREATE INDEX IF NOT EXISTS idx_staging_payments_status ON public.wbom_staging_pa
 -- Name: idx_tx_date; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS idx_tx_date ON public.wbom_cash_transactions USING btree (transaction_date);
+CREATE INDEX IF NOT EXISTS idx_tx_date ON public.fazle_cash_transactions_archive USING btree (transaction_date);
 
 --
 -- Name: idx_tx_type_date; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS idx_tx_type_date ON public.wbom_cash_transactions USING btree (transaction_type, transaction_date);
+CREATE INDEX IF NOT EXISTS idx_tx_type_date ON public.fazle_cash_transactions_archive USING btree (transaction_type, transaction_date);
 
 --
 -- Name: idx_txn_idempotency; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_txn_idempotency ON public.wbom_cash_transactions USING btree (idempotency_key) WHERE (idempotency_key IS NOT NULL);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_txn_idempotency ON public.fazle_cash_transactions_archive USING btree (idempotency_key) WHERE (idempotency_key IS NOT NULL);
 
 --
--- Name: idx_wbom_attendance_date; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fazle_attendance_date; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS idx_wbom_attendance_date ON public.wbom_attendance USING btree (attendance_date);
+CREATE INDEX IF NOT EXISTS idx_fazle_attendance_date ON public.wbom_attendance USING btree (attendance_date);
 
 --
--- Name: idx_wbom_attendance_employee; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fazle_attendance_employee; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS idx_wbom_attendance_employee ON public.wbom_attendance USING btree (employee_id);
+CREATE INDEX IF NOT EXISTS idx_fazle_attendance_employee ON public.wbom_attendance USING btree (employee_id);
 
 --
--- Name: idx_wbom_cases_contact; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fazle_cases_contact; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS idx_wbom_cases_contact ON public.wbom_cases USING btree (contact_id);
+CREATE INDEX IF NOT EXISTS idx_fazle_cases_contact ON public.wbom_cases USING btree (contact_id);
 
 --
--- Name: idx_wbom_cases_employee; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fazle_cases_employee; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS idx_wbom_cases_employee ON public.wbom_cases USING btree (employee_id);
+CREATE INDEX IF NOT EXISTS idx_fazle_cases_employee ON public.wbom_cases USING btree (employee_id);
 
 --
--- Name: idx_wbom_cases_opened_at; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fazle_cases_opened_at; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS idx_wbom_cases_opened_at ON public.wbom_cases USING btree (opened_at DESC);
+CREATE INDEX IF NOT EXISTS idx_fazle_cases_opened_at ON public.wbom_cases USING btree (opened_at DESC);
 
 --
--- Name: idx_wbom_cases_status_due; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fazle_cases_status_due; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS idx_wbom_cases_status_due ON public.wbom_cases USING btree (status, due_at);
+CREATE INDEX IF NOT EXISTS idx_fazle_cases_status_due ON public.wbom_cases USING btree (status, due_at);
 
 --
--- Name: idx_wbom_cases_type_status; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fazle_cases_type_status; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS idx_wbom_cases_type_status ON public.wbom_cases USING btree (case_type, status);
+CREATE INDEX IF NOT EXISTS idx_fazle_cases_type_status ON public.wbom_cases USING btree (case_type, status);
 
 --
--- Name: idx_wbom_contacts_last_seen; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fazle_contacts_last_seen; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS idx_wbom_contacts_last_seen ON public.wbom_contacts USING btree (last_seen DESC);
+CREATE INDEX IF NOT EXISTS idx_fazle_contacts_last_seen ON public.fazle_contacts USING btree (last_seen DESC);
 
 --
--- Name: idx_wbom_contacts_name; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fazle_contacts_name; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS idx_wbom_contacts_name ON public.wbom_contacts USING btree (display_name);
+CREATE INDEX IF NOT EXISTS idx_fazle_contacts_name ON public.fazle_contacts USING btree (display_name);
 
 --
--- Name: idx_wbom_contacts_phone; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fazle_contacts_phone; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS idx_wbom_contacts_phone ON public.wbom_contacts USING btree (whatsapp_number);
+CREATE INDEX IF NOT EXISTS idx_fazle_contacts_phone ON public.fazle_contacts USING btree (whatsapp_number);
 
 --
--- Name: idx_wbom_contacts_platform; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fazle_contacts_platform; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS idx_wbom_contacts_platform ON public.wbom_contacts USING btree (platform);
+CREATE INDEX IF NOT EXISTS idx_fazle_contacts_platform ON public.fazle_contacts USING btree (platform);
 
 --
--- Name: idx_wbom_contacts_whatsapp; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fazle_contacts_whatsapp; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS idx_wbom_contacts_whatsapp ON public.wbom_contacts USING btree (whatsapp_number);
+CREATE INDEX IF NOT EXISTS idx_fazle_contacts_whatsapp ON public.fazle_contacts USING btree (whatsapp_number);
 
 --
--- Name: idx_wbom_employee_requests_employee; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fazle_employee_requests_employee; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS idx_wbom_employee_requests_employee ON public.wbom_employee_requests USING btree (employee_id);
+CREATE INDEX IF NOT EXISTS idx_fazle_employee_requests_employee ON public.wbom_employee_requests USING btree (employee_id);
 
 --
--- Name: idx_wbom_employees_bkash; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fazle_employees_legacy_bkash; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS idx_wbom_employees_bkash ON public.wbom_employees USING btree (bkash_number);
+CREATE INDEX IF NOT EXISTS idx_fazle_employees_legacy_bkash ON public.fazle_employees_legacy USING btree (bkash_number);
 
 --
--- Name: idx_wbom_employees_mobile; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fazle_employees_legacy_mobile; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS idx_wbom_employees_mobile ON public.wbom_employees USING btree (employee_mobile);
+CREATE INDEX IF NOT EXISTS idx_fazle_employees_legacy_mobile ON public.fazle_employees_legacy USING btree (employee_mobile);
 
 --
--- Name: idx_wbom_employees_name; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fazle_employees_legacy_name; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS idx_wbom_employees_name ON public.wbom_employees USING btree (employee_name);
+CREATE INDEX IF NOT EXISTS idx_fazle_employees_legacy_name ON public.fazle_employees_legacy USING btree (employee_name);
 
 --
--- Name: idx_wbom_employees_name_trgm; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fazle_employees_legacy_name_trgm; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS idx_wbom_employees_name_trgm ON public.wbom_employees USING gin (employee_name public.gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_fazle_employees_legacy_name_trgm ON public.fazle_employees_legacy USING gin (employee_name public.gin_trgm_ops);
 
 --
--- Name: idx_wbom_messages_canonical_phone; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fazle_messages_canonical_phone; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS idx_wbom_messages_canonical_phone ON public.wbom_whatsapp_messages USING btree (canonical_phone, received_at DESC);
+CREATE INDEX IF NOT EXISTS idx_fazle_messages_canonical_phone ON public.fazle_whatsapp_messages USING btree (canonical_phone, received_at DESC);
 
 --
--- Name: idx_wbom_messages_class; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fazle_messages_class; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS idx_wbom_messages_class ON public.wbom_whatsapp_messages USING btree (classification);
+CREATE INDEX IF NOT EXISTS idx_fazle_messages_class ON public.fazle_whatsapp_messages USING btree (classification);
 
 --
--- Name: idx_wbom_messages_identity; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fazle_messages_identity; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS idx_wbom_messages_identity ON public.wbom_whatsapp_messages USING btree (identity_role, received_at DESC) WHERE (identity_role IS NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_fazle_messages_identity ON public.fazle_whatsapp_messages USING btree (identity_role, received_at DESC) WHERE (identity_role IS NOT NULL);
 
 --
--- Name: idx_wbom_messages_phone_last10; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fazle_messages_phone_last10; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS idx_wbom_messages_phone_last10 ON public.wbom_whatsapp_messages USING btree (phone_last10, received_at DESC);
+CREATE INDEX IF NOT EXISTS idx_fazle_messages_phone_last10 ON public.fazle_whatsapp_messages USING btree (phone_last10, received_at DESC);
 
 --
--- Name: idx_wbom_messages_received; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fazle_messages_received; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS idx_wbom_messages_received ON public.wbom_whatsapp_messages USING btree (received_at);
+CREATE INDEX IF NOT EXISTS idx_fazle_messages_received ON public.fazle_whatsapp_messages USING btree (received_at);
 
 --
--- Name: idx_wbom_messages_sender; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fazle_messages_sender; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS idx_wbom_messages_sender ON public.wbom_whatsapp_messages USING btree (sender_number);
+CREATE INDEX IF NOT EXISTS idx_fazle_messages_sender ON public.fazle_whatsapp_messages USING btree (sender_number);
 
 --
--- Name: idx_wbom_msg_contact_identifier; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fazle_msg_contact_identifier; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS idx_wbom_msg_contact_identifier ON public.wbom_whatsapp_messages USING btree (contact_identifier);
+CREATE INDEX IF NOT EXISTS idx_fazle_msg_contact_identifier ON public.fazle_whatsapp_messages USING btree (contact_identifier);
 
 --
--- Name: idx_wbom_msg_conv_key; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fazle_msg_conv_key; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS idx_wbom_msg_conv_key ON public.wbom_whatsapp_messages USING btree (conversation_key, received_at DESC);
+CREATE INDEX IF NOT EXISTS idx_fazle_msg_conv_key ON public.fazle_whatsapp_messages USING btree (conversation_key, received_at DESC);
 
 --
--- Name: idx_wbom_msg_direction; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fazle_msg_direction; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS idx_wbom_msg_direction ON public.wbom_whatsapp_messages USING btree (direction);
+CREATE INDEX IF NOT EXISTS idx_fazle_msg_direction ON public.fazle_whatsapp_messages USING btree (direction);
 
 --
--- Name: idx_wbom_msg_intent; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fazle_msg_intent; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS idx_wbom_msg_intent ON public.wbom_whatsapp_messages USING btree (intent_detected) WHERE (intent_detected IS NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_fazle_msg_intent ON public.fazle_whatsapp_messages USING btree (intent_detected) WHERE (intent_detected IS NOT NULL);
 
 --
--- Name: idx_wbom_msg_platform; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fazle_msg_platform; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS idx_wbom_msg_platform ON public.wbom_whatsapp_messages USING btree (platform);
+CREATE INDEX IF NOT EXISTS idx_fazle_msg_platform ON public.fazle_whatsapp_messages USING btree (platform);
 
 --
--- Name: idx_wbom_msg_platform_direction; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fazle_msg_platform_direction; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS idx_wbom_msg_platform_direction ON public.wbom_whatsapp_messages USING btree (platform, direction);
+CREATE INDEX IF NOT EXISTS idx_fazle_msg_platform_direction ON public.fazle_whatsapp_messages USING btree (platform, direction);
 
 --
--- Name: idx_wbom_msg_received_at; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fazle_msg_received_at; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS idx_wbom_msg_received_at ON public.wbom_whatsapp_messages USING btree (received_at DESC);
+CREATE INDEX IF NOT EXISTS idx_fazle_msg_received_at ON public.fazle_whatsapp_messages USING btree (received_at DESC);
 
 --
--- Name: idx_wbom_msg_status; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fazle_msg_status; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS idx_wbom_msg_status ON public.wbom_whatsapp_messages USING btree (status);
+CREATE INDEX IF NOT EXISTS idx_fazle_msg_status ON public.fazle_whatsapp_messages USING btree (status);
 
 --
--- Name: idx_wbom_programs_date; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fazle_programs_date; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS idx_wbom_programs_date ON public.wbom_escort_programs USING btree (program_date);
+CREATE INDEX IF NOT EXISTS idx_fazle_programs_date ON public.wbom_escort_programs USING btree (program_date);
 
 --
--- Name: idx_wbom_programs_end_date; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fazle_programs_end_date; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS idx_wbom_programs_end_date ON public.wbom_escort_programs USING btree (end_date);
+CREATE INDEX IF NOT EXISTS idx_fazle_programs_end_date ON public.wbom_escort_programs USING btree (end_date);
 
 --
--- Name: idx_wbom_programs_lighter; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fazle_programs_lighter; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS idx_wbom_programs_lighter ON public.wbom_escort_programs USING btree (lighter_vessel);
+CREATE INDEX IF NOT EXISTS idx_fazle_programs_lighter ON public.wbom_escort_programs USING btree (lighter_vessel);
 
 --
--- Name: idx_wbom_programs_mother; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fazle_programs_mother; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS idx_wbom_programs_mother ON public.wbom_escort_programs USING btree (mother_vessel);
+CREATE INDEX IF NOT EXISTS idx_fazle_programs_mother ON public.wbom_escort_programs USING btree (mother_vessel);
 
 --
--- Name: idx_wbom_programs_start_date; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fazle_programs_start_date; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS idx_wbom_programs_start_date ON public.wbom_escort_programs USING btree (start_date);
+CREATE INDEX IF NOT EXISTS idx_fazle_programs_start_date ON public.wbom_escort_programs USING btree (start_date);
 
 --
--- Name: idx_wbom_programs_status; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fazle_programs_status; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS idx_wbom_programs_status ON public.wbom_escort_programs USING btree (status);
+CREATE INDEX IF NOT EXISTS idx_fazle_programs_status ON public.wbom_escort_programs USING btree (status);
 
 --
--- Name: idx_wbom_transactions_date; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fazle_transactions_date; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS idx_wbom_transactions_date ON public.wbom_cash_transactions USING btree (transaction_date);
+CREATE INDEX IF NOT EXISTS idx_fazle_transactions_date ON public.fazle_cash_transactions_archive USING btree (transaction_date);
 
 --
--- Name: idx_wbom_transactions_dedup; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fazle_transactions_dedup; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_wbom_transactions_dedup ON public.wbom_cash_transactions USING btree (employee_id, transaction_date, amount, transaction_type, payment_method) WHERE ((status)::text = 'Completed'::text);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_fazle_transactions_dedup ON public.fazle_cash_transactions_archive USING btree (employee_id, transaction_date, amount, transaction_type, payment_method) WHERE ((status)::text = 'Completed'::text);
 
 --
--- Name: idx_wbom_transactions_employee; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fazle_transactions_employee; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS idx_wbom_transactions_employee ON public.wbom_cash_transactions USING btree (employee_id);
+CREATE INDEX IF NOT EXISTS idx_fazle_transactions_employee ON public.fazle_cash_transactions_archive USING btree (employee_id);
 
 --
--- Name: idx_wbom_transactions_type; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fazle_transactions_type; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX IF NOT EXISTS idx_wbom_transactions_type ON public.wbom_cash_transactions USING btree (transaction_type);
+CREATE INDEX IF NOT EXISTS idx_fazle_transactions_type ON public.fazle_cash_transactions_archive USING btree (transaction_type);
 
 --
--- Name: idx_wbom_transactions_wa_msg_dedup; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fazle_transactions_wa_msg_dedup; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_wbom_transactions_wa_msg_dedup ON public.wbom_cash_transactions USING btree (whatsapp_message_id) WHERE ((whatsapp_message_id IS NOT NULL) AND ((whatsapp_message_id)::text <> ''::text));
+CREATE UNIQUE INDEX IF NOT EXISTS idx_fazle_transactions_wa_msg_dedup ON public.fazle_cash_transactions_archive USING btree (whatsapp_message_id) WHERE ((whatsapp_message_id IS NOT NULL) AND ((whatsapp_message_id)::text <> ''::text));
 
 --
--- Name: idx_wbom_tx_dedup_migration; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_fazle_tx_dedup_migration; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_wbom_tx_dedup_migration ON public.wbom_cash_transactions USING btree (employee_id, amount, transaction_date, created_by) WHERE ((created_by)::text = 'migration_ops'::text);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_fazle_tx_dedup_migration ON public.fazle_cash_transactions_archive USING btree (employee_id, amount, transaction_date, created_by) WHERE ((created_by)::text = 'migration_ops'::text);
 
 --
 -- Name: uq_error_log_dedup; Type: INDEX; Schema: public; Owner: -
@@ -2055,25 +2055,25 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_wbom_tx_dedup_migration ON public.wbom_cas
 CREATE UNIQUE INDEX IF NOT EXISTS uq_error_log_dedup ON public.fazle_error_log USING btree (module, error_type, md5(COALESCE(message, ''::text)));
 
 --
--- Name: uq_wbom_escort_confirmed_exact; Type: INDEX; Schema: public; Owner: -
+-- Name: uq_fazle_escort_confirmed_exact; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX IF NOT EXISTS uq_wbom_escort_confirmed_exact ON public.wbom_escort_programs USING btree (COALESCE(start_date, program_date), upper(TRIM(BOTH FROM mother_vessel)), upper(TRIM(BOTH FROM lighter_vessel)), upper(TRIM(BOTH FROM escort_name))) WHERE (((status)::text = 'confirmed'::text) AND (COALESCE(TRIM(BOTH FROM mother_vessel), ''::text) <> ''::text) AND (COALESCE(TRIM(BOTH FROM lighter_vessel), ''::text) <> ''::text) AND (COALESCE(TRIM(BOTH FROM escort_name), ''::text) <> ''::text));
+CREATE UNIQUE INDEX IF NOT EXISTS uq_fazle_escort_confirmed_exact ON public.wbom_escort_programs USING btree (COALESCE(start_date, program_date), upper(TRIM(BOTH FROM mother_vessel)), upper(TRIM(BOTH FROM lighter_vessel)), upper(TRIM(BOTH FROM escort_name))) WHERE (((status)::text = 'confirmed'::text) AND (COALESCE(TRIM(BOTH FROM mother_vessel), ''::text) <> ''::text) AND (COALESCE(TRIM(BOTH FROM lighter_vessel), ''::text) <> ''::text) AND (COALESCE(TRIM(BOTH FROM escort_name), ''::text) <> ''::text));
 
 --
--- Name: uq_wbom_messages_hash; Type: INDEX; Schema: public; Owner: -
+-- Name: uq_fazle_messages_hash; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX IF NOT EXISTS uq_wbom_messages_hash ON public.wbom_whatsapp_messages USING btree (message_hash);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_fazle_messages_hash ON public.fazle_whatsapp_messages USING btree (message_hash);
 
 --
--- Name: wbom_whatsapp_messages trg_wbom_msg_autofill; Type: TRIGGER; Schema: public; Owner: -
+-- Name: fazle_whatsapp_messages trg_fazle_msg_autofill; Type: TRIGGER; Schema: public; Owner: -
 --
 
 -- The trigger below depends on this function, which (like the 24 tables
 -- above) has no prior definition anywhere in this repository's migrations —
--- discovered while verifying wbom_whatsapp_messages's live schema for this task.
-CREATE OR REPLACE FUNCTION public.wbom_msg_autofill()
+-- discovered while verifying fazle_whatsapp_messages's live schema for this task.
+CREATE OR REPLACE FUNCTION public.fazle_msg_autofill()
  RETURNS trigger
  LANGUAGE plpgsql
 AS $function$
@@ -2100,8 +2100,8 @@ BEGIN
 END;
 $function$;
 
-DROP TRIGGER IF EXISTS trg_wbom_msg_autofill ON public.wbom_whatsapp_messages;
-CREATE TRIGGER trg_wbom_msg_autofill BEFORE INSERT ON public.wbom_whatsapp_messages FOR EACH ROW EXECUTE FUNCTION public.wbom_msg_autofill();
+DROP TRIGGER IF EXISTS trg_fazle_msg_autofill ON public.fazle_whatsapp_messages;
+CREATE TRIGGER trg_fazle_msg_autofill BEFORE INSERT ON public.fazle_whatsapp_messages FOR EACH ROW EXECUTE FUNCTION public.fazle_msg_autofill();
 
 --
 -- Name: fazle_admin_roles fazle_admin_roles_admin_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -2130,275 +2130,275 @@ BEGIN
 END $$;
 
 --
--- Name: wbom_attendance wbom_attendance_employee_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: wbom_attendance fazle_attendance_employee_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_attendance_employee_id_fkey'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_attendance_employee_id_fkey'
     ) THEN
-        ALTER TABLE public.wbom_attendance ADD CONSTRAINT wbom_attendance_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES public.wbom_employees(employee_id) ON UPDATE CASCADE ON DELETE RESTRICT;
+        ALTER TABLE public.wbom_attendance ADD CONSTRAINT fazle_attendance_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES public.fazle_employees_legacy(employee_id) ON UPDATE CASCADE ON DELETE RESTRICT;
     END IF;
 END $$;
 
 --
--- Name: wbom_cases wbom_cases_contact_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: wbom_cases fazle_cases_contact_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_cases_contact_id_fkey'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_cases_contact_id_fkey'
     ) THEN
-        ALTER TABLE public.wbom_cases ADD CONSTRAINT wbom_cases_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES public.wbom_contacts(contact_id);
+        ALTER TABLE public.wbom_cases ADD CONSTRAINT fazle_cases_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES public.fazle_contacts(contact_id);
     END IF;
 END $$;
 
 --
--- Name: wbom_cases wbom_cases_employee_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: wbom_cases fazle_cases_employee_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_cases_employee_id_fkey'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_cases_employee_id_fkey'
     ) THEN
-        ALTER TABLE public.wbom_cases ADD CONSTRAINT wbom_cases_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES public.wbom_employees(employee_id) ON UPDATE CASCADE ON DELETE SET NULL;
+        ALTER TABLE public.wbom_cases ADD CONSTRAINT fazle_cases_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES public.fazle_employees_legacy(employee_id) ON UPDATE CASCADE ON DELETE SET NULL;
     END IF;
 END $$;
 
 --
--- Name: wbom_cases wbom_cases_related_program_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: wbom_cases fazle_cases_related_program_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_cases_related_program_id_fkey'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_cases_related_program_id_fkey'
     ) THEN
-        ALTER TABLE public.wbom_cases ADD CONSTRAINT wbom_cases_related_program_id_fkey FOREIGN KEY (related_program_id) REFERENCES public.wbom_escort_programs(program_id);
+        ALTER TABLE public.wbom_cases ADD CONSTRAINT fazle_cases_related_program_id_fkey FOREIGN KEY (related_program_id) REFERENCES public.wbom_escort_programs(program_id);
     END IF;
 END $$;
 
 --
--- Name: wbom_cash_transactions wbom_cash_transactions_employee_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: fazle_cash_transactions_archive fazle_cash_transactions_archive_employee_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_cash_transactions_employee_id_fkey'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_cash_transactions_archive_employee_id_fkey'
     ) THEN
-        ALTER TABLE public.wbom_cash_transactions ADD CONSTRAINT wbom_cash_transactions_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES public.wbom_employees(employee_id) ON UPDATE CASCADE ON DELETE RESTRICT;
+        ALTER TABLE public.fazle_cash_transactions_archive ADD CONSTRAINT fazle_cash_transactions_archive_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES public.fazle_employees_legacy(employee_id) ON UPDATE CASCADE ON DELETE RESTRICT;
     END IF;
 END $$;
 
 --
--- Name: wbom_cash_transactions wbom_cash_transactions_program_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: fazle_cash_transactions_archive fazle_cash_transactions_archive_program_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_cash_transactions_program_id_fkey'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_cash_transactions_archive_program_id_fkey'
     ) THEN
-        ALTER TABLE public.wbom_cash_transactions ADD CONSTRAINT wbom_cash_transactions_program_id_fkey FOREIGN KEY (program_id) REFERENCES public.wbom_escort_programs(program_id);
+        ALTER TABLE public.fazle_cash_transactions_archive ADD CONSTRAINT fazle_cash_transactions_archive_program_id_fkey FOREIGN KEY (program_id) REFERENCES public.wbom_escort_programs(program_id);
     END IF;
 END $$;
 
 --
--- Name: wbom_cash_transactions wbom_cash_transactions_reversal_of_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: fazle_cash_transactions_archive fazle_cash_transactions_archive_reversal_of_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_cash_transactions_reversal_of_fkey'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_cash_transactions_archive_reversal_of_fkey'
     ) THEN
-        ALTER TABLE public.wbom_cash_transactions ADD CONSTRAINT wbom_cash_transactions_reversal_of_fkey FOREIGN KEY (reversal_of) REFERENCES public.wbom_cash_transactions(transaction_id);
+        ALTER TABLE public.fazle_cash_transactions_archive ADD CONSTRAINT fazle_cash_transactions_archive_reversal_of_fkey FOREIGN KEY (reversal_of) REFERENCES public.fazle_cash_transactions_archive(transaction_id);
     END IF;
 END $$;
 
 --
--- Name: wbom_contacts wbom_contacts_business_type_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: fazle_contacts fazle_contacts_business_type_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_contacts_business_type_id_fkey'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_contacts_business_type_id_fkey'
     ) THEN
-        ALTER TABLE public.wbom_contacts ADD CONSTRAINT wbom_contacts_business_type_id_fkey FOREIGN KEY (business_type_id) REFERENCES public.wbom_business_types(business_type_id);
+        ALTER TABLE public.fazle_contacts ADD CONSTRAINT fazle_contacts_business_type_id_fkey FOREIGN KEY (business_type_id) REFERENCES public.wbom_business_types(business_type_id);
     END IF;
 END $$;
 
 --
--- Name: wbom_contacts wbom_contacts_relation_type_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: fazle_contacts fazle_contacts_relation_type_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_contacts_relation_type_id_fkey'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_contacts_relation_type_id_fkey'
     ) THEN
-        ALTER TABLE public.wbom_contacts ADD CONSTRAINT wbom_contacts_relation_type_id_fkey FOREIGN KEY (relation_type_id) REFERENCES public.wbom_relation_types(relation_type_id);
+        ALTER TABLE public.fazle_contacts ADD CONSTRAINT fazle_contacts_relation_type_id_fkey FOREIGN KEY (relation_type_id) REFERENCES public.wbom_relation_types(relation_type_id);
     END IF;
 END $$;
 
 --
--- Name: wbom_employee_requests wbom_employee_requests_employee_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: wbom_employee_requests fazle_employee_requests_employee_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_employee_requests_employee_id_fkey'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_employee_requests_employee_id_fkey'
     ) THEN
-        ALTER TABLE public.wbom_employee_requests ADD CONSTRAINT wbom_employee_requests_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES public.wbom_employees(employee_id) ON UPDATE CASCADE ON DELETE RESTRICT;
+        ALTER TABLE public.wbom_employee_requests ADD CONSTRAINT fazle_employee_requests_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES public.fazle_employees_legacy(employee_id) ON UPDATE CASCADE ON DELETE RESTRICT;
     END IF;
 END $$;
 
 --
--- Name: wbom_escort_programs wbom_escort_programs_contact_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: wbom_escort_programs fazle_escort_programs_contact_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_escort_programs_contact_id_fkey'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_escort_programs_contact_id_fkey'
     ) THEN
-        ALTER TABLE public.wbom_escort_programs ADD CONSTRAINT wbom_escort_programs_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES public.wbom_contacts(contact_id);
+        ALTER TABLE public.wbom_escort_programs ADD CONSTRAINT fazle_escort_programs_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES public.fazle_contacts(contact_id);
     END IF;
 END $$;
 
 --
--- Name: wbom_escort_programs wbom_escort_programs_escort_employee_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: wbom_escort_programs fazle_escort_programs_escort_employee_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_escort_programs_escort_employee_id_fkey'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_escort_programs_escort_employee_id_fkey'
     ) THEN
-        ALTER TABLE public.wbom_escort_programs ADD CONSTRAINT wbom_escort_programs_escort_employee_id_fkey FOREIGN KEY (escort_employee_id) REFERENCES public.wbom_employees(employee_id) ON UPDATE CASCADE ON DELETE RESTRICT;
+        ALTER TABLE public.wbom_escort_programs ADD CONSTRAINT fazle_escort_programs_escort_employee_id_fkey FOREIGN KEY (escort_employee_id) REFERENCES public.fazle_employees_legacy(employee_id) ON UPDATE CASCADE ON DELETE RESTRICT;
     END IF;
 END $$;
 
 --
--- Name: wbom_payroll_approval_log wbom_payroll_approval_log_run_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: wbom_payroll_approval_log fazle_payroll_approval_log_run_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_payroll_approval_log_run_id_fkey'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_payroll_approval_log_run_id_fkey'
     ) THEN
-        ALTER TABLE public.wbom_payroll_approval_log ADD CONSTRAINT wbom_payroll_approval_log_run_id_fkey FOREIGN KEY (run_id) REFERENCES public.wbom_payroll_runs(run_id);
+        ALTER TABLE public.wbom_payroll_approval_log ADD CONSTRAINT fazle_payroll_approval_log_run_id_fkey FOREIGN KEY (run_id) REFERENCES public.wbom_payroll_runs(run_id);
     END IF;
 END $$;
 
 --
--- Name: wbom_payroll_run_items wbom_payroll_run_items_run_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: wbom_payroll_run_items fazle_payroll_run_items_run_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_payroll_run_items_run_id_fkey'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_payroll_run_items_run_id_fkey'
     ) THEN
-        ALTER TABLE public.wbom_payroll_run_items ADD CONSTRAINT wbom_payroll_run_items_run_id_fkey FOREIGN KEY (run_id) REFERENCES public.wbom_payroll_runs(run_id) ON DELETE CASCADE;
+        ALTER TABLE public.wbom_payroll_run_items ADD CONSTRAINT fazle_payroll_run_items_run_id_fkey FOREIGN KEY (run_id) REFERENCES public.wbom_payroll_runs(run_id) ON DELETE CASCADE;
     END IF;
 END $$;
 
 --
--- Name: wbom_payroll_runs wbom_payroll_runs_employee_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: wbom_payroll_runs fazle_payroll_runs_employee_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_payroll_runs_employee_id_fkey'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_payroll_runs_employee_id_fkey'
     ) THEN
-        ALTER TABLE public.wbom_payroll_runs ADD CONSTRAINT wbom_payroll_runs_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES public.wbom_employees(employee_id) ON UPDATE CASCADE ON DELETE RESTRICT;
+        ALTER TABLE public.wbom_payroll_runs ADD CONSTRAINT fazle_payroll_runs_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES public.fazle_employees_legacy(employee_id) ON UPDATE CASCADE ON DELETE RESTRICT;
     END IF;
 END $$;
 
 --
--- Name: wbom_salary_records wbom_salary_records_employee_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: wbom_salary_records fazle_salary_records_employee_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_salary_records_employee_id_fkey'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_salary_records_employee_id_fkey'
     ) THEN
-        ALTER TABLE public.wbom_salary_records ADD CONSTRAINT wbom_salary_records_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES public.wbom_employees(employee_id) ON UPDATE CASCADE ON DELETE RESTRICT;
+        ALTER TABLE public.wbom_salary_records ADD CONSTRAINT fazle_salary_records_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES public.fazle_employees_legacy(employee_id) ON UPDATE CASCADE ON DELETE RESTRICT;
     END IF;
 END $$;
 
 --
--- Name: wbom_staging_payments wbom_staging_payments_final_transaction_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: wbom_staging_payments fazle_staging_payments_final_transaction_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_staging_payments_final_transaction_id_fkey'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_staging_payments_final_transaction_id_fkey'
     ) THEN
-        ALTER TABLE public.wbom_staging_payments ADD CONSTRAINT wbom_staging_payments_final_transaction_id_fkey FOREIGN KEY (final_transaction_id) REFERENCES public.wbom_cash_transactions(transaction_id);
+        ALTER TABLE public.wbom_staging_payments ADD CONSTRAINT fazle_staging_payments_final_transaction_id_fkey FOREIGN KEY (final_transaction_id) REFERENCES public.fazle_cash_transactions_archive(transaction_id);
     END IF;
 END $$;
 
 --
--- Name: wbom_whatsapp_messages wbom_whatsapp_messages_contact_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: fazle_whatsapp_messages fazle_whatsapp_messages_contact_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_whatsapp_messages_contact_id_fkey'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_whatsapp_messages_contact_id_fkey'
     ) THEN
-        ALTER TABLE public.wbom_whatsapp_messages ADD CONSTRAINT wbom_whatsapp_messages_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES public.wbom_contacts(contact_id) ON UPDATE CASCADE ON DELETE SET NULL;
+        ALTER TABLE public.fazle_whatsapp_messages ADD CONSTRAINT fazle_whatsapp_messages_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES public.fazle_contacts(contact_id) ON UPDATE CASCADE ON DELETE SET NULL;
     END IF;
 END $$;
 
 --
--- Name: wbom_whatsapp_messages wbom_whatsapp_messages_related_program_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: fazle_whatsapp_messages fazle_whatsapp_messages_related_program_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_whatsapp_messages_related_program_id_fkey'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_whatsapp_messages_related_program_id_fkey'
     ) THEN
-        ALTER TABLE public.wbom_whatsapp_messages ADD CONSTRAINT wbom_whatsapp_messages_related_program_id_fkey FOREIGN KEY (related_program_id) REFERENCES public.wbom_escort_programs(program_id);
+        ALTER TABLE public.fazle_whatsapp_messages ADD CONSTRAINT fazle_whatsapp_messages_related_program_id_fkey FOREIGN KEY (related_program_id) REFERENCES public.wbom_escort_programs(program_id);
     END IF;
 END $$;
 
 --
--- Name: wbom_whatsapp_messages wbom_whatsapp_messages_related_transaction_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: fazle_whatsapp_messages fazle_whatsapp_messages_related_transaction_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_whatsapp_messages_related_transaction_id_fkey'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_whatsapp_messages_related_transaction_id_fkey'
     ) THEN
-        ALTER TABLE public.wbom_whatsapp_messages ADD CONSTRAINT wbom_whatsapp_messages_related_transaction_id_fkey FOREIGN KEY (related_transaction_id) REFERENCES public.wbom_cash_transactions(transaction_id);
+        ALTER TABLE public.fazle_whatsapp_messages ADD CONSTRAINT fazle_whatsapp_messages_related_transaction_id_fkey FOREIGN KEY (related_transaction_id) REFERENCES public.fazle_cash_transactions_archive(transaction_id);
     END IF;
 END $$;
 
 --
--- Name: wbom_whatsapp_messages wbom_whatsapp_messages_template_used_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: fazle_whatsapp_messages fazle_whatsapp_messages_template_used_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_whatsapp_messages_template_used_id_fkey'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_whatsapp_messages_template_used_id_fkey'
     ) THEN
-        ALTER TABLE public.wbom_whatsapp_messages ADD CONSTRAINT wbom_whatsapp_messages_template_used_id_fkey FOREIGN KEY (template_used_id) REFERENCES public.wbom_message_templates(template_id);
+        ALTER TABLE public.fazle_whatsapp_messages ADD CONSTRAINT fazle_whatsapp_messages_template_used_id_fkey FOREIGN KEY (template_used_id) REFERENCES public.wbom_message_templates(template_id);
     END IF;
 END $$;
 

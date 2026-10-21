@@ -105,7 +105,7 @@ Those cases become admin-review drafts and must be verified against DB/roster da
 
 ## Employee Identity
 
-`wbom_employees.employee_id` is numeric. Escort mobile is the stable identity anchor in `employee_mobile`. If the mobile is not found, the module auto-creates an active `Escort` employee row and links the generated numeric employee ID to `wbom_escort_programs.escort_employee_id`.
+`fazle_employees_legacy.employee_id` is numeric. Escort mobile is the stable identity anchor in `employee_mobile`. If the mobile is not found, the module auto-creates an active `Escort` employee row and links the generated numeric employee ID to `wbom_escort_programs.escort_employee_id`.
 
 ## Historical Import
 

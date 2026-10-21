@@ -100,7 +100,7 @@ async def t6_dlq_alert_with_dlq():
 async def t7_payment_reconciliation_match():
     # Pick a real employee with mobile
     emp = await fetch_one(
-        "SELECT employee_id, employee_mobile FROM wbom_employees "
+        "SELECT employee_id, employee_mobile FROM fazle_employees_legacy "
         "WHERE employee_mobile IS NOT NULL AND length(regexp_replace(employee_mobile,'\\D','','g')) >= 10 LIMIT 1"
     )
     assert emp, "need at least one employee with mobile"

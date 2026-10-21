@@ -78,7 +78,7 @@ async def process_voice(file_path: str, skip_intent: bool = False) -> VoiceResul
         )
 
     # Lazy import to avoid circular
-    from modules.intent import classify
+    from modules.fazle_intent import classify
     from app import ollama as ai
 
     intent = classify(transcript)

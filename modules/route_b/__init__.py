@@ -2,7 +2,7 @@
 Fazle Core — Route B (Ollama-only reply handler)
 
 2026-07-21 identity-first routing work. Handles every sender whose
-identity_brain role is in modules.identity_brain.ROUTE_B_ROLES (escort,
+identity_brain role is in modules.fazle_identity_brain.ROUTE_B_ROLES (escort,
 security_guard, candidate, unknown) plus a money/advance-request override
 for those same roles. Called from modules.message_router.process_message()
 as just another branch — NOT a separate ingestion path — so it inherits the
@@ -15,11 +15,11 @@ contract to process_message() itself.
 Design boundary (Owner-approved):
   - Bypasses KB/template machinery and calls app.ollama.generate_reply()
     directly — the one Ollama-only function with no Groq/GitHub fallback.
-  - Read-only context gathering from: wbom_whatsapp_messages, wbom_contacts,
+  - Read-only context gathering from: fazle_whatsapp_messages, fazle_contacts,
     the per-bridge whatsmeow_contacts SQLite (phone-book contact name,
     canonical over WhatsApp's own push_name — see _best_name()), and
     the already-computed identity_brain identity dict. Never queries
-    wbom_employees, fpe_cash_transactions, wbom_escort_programs,
+    fazle_employees_legacy, fazle_cash_transactions, wbom_escort_programs,
     escort_roster_entries, or attendance tables directly.
   - Money/advance intent additionally returns an admin_notification dict;
     the actual WhatsApp send is done by the existing bridge_poller delivery
@@ -37,7 +37,7 @@ from app.config import get_settings
 from app.database import fetch_all, fetch_one, fetch_val
 from app.ollama import generate_reply as ollama_generate_reply
 from shared.draft_reply import create_draft_reply
-from modules.payment_workflow import is_advance_request
+from modules.fazle_payment_workflow import is_advance_request
 
 log = logging.getLogger("fazle.route_b")
 
@@ -47,11 +47,11 @@ _CONTACT_NAME_MAX_ROWS = 1
 
 async def _get_conversation_history(phone: str, source: str, limit: int = _HISTORY_LIMIT) -> str:
     """Last N messages, both directions, for this phone on this source.
-    Read-only against wbom_whatsapp_messages."""
+    Read-only against fazle_whatsapp_messages."""
     try:
         rows = await fetch_all(
             """SELECT direction, message_body, received_at
-               FROM wbom_whatsapp_messages
+               FROM fazle_whatsapp_messages
                WHERE sender_number = $1 OR receiver_number = $1
                ORDER BY received_at DESC
                LIMIT $2""",
@@ -70,14 +70,14 @@ async def _get_conversation_history(phone: str, source: str, limit: int = _HISTO
 
 
 async def _get_saved_contact(phone: str) -> Optional[dict]:
-    """wbom_contacts row for this number, if any. Read-only."""
+    """fazle_contacts row for this number, if any. Read-only."""
     try:
         from modules.number_identity import normalize_phone as _variants
         variants = _variants(phone) or [phone]
         return await fetch_one(
             """SELECT display_name, company_name, relation, notes, personality_hint,
                       interaction_count, last_seen
-               FROM wbom_contacts
+               FROM fazle_contacts
                WHERE whatsapp_number = ANY($1) AND is_active = true
                LIMIT 1""",
             variants,
@@ -174,7 +174,7 @@ async def _create_money_advance_admin_draft(
     modules.employee_conversation's shape, role restriction removed).
     Writes ONLY to fazle_draft_replies (via the shared, race-safe
     create_draft_reply helper) and fazle_payment_drafts — never to
-    wbom_employees/fpe_cash_transactions/escort tables."""
+    fazle_employees_legacy/fazle_cash_transactions/escort tables."""
     from modules.message_router import get_primary_admin
 
     role = identity.get("identity_role") or identity.get("role") or "unknown"
@@ -268,7 +268,7 @@ async def handle_route_b_message(
         db_context_parts.append(_UNKNOWN_SENDER_PROBE)
 
     # 2026-07-22 (Final Instruction Section 5): is_advance_request() is a
-    # bare keyword/distress-word match (see modules.payment_workflow) with
+    # bare keyword/distress-word match (see modules.fazle_payment_workflow) with
     # no identity awareness of its own -- previously it fired identically
     # for all four ROUTE_B_ROLES, so a candidate or genuinely unknown
     # sender using a generic distress word (e.g. "বিপদ", "সাহায্য লাগবে") for

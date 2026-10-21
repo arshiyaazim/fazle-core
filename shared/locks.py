@@ -185,7 +185,7 @@ def ingestion_fingerprint(
     Build a stable deduplication key for a message ingestion event.
 
     The fingerprint is a short hex digest that can be used as:
-    - A `txn_ref` in fpe_cash_transactions (when employee + amount are known)
+    - A `txn_ref` in fazle_cash_transactions (when employee + amount are known)
     - A `lock_key` in fazle_processing_locks (always, using message_id + source)
 
     Parameters

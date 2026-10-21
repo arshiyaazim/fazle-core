@@ -1,5 +1,9 @@
 # Sprint-C0D: Migration Repair + Test Infrastructure Alignment — Completion Report
 
+
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **Status:** ✅ COMPLETE  
 **Date:** 2026-06-29  
 **Predecessor:** Sprint-C0C (Canonical Schema Generation — APPROVED WITH MODIFICATIONS)  
@@ -66,9 +70,9 @@ Documents all existing migrations across 3 directories, new C0D migration order,
 ### Tests Run (C0D-relevant subset)
 ```
 tests/db/test_db_consistency.py     — 14 passed
-tests/test_fpe_accounting.py        — 19 passed
-tests/test_fpe_employee.py          — 5 passed, 2 failed (pre-existing)
-tests/test_fpe_parser.py            — 22 passed
+tests/test_fazle_accounting.py        — 19 passed
+tests/test_fazle_employee.py          — 5 passed, 2 failed (pre-existing)
+tests/test_fazle_parser.py            — 22 passed
 tests/unit/test_payment_workflow.py — 23 passed
 tests/unit/test_c0d_source_bridge_fix.py — 2 passed
 ─────────────────────────────────────────
@@ -76,8 +80,8 @@ Total: 75 passed, 2 failed (pre-existing)
 ```
 
 ### Pre-existing Failures (NOT caused by C0D)
-1. `test_fpe_employee.py::test_auto_create_when_no_match` — `RuntimeError: DB pool not initialized`. The test mocks `fetch_val` but the code uses `db_conn()` directly. Pre-existing mock/patch mismatch.
-2. `test_fpe_employee.py::test_none_returned_when_no_name_no_phone` — The test expects auto-creation but the code returns None when no name and no phone. Pre-existing test/code logic mismatch.
+1. `test_fazle_employee.py::test_auto_create_when_no_match` — `RuntimeError: DB pool not initialized`. The test mocks `fetch_val` but the code uses `db_conn()` directly. Pre-existing mock/patch mismatch.
+2. `test_fazle_employee.py::test_none_returned_when_no_name_no_phone` — The test expects auto-creation but the code returns None when no name and no phone. Pre-existing test/code logic mismatch.
 
 ### Full Suite Notes
 The full test suite has ~373 ERRORs from:

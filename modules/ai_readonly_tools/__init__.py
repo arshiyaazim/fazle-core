@@ -322,7 +322,7 @@ async def get_daily_payments(question: str) -> dict[str, Any]:
       "today payments"
       "গতকাল টাকা পাঠানো হয়েছে কতজনকে?"
     """
-    from modules.admin_commands.date_parser import parse_date_range
+    from modules.fazle_admin_commands.date_parser import parse_date_range
 
     rng = parse_date_range(question, default_days=1)
     assert rng is not None
@@ -333,11 +333,11 @@ async def get_daily_payments(question: str) -> dict[str, Any]:
     # Owner decision 2026-08-04 (Phase E Part 6 root-cause fix): reads
     # through ai_read_cash_transactions, the only cash-data object the
     # fazle_ai_reader role can actually SELECT from (has_table_privilege
-    # confirmed direct SELECT on fpe_cash_transactions is False for this
-    # role, True for the view). The prior query hit fpe_cash_transactions
+    # confirmed direct SELECT on fazle_cash_transactions is False for this
+    # role, True for the view). The prior query hit fazle_cash_transactions
     # directly (plus had an unrelated bad column reference,
-    # fpe_employees.employee_id, which does not exist -- the real PK is
-    # fpe_employees.id) and always failed under the real production role;
+    # fazle_employees.employee_id, which does not exist -- the real PK is
+    # fazle_employees.id) and always failed under the real production role;
     # the failure was silently swallowed upstream in
     # modules.ai_console.live_adapters, producing an empty/degraded tool
     # result the LLM then had to answer around without real data. The view
@@ -464,12 +464,12 @@ async def get_employee_month_payments(question: str) -> dict[str, Any]:
     # get_daily_payments): reads through ai_read_cash_transactions, the
     # only cash-data object the fazle_ai_reader role can actually SELECT
     # from. The prior version's two branches both queried
-    # fpe_cash_transactions directly (one had the same bad
-    # fpe_employees.employee_id column reference as get_daily_payments;
+    # fazle_cash_transactions directly (one had the same bad
+    # fazle_employees.employee_id column reference as get_daily_payments;
     # both always failed under the real production role). The view has no
     # employee_id/phone columns, so this now matches purely by
     # employee_name (ILIKE) against the view directly -- the preliminary
-    # wbom_employees ID lookup is no longer needed since the view already
+    # fazle_employees_legacy ID lookup is no longer needed since the view already
     # carries the resolved canonical name.
     rows = await _fetch(
         """

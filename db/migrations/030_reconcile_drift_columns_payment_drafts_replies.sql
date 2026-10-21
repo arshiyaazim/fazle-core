@@ -4,7 +4,7 @@
 -- information_schema diff between live production and the tracked migration
 -- set (db/migrations/ + modules/fazle_payroll_engine/migrations/) and found
 -- these columns live in production, read/written by production code
--- (modules/payment_workflow, modules/admin_commands), with no corresponding
+-- (modules/fazle_payment_workflow, modules/fazle_admin_commands), with no corresponding
 -- migration anywhere in the repo. They were most likely added via an
 -- untracked manual ALTER TABLE at some point. This migration only documents
 -- and reproduces that already-live state — it does not change production
@@ -23,8 +23,8 @@ ALTER TABLE fazle_draft_replies
     ADD COLUMN IF NOT EXISTS error_text TEXT,
     ADD COLUMN IF NOT EXISTS edited_at  TIMESTAMPTZ;
 
--- modules/payment_ingest/fpe_bridge.py's INSERT ... ON CONFLICT (primary_phone)
+-- modules/fazle_payment_ingest/fpe_bridge.py's INSERT ... ON CONFLICT (primary_phone)
 -- WHERE primary_phone IS NOT NULL requires this exact partial unique index.
 -- It exists in production (confirmed via pg_indexes) with no migration record.
-CREATE UNIQUE INDEX IF NOT EXISTS idx_fpe_emp_phone_unique
-    ON fpe_employees (primary_phone) WHERE (primary_phone IS NOT NULL);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_fazle_emp_phone_unique
+    ON fazle_employees (primary_phone) WHERE (primary_phone IS NOT NULL);

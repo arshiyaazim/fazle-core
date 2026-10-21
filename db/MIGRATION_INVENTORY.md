@@ -9,6 +9,29 @@
 
 ---
 
+**Updated 2026-10-21** (`fazle_` prefix unification): added `090`-`096` — seven
+idempotent RENAME migrations that move the last legacy-prefixed tables onto the
+`fazle_` prefix: `090_unify_rename_wbom_whatsapp_messages.sql`,
+`091_unify_rename_wbom_contacts.sql`,
+`092_unify_rename_wbom_cash_transactions_archive.sql`,
+`093_unify_rename_wbom_employees_legacy.sql`,
+`094_unify_rename_fpe_cash_transactions.sql`,
+`095_unify_rename_fpe_employee_ledger.sql` and
+`096_unify_rename_fpe_employees.sql`. Each one renames exactly one table with
+`ALTER TABLE IF EXISTS ... RENAME TO ...` (no DROP, no TRUNCATE, no re-CREATE,
+so every row / column / index definition / constraint definition is preserved)
+and additionally renames the dependent indexes, constraints, sequences,
+triggers and functions that carried the old prefix — name-only, definitions
+untouched. Column names are deliberately NOT changed, so `wbom_employee_id`
+and `fpe_wa_message_id` keep their names. Every statement is guarded, so each
+file is safe to re-run, and each file ends with a guarded ROLLBACK section
+(run 096 -> 090 to restore the pre-unification names). The historical
+migration files themselves were rewritten to create the NEW names, so a
+from-scratch build lands directly on `fazle_*` while an existing database
+converges through these seven RENAME migrations. Verified end to end on
+PostgreSQL 16.2: fresh build, re-run (idempotent), rollback, and re-apply.
+See `audits/prefix_unification_2026-10-21.md`.
+
 **Updated 2026-07-12** (deployment-restart-gate implementation): added the 15 files below (`029`-`043`) that had accumulated since this inventory was first written 2026-07-08 without a corresponding update — found by `scripts/restart_gate.sh` check 5 on its first real run. No files renamed/renumbered by this update either, same as the original policy.
 
 **Updated again 2026-07-12/13** (Phase 2B Commit D): added `044_billing_payment_recording.sql` and `045_ai_read_billing_outstanding.sql`. Both applied directly to production (not via `db/migrate.py` — see the note below about `schema_migrations` being stale since `028`).
@@ -35,9 +58,9 @@ non-policy greeting, and deprecates the nine superseded governance facts. It is
 registered here but remains **not yet applied to production** pending Owner
 approval and the activation gate.
 
-**Updated again 2026-07-19** (Workstream 2, draft-confirmation invariant, Stage 1): added `052_unmatched_escort_confirmations.sql` -- new table `wbom_unmatched_confirmations`, replacing `handle_admin_escort_completion()`'s silent auto-create-on-no-match with a durable admin-review queue (see `modules/escort/__init__.py::_find_pending_program()`/`_create_confirmed_from_admin()`). Purely additive, no existing table touched. Includes a partial unique index on `(source_bridge, source_message_id)` closing a real cross-path duplicate-admission gap: `processed_bridge_messages` and `processed_outgoing_escort_messages` (both `modules/bridge_poller/__init__.py`) each dedup their own ingestion path independently, so the same physical admin confirmation could otherwise reach this queue twice via two different paths. Verified on a genuinely disposable, throwaway `postgres:17-alpine` Docker container (not the shared test DB, which was unavailable this session) before production application: idempotent re-run, unique-violation on true duplicate, multiple `NULL` message-ids permitted (webhook path lacks a reliable id), status `CHECK` enforced, FK to `wbom_escort_programs` enforced. See `knowledge_base/00_governance/management_decisions.md` → "Draft-Confirmation Invariant, Workstream 2 Stage 1" for full detail.
+**Updated again 2026-07-19** (Workstream 2, draft-confirmation invariant, Stage 1): added `052_unmatched_escort_confirmations.sql` -- new table `wbom_unmatched_confirmations`, replacing `handle_admin_escort_completion()`'s silent auto-create-on-no-match with a durable admin-review queue (see `modules/escort/__init__.py::_find_pending_program()`/`_create_confirmed_from_admin()`). Purely additive, no existing table touched. Includes a partial unique index on `(source_bridge, source_message_id)` closing a real cross-path duplicate-admission gap: `processed_bridge_messages` and `processed_outgoing_escort_messages` (both `modules/fazle_bridge_poller/__init__.py`) each dedup their own ingestion path independently, so the same physical admin confirmation could otherwise reach this queue twice via two different paths. Verified on a genuinely disposable, throwaway `postgres:17-alpine` Docker container (not the shared test DB, which was unavailable this session) before production application: idempotent re-run, unique-violation on true duplicate, multiple `NULL` message-ids permitted (webhook path lacks a reliable id), status `CHECK` enforced, FK to `wbom_escort_programs` enforced. See `knowledge_base/00_governance/management_decisions.md` → "Draft-Confirmation Invariant, Workstream 2 Stage 1" for full detail.
 
-**Updated again 2026-07-19** (Phase B, Conversation Memory Engine, Stage 1): added `053_conversation_memory_engine.sql` -- new table `fazle_conversation_threads` (generic, JSONB-structured per-field provenance -- value/source_message_id/confidence/extraction_method per accumulated field) plus a dedup table `processed_conversation_messages` following the exact existing `processed_bridge_messages`/`processed_outgoing_escort_messages` pattern. Deliberately reuses `wbom_whatsapp_messages` as the raw message-event source and computes `system_generated` on read via the already-deployed `modules.bridge_poller._is_system_generated_notification()` rather than storing it -- neither is a new table. Owner-approved scope decision: coexists with, does not replace, `fazle_recruitment_sessions`/`intake_message()` (recruitment keeps its own existing, working mechanism). Verified on a genuinely disposable `postgres:17-alpine` container before production application: idempotent re-run, `state` `CHECK` enforced, dedup `(message_id, bridge)` uniqueness enforced, JSONB field structure round-trips correctly. See `knowledge_base/00_governance/management_decisions.md` → "Phase B, Conversation Memory Engine, Stage 1" for full detail.
+**Updated again 2026-07-19** (Phase B, Conversation Memory Engine, Stage 1): added `053_conversation_memory_engine.sql` -- new table `fazle_conversation_threads` (generic, JSONB-structured per-field provenance -- value/source_message_id/confidence/extraction_method per accumulated field) plus a dedup table `processed_conversation_messages` following the exact existing `processed_bridge_messages`/`processed_outgoing_escort_messages` pattern. Deliberately reuses `fazle_whatsapp_messages` as the raw message-event source and computes `system_generated` on read via the already-deployed `modules.fazle_bridge_poller._is_system_generated_notification()` rather than storing it -- neither is a new table. Owner-approved scope decision: coexists with, does not replace, `fazle_recruitment_sessions`/`intake_message()` (recruitment keeps its own existing, working mechanism). Verified on a genuinely disposable `postgres:17-alpine` container before production application: idempotent re-run, `state` `CHECK` enforced, dedup `(message_id, bridge)` uniqueness enforced, JSONB field structure round-trips correctly. See `knowledge_base/00_governance/management_decisions.md` → "Phase B, Conversation Memory Engine, Stage 1" for full detail.
 
 ## ✅ `db/migrations/` (canonical, 53+ files as of this update — see 2026-07-15 note above for a known pre-existing count discrepancy not resolved here) — tracked in `schema_migrations` via `db/migrate.py`
 
@@ -130,6 +153,13 @@ approval and the activation gate.
 087_identity_role_persistence.sql
 088_outbound_authorization_snapshot.sql
 089_identity_role_admin_revocation_actor.sql
+090_unify_rename_wbom_whatsapp_messages.sql
+091_unify_rename_wbom_contacts.sql
+092_unify_rename_wbom_cash_transactions_archive.sql
+093_unify_rename_wbom_employees_legacy.sql
+094_unify_rename_fpe_cash_transactions.sql
+095_unify_rename_fpe_employee_ledger.sql
+096_unify_rename_fpe_employees.sql
 ```
 
 **Note — no `009`**: never existed in this directory's history, or was removed before it. Intentionally left as a documented gap (see governance section) — do not backfill.
@@ -184,8 +214,8 @@ row; the full stale `db/migrate.py` queue was not run.
 
 **`063_ai_read_cash_transactions.sql` (2026-08-10, Hermes Capability
 Expansion Level 1, NOT YET APPLIED to production):** adds
-`ai_read_cash_transactions`, a read-only view over `fpe_cash_transactions`
-(joined to `fpe_employees` for the employee name), completing the
+`ai_read_cash_transactions`, a read-only view over `fazle_cash_transactions`
+(joined to `fazle_employees` for the employee name), completing the
 already-Owner-approved `proposal_ai_read_cash_transactions_20260802.md`
 (assistant-platform repo, marked FINAL). Purely additive (`CREATE VIEW` +
 one `GRANT SELECT`), same pattern as every other `ai_read_*` view (012,
@@ -213,8 +243,8 @@ reason documented there). Full record: `management_decisions.md` 2026-07-30
 **`066_ai_read_employees_fpe_fallback.sql` (2026-08-18, Hermes Identity/Role/Intent
 Capability Audit, APPLIED to production 2026-08-18):** extends `ai_read_employees`
 (`CREATE OR REPLACE VIEW`, same view migration 012 created) with a `UNION ALL`
-branch surfacing `fpe_employees`-linked employees that have no matching
-`wbom_employees` row — the same fallback `modules.identity_brain._lookup_employee()`
+branch surfacing `fazle_employees`-linked employees that have no matching
+`fazle_employees_legacy` row — the same fallback `modules.fazle_identity_brain._lookup_employee()`
 already checks for every real WhatsApp identity resolution, so Hermes's
 `get_employees` tool no longer misses a category of employee `identity_brain`
 itself can already resolve. Purely additive at the row level (no source table
@@ -233,7 +263,7 @@ dry-run-and-rollback verification pass, succeeded. Applied via the previously
 verified scoped-transaction path (pre-checked target not already tracked,
 referenced tables exist, single transaction wrapping both the `CREATE OR
 REPLACE VIEW` and its `schema_migrations` insert, commit only on full success).
-Row-count reconciled exactly: 247 `wbom_employees` baseline rows + 86
+Row-count reconciled exactly: 247 `fazle_employees_legacy` baseline rows + 86
 FPE-only-active-unlinked rows = 333 resulting view rows, zero duplicate
 non-NULL `employee_id` groups. Full evidence trail:
 `HERMES_IDENTITY_GAP_FIX_PREDEPLOYMENT_ACCEPTANCE_2026-08-18.md`.
@@ -320,7 +350,7 @@ canonical-history baseline plan, APPLIED directly to production and
 tracked in `schema_migrations`; `072` above was found still pending at
 that time -- despite this doc's own note calling it applied -- and was
 deliberately left untouched as pre-existing, unrelated, out of this
-stage's scope):** adds nullable `wbom_whatsapp_messages.actor_type` /
+stage's scope):** adds nullable `fazle_whatsapp_messages.actor_type` /
 `actor_id` (who/what produced a row's content -- `external_user`,
 `human_device`, `human_operator`, `hermes`, `automation`, `system` --
 deliberately distinct from `identity_role`, which describes the
@@ -333,9 +363,9 @@ message for the full per-writer inventory.
 **`074_wbom_whatsapp_messages_stage_c_indexes.sql` (2026-08-28, Stage C
 filtered-retrieval baseline, APPLIED directly to production and tracked
 in `schema_migrations`):** two supporting partial indexes on
-`wbom_whatsapp_messages` (`actor_type`, `workflow_triggered`), same
-`WHERE ... IS NOT NULL` pattern the table's existing `idx_wbom_msg_intent`/
-`idx_wbom_messages_identity` already use. No new columns, no data change
+`fazle_whatsapp_messages` (`actor_type`, `workflow_triggered`), same
+`WHERE ... IS NOT NULL` pattern the table's existing `idx_fazle_msg_intent`/
+`idx_fazle_messages_identity` already use. No new columns, no data change
 -- read-performance only, for the new `/api/whatsapp/messages/query` and
 `/api/whatsapp/messages/conversation` filtered-retrieval endpoints.
 
@@ -345,7 +375,7 @@ table `wbom_group_identities` (group_jid, source_bridge, display_name,
 business_label, first_seen_at, last_seen_at, metadata_updated_at; PK
 (group_jid, source_bridge)) -- mirrors each WhatsApp bridge's own
 authoritative `chats` table (populated live by whatsmeow) rather than any
-hand-maintained mapping, synced via `modules/group_identity.py`. Real
+hand-maintained mapping, synced via `modules/fazle_group_identity.py`. Real
 finding from the first live sync: the same group_jid carried two
 different `display_name` values across bridge1 vs bridge2's local caches
 (one bridge's cache was stale relative to the other) -- this is exactly
@@ -353,7 +383,7 @@ why the primary key is (group_jid, source_bridge) and not group_jid
 alone; both observations are preserved, never collapsed to one "true"
 name. `business_label` is nullable and never auto-set by the sync
 function -- see the migration's own column comments. No FK to
-`wbom_whatsapp_messages` (group messages are not currently ingested into
+`fazle_whatsapp_messages` (group messages are not currently ingested into
 that table at all -- see Stage D2's own report for why).
 
 **`076_hermes_action_approvals_business_actions.sql` (2026-08-28, Stage F
@@ -375,7 +405,7 @@ session).
 
 **`077_wbom_candidates_linked_employee.sql` (2026-08-29, Owner directive
 "Final recruitment lifecycle closure" GAP 1):** adds one nullable
-`wbom_candidates.linked_employee_id` BIGINT FK to `wbom_employees`
+`wbom_candidates.linked_employee_id` BIGINT FK to `fazle_employees_legacy`
 (`ON DELETE SET NULL`) plus a partial UNIQUE index enforcing 1:1
 (an employee is the conversion target of at most one candidate). Closes
 the "phone changes after joining -> candidate/employee thread breaks"
@@ -390,7 +420,7 @@ Verified idempotent (`ADD COLUMN IF NOT EXISTS` / `CREATE ... IF NOT
 EXISTS`) on the disposable test DB before production application.
 
 **`078_phase2_identity_and_canonical_dedup.sql` (2026-08-31, Phase-2
-inbound WhatsApp identity):** purely additive on `wbom_whatsapp_messages`
+inbound WhatsApp identity):** purely additive on `fazle_whatsapp_messages`
 — 6 nullable columns (`sender_name_snapshot` / `_source` / `_confidence`,
 `canonical_message_key`, `resolved_phone`, `resolved_at`), 1 NULL-tolerant
 CHECK on `sender_name_source` (9-value provenance vocabulary), 2 partial
@@ -405,12 +435,12 @@ because it is additive-nullable. `canonical_message_key` is FORENSIC /
 OBSERVABILITY only: nothing reads it to gate a business action and it must
 never be wired into `process_bridge_inbound` or any idempotency check.
 
-**Next available number for new work: `079`.**
+**Next available number for new work: `097`.**
 
-**Known cross-directory `ALTER TABLE` touches into these tables from outside `db/migrations/`** (see Report 4 for full evidence): `fpe_cash_transactions`, `fpe_income_transactions`, `escort_roster_entries`, `wbom_escort_programs`, `fazle_payment_drafts` are each also touched by `fazle_payroll_engine/migrations/` and/or the legacy `migrations/` directory.
+**Known cross-directory `ALTER TABLE` touches into these tables from outside `db/migrations/`** (see Report 4 for full evidence): `fazle_cash_transactions`, `fpe_income_transactions`, `escort_roster_entries`, `wbom_escort_programs`, `fazle_payment_drafts` are each also touched by `fazle_payroll_engine/migrations/` and/or the legacy `migrations/` directory.
 
 **Re-investigated 2026-07-13, table by table (full file:line detail available on request) — good news: no actual data-corrupting conflicts found in any of the 5.** Every cross-directory overlap is one of two harmless shapes:
-- **Redundant-but-idempotent**: two directories independently add the *same* column/constraint/index (e.g. `fpe_cash_transactions.deleted_at/deleted_by/updated_at` — added by both `fazle_payroll_engine/migrations/010` and `db/migrations/023_c0d_001`, identical definitions, both `IF NOT EXISTS`-guarded; `fazle_payment_drafts.expires_at` — added by both `fpe/009` and `db/021`, `db/021`'s own comment even says *"already exists from migration 009; ensure it is present for safety"*, i.e. already a known, deliberate duplicate).
+- **Redundant-but-idempotent**: two directories independently add the *same* column/constraint/index (e.g. `fazle_cash_transactions.deleted_at/deleted_by/updated_at` — added by both `fazle_payroll_engine/migrations/010` and `db/migrations/023_c0d_001`, identical definitions, both `IF NOT EXISTS`-guarded; `fazle_payment_drafts.expires_at` — added by both `fpe/009` and `db/021`, `db/021`'s own comment even says *"already exists from migration 009; ensure it is present for safety"*, i.e. already a known, deliberate duplicate).
 - **Additive-but-uncoordinated**: different directories add genuinely *different* columns/indexes to the same table with no overlap at all (e.g. `escort_roster_entries` — `migrations/`'s `expires_at`, `db/018`'s `food_bill`/`advance_deduction`/`net_payable`, `db/020`'s `escort_employee_id`, all disjoint; `wbom_escort_programs` — `db/018`'s `food_bill` vs `fazle_payroll_engine/009`'s `is_historical`, disjoint).
 
 `fazle_payroll_engine/migrations/` is confirmed **not dead code** — `start_fpe()` (`modules/fazle_payroll_engine/__init__.py:25-38`) is called from `app/main.py`'s startup lifespan and re-runs that whole directory's SQL on every restart; its cross-directory touches above are live, not theoretical.
@@ -466,7 +496,7 @@ Own independent, internally-clean `001`–`014` sequence (no gaps/duplicates wit
 | `modules/social_auto_reply/__init__.py` | `social_inbox_events`, `social_reply_queue`, `social_sent_log`, `social_retry_queue`, `social_flagged_items`, `social_backlog_state`, `social_rate_limit_state`, `social_thread_state` |
 | `modules/contact_sync/__init__.py` | `fazle_contact_sync_log`, `fazle_unified_contacts`, `fazle_contact_aliases` |
 | `modules/wa_chat_frontend/__init__.py` | `fazle_runtime_settings`, `wa_chat_groups` |
-| `modules/bridge_poller/__init__.py` | `bridge_poller_cursor`, `processed_bridge_messages`, `processed_outgoing_escort_messages`, `outbound_safety_incidents` |
+| `modules/fazle_bridge_poller/__init__.py` | `bridge_poller_cursor`, `processed_bridge_messages`, `processed_outgoing_escort_messages`, `outbound_safety_incidents` |
 
 **Known duplicate definition:** all 8 `social_auto_reply` tables above are *also* defined, identically (verified byte-for-byte as of 2026-07-08), in `db/migrations/013_social_auto_reply.sql`. Confirmed in sync today; this is the largest duplicated-schema-definition surface in the repo, with zero drift detection between the two copies. Not resolved by this inventory — tracked as a checklist item in `database_rules.md`'s Migration Governance section.
 

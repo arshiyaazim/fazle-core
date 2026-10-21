@@ -161,7 +161,7 @@ class TestDownloadMedia:
 
 class TestProvenance:
     def test_bridge_configs_map_each_bridge_to_its_own_client(self):
-        from modules.bridge_poller import BRIDGE_CONFIGS
+        from modules.fazle_bridge_poller import BRIDGE_CONFIGS
         from app.bridge import get_bridge1, get_bridge2, get_bridge3
         by_name = {c["name"]: c for c in BRIDGE_CONFIGS}
         assert by_name["bridge1"]["get_bridge"] is get_bridge1
@@ -189,7 +189,7 @@ class TestProvenance:
 # ── 3. _poll_bridge intercept structure ───────────────────────────────────
 
 def _poll_src():
-    import modules.bridge_poller as bp
+    import modules.fazle_bridge_poller as bp
     return inspect.getsource(bp._poll_bridge)
 
 
@@ -317,7 +317,7 @@ class TestAcquirePreconditionMirror:
 
 class TestRoutingGuardUnchanged:
     async def test_media_placeholder_without_extracted_flag_not_routed(self, monkeypatch):
-        import modules.bridge_poller as bp
+        import modules.fazle_bridge_poller as bp
         classify_spy = MagicMock(return_value="unknown")
         elig_spy = AsyncMock(side_effect=RuntimeError("__past_guard__"))
         monkeypatch.setattr(bp, "classify_intent", classify_spy)
@@ -332,7 +332,7 @@ class TestRoutingGuardUnchanged:
         assert elig_spy.call_count == 0
 
     async def test_extracted_media_text_routes(self, monkeypatch):
-        import modules.bridge_poller as bp
+        import modules.fazle_bridge_poller as bp
         classify_spy = MagicMock(return_value="unknown")
         elig_spy = AsyncMock(side_effect=RuntimeError("__past_guard__"))
         monkeypatch.setattr(bp, "classify_intent", classify_spy)

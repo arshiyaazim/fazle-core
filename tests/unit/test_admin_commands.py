@@ -1,4 +1,4 @@
-"""Unit tests — modules/admin_commands"""
+"""Unit tests — modules/fazle_admin_commands"""
 from __future__ import annotations
 
 import pytest
@@ -24,7 +24,7 @@ class TestIsAdminCommand:
         "ADJUST 3 1200 bkash",
     ])
     def test_admin_commands_detected(self, text):
-        from modules.admin_commands import is_admin_command
+        from modules.fazle_admin_commands import is_admin_command
         assert is_admin_command(text) is True
 
     @pytest.mark.parametrize("text", [
@@ -36,7 +36,7 @@ class TestIsAdminCommand:
         "hello",
     ])
     def test_non_commands_not_detected(self, text):
-        from modules.admin_commands import is_admin_command
+        from modules.fazle_admin_commands import is_admin_command
         # Lowercase "approve" should NOT match (commands are uppercase)
         if text == "approve":
             # Test that lowercase doesn't match (safety: admin from non-admin)
@@ -51,14 +51,14 @@ class TestBengaliDigitNormalisation:
     """Bengali digit strings are converted to ASCII via _BN_DIGITS table."""
 
     def test_bengali_digits_normalised(self):
-        from modules.admin_commands import _BN_DIGITS
+        from modules.fazle_admin_commands import _BN_DIGITS
 
         assert "১২৩৪".translate(_BN_DIGITS) == "1234"
         assert "APPROVE ৩".translate(_BN_DIGITS) == "APPROVE 3"
         assert "PAID ৫ ১৫০০ bkash".translate(_BN_DIGITS) == "PAID 5 1500 bkash"
 
     def test_mixed_digits_normalised(self):
-        from modules.admin_commands import _BN_DIGITS
+        from modules.fazle_admin_commands import _BN_DIGITS
 
         assert "APPROVE 5৩".translate(_BN_DIGITS) == "APPROVE 53"
 
@@ -80,7 +80,7 @@ class TestProcessApproveCommand:
             """)
         draft_id = draft["id"]
 
-        from modules.admin_commands import process_admin_command
+        from modules.fazle_admin_commands import process_admin_command
 
         with patch("modules.rbac.check_permission", new=AsyncMock(return_value={
             "allowed": True, "required_role": "operator",
@@ -117,7 +117,7 @@ class TestProcessApproveCommand:
             """)
         draft_id = draft["id"]
 
-        from modules.admin_commands import process_admin_command
+        from modules.fazle_admin_commands import process_admin_command
 
         with patch("modules.rbac.check_permission", new=AsyncMock(return_value={"allowed": True, "required_role": "operator", "admin": True})):
             result = await process_admin_command(
@@ -141,7 +141,7 @@ class TestProcessPaidCommand:
         import app.database as db_module
         db_module._pool = test_db_pool
 
-        from modules.admin_commands import process_admin_command
+        from modules.fazle_admin_commands import process_admin_command
 
         draft_id = seed_payment_draft["id"]
 
@@ -154,7 +154,7 @@ class TestProcessPaidCommand:
 
         async with test_db_pool.acquire() as conn:
             txn = await conn.fetchrow(
-                "SELECT * FROM fpe_cash_transactions WHERE employee_id=$1 LIMIT 1",
+                "SELECT * FROM fazle_cash_transactions WHERE employee_id=$1 LIMIT 1",
                 seed_fpe_employee["id"],
             )
         assert txn is not None
@@ -168,7 +168,7 @@ class TestProcessPaidCommand:
         import app.database as db_module
         db_module._pool = test_db_pool
 
-        from modules.admin_commands import process_admin_command
+        from modules.fazle_admin_commands import process_admin_command
 
         draft_id = seed_payment_draft["id"]
 
@@ -182,7 +182,7 @@ class TestProcessPaidCommand:
         # Canonical transaction should NOT be created
         async with test_db_pool.acquire() as conn:
             count = await conn.fetchval(
-                "SELECT COUNT(*) FROM fpe_cash_transactions"
+                "SELECT COUNT(*) FROM fazle_cash_transactions"
             )
         assert count == 0
 
@@ -197,7 +197,7 @@ class TestProcessPaidCommand:
         import app.database as db_module
         db_module._pool = test_db_pool
 
-        from modules.admin_commands import process_admin_command
+        from modules.fazle_admin_commands import process_admin_command
 
         draft_id = seed_payment_draft["id"]
 
@@ -217,7 +217,7 @@ class TestProcessPaidCommand:
         # itself failed — this is the money-safety guarantee this fix protects.
         async with test_db_pool.acquire() as conn:
             count = await conn.fetchval(
-                "SELECT COUNT(*) FROM fpe_cash_transactions"
+                "SELECT COUNT(*) FROM fazle_cash_transactions"
             )
         assert count == 0
 
@@ -225,14 +225,14 @@ class TestProcessPaidCommand:
 class TestRbacFailClosed:
     """
     Isolated, DB-independent regression tests for the RBAC fail-open bug
-    (2026-07-08 audit finding, modules/admin_commands/__init__.py). These do
+    (2026-07-08 audit finding, modules/fazle_admin_commands/__init__.py). These do
     not depend on any DB fixture, so they still catch a regression even if
     the test database schema drifts (see TestProcessPaidCommand for the
     end-to-end equivalents, which do exercise the real ledger table).
     """
 
     async def test_rbac_exception_never_reaches_paid_handler(self):
-        from modules.admin_commands import process_admin_command
+        from modules.fazle_admin_commands import process_admin_command
 
         with patch(
             "modules.rbac.check_permission",
@@ -240,7 +240,7 @@ class TestRbacFailClosed:
         ), patch(
             "modules.rbac.record_audit", new=AsyncMock(return_value=None)
         ), patch(
-            "modules.admin_commands._cmd_paid", new=AsyncMock(return_value="should not run")
+            "modules.fazle_admin_commands._cmd_paid", new=AsyncMock(return_value="should not run")
         ) as mock_cmd_paid:
             result = await process_admin_command(
                 text="PAID 1 1500 bkash",
@@ -252,7 +252,7 @@ class TestRbacFailClosed:
 
     async def test_rbac_allowed_true_still_reaches_paid_handler(self):
         """Sanity check: the fail-closed fix must not also fail closed when allowed."""
-        from modules.admin_commands import process_admin_command
+        from modules.fazle_admin_commands import process_admin_command
 
         with patch(
             "modules.rbac.check_permission",
@@ -260,7 +260,7 @@ class TestRbacFailClosed:
         ), patch(
             "modules.rbac.record_audit", new=AsyncMock(return_value=None)
         ), patch(
-            "modules.admin_commands._cmd_paid", new=AsyncMock(return_value="handled")
+            "modules.fazle_admin_commands._cmd_paid", new=AsyncMock(return_value="handled")
         ) as mock_cmd_paid:
             result = await process_admin_command(
                 text="PAID 2 1500 bkash",
@@ -271,7 +271,7 @@ class TestRbacFailClosed:
         assert result == "handled"
 
     async def test_rbac_denied_never_reaches_paid_handler(self):
-        from modules.admin_commands import process_admin_command
+        from modules.fazle_admin_commands import process_admin_command
 
         with patch(
             "modules.rbac.check_permission",
@@ -279,7 +279,7 @@ class TestRbacFailClosed:
         ), patch(
             "modules.rbac.record_audit", new=AsyncMock(return_value=None)
         ), patch(
-            "modules.admin_commands._cmd_paid", new=AsyncMock(return_value="should not run")
+            "modules.fazle_admin_commands._cmd_paid", new=AsyncMock(return_value="should not run")
         ) as mock_cmd_paid:
             result = await process_admin_command(
                 text="PAID 3 1500 bkash",

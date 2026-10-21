@@ -1,4 +1,8 @@
 # Phase-C1A: Canonical Transaction Function Consolidation
+
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 ## Evidence-Based Refactoring Blueprint
 
 **Date:** 2026-06-28  

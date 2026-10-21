@@ -19,7 +19,7 @@ async def test_process_voice_default_behavior_still_classifies_intent(monkeypatc
         return "greeting"
 
     monkeypatch.setattr(voice_processor, "_call_transcribe", fake_call_transcribe)
-    monkeypatch.setattr("modules.intent.classify", fake_classify)
+    monkeypatch.setattr("modules.fazle_intent.classify", fake_classify)
 
     result = await voice_processor.process_voice("/tmp/fake.ogg")
 
@@ -38,7 +38,7 @@ async def test_process_voice_skip_intent_never_classifies_or_calls_llm(monkeypat
         raise AssertionError("intent classifier must not run when skip_intent=True")
 
     monkeypatch.setattr(voice_processor, "_call_transcribe", fake_call_transcribe)
-    monkeypatch.setattr("modules.intent.classify", fake_classify)
+    monkeypatch.setattr("modules.fazle_intent.classify", fake_classify)
 
     result = await voice_processor.process_voice("/tmp/fake.ogg", skip_intent=True)
 

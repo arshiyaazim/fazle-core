@@ -30,10 +30,10 @@ Current production values are shown. These may differ in staging/test environmen
 
 | Flag | Current Value | Module That Reads It | Effect When Disabled |
 |---|---|---|---|
-| `AUTO_REPLY_ENABLED` | `false` | `modules/bridge_poller` | All AI replies go to `fazle_draft_replies` for admin review; nothing auto-sent to WhatsApp |
+| `AUTO_REPLY_ENABLED` | `false` | `modules/fazle_bridge_poller` | All AI replies go to `fazle_draft_replies` for admin review; nothing auto-sent to WhatsApp |
 | `HYBRID_SEARCH_ENABLED` | `true` | `modules/rag/__init__.py` | Falls back to BM25-only search; Qdrant not contacted; `_hybrid_search()` path skipped |
 | `DRAFT_QUALITY_GATE` | `true` | `modules/draft_quality` | Disables all 4 quality checks; all replies pass to queue without scoring |
-| `AI_SAFE_MODE` | `false` | `modules/bridge_poller` (line 1426) | When `true`: forces draft (no auto-send) for replies that are: >200 chars, identity confidence <50, or intent = "unknown"/"unclear" |
+| `AI_SAFE_MODE` | `false` | `modules/fazle_bridge_poller` (line 1426) | When `true`: forces draft (no auto-send) for replies that are: >200 chars, identity confidence <50, or intent = "unknown"/"unclear" |
 | `DRAFT_CREATION_ENABLED` | `true` | Draft creation path | When `false`: disables all draft creation; replies are dropped rather than queued |
 | `REVIEWED_REPLY_MEMORY_ENABLED` | `true` | `modules/reviewed_reply_memory` | When `false`: `lookup_reviewed_reply()` returns `None` immediately; message_router step 14 is skipped |
 

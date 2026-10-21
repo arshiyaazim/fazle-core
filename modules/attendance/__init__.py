@@ -83,7 +83,7 @@ async def handle_attendance_message(
     try:
         emp = await fetch_one(
             """SELECT employee_id, employee_name, designation
-               FROM wbom_employees
+               FROM fazle_employees_legacy
                WHERE employee_mobile = $1 AND status = 'Active'""",
             sender_phone,
         )
@@ -95,7 +95,7 @@ async def handle_attendance_message(
             for v in variants:
                 emp = await fetch_one(
                     """SELECT employee_id, employee_name, designation
-                       FROM wbom_employees
+                       FROM fazle_employees_legacy
                        WHERE employee_mobile = $1 AND status = 'Active'""",
                     v,
                 )
@@ -223,7 +223,7 @@ async def save_attendance(
 
 
 # ── Shared attendance-finalization service (Owner decision, 2026-07-11) ───────
-# Called from BOTH modules.admin_commands._cmd_approve (WhatsApp APPROVE <id>)
+# Called from BOTH modules.fazle_admin_commands._cmd_approve (WhatsApp APPROVE <id>)
 # and modules.drafts.routes.approve_draft (frontend Review Queue) for any
 # fazle_draft_replies row where intent == 'attendance'. Never called for any
 # other intent -- those keep their existing, untouched behavior. This is the
@@ -273,7 +273,7 @@ async def _resolve_attendance_employee(
     fields: dict, sender_phone: str = "", conn=None,
 ) -> Optional[dict]:
     """
-    Resolve the employee this attendance draft is about, against wbom_employees
+    Resolve the employee this attendance draft is about, against fazle_employees_legacy
     only. Never auto-creates an employee (Owner decision: a parser draft must
     not create an independent duplicate employee identity) -- if nothing
     resolves, the caller must treat this as a hard validation failure, not a
@@ -282,7 +282,7 @@ async def _resolve_attendance_employee(
     emp_id = fields.get("employee_id")
     if emp_id:
         row = await fetch_one(
-            "SELECT employee_id, employee_name, status FROM wbom_employees WHERE employee_id = $1",
+            "SELECT employee_id, employee_name, status FROM fazle_employees_legacy WHERE employee_id = $1",
             emp_id, conn=conn,
         )
         if row:
@@ -291,7 +291,7 @@ async def _resolve_attendance_employee(
     emp_mobile = fields.get("employee_mobile")
     if emp_mobile:
         row = await fetch_one(
-            "SELECT employee_id, employee_name, status FROM wbom_employees WHERE employee_mobile = $1",
+            "SELECT employee_id, employee_name, status FROM fazle_employees_legacy WHERE employee_mobile = $1",
             emp_mobile, conn=conn,
         )
         if row:
@@ -300,7 +300,7 @@ async def _resolve_attendance_employee(
     emp_name = fields.get("employee_name")
     if emp_name and emp_name.split():
         row = await fetch_one(
-            """SELECT employee_id, employee_name, status FROM wbom_employees
+            """SELECT employee_id, employee_name, status FROM fazle_employees_legacy
                WHERE LOWER(employee_name) LIKE LOWER($1) AND status = 'Active' LIMIT 1""",
             f"%{emp_name.split()[0]}%", conn=conn,
         )
@@ -313,7 +313,7 @@ async def _resolve_attendance_employee(
     if sender_phone:
         for variant in ([sender_phone, "880" + sender_phone[1:]] if sender_phone.startswith("0") else [sender_phone]):
             row = await fetch_one(
-                "SELECT employee_id, employee_name, status FROM wbom_employees WHERE employee_mobile = $1",
+                "SELECT employee_id, employee_name, status FROM fazle_employees_legacy WHERE employee_mobile = $1",
                 variant, conn=conn,
             )
             if row:
@@ -366,7 +366,7 @@ async def finalize_attendance_draft(
             fields = _parse_attendance_draft_fields(dict(draft))
             emp = await _resolve_attendance_employee(fields, sender_phone=draft["recipient"] or "", conn=conn)
             if not emp:
-                return {"ok": False, "error": "employee could not be resolved from wbom_employees"}
+                return {"ok": False, "error": "employee could not be resolved from fazle_employees_legacy"}
             if (emp.get("status") or "").strip().lower() != "active":
                 return {"ok": False, "error": f"employee {emp['employee_id']} is not Active"}
 
@@ -456,7 +456,7 @@ async def get_attendance_summary(
             rows = await fetch_all(
                 """SELECT e.employee_name, e.designation, a.status, a.location
                    FROM wbom_attendance a
-                   JOIN wbom_employees e ON e.employee_id = a.employee_id
+                   JOIN fazle_employees_legacy e ON e.employee_id = a.employee_id
                    WHERE a.attendance_date = $1 AND a.location ILIKE $2
                    ORDER BY a.status, e.employee_name""",
                 d, f"%{location_filter}%",
@@ -465,7 +465,7 @@ async def get_attendance_summary(
             rows = await fetch_all(
                 """SELECT e.employee_name, e.designation, a.status, a.location
                    FROM wbom_attendance a
-                   JOIN wbom_employees e ON e.employee_id = a.employee_id
+                   JOIN fazle_employees_legacy e ON e.employee_id = a.employee_id
                    WHERE a.attendance_date = $1
                    ORDER BY a.status, e.employee_name""",
                 d,

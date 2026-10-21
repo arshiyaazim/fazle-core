@@ -72,14 +72,14 @@ async def _record_run(name: str, args: dict, status: str, duration_ms: int,
 async def _b_daily_summary(date: Optional[date] = None) -> dict:  # noqa: A002
     """Daily activity snapshot — payments in/out, programs, payroll status."""
     d = date or _today()
-    # C1B: daily summary reads from canonical fpe_cash_transactions
+    # C1B: daily summary reads from canonical fazle_cash_transactions
     pay = await fetch_one(
         """SELECT
               COALESCE(SUM(CASE WHEN amount >= 0 THEN amount END), 0) AS total_out,
               COALESCE(SUM(CASE WHEN amount < 0  THEN amount END), 0) AS total_in,
               COUNT(*) FILTER (WHERE amount >= 0) AS out_count,
               COUNT(*) FILTER (WHERE amount < 0)  AS in_count
-           FROM fpe_cash_transactions
+           FROM fazle_cash_transactions
            WHERE txn_date = $1
              AND transaction_status = 'final'""",
         d,
@@ -87,7 +87,7 @@ async def _b_daily_summary(date: Optional[date] = None) -> dict:  # noqa: A002
     by_method = await fetch_all(
         """SELECT payout_method,
                   COUNT(*) AS cnt, COALESCE(SUM(amount),0) AS amt
-           FROM fpe_cash_transactions
+           FROM fazle_cash_transactions
            WHERE txn_date=$1 AND transaction_status='final'
            GROUP BY payout_method
            ORDER BY payout_method""",
@@ -139,7 +139,7 @@ async def _b_monthly_payroll(year: int, month: int) -> dict:
                   pr.gross_salary, pr.net_salary, pr.total_programs,
                   pr.payment_method, pr.paid_at
            FROM wbom_payroll_runs pr
-           LEFT JOIN wbom_employees e ON e.employee_id = pr.employee_id
+           LEFT JOIN fazle_employees_legacy e ON e.employee_id = pr.employee_id
            WHERE pr.period_year=$1 AND pr.period_month=$2
            ORDER BY pr.status, e.employee_name""",
         year, month,
@@ -192,7 +192,7 @@ async def _b_escort_utilization(start: date, end: date) -> dict:
                   COALESCE(SUM(p.day_count), 0)   AS total_days,
                   COALESCE(SUM(p.conveyance), 0)  AS total_conveyance
            FROM wbom_escort_programs p
-           LEFT JOIN wbom_employees e ON e.employee_id = p.escort_employee_id
+           LEFT JOIN fazle_employees_legacy e ON e.employee_id = p.escort_employee_id
            WHERE p.program_date BETWEEN $1 AND $2
              AND p.escort_employee_id IS NOT NULL
            GROUP BY p.escort_employee_id, e.employee_name
@@ -266,14 +266,14 @@ async def _b_payment_reconciliation(days: int = 7) -> dict:
 async def _b_cash_position(days: int = 30) -> dict:
     """Cash flow position — net by payment method over last N days."""
     cutoff = _today() - timedelta(days=days)
-    # C1B: cash position reads from canonical fpe_cash_transactions
+    # C1B: cash position reads from canonical fazle_cash_transactions
     rows = await fetch_all(
         """SELECT payout_method,
                   COALESCE(SUM(CASE WHEN amount < 0 THEN amount END), 0) AS total_in,
                   COALESCE(SUM(CASE WHEN amount >= 0 THEN amount END), 0) AS total_out,
                   COUNT(*) FILTER (WHERE amount < 0)  AS in_count,
                   COUNT(*) FILTER (WHERE amount >= 0) AS out_count
-           FROM fpe_cash_transactions
+           FROM fazle_cash_transactions
            WHERE txn_date >= $1 AND transaction_status='final'
            GROUP BY payout_method
            ORDER BY payout_method""",
@@ -304,14 +304,14 @@ async def _b_cash_position(days: int = 30) -> dict:
     }
 
 
-async def _b_unresolved_fpe_employees() -> dict:
-    """Read-only report: fpe_employees rows needing human review for WBOM
+async def _b_unresolved_fazle_employees() -> dict:
+    """Read-only report: fazle_employees rows needing human review for WBOM
     linkage. Distinguishes truly-unlinked rows from rows that are already
     correctly linked but still carry a stale resolution_status (Session 20
     Phase 2 finding, S20-10 governance entry) -- never conflates the two.
     Phone matching uses last-10-digit, digit-only comparison (same
-    normalization style as match_employee() in modules/payment_ingest),
-    checked against wbom_employees.employee_mobile/bkash_number/nagad_number
+    normalization style as match_employee() in modules/fazle_payment_ingest),
+    checked against fazle_employees_legacy.employee_mobile/bkash_number/nagad_number
     -- the same three fields payment_ingest and fazle_payroll_engine.employee
     already treat as authoritative WBOM phone-identity anchors elsewhere in
     this codebase, not a new matching rule invented for this report.
@@ -336,14 +336,14 @@ async def _b_unresolved_fpe_employees() -> dict:
             fe.primary_phone, fe.employee_id_phone,
             fe.resolution_status, fe.wbom_employee_id,
             fe.created_source, fe.designation, fe.basic_salary, fe.joining_date,
-            (SELECT COUNT(*) FROM fpe_cash_transactions t WHERE t.employee_id = fe.id) AS txn_count,
+            (SELECT COUNT(*) FROM fazle_cash_transactions t WHERE t.employee_id = fe.id) AS txn_count,
             wm.employee_id AS wbom_match_id,
             wm.employee_name AS wbom_match_name,
             wm.employee_mobile AS wbom_match_mobile
-        FROM fpe_employees fe
+        FROM fazle_employees fe
         LEFT JOIN LATERAL (
             SELECT we.employee_id, we.employee_name, we.employee_mobile
-            FROM wbom_employees we
+            FROM fazle_employees_legacy we
             WHERE RIGHT(regexp_replace(we.employee_mobile, '\\D', '', 'g'), 10)
                     = RIGHT(regexp_replace(COALESCE(fe.primary_phone, fe.employee_id_phone, ''), '\\D', '', 'g'), 10)
                OR RIGHT(regexp_replace(COALESCE(we.bkash_number, ''), '\\D', '', 'g'), 10)
@@ -395,7 +395,7 @@ async def _b_unresolved_fpe_employees() -> dict:
             })
 
     return {
-        "report": "unresolved_fpe_employees",
+        "report": "unresolved_fazle_employees",
         "args": {},
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "summary": {
@@ -436,21 +436,21 @@ async def _b_business_communication_summary(hours: int = 12) -> dict:
             ELSE 'other'
           END AS category,
           COUNT(DISTINCT conversation_key) AS contacts
-        FROM wbom_whatsapp_messages
+        FROM fazle_whatsapp_messages
         WHERE received_at >= {since}
         GROUP BY 1
         ORDER BY 2 DESC
         """
     )
     complaints = await fetch_val(
-        f"SELECT COUNT(DISTINCT conversation_key) FROM wbom_whatsapp_messages "
+        f"SELECT COUNT(DISTINCT conversation_key) FROM fazle_whatsapp_messages "
         f"WHERE received_at >= {since} AND (workflow_triggered='complaint' OR intent_detected='complaint')"
     )
     office_group_msgs = await fetch_val(
-        f"SELECT COUNT(*) FROM wbom_whatsapp_messages WHERE received_at >= {since} AND conversation_key LIKE '%@g.us%'"
+        f"SELECT COUNT(*) FROM fazle_whatsapp_messages WHERE received_at >= {since} AND conversation_key LIKE '%@g.us%'"
     )
     replies_sent = await fetch_val(
-        f"SELECT COUNT(*) FROM wbom_whatsapp_messages WHERE received_at >= {since} AND direction='outbound' AND actor_type IN ('automation','hermes')"
+        f"SELECT COUNT(*) FROM fazle_whatsapp_messages WHERE received_at >= {since} AND direction='outbound' AND actor_type IN ('automation','hermes')"
     )
     pending_drafts = await fetch_all(
         "SELECT id, recipient, source, intent, created_at FROM fazle_draft_replies "
@@ -485,7 +485,7 @@ async def _b_business_communication_summary(hours: int = 12) -> dict:
         "SELECT COUNT(*) FROM wbom_attendance WHERE approved_at IS NULL"
     )
     cash_needs_action = await fetch_val(
-        "SELECT COUNT(*) FROM fpe_cash_transactions WHERE transaction_status='pending' AND deleted_at IS NULL"
+        "SELECT COUNT(*) FROM fazle_cash_transactions WHERE transaction_status='pending' AND deleted_at IS NULL"
     )
     escort_needs_action = await fetch_val(
         "SELECT COUNT(*) FROM wbom_escort_programs WHERE status='draft'"
@@ -676,13 +676,13 @@ async def _b_system_observation() -> dict:
     old_pending_cash = await fetch_all(
         "SELECT id, txn_ref, employee_name_raw, amount, "
         "EXTRACT(EPOCH FROM (NOW() - created_at))::int / 86400.0 AS age_days "
-        "FROM fpe_cash_transactions WHERE transaction_status='pending' AND deleted_at IS NULL "
+        "FROM fazle_cash_transactions WHERE transaction_status='pending' AND deleted_at IS NULL "
         "AND created_at < NOW() - INTERVAL '3 days' ORDER BY created_at ASC LIMIT 15"
     )
     duplicate_pending_cash = await fetch_all(
         "SELECT employee_id, amount, txn_date, COUNT(*) AS n, "
         "array_agg(txn_ref) AS txn_refs "
-        "FROM fpe_cash_transactions WHERE transaction_status='pending' AND deleted_at IS NULL "
+        "FROM fazle_cash_transactions WHERE transaction_status='pending' AND deleted_at IS NULL "
         "GROUP BY employee_id, amount, txn_date HAVING COUNT(*) > 1 LIMIT 15"
     )
     financial_anomalies = (
@@ -819,7 +819,7 @@ _BUILDERS: dict[str, Callable[..., Awaitable[dict]]] = {
     "escort_utilization":     _b_escort_utilization,
     "payment_reconciliation": _b_payment_reconciliation,
     "cash_position":          _b_cash_position,
-    "unresolved_fpe_employees": _b_unresolved_fpe_employees,
+    "unresolved_fazle_employees": _b_unresolved_fazle_employees,
 }
 
 

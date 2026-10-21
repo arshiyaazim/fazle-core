@@ -1,5 +1,9 @@
 # Fazle Core — System Atlas
 
+
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **Version:** 1.0
 **Date:** 2026-07-09
 **Purpose:** the single entry point for understanding Fazle Core — what it is, who it's for, how it's built, what state it's in right now, and where to go for detail. Read this first. Everything below links to the document that actually owns that detail — this file summarizes and indexes, it does not duplicate.
@@ -74,7 +78,7 @@ Also newly found: the RAG index-rebuild availability gap (previously documented 
 
 For the full blow-by-blow (files changed, tests run, exact validation commands), see `SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md`'s "Current Consolidation State" and "Release Preparation State" sections — this Atlas intentionally does not repeat that detail.
 
-**Office Payroll Hardening (2026-07-10/11):** the dual pay-formula question above is now resolved by Owner decision — `modules/payment_workflow::create_escort_payment_draft` (the real, live escort-payment path) is fixed to use the shift-based day-rate (matching `escort_roster/calculations.py`, not `basic_salary/30`) with conveyance added, not subtracted. A separate, new office-staff monthly-salary pipeline was built (`modules/payroll/eligibility.py`, `modules/payroll/dry_run.py`, `modules/attendance/{crud,routes}.py`, migration 040) — manual + admin-approved-supervisor-message attendance only, escort attendance never counts. **Confirmed: 0 of 188 employees are currently eligible** (184 are Escort, the rest fail salary/active/placeholder checks) — correct and dormant, not broken. `job_daily_payroll` is now guarded behind `settings.office_payroll_authoritative_enabled` (default False) and creates no payroll rows until Owner sign-off; `compute_run`'s own internal formula still needs rewriting to the new calendar-days formula before that flag can safely flip. Full detail: `docs/NEXT_IMPLEMENTATION_QUEUE.md`, `knowledge_base/00_governance/CANONICAL_BUSINESS_RULES.md` §Payroll/§Attendance.
+**Office Payroll Hardening (2026-07-10/11):** the dual pay-formula question above is now resolved by Owner decision — `modules/fazle_payment_workflow::create_escort_payment_draft` (the real, live escort-payment path) is fixed to use the shift-based day-rate (matching `escort_roster/calculations.py`, not `basic_salary/30`) with conveyance added, not subtracted. A separate, new office-staff monthly-salary pipeline was built (`modules/payroll/eligibility.py`, `modules/payroll/dry_run.py`, `modules/attendance/{crud,routes}.py`, migration 040) — manual + admin-approved-supervisor-message attendance only, escort attendance never counts. **Confirmed: 0 of 188 employees are currently eligible** (184 are Escort, the rest fail salary/active/placeholder checks) — correct and dormant, not broken. `job_daily_payroll` is now guarded behind `settings.office_payroll_authoritative_enabled` (default False) and creates no payroll rows until Owner sign-off; `compute_run`'s own internal formula still needs rewriting to the new calendar-days formula before that flag can safely flip. Full detail: `docs/NEXT_IMPLEMENTATION_QUEUE.md`, `knowledge_base/00_governance/CANONICAL_BUSINESS_RULES.md` §Payroll/§Attendance.
 
 ---
 

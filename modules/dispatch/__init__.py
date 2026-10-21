@@ -42,7 +42,7 @@ without any special-casing: an assignment ending at (day X, N) and another
 starting at (day X+1, D) -- the very next discrete shift -- are adjacent,
 not overlapping, because their ordinals differ by exactly 1.
 
-Employee eligibility ("active escort worker"): wbom_employees.status='Active'
+Employee eligibility ("active escort worker"): fazle_employees_legacy.status='Active'
 AND designation ILIKE 'Escort' -- confirmed against 5/5 sampled real
 escort-assigned employees in production (all designation='Escort' exactly),
 and consistent with modules.payroll.eligibility's inverse rule (office-staff
@@ -258,12 +258,12 @@ async def list_escort_workers(active_only: bool = True, employee_id: Optional[in
         params.append(employee_id)
     where_sql = " AND ".join(where)
 
-    total = await fetch_val(f"SELECT COUNT(*) FROM wbom_employees WHERE {where_sql}", *params) or 0
+    total = await fetch_val(f"SELECT COUNT(*) FROM fazle_employees_legacy WHERE {where_sql}", *params) or 0
 
     offset = (page - 1) * page_size
     emp_rows = await fetch_all(
         f"""SELECT employee_id, employee_name, employee_mobile, status, designation
-            FROM wbom_employees WHERE {where_sql}
+            FROM fazle_employees_legacy WHERE {where_sql}
             ORDER BY employee_id
             LIMIT ${len(params) + 1} OFFSET ${len(params) + 2}""",
         *params, page_size, offset,
@@ -463,7 +463,7 @@ async def get_suggestions(
 
     emp_rows = await fetch_all(
         f"SELECT employee_id, employee_name, employee_mobile, status, designation "
-        f"FROM wbom_employees WHERE {_ESCORT_WORKER_WHERE} ORDER BY employee_id"
+        f"FROM fazle_employees_legacy WHERE {_ESCORT_WORKER_WHERE} ORDER BY employee_id"
     )
     employee_ids = [r["employee_id"] for r in emp_rows]
     blocking_by_emp = await _fetch_blocking_programs_for_employees(employee_ids)
@@ -559,7 +559,7 @@ async def get_suggestions(
 #                 rather than assumed safe.
 #   completed,
 #   cancelled  -> EXCLUDED (terminal, per Owner instruction). Also protects
-#                 against modules.payment_workflow.create_escort_payment_draft()'s
+#                 against modules.fazle_payment_workflow.create_escort_payment_draft()'s
 #                 confirmed behavior of overwriting employee_id on an EXISTING
 #                 draft if re-invoked for the same program_id -- drafts are
 #                 only created at release (a terminal transition), so
@@ -613,7 +613,7 @@ async def assign_program(
     Locking: pg_advisory_xact_lock, the established precedent in this repo
     for exactly this "read-then-write with conflict check" shape (used
     identically, keyed by escort_program_id, in
-    modules.payment_workflow.create_escort_payment_draft() and by
+    modules.fazle_payment_workflow.create_escort_payment_draft() and by
     modules.escort_roster.db.create_roster_entry()). Two locks are always
     acquired in the SAME fixed order -- escort_employee_id first, then
     program_id -- regardless of which is "old" or "new" in a reassignment,
@@ -677,7 +677,7 @@ async def assign_program(
 
             employee = await fetch_one(
                 "SELECT employee_id, employee_name, employee_mobile, status, designation "
-                "FROM wbom_employees WHERE employee_id = $1",
+                "FROM fazle_employees_legacy WHERE employee_id = $1",
                 escort_employee_id, conn=conn,
             )
             if employee is None:
@@ -882,7 +882,7 @@ async def list_overlaps(
                    p.status, p.mother_vessel, p.lighter_vessel, p.destination,
                    p.start_date, p.program_date, p.shift, p.end_date, p.end_shift
             FROM wbom_escort_programs p
-            LEFT JOIN wbom_employees e ON e.employee_id = p.escort_employee_id
+            LEFT JOIN fazle_employees_legacy e ON e.employee_id = p.escort_employee_id
             WHERE {where_sql}
             ORDER BY p.escort_employee_id, COALESCE(p.start_date, p.program_date)""",
         *params,

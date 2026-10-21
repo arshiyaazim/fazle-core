@@ -1,5 +1,5 @@
 """
-Regression tests for modules.admin_commands.nl_payments::intent_employee_totals
+Regression tests for modules.fazle_admin_commands.nl_payments::intent_employee_totals
 (2026-08-20 ambiguity-refusal fix). Previously every resolution tier
 (phone match, exact ILIKE name match, Bengali-transliteration/trgm fuzzy
 fallback) silently collapsed 2+ matching employees to one arbitrary row
@@ -9,7 +9,7 @@ tier now refuses to guess and asks for a phone/employee ID instead.
 """
 import pytest
 
-from modules.admin_commands.nl_payments import intent_employee_totals
+from modules.fazle_admin_commands.nl_payments import intent_employee_totals
 
 pytestmark = pytest.mark.integration
 
@@ -18,7 +18,7 @@ class TestAmbiguousNameRefusesToGuess:
     async def test_ambiguous_name_no_silent_total(self, clean_tables, test_db_pool):
         async with test_db_pool.acquire() as conn:
             await conn.execute("""
-                INSERT INTO wbom_employees (employee_mobile, employee_name, designation, status)
+                INSERT INTO fazle_employees_legacy (employee_mobile, employee_name, designation, status)
                 VALUES
                     ('8801811111111', 'Karim Uddin', 'Security Guard', 'Active'),
                     ('8801822222222', 'Karim Hossain', 'Escort', 'Active')
@@ -36,7 +36,7 @@ class TestAmbiguousNameRefusesToGuess:
         `employee_mobile = $1 OR employee_mobile = $2` matches both."""
         async with test_db_pool.acquire() as conn:
             await conn.execute("""
-                INSERT INTO wbom_employees (employee_mobile, employee_name, designation, status)
+                INSERT INTO fazle_employees_legacy (employee_mobile, employee_name, designation, status)
                 VALUES
                     ('8801811111111', 'Karim Uddin', 'Security Guard', 'Active'),
                     ('01811111111', 'Duplicate Row Karim', 'Escort', 'Active')
@@ -51,7 +51,7 @@ class TestUniqueMatchStillWorks:
     async def test_unique_name_still_resolves(self, clean_tables, test_db_pool):
         async with test_db_pool.acquire() as conn:
             await conn.execute("""
-                INSERT INTO wbom_employees (employee_mobile, employee_name, designation, status)
+                INSERT INTO fazle_employees_legacy (employee_mobile, employee_name, designation, status)
                 VALUES ('8801811111111', 'Karim Uddin', 'Security Guard', 'Active')
             """)
         reply = await intent_employee_totals("Karim Uddin total", "8801700000001")
@@ -63,7 +63,7 @@ class TestUniqueMatchStillWorks:
     async def test_unique_phone_still_resolves(self, clean_tables, test_db_pool):
         async with test_db_pool.acquire() as conn:
             await conn.execute("""
-                INSERT INTO wbom_employees (employee_mobile, employee_name, designation, status)
+                INSERT INTO fazle_employees_legacy (employee_mobile, employee_name, designation, status)
                 VALUES ('8801811111111', 'Karim Uddin', 'Security Guard', 'Active')
             """)
         reply = await intent_employee_totals("01811111111 total", "8801700000001")

@@ -1,4 +1,8 @@
 # Fazle Core — Full System Audit Report
+
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **Date:** 2026-06-01  
 **Auditor:** Claude Code (Senior System Auditor / Read-Only Mode)  
 **Scope:** Full VPS ecosystem — all apps, modules, services, routes, dependencies  
@@ -259,7 +263,7 @@ Modules confirmed active (imported in production call chain from `main.py` or `b
 
 | System | Type | File | Trigger |
 |---|---|---|---|
-| `modules/intent.classify()` | Keyword/rule-based (fast) | `modules/intent/__init__.py` | Every message, first pass |
+| `modules/fazle_intent.classify()` | Keyword/rule-based (fast) | `modules/intent/__init__.py` | Every message, first pass |
 | `app.ollama.classify_intent_llm()` | LLM-based (slow, accurate) | `app/ollama.py` | Fallback when intent == "unknown" |
 
 **Assessment:** These are complementary, not conflicting. Fast path → LLM fallback is intentional design. ✅
@@ -470,10 +474,10 @@ Stored in `fazle_recruitment_sessions` table. Funnel progresses through stages m
 
 | System | Type | Speed | Used When | Status |
 |---|---|---|---|---|
-| `modules/intent.classify(text)` | Keyword/regex (Bangla+English) | ~1ms | Every message, first pass | ✅ ACTIVE PRIMARY |
+| `modules/fazle_intent.classify(text)` | Keyword/regex (Bangla+English) | ~1ms | Every message, first pass | ✅ ACTIVE PRIMARY |
 | `app.ollama.classify_intent_llm(text)` | LLM (qwen2.5:3b) | ~1-5s | Fallback when `intent == "unknown"` | ✅ ACTIVE FALLBACK |
 
-**Intent categories handled by `modules/intent`:**
+**Intent categories handled by `modules/fazle_intent`:**
 `recruitment`, `payment`, `salary`, `advance`, `attendance`, `leave`, `escort_duty`, `client_order`, `slip_submission`, `office_location`, `greeting`, `salary_query`, `payment_due`, `employee_salary_complaint`, `legal_issue`, `payment_issue`, `unknown`
 
 **Conflict check:** No conflicts. Two-layer design is correct — fast keyword check first, LLM only for ambiguous messages.
@@ -629,7 +633,7 @@ escort_lifecycle.handle_release_event() / handle_ocr_release_slip()
 | `known_contact` | DB contacts table | KB → AI fallback |
 | `unknown` / `new_lead` | No match | Intent → KB → AI |
 
-### 13b. Admin Commands (modules/admin_commands — 1,329 lines)
+### 13b. Admin Commands (modules/fazle_admin_commands — 1,329 lines)
 
 | Command | Action |
 |---|---|
@@ -939,35 +943,35 @@ Only the three orphan directories have zero content and zero risk: `modules/medi
 
 ```
 app/main.py
-  ├── modules.intent
-  ├── modules.bridge_poller
+  ├── modules.fazle_intent
+  ├── modules.fazle_bridge_poller
   │     ├── modules.message_router
-  │     ├── modules.intent
+  │     ├── modules.fazle_intent
   │     ├── modules.recruitment_flow
   │     ├── modules.recruitment_ai
   │     ├── modules.escort
   │     ├── modules.escort_lifecycle
-  │     ├── modules.identity_brain
+  │     ├── modules.fazle_identity_brain
   │     ├── modules.observability
   │     ├── modules.ocr_processor
   │     ├── modules.voice_processor
   │     ├── modules.draft_quality
   │     └── modules.social_auto_reply
   ├── modules.escort_slip_extractor
-  ├── modules.payment_workflow
+  ├── modules.fazle_payment_workflow
   ├── modules.message_router
-  │     ├── modules.intent
-  │     ├── modules.identity_brain
+  │     ├── modules.fazle_intent
+  │     ├── modules.fazle_identity_brain
   │     ├── modules.payroll_logic
   │     ├── modules.escort
   │     ├── modules.knowledge_base
   │     ├── modules.recruitment_flow
   │     ├── modules.recruitment_ai
-  │     ├── modules.admin_commands
-  │     │     └── modules.admin_commands.nl_router
-  │     │     └── modules.admin_commands.nl_advance_record
-  │     ├── modules.payment_workflow
-  │     ├── modules.payment_ingest
+  │     ├── modules.fazle_admin_commands
+  │     │     └── modules.fazle_admin_commands.nl_router
+  │     │     └── modules.fazle_admin_commands.nl_advance_record
+  │     ├── modules.fazle_payment_workflow
+  │     ├── modules.fazle_payment_ingest
   │     ├── modules.attendance
   │     ├── modules.attendance_parser
   │     ├── modules.employee_verification

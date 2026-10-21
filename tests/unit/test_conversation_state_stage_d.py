@@ -113,9 +113,9 @@ class TestEscortStateMapping:
 
 
 class TestAttendanceStateMapping:
-    """Stage E6: linkage proven deterministic (wbom_employees.employee_mobile
+    """Stage E6: linkage proven deterministic (fazle_employees_legacy.employee_mobile
     -> employee_id -> wbom_attendance, the same resolution
-    modules.identity_brain._lookup_attendance_identity already uses live).
+    modules.fazle_identity_brain._lookup_attendance_identity already uses live).
     State derives from approved_at nullability (modules.attendance's own
     save_attendance(): approved_at = NOW() if approved_by else None),
     never from the DUTY_STATUS_VALUES business fact (Present/Half Day/
@@ -137,7 +137,7 @@ class TestAttendanceStateMapping:
 
 
 class TestCashStateMapping:
-    """Stage E7: linkage via fpe_cash_transactions.{employee_phone,
+    """Stage E7: linkage via fazle_cash_transactions.{employee_phone,
     employee_id_phone,payout_phone} (same canonical BD phone format,
     normalized the same way). transaction_status is the genuine, dominant,
     already-live state field (live distribution confirmed during

@@ -8,6 +8,9 @@ runtime_index: true
 
 # Missing Report
 
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 ## Missing Identity Rules
 Resolved by adding `03_ai_identity` with role files and permission matrix.
 

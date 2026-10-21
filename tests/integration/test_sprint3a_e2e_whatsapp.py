@@ -47,7 +47,7 @@ class TestE2EWhatsAppConversation:
         # ── Snapshot before ──────────────────────────────────────────────────
         async with test_db_pool.acquire() as conn:
             txn_before = await conn.fetchval(
-                "SELECT COUNT(*) FROM wbom_cash_transactions"
+                "SELECT COUNT(*) FROM fazle_cash_transactions_archive"
             )
             draft_before = await conn.fetchval(
                 "SELECT COUNT(*) FROM fazle_payment_drafts"
@@ -88,7 +88,7 @@ class TestE2EWhatsAppConversation:
                 draft_id,
             )
             txn_after = await conn.fetchval(
-                "SELECT COUNT(*) FROM wbom_cash_transactions"
+                "SELECT COUNT(*) FROM fazle_cash_transactions_archive"
             )
             draft_after = await conn.fetchval(
                 "SELECT COUNT(*) FROM fazle_payment_drafts"
@@ -163,7 +163,7 @@ class TestE2EWhatsAppConversation:
         # Mark employee inactive
         async with test_db_pool.acquire() as conn:
             await conn.execute(
-                "UPDATE wbom_employees SET status='Inactive' WHERE employee_id=$1",
+                "UPDATE fazle_employees_legacy SET status='Inactive' WHERE employee_id=$1",
                 seed_employee["employee_id"],
             )
             draft_before = await conn.fetchval(
@@ -224,7 +224,7 @@ class TestE2EWhatsAppConversation:
     async def test_e2e_no_transaction_created(
         self, test_db_pool, seed_employee
     ):
-        """E2E: After full conversation, NO wbom_cash_transactions entry exists."""
+        """E2E: After full conversation, NO fazle_cash_transactions_archive entry exists."""
         import app.database as db_module
         db_module._pool = test_db_pool
 
@@ -244,7 +244,7 @@ class TestE2EWhatsAppConversation:
         # Verify NO transaction for this employee
         async with test_db_pool.acquire() as conn:
             txn_count = await conn.fetchval(
-                "SELECT COUNT(*) FROM wbom_cash_transactions WHERE employee_id=$1",
+                "SELECT COUNT(*) FROM fazle_cash_transactions_archive WHERE employee_id=$1",
                 emp_id,
             )
         assert txn_count == 0, "No transaction must exist after Sprint-3A draft"
@@ -263,7 +263,7 @@ class TestE2EWhatsAppConversation:
 
         async with test_db_pool.acquire() as conn:
             salary_before = await conn.fetchval(
-                "SELECT basic_salary FROM wbom_employees WHERE employee_id=$1",
+                "SELECT basic_salary FROM fazle_employees_legacy WHERE employee_id=$1",
                 emp_id,
             )
 
@@ -275,7 +275,7 @@ class TestE2EWhatsAppConversation:
 
         async with test_db_pool.acquire() as conn:
             salary_after = await conn.fetchval(
-                "SELECT basic_salary FROM wbom_employees WHERE employee_id=$1",
+                "SELECT basic_salary FROM fazle_employees_legacy WHERE employee_id=$1",
                 emp_id,
             )
 

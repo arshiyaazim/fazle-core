@@ -29,8 +29,8 @@ async def get_recent_errors(limit: int = 50) -> list[dict[str, Any]]:
     fazle_error_log is NOT in modules.preflight_guard.PROTECTED_TABLES or
     its _PREFIX_PROTECTED_TABLES prefixes (confirmed by direct read of
     modules/preflight_guard/__init__.py: PROTECTED_TABLES is
-    fpe_cash_transactions/fpe_employee_ledger/wbom_employees/
-    wbom_whatsapp_messages; _PREFIX_PROTECTED_TABLES is escort_/payroll_)
+    fazle_cash_transactions/fazle_employee_ledger/fazle_employees_legacy/
+    fazle_whatsapp_messages; _PREFIX_PROTECTED_TABLES is escort_/payroll_)
     -- so this plain read-only SELECT carries no protected-path risk.
     """
     rows = await fetch_all(

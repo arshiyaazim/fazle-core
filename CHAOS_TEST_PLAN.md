@@ -1,5 +1,9 @@
 # Chaos Test Plan — Fazle Core
 
+
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **Purpose:** Define systematic chaos and soak tests to validate production resilience
 before enabling high-volume operations.
 **Prerequisite:** PRE_CHAOS_CHECKLIST.md must be fully completed (all 33 items GREEN).

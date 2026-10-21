@@ -88,8 +88,8 @@ SELECT
     t.fpe_wa_message_id,
     e.primary_phone         AS current_employee_phone
 FROM fpe_transaction_repairs r
-JOIN fpe_cash_transactions t ON t.id = r.transaction_id
-LEFT JOIN fpe_employees e    ON e.id = r.old_employee_id
+JOIN fazle_cash_transactions t ON t.id = r.transaction_id
+LEFT JOIN fazle_employees e    ON e.id = r.old_employee_id
 WHERE r.review_needed = TRUE
   AND r.dry_run       = FALSE
   AND NOT EXISTS (
@@ -108,7 +108,7 @@ _PENDING_QUERY_SINGLE = _PENDING_QUERY.replace(
 
 _EMPLOYEE_SEARCH = """
 SELECT id, full_name, primary_phone, status
-FROM fpe_employees
+FROM fazle_employees
 WHERE status = 'active'
   AND (
       lower(full_name) LIKE lower($1)
@@ -120,7 +120,7 @@ LIMIT 20
 
 _EMPLOYEE_BY_ID = """
 SELECT id, full_name, primary_phone, status
-FROM fpe_employees
+FROM fazle_employees
 WHERE id = $1
 """
 
@@ -232,7 +232,7 @@ async def _apply_confirmed(
     emp_row = await conn.fetchrow(_EMPLOYEE_BY_ID, confirmed_employee_id)
     if not emp_row:
         return {"action": "failed", "txn_id": item.transaction_id,
-                "error": f"Employee id={confirmed_employee_id} not found in fpe_employees"}
+                "error": f"Employee id={confirmed_employee_id} not found in fazle_employees"}
 
     # Build a SuspiciousTxn from the review item
     txn = SuspiciousTxn(

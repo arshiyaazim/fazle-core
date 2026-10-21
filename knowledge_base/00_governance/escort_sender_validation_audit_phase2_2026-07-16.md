@@ -8,6 +8,9 @@ runtime_index: true
 
 # Escort Program Audit — Phase 2
 
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 Follow-up to [escort_sender_validation_audit_2026-07-16.md](escort_sender_validation_audit_2026-07-16.md)
 (Session 16). Owner requested 5 items; this document records findings and actions for
 all 5.
@@ -25,7 +28,7 @@ from the 18 unauthorized-sender rows removed in Session 16, but the same in effe
 Pre-delete verification (read-only):
 - `escort_employee_id IS NULL` on all 10 (`wbom_escort_programs` and
   `escort_roster_entries`)
-- `fpe_cash_transactions` references: **0** across all 10
+- `fazle_cash_transactions` references: **0** across all 10
 - `net_payable = 0.00` on all 10 roster projections
 
 **Action taken:** deleted, per Owner's Phase 2 instruction. Audit-logged first (action
@@ -41,7 +44,7 @@ concluded it was safe to include).
 **Original stored row:** `mother_vessel=''`, `lighter_vessel='Mv: kafela--01.mobile:'`,
 `master_mobile='01820413051'`, `destination=''`.
 
-**Original raw message** (recovered from `wbom_whatsapp_messages`, message_id 7939,
+**Original raw message** (recovered from `fazle_whatsapp_messages`, message_id 7939,
 received 2026-05-23 20:30:15):
 
 ```
@@ -169,7 +172,7 @@ like `"Escort Name: Sohedul Karim"` / `"Escort Name: Ferdous"` / `"Escort Name: 
 Helal"` / `"Escort Name: Md Rubel"` instead of an actual place name — the escort's name
 is leaking into the destination field. All 4 rows are `auto_created=true` (the
 `_create_confirmed_from_admin()` direct-create path). I checked whether this is still
-live: I could not locate the original admin message in `wbom_whatsapp_messages` for
+live: I could not locate the original admin message in `fazle_whatsapp_messages` for
 these (unlike S/N 777, no matching row found in that window), so I could not run the
 same replay-and-compare test I ran for §2 — **reproducibility is unconfirmed, not ruled
 out**. All 4 rows predate 2026-06-27 by a few hours to two days, so this may or may not
@@ -218,15 +221,15 @@ quick, cheap next query — say the word and I'll run it.
 **2026-07-16, follow-up (Owner sign-off on the 3 confirmed duplicates):** `933`
 (duplicate of 934, kept), `1` (duplicate of 9, kept), `3` (duplicate of 10, kept).
 Pre-delete re-verification checked every table with a `program_id`/`related_program_id`
-FK to `wbom_escort_programs` (`fpe_cash_transactions`, `wbom_cash_transactions`,
-`wbom_billing_records`, `wbom_cases`, `wbom_whatsapp_messages`,
+FK to `wbom_escort_programs` (`fazle_cash_transactions`, `fazle_cash_transactions_archive`,
+`wbom_billing_records`, `wbom_cases`, `fazle_whatsapp_messages`,
 `fazle_payment_drafts`, `escort_order_lighters`) — zero references on all three.
 `escort_shift_logs` had 7 release-log rows each for program_id 1 and 3 (no FK
 constraint, but deleted alongside to avoid dangling references); 0 for 933.
 `escort_roster_entries` for 1 and 3 had non-zero `total`/`net_payable`
 (৳1,400 and ৳3,000 respectively) — flagged and checked explicitly since this differs
 from every other row removed in this audit, but confirmed there was no
-`fpe_cash_transactions` entry behind it (i.e., a roster amount was computed/displayed,
+`fazle_cash_transactions` entry behind it (i.e., a roster amount was computed/displayed,
 but no actual payout was ever recorded against these specific duplicate rows — the kept
 sibling, 9/10, carries the same computed amount, so nothing is lost). Audit trail:
 `escort_roster_audit_logs`, action `manual_duplicate_cleanup`.

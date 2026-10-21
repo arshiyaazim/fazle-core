@@ -64,14 +64,14 @@ CREATE INDEX IF NOT EXISTS idx_recruitment_sessions_phone
 CREATE INDEX IF NOT EXISTS idx_recruitment_sessions_status
     ON fazle_recruitment_sessions (status);
 
--- ── Phase 8: Normalize direction values in wbom_whatsapp_messages ─────────────
+-- ── Phase 8: Normalize direction values in fazle_whatsapp_messages ─────────────
 -- Ensure any remaining non-standard direction values are corrected
-UPDATE wbom_whatsapp_messages
+UPDATE fazle_whatsapp_messages
 SET direction = 'inbound'
 WHERE direction IN ('incoming', 'in', 'received')
   AND direction != 'inbound';
 
-UPDATE wbom_whatsapp_messages
+UPDATE fazle_whatsapp_messages
 SET direction = 'outbound'
 WHERE direction IN ('outgoing', 'out', 'sent')
   AND direction != 'outbound';

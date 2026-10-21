@@ -21,10 +21,10 @@ Flow:
       -> resolve employee (status-agnostic; existing inactive row is matched,
          never duplicated)
       -> fazle_payroll_engine.accounting.create_transaction(req, conn=<txn>)
-           = INSERT fpe_cash_transactions
+           = INSERT fazle_cash_transactions
            + fpe_accounting_audit_logs
            + employee activation (inactive -> active)   [in create_transaction]
-           + fpe_employee_ledger upsert                 [in create_transaction]
+           + fazle_employee_ledger upsert                 [in create_transaction]
          ALL in one DB transaction.
       -> STOP
 
@@ -34,7 +34,7 @@ transaction / ledger entry / activation for the same successful relay send.
 
 Exactly-once: keyed on the OUTBOUND QUEUE ID (stable transport identity, one
 row per relay send) + the payment line index, carried as
-fpe_cash_transactions.source_message_id = "payment-relay-send:<queue_id>:<idx>"
+fazle_cash_transactions.source_message_id = "payment-relay-send:<queue_id>:<idx>"
 and enforced by create_transaction()'s own txn_ref idempotency plus an
 explicit pre-check here. Never dedupes by employee+amount+date alone.
 
@@ -120,13 +120,13 @@ RECONCILE_LINK_TYPE_EXISTING_MANUAL = "existing_manual_booking"
 
 
 async def _queue_reconciled_by_existing_link(queue_id: int, conn: Any = None) -> Optional[int]:
-    """Return the id of a non-reversal fpe_cash_transactions row that carries an
+    """Return the id of a non-reversal fazle_cash_transactions row that carries an
     EXPLICIT reconciliation link to this exact relay queue id, or None. This is
     the only 'already reconciled by an existing transaction' signal — it is
     never inferred from employee/amount/date/method/body/time."""
     row = await fetch_one(
         f"""
-        SELECT id FROM fpe_cash_transactions
+        SELECT id FROM fazle_cash_transactions
         WHERE NOT is_reversal
           AND deleted_at IS NULL
           AND metadata->>'{RECONCILE_LINK_META_KEY}' = $1
@@ -148,7 +148,7 @@ async def link_existing_transaction_to_relay_queue(
     conn: Any = None,
 ) -> dict:
     """Attach an explicit 'this relay queue is already financially booked by
-    this existing transaction' provenance link to fpe_cash_transactions.<txn_id>,
+    this existing transaction' provenance link to fazle_cash_transactions.<txn_id>,
     plus one accounting audit row. Owner-approved, human-established — NEVER a
     heuristic.
 
@@ -171,7 +171,7 @@ async def link_existing_transaction_to_relay_queue(
             row = await fetch_one(
                 "SELECT id, amount, txn_category, employee_id, source, source_channel, "
                 "source_message_id, created_by, is_reversal, deleted_at, metadata "
-                "FROM fpe_cash_transactions WHERE id = $1",
+                "FROM fazle_cash_transactions WHERE id = $1",
                 txn_id, conn=c,
             )
             if row is None:
@@ -208,7 +208,7 @@ async def link_existing_transaction_to_relay_queue(
                 "relay_reconciliation_reason": reason,
             }
             await c.execute(
-                "UPDATE fpe_cash_transactions "
+                "UPDATE fazle_cash_transactions "
                 "SET metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb "
                 "WHERE id = $1",
                 txn_id, json.dumps(add),
@@ -392,7 +392,7 @@ async def _account_relay_send(
 
             # Exactly-once — this exact (queue send, line) already booked?
             existing = await fetch_one(
-                "SELECT id, txn_ref, employee_id, amount FROM fpe_cash_transactions "
+                "SELECT id, txn_ref, employee_id, amount FROM fazle_cash_transactions "
                 "WHERE source_message_id = $1 AND source_channel = $2",
                 src_msg_id, SOURCE_CHANNEL, conn=conn,
             )
@@ -497,7 +497,7 @@ async def _account_relay_send(
 
 async def reconcile_pending_relay_accounting(limit: int = 25) -> dict:
     """Find payment-relay queue rows that were successfully SENT but have no
-    corresponding fpe_cash_transactions row, and book them. Idempotent; run
+    corresponding fazle_cash_transactions row, and book them. Idempotent; run
     periodically from the FPE accounting worker."""
     if not _enabled():
         return {"ok": True, "skipped": "disabled", "processed": 0}
@@ -510,12 +510,12 @@ async def reconcile_pending_relay_accounting(limit: int = 25) -> dict:
           AND q.status = 'sent'
           AND q.sent_at > NOW() - INTERVAL '7 days'
           AND NOT EXISTS (                                  -- Rule A: canonical relay txn
-              SELECT 1 FROM fpe_cash_transactions t
+              SELECT 1 FROM fazle_cash_transactions t
               WHERE t.source_channel = $2
                 AND t.source_message_id LIKE ('payment-relay-send:' || q.id::text || ':%')
           )
           AND NOT EXISTS (                                  -- Rule B: explicit link to an existing txn
-              SELECT 1 FROM fpe_cash_transactions t2
+              SELECT 1 FROM fazle_cash_transactions t2
               WHERE NOT t2.is_reversal
                 AND t2.deleted_at IS NULL
                 AND t2.metadata->>'relay_reconciled_queue_id' = q.id::text
@@ -562,7 +562,7 @@ async def is_relay_payment_already_accounted(
                                                       bridge is upgraded; NOT
                                                       required now)
 
-    "booked" = an fpe_cash_transactions row with source_channel = SOURCE_CHANNEL
+    "booked" = an fazle_cash_transactions row with source_channel = SOURCE_CHANNEL
     AND NOT is_reversal carrying that metadata value.
 
     NO body/time/queue heuristic can suppress a financial event. The former
@@ -584,7 +584,7 @@ async def is_relay_payment_already_accounted(
             row = await fetch_one(
                 """
                 SELECT id, txn_ref
-                FROM fpe_cash_transactions
+                FROM fazle_cash_transactions
                 WHERE source_channel = $1
                   AND NOT is_reversal
                   AND (
@@ -619,7 +619,7 @@ async def is_relay_payment_already_accounted(
                   AND q.sent_at < ($3::timestamptz + make_interval(mins => $4))
                   AND q.sent_at > NOW() - make_interval(days => $5)
                   AND EXISTS (
-                      SELECT 1 FROM fpe_cash_transactions t
+                      SELECT 1 FROM fazle_cash_transactions t
                       WHERE t.source_channel = $6 AND NOT t.is_reversal
                         AND t.source_message_id LIKE ('payment-relay-send:' || q.id::text || ':%')
                   )
@@ -674,7 +674,7 @@ async def run_payment_inactivity_sweep() -> dict:
                 """
                 WITH latest AS (
                     SELECT employee_id, MAX(txn_date) AS last_txn_date
-                    FROM fpe_cash_transactions
+                    FROM fazle_cash_transactions
                     WHERE employee_id IS NOT NULL
                       AND NOT is_reversal
                       AND transaction_status = 'final'
@@ -682,7 +682,7 @@ async def run_payment_inactivity_sweep() -> dict:
                     GROUP BY employee_id
                 )
                 SELECT e.id, e.full_name, latest.last_txn_date
-                FROM fpe_employees e
+                FROM fazle_employees e
                 JOIN latest ON latest.employee_id = e.id
                 WHERE e.status = 'active'
                   AND latest.last_txn_date < (CURRENT_DATE - INTERVAL '3 months')
@@ -691,7 +691,7 @@ async def run_payment_inactivity_sweep() -> dict:
             ids = [r["id"] for r in rows]
             if ids:
                 await conn.execute(
-                    "UPDATE fpe_employees SET status = 'inactive', updated_at = NOW() "
+                    "UPDATE fazle_employees SET status = 'inactive', updated_at = NOW() "
                     "WHERE id = ANY($1::bigint[]) AND status = 'active'",
                     ids,
                 )

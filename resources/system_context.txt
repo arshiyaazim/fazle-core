@@ -83,10 +83,10 @@ Status: Connected (health probe: db.status=ok)
 
 প্রধান টেবিলসমূহ:
   - fazle_knowledge_base — নলেজ বেস (recruitment, business, vessel_duty ইত্যাদি)
-  - wbom_contacts — পরিচিতি তালিকা
-  - wbom_whatsapp_messages — WhatsApp মেসেজ ইতিহাস
-  - fpe_employees — কর্মচারী তথ্য
-  - fpe_transactions — আর্থিক লেনদেন
+  - fazle_contacts — পরিচিতি তালিকা
+  - fazle_whatsapp_messages — WhatsApp মেসেজ ইতিহাস
+  - fazle_employees — কর্মচারী তথ্য
+  - fazle_cash_transactions — আর্থিক লেনদেন
   - escort_programs — এস্কর্ট প্রোগ্রাম
 
 ডেটাবেস সংযুক্ত আছে কিনা: /health endpoint এ db.status দেখুন।

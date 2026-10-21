@@ -3,12 +3,12 @@
 -- Purely additive. Not written to by any app code in this repo -- it exists
 -- only as the write target for a standalone, out-of-repo service
 -- (/opt/chat_sync/sync.py, systemd unit chat-sync.service) that reads
--- wbom_whatsapp_messages (inbound) and fazle_outbound_queue (outbound) on a
+-- fazle_whatsapp_messages (inbound) and fazle_outbound_queue (outbound) on a
 -- poll loop and copies rows here for a unified per-thread conversation view.
 -- See docs/TASK_BRIEF_chat_sync_and_reply_gap_2026-07-15.md Phase 1.
 --
 -- Outbound is sourced from fazle_outbound_queue only, never from
--- wbom_whatsapp_messages -- the customer-reply auto-send path writes the
+-- fazle_whatsapp_messages -- the customer-reply auto-send path writes the
 -- same message to both tables, and there is no shared key across them to
 -- de-dupe against; admin notifications write only to fazle_outbound_queue.
 -- Pulling outbound from both would double-count.

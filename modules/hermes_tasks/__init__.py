@@ -25,7 +25,7 @@ an approval's own status directly drives its parent task's status):
       write tool -- it's an additional, second layer specifically for
       code/infra-shaped actions, on top of that existing mode gate.
 
-Shape mirrors modules.draft_approval's proven fazle_payment_drafts +
+Shape mirrors modules.fazle_draft_approval's proven fazle_payment_drafts +
 fazle_draft_audit_log pattern throughout: row-level SELECT ... FOR UPDATE
 locks before a state transition (get_pool()/conn.transaction(), same as
 approve_draft()), a separate append-only audit table with before/after +

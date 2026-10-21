@@ -35,7 +35,7 @@ from typing import Optional, TypedDict
 from app.config import get_settings
 from app.database import execute, fetch_one, fetch_val, fetch_all, db_conn
 from modules.fazle_payroll_engine.normalizer import normalize_bd_phone
-from modules.identity_brain import _phone_variants
+from modules.fazle_identity_brain import _phone_variants
 
 log = logging.getLogger("fazle.escort")
 _ESCORT_PROGRAM_COLUMNS_CACHE: Optional[set[str]] = None
@@ -1318,7 +1318,7 @@ def build_final_slip(draft: CompletedDraft, db_destination: Optional[str] = None
 # ── DB helpers ─────────────────────────────────────────────────────────────────
 
 async def _get_contact_id(phone: str) -> Optional[int]:
-    """Resolve a raw phone string to wbom_contacts.contact_id via normalized
+    """Resolve a raw phone string to fazle_contacts.contact_id via normalized
     variants (0XXXXXXXXXX / 880XXXXXXXXXX / +880XXXXXXXXXX), matching the
     same lookup identity_brain._lookup_contact() uses — a raw un-normalized
     exact-string match silently misses any format drift between however the
@@ -1328,7 +1328,7 @@ async def _get_contact_id(phone: str) -> Optional[int]:
     if not variants:
         return None
     row = await fetch_one(
-        "SELECT contact_id FROM wbom_contacts WHERE whatsapp_number = ANY($1) ORDER BY contact_id DESC LIMIT 1",
+        "SELECT contact_id FROM fazle_contacts WHERE whatsapp_number = ANY($1) ORDER BY contact_id DESC LIMIT 1",
         variants,
     )
     return row["contact_id"] if row else None
@@ -1714,13 +1714,13 @@ async def _resolve_escort_employee_id(
     *,
     auto_create: bool = False,
 ) -> Optional[int]:
-    """Look up or create wbom_employees row by escort mobile.
+    """Look up or create fazle_employees_legacy row by escort mobile.
 
-    wbom_employees.employee_id is a numeric primary key; the escort mobile is
+    fazle_employees_legacy.employee_id is a numeric primary key; the escort mobile is
     stored as employee_mobile and used as the stable identity anchor.
 
     After resolving/creating the WBOM record, this function also ensures an
-    fpe_employees row exists and is linked via wbom_employee_id. This makes
+    fazle_employees row exists and is linked via wbom_employee_id. This makes
     the escort visible in /payroll/employees immediately.
     """
     if not escort_mobile:
@@ -1731,7 +1731,7 @@ async def _resolve_escort_employee_id(
         if not variants:
             return None
         row = await fetch_one(
-            "SELECT employee_id FROM wbom_employees WHERE employee_mobile = ANY($1) AND status = 'Active' LIMIT 1",
+            "SELECT employee_id FROM fazle_employees_legacy WHERE employee_mobile = ANY($1) AND status = 'Active' LIMIT 1",
             variants,
         )
         if row:
@@ -1744,11 +1744,11 @@ async def _resolve_escort_employee_id(
 
         mobile_to_store = variants[1] if len(variants) > 1 else variants[0]
         emp_id = await fetch_val(
-            """INSERT INTO wbom_employees
+            """INSERT INTO fazle_employees_legacy
                    (employee_name, employee_mobile, designation, status, joining_date)
                VALUES ($1, $2, 'Escort', 'Active', CURRENT_DATE)
                ON CONFLICT (employee_mobile) DO UPDATE
-                   SET employee_name = COALESCE(NULLIF(EXCLUDED.employee_name, ''), wbom_employees.employee_name),
+                   SET employee_name = COALESCE(NULLIF(EXCLUDED.employee_name, ''), fazle_employees_legacy.employee_name),
                        designation = 'Escort',
                        status = 'Active'
                RETURNING employee_id""",
@@ -1770,10 +1770,10 @@ async def _ensure_fpe_employee_link(
     name: Optional[str] = None,
 ) -> None:
     """
-    Ensure an fpe_employees row exists for this escort and is linked to WBOM.
+    Ensure an fazle_employees row exists for this escort and is linked to WBOM.
     Non-fatal: any error is logged and swallowed.
-    Called after resolving/creating a wbom_employees row for an escort.
-    Does NOT touch fpe_cash_transactions — only fpe_employees identity table.
+    Called after resolving/creating a fazle_employees_legacy row for an escort.
+    Does NOT touch fazle_cash_transactions — only fazle_employees identity table.
     """
     try:
         from modules.fazle_payroll_engine.normalizer import normalize_bd_phone
@@ -1785,7 +1785,7 @@ async def _ensure_fpe_employee_link(
 
         # 1. FPE record already linked to this WBOM id?
         already = await _fo(
-            "SELECT id FROM fpe_employees WHERE wbom_employee_id = $1 LIMIT 1",
+            "SELECT id FROM fazle_employees WHERE wbom_employee_id = $1 LIMIT 1",
             wbom_employee_id,
         )
         if already:
@@ -1793,12 +1793,12 @@ async def _ensure_fpe_employee_link(
 
         # 2. FPE record exists by phone but wbom_employee_id not set → just link it
         fpe_by_phone = await _fo(
-            "SELECT id FROM fpe_employees WHERE primary_phone = $1 OR employee_id_phone = $1 LIMIT 1",
+            "SELECT id FROM fazle_employees WHERE primary_phone = $1 OR employee_id_phone = $1 LIMIT 1",
             canon,
         )
         if fpe_by_phone:
             await _exec(
-                "UPDATE fpe_employees SET wbom_employee_id = $1 WHERE id = $2 AND wbom_employee_id IS NULL",
+                "UPDATE fazle_employees SET wbom_employee_id = $1 WHERE id = $2 AND wbom_employee_id IS NULL",
                 wbom_employee_id, fpe_by_phone["id"],
             )
             log.debug("[escort] linked fpe_employee id=%d → wbom_employee_id=%d", fpe_by_phone["id"], wbom_employee_id)
@@ -1808,7 +1808,7 @@ async def _ensure_fpe_employee_link(
         clean_name = (name or "Unknown Escort").strip()
         name_norm = clean_name.lower()
         new_fpe_id = await _fv(
-            """INSERT INTO fpe_employees
+            """INSERT INTO fazle_employees
                    (full_name, name_normalized, primary_phone, employee_id_phone,
                     department, status, created_source, resolution_status, confidence_score,
                     wbom_employee_id, designation)
@@ -1820,7 +1820,7 @@ async def _ensure_fpe_employee_link(
         )
         if new_fpe_id:
             await _exec(
-                "UPDATE fpe_employees SET employee_code = 'EMP-' || LPAD(id::text, 5, '0') WHERE id = $1 AND employee_code IS NULL",
+                "UPDATE fazle_employees SET employee_code = 'EMP-' || LPAD(id::text, 5, '0') WHERE id = $1 AND employee_code IS NULL",
                 new_fpe_id,
             )
             log.info("[escort] created fpe_employee id=%d for escort mobile=%s wbom_id=%d", new_fpe_id, canon, wbom_employee_id)
@@ -2410,7 +2410,7 @@ async def handle_escort_client_message(
     is_verified (Phase 1B.2): True when the sender's client_escort_buyer
     identity came from a genuine source (ESCORT_CLIENT_PHONES, a stored
     fazle_contact_roles row, or a contact-book name marker — see
-    modules.identity_brain.resolve_escort_client_identity). False when the
+    modules.fazle_identity_brain.resolve_escort_client_identity). False when the
     caller only matched via message-content keyword inference (identity_brain
     Step 6) — a real, previously-unseen sender whose message merely looked
     escort-shaped. The unverified path still runs the same safe extraction
@@ -2895,7 +2895,7 @@ async def _create_escort_confirmation_review_draft(
     """Create and immediately push the Step 5 (2026-08-01) admin-reminder
     draft for a confirmation entry whose master/escort mobile is present
     but malformed. Owner spec, exact wording -- admin replies with
-    "<id> Type: APPROVE/EDIT/REJECT" (modules.admin_commands, a dedicated
+    "<id> Type: APPROVE/EDIT/REJECT" (modules.fazle_admin_commands, a dedicated
     parser -- NOT the generic APPROVE/EDIT/REJECT verbs, whose EDIT sends
     the edited text back to the original sender, the wrong meaning here;
     see docs/PLAN_ESCORT_CONFIRMATION_MULTI_ENTRY_2026-08-01.md Step 5).
@@ -2911,7 +2911,7 @@ async def _create_escort_confirmation_review_draft(
     if recipient_phone:
         try:
             contact = await fetch_one(
-                "SELECT display_name FROM wbom_contacts WHERE whatsapp_number = ANY($1) "
+                "SELECT display_name FROM fazle_contacts WHERE whatsapp_number = ANY($1) "
                 "ORDER BY contact_id DESC LIMIT 1",
                 _phone_variants(recipient_phone),
             )
@@ -2983,7 +2983,7 @@ async def _process_one_confirmation_entry(
     """Resolve, update, sync, and reconcile a single confirmation entry --
     extracted 2026-08-01 from handle_admin_escort_completion()'s per-entry
     loop body so the Step 5 APPROVE command handler
-    (modules.admin_commands) can reuse the exact same logic for a
+    (modules.fazle_admin_commands) can reuse the exact same logic for a
     previously-reviewed entry instead of re-implementing it. Behavior is
     byte-for-byte the same as the inline version this replaced.
 
@@ -3109,7 +3109,7 @@ async def _process_one_confirmation_entry(
 # ── Step 5 (2026-08-01): Admin REMINDER / APPROVE / EDIT / REJECT ──────────────
 # Handlers for the dedicated review queue created by
 # _create_escort_confirmation_review_draft() above. Called from
-# modules.admin_commands's own "<id> Type: APPROVE|EDIT|REJECT" parser --
+# modules.fazle_admin_commands's own "<id> Type: APPROVE|EDIT|REJECT" parser --
 # deliberately NOT the generic APPROVE/EDIT/REJECT commands, whose EDIT
 # sends the edited text to the original sender (wrong meaning here).
 

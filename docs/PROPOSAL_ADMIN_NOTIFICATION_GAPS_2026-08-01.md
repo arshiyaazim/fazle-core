@@ -9,7 +9,7 @@ structure that policy requires for every implementation proposal.
 symptoms — (1) an escort-order message didn't produce a draft the admin ever
 saw, (2) escort-client/admin conversations weren't landing new confirmed
 rows in `escort_roster_entries`, (3) an admin→accountant conversation didn't
-produce a new `fpe_cash_transactions` row. Full findings already reported to
+produce a new `fazle_cash_transactions` row. Full findings already reported to
 Owner in chat; this document is the formal proposal for fixing them.
 
 **Cross-cutting root cause:** all three symptoms come from the same class of
@@ -33,19 +33,19 @@ paths, but only one of them ever sends anything:
 - **Verified/complete escort orders** — `modules.escort.handle_escort_client_message()`
   (`modules/escort/__init__.py:2159-2240`) returns an `admin_note` dict that
   `message_router.process_message()`'s caller in `bridge_poller` forwards to
-  `_notify_admin_bridge()` (`modules/bridge_poller/__init__.py:1744-1771`),
+  `_notify_admin_bridge()` (`modules/fazle_bridge_poller/__init__.py:1744-1771`),
   which enqueues onto `fazle_outbound_queue` (purpose `internal-notification`).
   **Confirmed working** — verified live: several `internal-notification` rows
   sent successfully to `8801880446111` within hours of this audit.
 - **Everything else that gets drafted** (incomplete orders — missing escort
   name/mobile, unmatched senders, generic AI-reply suppressions, financial-
   intent forced drafts, safety-block drafts, etc.) goes through
-  `bridge_poller._save_draft()` (`modules/bridge_poller/__init__.py:1416-1516`)
+  `bridge_poller._save_draft()` (`modules/fazle_bridge_poller/__init__.py:1416-1516`)
   or `app/main.py:_save_draft()` (`app/main.py:2211-2272`). **Neither
   function calls any send/enqueue function.** They only `INSERT INTO
   fazle_draft_replies`.
 - The only two ways a pending draft ever becomes visible to a human are (a)
-  the admin texting `STATUS`/`DRAFTS` (`modules/admin_commands/__init__.py`,
+  the admin texting `STATUS`/`DRAFTS` (`modules/fazle_admin_commands/__init__.py`,
   `modules/message_router/__init__.py:554`) or (b) the web dashboard
   (`GET /api/drafts`, `modules/drafts/routes.py:66-80`). Both are pull-only.
 - `job_combined_draft_cleanup` (`app/main.py:393-455`, hourly) and
@@ -109,7 +109,7 @@ Proposed change, in two parts:
 - **A4a — Immediate per-draft push (real-time), for `_save_draft()` and
   `app/main.py:_save_draft()` only when `draft_only=True`/enriched (i.e. the
   5-part admin-review format).** After the `INSERT`, call
-  `modules.bridge_poller._notify_admin_bridge()` with the same draft text,
+  `modules.fazle_bridge_poller._notify_admin_bridge()` with the same draft text,
   `purpose="draft-review-pending"`, `admin_phone=settings.admin_bridge2_number
   or settings.admin_bridge1_number`. This is the smallest possible change —
   one new call site, reusing an existing, already-tested send function — no
@@ -230,15 +230,15 @@ N/A — no change proposed.
 
 ### C1. Current production behavior
 
-`modules.payment_ingest.ingest_admin_cash_entry()` (`modules/payment_ingest/__init__.py:509-563`)
-is the only path that writes a `fpe_cash_transactions` row directly from a
+`modules.fazle_payment_ingest.ingest_admin_cash_entry()` (`modules/fazle_payment_ingest/__init__.py:509-563`)
+is the only path that writes a `fazle_cash_transactions` row directly from a
 WhatsApp message text with `source_channel='admin-accountant-instruction'`.
 It only runs when:
 - `message_router.process_message()` resolves the **sender's role to
   `accountant`** (`modules/message_router/__init__.py:592`) — not `admin`,
   despite the function's name and docstring; and
 - the message text matches `_SHORTHAND_RE`
-  (`modules/payment_ingest/__init__.py:424-431`), an exact single-line
+  (`modules/fazle_payment_ingest/__init__.py:424-431`), an exact single-line
   pattern: `[ID: <mobile>] <Name> <mobile>(N|B|Nagad|Bikash|Bkash|Cash|C|Rocket|R|BANK) <amount>/-`.
 
 If the role resolves to `accountant` but the text does **not** match
@@ -251,7 +251,7 @@ balance-summary messages (e.g. `31/7/26=টোটাল বাকি =27,435/-`)
 correctly do **not** match the shorthand (by design — KB confirms these are
 informational) and never write a transaction. No message from this contact
 in the entire recent history matches `_SHORTHAND_RE`. Separately, the
-`fpe_cash_transactions` rows that *did* land on the audit date came from a
+`fazle_cash_transactions` rows that *did* land on the audit date came from a
 different sender/role (an escort self-reported payout format that happens
 to superficially resemble the shorthand) via a different code path, not
 via `ingest_admin_cash_entry()` at all.
@@ -264,7 +264,7 @@ via `ingest_admin_cash_entry()` at all.
 > Duplicate Check -> Cash Ledger Entry -> Employee Balance Update ->
 > Payroll/Advance Sync... **Admin -> Accountant instruction path: admin
 > sends a payment instruction to accountant -> message is treated as final
-> payment proof -> parser writes `fpe_cash_transactions` directly via
+> payment proof -> parser writes `fazle_cash_transactions` directly via
 > `create_transaction()`. No additional verification or draft is required.
 > Admin's message reaching the accountant is the completion trigger.**"
 

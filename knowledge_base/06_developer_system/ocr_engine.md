@@ -181,7 +181,7 @@ If all scores = 0 → `unknown`. Highest-scoring type wins. Ties: escort > relea
 
 ## Duplicate Detection
 
-**Module:** `modules/image_hash/`
+**Module:** `modules/fazle_image_hash/`
 **Algorithm:** SHA-256 hash of raw image bytes
 **Storage:** `check_and_register(file_path, message_id)` — registers hash in production table on first occurrence
 **Behavior:** If duplicate detected → returns early with Bangla notice: `"এই স্লিপটি পূর্বে জমা হয়েছে। যাচাই চলছে।"`

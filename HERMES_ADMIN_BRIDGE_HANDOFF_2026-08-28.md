@@ -96,7 +96,7 @@ conversation.
 ```
 Super Admin
   → Bridge2 (self-chat)
-  → Fazle Core (modules/bridge_poller, modules/admin_directives/router.py)
+  → Fazle Core (modules/fazle_bridge_poller, modules/admin_directives/router.py)
   → Hermes Admin relay (_handle_hermes_relay)
   → hermes-runner (readonly_key="readonly:whatsapp_relay")
   → Hermes RUN toolset
@@ -125,7 +125,7 @@ Super Admin
 ### 2a. Bridge2 natural-language Admin routing — DEPLOYED, LIVE-PROVEN
 
 **Problem:** the Bridge2 self-chat outgoing scanner
-(`modules/bridge_poller/__init__.py`) only ever recognized the explicit
+(`modules/fazle_bridge_poller/__init__.py`) only ever recognized the explicit
 `hermes,`/`hermes:` prefix. An unprefixed natural-language Super Admin
 self-chat message fell through every check and was silently dropped — this
 was the real cause of 3 missing Admin replies traced earlier in this
@@ -141,7 +141,7 @@ logic was added.
 
 - **Commit:** `53ddc241c34885642e926563f00447517f6b25ad`
   ("fix: route bridge2 natural admin self-chat to Hermes")
-- **Files:** `modules/bridge_poller/__init__.py`,
+- **Files:** `modules/fazle_bridge_poller/__init__.py`,
   `tests/unit/test_bridge2_selfchat_natural_admin_routing.py` (15
   structural tests)
 - **Deployed** via `scripts/restart_gate.sh --restart` on 2026-08-27,

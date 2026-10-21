@@ -1,5 +1,9 @@
 # C1B Release Gate Certification — 5 Gates
 
+
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **Date:** 2026-06-29  
 **Certified by:** Engineering Agent  
 **Production Database:** `ai-postgres` @ `172.20.0.6:5432`
@@ -68,7 +72,7 @@ DELTA:  fpe_cash=+1,   wbom_cash=+0,   audit=+1
 
 **FPE has MORE rows than WBOM (2494 vs 1428):** This is expected — FPE was the active write target before C1B (the system was already writing to FPE via the FPE engine). The WBOM table was the older write target that was deprecated in favor of FPE.
 
-**`legacy_wbom_transaction_id` is NULL for all rows:** The `backfill_wbom_to_fpe()` migration function exists in [`wbom_fpe_sync.py`](core/modules/payment_ingest/wbom_fpe_sync.py:197) but has not been run against historical WBOM data. The 1,428 WBOM rows are preserved as legacy archive. Running the backfill would link them to FPE transactions via `legacy_wbom_transaction_id`.
+**`legacy_wbom_transaction_id` is NULL for all rows:** The `backfill_wbom_to_fpe()` migration function exists in [`wbom_fpe_sync.py`](core/modules/fazle_data_sync/__init__.py:197) but has not been run against historical WBOM data. The 1,428 WBOM rows are preserved as legacy archive. Running the backfill would link them to FPE transactions via `legacy_wbom_transaction_id`.
 
 **Employee mapping:** 100 of 378 FPE employees have `wbom_employee_id` set. The remaining 278 were created directly in FPE (via `match_or_create_employee()`) without a WBOM link.
 
@@ -124,7 +128,7 @@ Total Match %:             100% of new writes go to FPE (verified by Gate-1)
 
 | Module | File | Purpose | Legitimate? |
 |--------|------|---------|-------------|
-| WBOM→FPE Sync | [`payment_ingest/wbom_fpe_sync.py`](core/modules/payment_ingest/wbom_fpe_sync.py:208) | Migration reader — reads WBOM to copy to FPE | ✅ Yes |
+| WBOM→FPE Sync | [`payment_ingest/wbom_fpe_sync.py`](core/modules/fazle_data_sync/__init__.py:208) | Migration reader — reads WBOM to copy to FPE | ✅ Yes |
 
 > **No runtime module reads `wbom_cash_transactions` anymore** — except the migration sync reader (`wbom_fpe_sync.py`) which is the legitimate historical migration path.
 

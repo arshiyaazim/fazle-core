@@ -3,7 +3,6 @@ SHA256: 809dabba7d93d24c5135f65ce91e3d7f733e6defe558d30e5fe1443a7d673bc6
 Version: 809dabba7d93
 
 # Missing Report
-
 ## Missing Identity Rules
 Resolved by adding `03_ai_identity` with role files and permission matrix.
 

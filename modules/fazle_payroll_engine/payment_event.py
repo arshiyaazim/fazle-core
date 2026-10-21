@@ -5,8 +5,8 @@ Converts any cash/payment source into a canonical PaymentEvent, then into a
 TransactionCreateRequest for create_transaction().
 
 Owner Directive (2026-06-29):
-  - fpe_cash_transactions is the ONLY canonical cash transaction table.
-  - All sources must end up in fpe_cash_transactions via create_transaction().
+  - fazle_cash_transactions is the ONLY canonical cash transaction table.
+  - All sources must end up in fazle_cash_transactions via create_transaction().
   - WhatsApp Admin → Accountant parser behaviour must not break.
 """
 from __future__ import annotations

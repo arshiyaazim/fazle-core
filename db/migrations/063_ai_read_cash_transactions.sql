@@ -11,8 +11,8 @@
 -- available" message instead of attempting the call (see fazle-mcp
 -- commit e17aeec).
 --
--- fpe_cash_transactions is the sole canonical cash ledger (Owner Directive
--- 2026-06-29) — never wbom_cash_transactions (legacy/archive only), same
+-- fazle_cash_transactions is the sole canonical cash ledger (Owner Directive
+-- 2026-06-29) — never fazle_cash_transactions_archive (legacy/archive only), same
 -- rule this repo enforces everywhere else cash transactions are touched.
 --
 -- Deliberately excluded (matching every other ai_read_* view's pattern of
@@ -41,8 +41,8 @@ SELECT
     t.payout_method,
     COALESCE(e.full_name, t.employee_name_raw) AS employee_name,
     t.is_reversal
-FROM fpe_cash_transactions t
-LEFT JOIN fpe_employees e ON e.id = t.employee_id
+FROM fazle_cash_transactions t
+LEFT JOIN fazle_employees e ON e.id = t.employee_id
 WHERE t.deleted_at IS NULL
 ORDER BY t.txn_date DESC;
 

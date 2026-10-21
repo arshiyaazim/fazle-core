@@ -111,7 +111,7 @@ async def compute_run(
 
     emp = await fetch_one(
         "SELECT employee_id, employee_name, designation, basic_salary, status "
-        "FROM wbom_employees WHERE employee_id=$1",
+        "FROM fazle_employees_legacy WHERE employee_id=$1",
         employee_id,
     )
     if not emp:
@@ -147,22 +147,22 @@ async def compute_run(
     total_programs = len(prog_rows)
     program_allowance = round(total_days * rate, 2)
 
-    # C1B: Sum advances from canonical fpe_cash_transactions within period.
-    # fpe_cash_transactions.employee_id FKs to fpe_employees(id) -- a
-    # different ID space from wbom_employees.employee_id (this function's
-    # own `employee_id` param, confirmed by the wbom_employees lookup
+    # C1B: Sum advances from canonical fazle_cash_transactions within period.
+    # fazle_cash_transactions.employee_id FKs to fazle_employees(id) -- a
+    # different ID space from fazle_employees_legacy.employee_id (this function's
+    # own `employee_id` param, confirmed by the fazle_employees_legacy lookup
     # above). Must resolve the linked FPE employee first, matching the
-    # same wbom_employee_id -> fpe_employees resolution _transition()
+    # same wbom_employee_id -> fazle_employees resolution _transition()
     # already uses elsewhere in this file for the "paid" fail-closed check.
     # No linked (active) FPE employee -> zero advances, not an error and
     # not a reason to fail the run (Owner decision, 2026-07-18 fix).
     fpe_link = await fetch_one(
-        "SELECT id FROM fpe_employees WHERE wbom_employee_id=$1 AND status='active'",
+        "SELECT id FROM fazle_employees WHERE wbom_employee_id=$1 AND status='active'",
         employee_id,
     )
     if fpe_link:
         advances = await fetch_val(
-            """SELECT COALESCE(SUM(amount), 0) FROM fpe_cash_transactions
+            """SELECT COALESCE(SUM(amount), 0) FROM fazle_cash_transactions
                WHERE employee_id=$1 AND txn_category='advance' AND transaction_status='final'
                  AND txn_date BETWEEN $2 AND $3""",
             fpe_link["id"], period_start, period_end,
@@ -212,7 +212,7 @@ async def compute_run(
                 await conn.execute(
                     """INSERT INTO wbom_payroll_run_items
                           (run_id, component_type, component_label, amount, sign, source_table, notes)
-                       VALUES ($1, 'basic', 'Basic Salary', $2, '+', 'wbom_employees', $3)""",
+                       VALUES ($1, 'basic', 'Basic Salary', $2, '+', 'fazle_employees_legacy', $3)""",
                     run_id, basic_component, basic_notes,
                 )
                 for pr in prog_rows:
@@ -234,7 +234,7 @@ async def compute_run(
                               (run_id, component_type, component_label, amount, sign,
                                source_table, notes)
                            VALUES ($1, 'advance', 'Advances Adjusted', $2, '-',
-                                   'fpe_cash_transactions',
+                                   'fazle_cash_transactions',
                                    'sum within period')""",
                         run_id, total_advances,
                     )
@@ -280,7 +280,7 @@ async def compute_all_for_period(
 ) -> dict:
     """Compute runs for all Active employees. Idempotent."""
     rows = await fetch_all(
-        "SELECT employee_id FROM wbom_employees "
+        "SELECT employee_id FROM fazle_employees_legacy "
         "WHERE COALESCE(status,'Active')='Active' ORDER BY employee_id"
     )
     created = 0; existing = 0; failed = 0
@@ -314,7 +314,7 @@ async def compute_all_for_period_office_only(
     from modules.payroll.eligibility import classify_office_staff
 
     rows = await fetch_all(
-        "SELECT employee_id, employee_name, designation, status, basic_salary FROM wbom_employees "
+        "SELECT employee_id, employee_name, designation, status, basic_salary FROM fazle_employees_legacy "
         "WHERE COALESCE(status,'Active')='Active' ORDER BY employee_id"
     )
     created = 0; existing = 0; failed = 0; skipped = 0
@@ -360,15 +360,15 @@ async def _transition(
         return {"ok": False, "error":
                 f"transition {cur_status} → {target} not allowed"}
 
-    # A "paid" transition must post a canonical fpe_cash_transactions ledger
+    # A "paid" transition must post a canonical fazle_cash_transactions ledger
     # entry (knowledge_base/06_developer_system/daily_cash_transaction_source_of_truth.md
-    # -- fpe_cash_transactions is the ONLY canonical cash ledger). Fail closed
+    # -- fazle_cash_transactions is the ONLY canonical cash ledger). Fail closed
     # rather than mark a run paid with no ledger entry: check the FPE bridge
     # link exists *before* mutating anything.
     fpe_employee = None
     if target == "paid":
         fpe_employee = await fetch_one(
-            "SELECT id, primary_phone FROM fpe_employees "
+            "SELECT id, primary_phone FROM fazle_employees "
             "WHERE wbom_employee_id=$1 AND status='active'",
             cur["employee_id"],
         )
@@ -442,7 +442,7 @@ async def _post_payroll_ledger_entry(
     payment_method: Optional[str], payment_reference: Optional[str],
 ) -> None:
     """
-    Write the canonical fpe_cash_transactions entry for a payroll payout.
+    Write the canonical fazle_cash_transactions entry for a payroll payout.
     Reuses modules.fazle_payroll_engine.accounting.create_transaction() --
     the single choke point every other module (draft_approval, payment_correction)
     already funnels through; never a raw INSERT here.
@@ -511,7 +511,7 @@ async def get_run(run_id: int) -> Optional[dict]:
     row = await fetch_one(
         """SELECT r.*, e.employee_name, e.employee_mobile
            FROM wbom_payroll_runs r
-           JOIN wbom_employees e USING (employee_id)
+           JOIN fazle_employees_legacy e USING (employee_id)
            WHERE r.run_id=$1""",
         run_id,
     )
@@ -525,7 +525,7 @@ async def list_runs(period_year: int, period_month: int,
             """SELECT r.run_id, r.employee_id, e.employee_name,
                       r.status, r.gross_salary, r.net_salary, r.total_programs
                FROM wbom_payroll_runs r
-               JOIN wbom_employees e USING (employee_id)
+               JOIN fazle_employees_legacy e USING (employee_id)
                WHERE r.period_year=$1 AND r.period_month=$2 AND r.status=$3
                ORDER BY r.run_id""",
             period_year, period_month, status,
@@ -535,7 +535,7 @@ async def list_runs(period_year: int, period_month: int,
             """SELECT r.run_id, r.employee_id, e.employee_name,
                       r.status, r.gross_salary, r.net_salary, r.total_programs
                FROM wbom_payroll_runs r
-               JOIN wbom_employees e USING (employee_id)
+               JOIN fazle_employees_legacy e USING (employee_id)
                WHERE r.period_year=$1 AND r.period_month=$2
                ORDER BY r.run_id""",
             period_year, period_month,

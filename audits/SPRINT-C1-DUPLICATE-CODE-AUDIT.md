@@ -1,5 +1,9 @@
 # Sprint-C1: Duplicate Code Audit Report
 
+
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **Status:** AUDIT COMPLETE — Awaiting Owner Approval before Implementation  
 **Date:** 2026-06-28  
 **Auditor:** Software Auditor (not Code Writer)  

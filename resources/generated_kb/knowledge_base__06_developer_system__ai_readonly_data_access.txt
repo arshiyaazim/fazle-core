@@ -36,9 +36,9 @@ Formatted rows → context block → Ollama prompt
 
 | View | Source Tables | What AI sees |
 |---|---|---|
-| `ai_read_employees` | `wbom_employees` | name, mobile, designation, status, salary |
-| `ai_read_contacts` | `wbom_contacts` | name, number, relation, company |
-| `ai_read_recent_messages` | `wbom_whatsapp_messages` | last 7 days, 300 char body |
+| `ai_read_employees` | `fazle_employees_legacy` | name, mobile, designation, status, salary |
+| `ai_read_contacts` | `fazle_contacts` | name, number, relation, company |
+| `ai_read_recent_messages` | `fazle_whatsapp_messages` | last 7 days, 300 char body |
 | `ai_read_escort_programs` | `wbom_escort_programs` | vessel, employee, status, last 30 days |
 | `ai_read_attendance_summary` | `wbom_attendance` | current + last month |
 | `ai_read_payroll_runs` | `wbom_payroll_runs` | salary summaries, last year |

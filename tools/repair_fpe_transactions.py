@@ -24,12 +24,12 @@ Usage examples:
     python tools/repair_fpe_transactions.py --apply --transaction-id 889
 
 Matching priority (strict, phone-first):
-    1. fpe_employees.primary_phone       = transaction.payout_phone
-    2. fpe_employees.employee_id_phone   = transaction.payout_phone
+    1. fazle_employees.primary_phone       = transaction.payout_phone
+    2. fazle_employees.employee_id_phone   = transaction.payout_phone
     3. fpe_employee_aliases.alias_value  = transaction.payout_phone
-    4. wbom_employees.bkash_number       = transaction.payout_phone  (+ fpe link)
-    5. wbom_employees.nagad_number       = transaction.payout_phone  (+ fpe link)
-    6. wbom_employees.employee_mobile    = transaction.payout_phone  (+ fpe link)
+    4. fazle_employees_legacy.bkash_number       = transaction.payout_phone  (+ fpe link)
+    5. fazle_employees_legacy.nagad_number       = transaction.payout_phone  (+ fpe link)
+    6. fazle_employees_legacy.employee_mobile    = transaction.payout_phone  (+ fpe link)
     7. Fuzzy name match                  — SUGGESTION ONLY, never auto-applied
 """
 from __future__ import annotations
@@ -108,15 +108,15 @@ def _resolve_db_url() -> str:
 _AUDIT_TABLE_DDL = """
 CREATE TABLE IF NOT EXISTS fpe_transaction_repairs (
     id                  BIGSERIAL PRIMARY KEY,
-    transaction_id      BIGINT      NOT NULL REFERENCES fpe_cash_transactions(id),
+    transaction_id      BIGINT      NOT NULL REFERENCES fazle_cash_transactions(id),
     old_employee_id     BIGINT,
     new_employee_id     BIGINT,
     old_employee_name   TEXT,
     new_employee_name   TEXT,
     repair_reason       TEXT,
     match_method        TEXT,
-    reversal_txn_id     BIGINT      REFERENCES fpe_cash_transactions(id),
-    new_txn_id          BIGINT      REFERENCES fpe_cash_transactions(id),
+    reversal_txn_id     BIGINT      REFERENCES fazle_cash_transactions(id),
+    new_txn_id          BIGINT      REFERENCES fazle_cash_transactions(id),
     review_needed       BOOLEAN     NOT NULL DEFAULT FALSE,
     review_note         TEXT,
     dry_run             BOOLEAN     NOT NULL DEFAULT FALSE,
@@ -187,14 +187,14 @@ SELECT
     t.source_message_text,
     pr.confidence                       AS parser_confidence,
     pr.parsed_data
-FROM fpe_cash_transactions t
-LEFT JOIN fpe_employees e  ON e.id = t.employee_id
+FROM fazle_cash_transactions t
+LEFT JOIN fazle_employees e  ON e.id = t.employee_id
 LEFT JOIN fpe_wa_messages m ON m.id = t.fpe_wa_message_id
 LEFT JOIN fpe_parser_results pr ON pr.fpe_wa_message_id = m.id
 WHERE
     t.is_reversal = FALSE
     AND NOT EXISTS (
-        SELECT 1 FROM fpe_cash_transactions rev
+        SELECT 1 FROM fazle_cash_transactions rev
         WHERE rev.reversed_txn_id = t.id AND rev.is_reversal = TRUE
     )
     AND NOT EXISTS (
@@ -333,10 +333,10 @@ async def _find_correct_employee(
         return MatchResult(None, None, None, "LOW", True,
                            "No phone and no name — cannot re-match")
 
-    # ── Priority 1: fpe_employees.primary_phone ───────────────────────────────
+    # ── Priority 1: fazle_employees.primary_phone ───────────────────────────────
     if payout_phone:
         row = await conn.fetchrow(
-            "SELECT id, full_name FROM fpe_employees "
+            "SELECT id, full_name FROM fazle_employees "
             "WHERE primary_phone = $1 AND status = 'active' LIMIT 1",
             payout_phone,
         )
@@ -344,10 +344,10 @@ async def _find_correct_employee(
             return MatchResult(row["id"], row["full_name"],
                                "primary_phone", "HIGH", False)
 
-    # ── Priority 2: fpe_employees.employee_id_phone ───────────────────────────
+    # ── Priority 2: fazle_employees.employee_id_phone ───────────────────────────
     if payout_phone:
         row = await conn.fetchrow(
-            "SELECT id, full_name FROM fpe_employees "
+            "SELECT id, full_name FROM fazle_employees "
             "WHERE employee_id_phone = $1 AND status = 'active' LIMIT 1",
             payout_phone,
         )
@@ -361,7 +361,7 @@ async def _find_correct_employee(
             """
             SELECT e.id, e.full_name
             FROM fpe_employee_aliases a
-            JOIN fpe_employees e ON e.id = a.employee_id
+            JOIN fazle_employees e ON e.id = a.employee_id
             WHERE a.alias_value = $1
               AND a.alias_type IN ('mobile', 'bkash', 'nagad', 'phone')
               AND e.status = 'active'
@@ -375,21 +375,21 @@ async def _find_correct_employee(
 
     # ── Priority 4–6: WBOM cross-lookup ──────────────────────────────────────
     if payout_phone:
-        # Check bkash, nagad, mobile in wbom_employees then follow to fpe
+        # Check bkash, nagad, mobile in fazle_employees_legacy then follow to fpe
         for wbom_col, label in [
             ("bkash_number", "wbom_bkash"),
             ("nagad_number", "wbom_nagad"),
             ("employee_mobile", "wbom_mobile"),
         ]:
             wbom_row = await conn.fetchrow(
-                f"SELECT employee_id, employee_name FROM wbom_employees "
+                f"SELECT employee_id, employee_name FROM fazle_employees_legacy "
                 f"WHERE {wbom_col} = $1 AND status != 'inactive' LIMIT 1",
                 payout_phone,
             )
             if wbom_row:
                 # Try to find FPE employee linked to this WBOM employee
                 fpe_row = await conn.fetchrow(
-                    "SELECT id, full_name FROM fpe_employees "
+                    "SELECT id, full_name FROM fazle_employees "
                     "WHERE wbom_employee_id = $1 AND status = 'active' LIMIT 1",
                     wbom_row["employee_id"],
                 )
@@ -400,7 +400,7 @@ async def _find_correct_employee(
                 return MatchResult(
                     None, wbom_row["employee_name"], label, "MEDIUM", True,
                     f"WBOM employee found (id={wbom_row['employee_id']}) "
-                    "but no linked fpe_employees row — manual link needed",
+                    "but no linked fazle_employees row — manual link needed",
                 )
 
     # ── Priority 7: Fuzzy name — SUGGESTION ONLY, LOW confidence ─────────────
@@ -410,7 +410,7 @@ async def _find_correct_employee(
             """
             SELECT id, full_name,
                    similarity(lower(full_name), lower($1)) AS sim
-            FROM fpe_employees
+            FROM fazle_employees
             WHERE status = 'active'
               AND similarity(lower(full_name), lower($1)) > 0.30
             ORDER BY sim DESC
@@ -501,7 +501,7 @@ async def _apply_repair(
     # ── a) Reversal of wrong transaction ──────────────────────────────────────
     reversal_ref = f"REV-{txn.txn_ref}"
     existing_rev = await conn.fetchrow(
-        "SELECT id FROM fpe_cash_transactions WHERE txn_ref = $1",
+        "SELECT id FROM fazle_cash_transactions WHERE txn_ref = $1",
         reversal_ref,
     )
     if existing_rev:
@@ -510,7 +510,7 @@ async def _apply_repair(
     else:
         reversal_id = await conn.fetchval(
             """
-            INSERT INTO fpe_cash_transactions
+            INSERT INTO fazle_cash_transactions
                 (txn_ref, fpe_wa_message_id, employee_id, employee_name_raw,
                  amount, payout_phone, payout_method,
                  txn_date, txn_category, source_message_text,
@@ -521,7 +521,7 @@ async def _apply_repair(
                 txn_date, txn_category,
                 'REPAIR-REVERSAL: wrong employee — ' || COALESCE(source_message_text,''),
                 accounting_period, TRUE, id, $2
-            FROM fpe_cash_transactions WHERE id = $3
+            FROM fazle_cash_transactions WHERE id = $3
             RETURNING id
             """,
             reversal_ref,
@@ -533,7 +533,7 @@ async def _apply_repair(
     # ── b) New correct transaction ────────────────────────────────────────────
     new_txn_ref = _build_txn_ref(txn.fpe_wa_message_id, match.employee_id, txn.amount)
     existing_new = await conn.fetchrow(
-        "SELECT id FROM fpe_cash_transactions WHERE txn_ref = $1",
+        "SELECT id FROM fazle_cash_transactions WHERE txn_ref = $1",
         new_txn_ref,
     )
     if existing_new:
@@ -542,7 +542,7 @@ async def _apply_repair(
     else:
         new_txn_id = await conn.fetchval(
             """
-            INSERT INTO fpe_cash_transactions
+            INSERT INTO fazle_cash_transactions
                 (txn_ref, fpe_wa_message_id, employee_id, employee_name_raw,
                  amount, payout_phone, payout_method,
                  txn_date, txn_category, source_message_text,
@@ -597,15 +597,15 @@ async def _apply_repair(
         if txn.current_employee_id:
             await conn.execute(
                 """
-                INSERT INTO fpe_employee_ledger
+                INSERT INTO fazle_employee_ledger
                     (employee_id, accounting_period,
                      opening_balance, total_earned, total_paid, total_advance,
                      closing_balance, txn_count, last_updated)
                 VALUES ($1, $2, 0, 0, -$3::numeric, 0, -$3::numeric, -1, now())
                 ON CONFLICT (employee_id, accounting_period) DO UPDATE SET
-                    total_paid      = fpe_employee_ledger.total_paid      - $3::numeric,
-                    closing_balance = fpe_employee_ledger.closing_balance - $3::numeric,
-                    txn_count       = fpe_employee_ledger.txn_count       - 1,
+                    total_paid      = fazle_employee_ledger.total_paid      - $3::numeric,
+                    closing_balance = fazle_employee_ledger.closing_balance - $3::numeric,
+                    txn_count       = fazle_employee_ledger.txn_count       - 1,
                     last_updated    = now()
                 """,
                 txn.current_employee_id, period, amount,
@@ -613,15 +613,15 @@ async def _apply_repair(
         # Credit new employee
         await conn.execute(
             """
-            INSERT INTO fpe_employee_ledger
+            INSERT INTO fazle_employee_ledger
                 (employee_id, accounting_period,
                  opening_balance, total_earned, total_paid, total_advance,
                  closing_balance, txn_count, last_updated)
             VALUES ($1, $2, 0, 0, $3::numeric, 0, $3::numeric, 1, now())
             ON CONFLICT (employee_id, accounting_period) DO UPDATE SET
-                total_paid      = fpe_employee_ledger.total_paid      + $3::numeric,
-                closing_balance = fpe_employee_ledger.closing_balance + $3::numeric,
-                txn_count       = fpe_employee_ledger.txn_count       + 1,
+                total_paid      = fazle_employee_ledger.total_paid      + $3::numeric,
+                closing_balance = fazle_employee_ledger.closing_balance + $3::numeric,
+                txn_count       = fazle_employee_ledger.txn_count       + 1,
                 last_updated    = now()
             """,
             match.employee_id, period, amount,

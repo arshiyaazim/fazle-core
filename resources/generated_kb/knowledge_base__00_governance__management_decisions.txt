@@ -82,7 +82,7 @@ These are not decisions — they are unresolved schema questions that require a 
 | ID | Question | Risk | Target Version |
 |---|---|---|---|
 | U-01 | Does `wbom_candidates` exist in current production schema? | ✅ RESOLVED 2026-06-23 — EXISTS. 21 columns. See schema below. |
-| U-02 | Does `fpe_transaction_repairs` have a DDL anywhere in production? | ✅ RESOLVED 2026-06-23 — EXISTS. 15 columns. FKs to `fpe_cash_transactions`. See schema below. |
+| U-02 | Does `fpe_transaction_repairs` have a DDL anywhere in production? | ✅ RESOLVED 2026-06-23 — EXISTS. 15 columns. FKs to `fazle_cash_transactions`. See schema below. |
 | U-03 | Is `wbom_staging_payments` the same table as `fpe_staging_payments`, or two separate tables? | ✅ RESOLVED 2026-06-23 — `wbom_staging_payments` EXISTS (16 columns). `fpe_staging_payments` does NOT EXIST. They are NOT the same — only one table exists. |
 
 ---
@@ -101,7 +101,7 @@ Key columns: `candidate_id`, `phone` (UNIQUE), `full_name`, `age`, `area`, `job_
 
 ### U-02: `fpe_transaction_repairs` — EXISTS ✅
 
-15 columns. 3 FKs to `fpe_cash_transactions` (original txn, reversal txn, new txn). Tracks re-attribution of transactions to different employees.
+15 columns. 3 FKs to `fazle_cash_transactions` (original txn, reversal txn, new txn). Tracks re-attribution of transactions to different employees.
 
 Key columns: `transaction_id` (original), `old_employee_id`, `new_employee_id`, `repair_reason`, `match_method`, `reversal_txn_id`, `new_txn_id`, `review_needed`, `dry_run`, `repaired_by`.
 
@@ -113,7 +113,7 @@ Key columns: `transaction_id` (original), `old_employee_id`, `new_employee_id`, 
 These are NOT two separate tables — only `wbom_staging_payments` is in production.
 
 16 columns: `staging_id`, `message_id`, `sender_number`, `extracted_name`, `extracted_mobile`, `amount`, `payment_method`, `transaction_type`, `matched_employee_id`, `name_match_ratio`, `status` (default 'pending'), `approved_by`, `approved_at`, `created_at`, `final_transaction_id`, `idempotency_key`.
-FK: `final_transaction_id` → `fpe_cash_transactions.id` (canonical per Owner Directive 2026-06-29; was `wbom_cash_transactions.transaction_id` historically).
+FK: `final_transaction_id` → `fazle_cash_transactions.id` (canonical per Owner Directive 2026-06-29; was `fazle_cash_transactions_archive.transaction_id` historically).
 
 **KB action:** Update `database_rules.md` entry for C-02 — table name is `wbom_staging_payments` (not `fpe_staging_payments`). Correct domain assignment stands (CASH/FPE).
 
@@ -214,11 +214,11 @@ FK: `final_transaction_id` → `fpe_cash_transactions.id` (canonical per Owner D
 
 **Status:** Fully implemented, zero external callers (audited 2026-06-02)
 **Functions:** `reverse_payment()`, `adjust_payment()`, `list_corrections()`
-**DB tables required:** `fazle_payment_drafts` ✅, `fpe_cash_transactions` ✅ (canonical per Owner Directive 2026-06-29), `fazle_payment_correction_log` ✅ (migration `008_payment_correction.sql`)
+**DB tables required:** `fazle_payment_drafts` ✅, `fazle_cash_transactions` ✅ (canonical per Owner Directive 2026-06-29), `fazle_payment_correction_log` ✅ (migration `008_payment_correction.sql`)
 
 **To activate — changes required:**
-1. `modules/admin_commands/__init__.py`: Wire `REVERSE <draft_id> <reason>` → `payment_correction.reverse_payment()`
-2. `modules/admin_commands/__init__.py`: Wire `ADJUST <draft_id> <new_amount> <method> [reason]` → `payment_correction.adjust_payment()`
+1. `modules/fazle_admin_commands/__init__.py`: Wire `REVERSE <draft_id> <reason>` → `payment_correction.reverse_payment()`
+2. `modules/fazle_admin_commands/__init__.py`: Wire `ADJUST <draft_id> <new_amount> <method> [reason]` → `payment_correction.adjust_payment()`
 3. Add `REVERSE` and `ADJUST` to `COMMAND_ROLE` dict with required role (recommended: `superadmin` for REVERSE, `admin` for ADJUST)
 4. KB: Create `06_developer_system/payment_correction.md` documenting both commands
 5. Test: Write unit tests for `reverse_payment()` edge cases (already reversed, non-approved status)
@@ -303,7 +303,7 @@ FK: `final_transaction_id` → `fpe_cash_transactions.id` (canonical per Owner D
 
 | ID | File | Change | Date |
 |---|---|---|---|
-| ESX-WIRE | `modules/bridge_poller/__init__.py` | Image STEP 2: replace `_proc_img(file_path, None)` with `extract_escort_slip(file_path, source_label=bridge_name)`. Replace keyword-based `slip_type` check with `completion_date is not None` for release detection. Remove `slip_type == "duplicate"` case (not a concept in escort_slip_extractor). Use `raw_ocr_text` field name. | 2026-06-23 |
+| ESX-WIRE | `modules/fazle_bridge_poller/__init__.py` | Image STEP 2: replace `_proc_img(file_path, None)` with `extract_escort_slip(file_path, source_label=bridge_name)`. Replace keyword-based `slip_type` check with `completion_date is not None` for release detection. Remove `slip_type == "duplicate"` case (not a concept in escort_slip_extractor). Use `raw_ocr_text` field name. | 2026-06-23 |
 
 ### Technical Notes (Session 10)
 

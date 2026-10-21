@@ -80,7 +80,7 @@ async def shadow_observe_escort_client_message(
 async def _observe(*, text: str, sender_phone: str, source: str, message_id: Optional[str], sender_role: str) -> None:
     import modules.conversation_memory as cm
     from modules.escort import _is_allowed_escort_client
-    from modules.bridge_poller import _is_system_generated_notification
+    from modules.fazle_bridge_poller import _is_system_generated_notification
 
     settings = get_settings()
     # Section 6's exclusion/duplicate metrics only make sense in Stage

@@ -8,7 +8,7 @@ path:
      constraint (fazle_outbound_queue_idempotency_key_key) with
      ON CONFLICT (idempotency_key) DO NOTHING -- a retry with the same key
      is a true no-op, not a second row.
-  2. modules.bridge_poller's REPLY_COOLDOWN (60s) gate, independent of (1),
+  2. modules.fazle_bridge_poller's REPLY_COOLDOWN (60s) gate, independent of (1),
      stops a rapid burst of genuine new inbound messages from each
      triggering their own separate reply within the cooldown window (see
      test_recruitment_cooldown_lead_creation_fix.py for that regression).

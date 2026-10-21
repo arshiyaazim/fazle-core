@@ -110,7 +110,7 @@ async def test_explicitly_authorized_nonmaintenance_behavior_is_preserved(monkey
 
 @pytest.mark.asyncio
 async def test_startup_guard_preserves_inbound_poller_start(monkeypatch):
-    import modules.bridge_poller as poller
+    import modules.fazle_bridge_poller as poller
 
     monkeypatch.setenv("OUTBOUND_ENABLED", "false")
     clients = [_bridge(_HTTP()), _bridge(_HTTP()), _bridge(_HTTP())]
@@ -145,7 +145,7 @@ def test_manual_send_path_and_automatic_paths_remain_distinct():
 
 
 def test_every_automatic_enable_call_routes_through_shared_guard():
-    import modules.bridge_poller as poller
+    import modules.fazle_bridge_poller as poller
 
     source = inspect.getsource(poller)
     executable = "\n".join(line.split("#", 1)[0] for line in source.splitlines())

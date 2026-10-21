@@ -1,5 +1,9 @@
 # Post-Chaos Validation Checklist
 
+
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **Purpose:** Verify system data integrity, operational health, and correctness after chaos/soak testing.
 **Run this after every chaos test and before declaring system healthy.**
 **Date of chaos test:** _______________

@@ -25,7 +25,7 @@ This gives two different correction paths depending on `payment_status` at the m
 | `Pending` | **In-place correction**, logged | Nothing has been collected yet; the bill is still a draft the client hasn't necessarily been charged against in an irreversible way. Editing it directly (with a mandatory audit-log entry) is simpler and doesn't fragment the client's invoice history. |
 | `Paid` | **Reversal + replacement**, never in-place edit | The original row's amount and `bill_number` must stand permanently as issued. Correction happens by (a) recording a reversal against the original, and (b) issuing a brand-new bill with a new `bill_number` for the correct amount. |
 
-This mirrors the pattern this codebase already uses elsewhere: `modules/payment_correction/__init__.py::adjust_payment()` never rewrites `fpe_cash_transactions` rows in place either — it creates a reversal transaction plus a new corrected transaction, preserving the original. The bill-revision design below is the same shape, applied to `wbom_billing_records`.
+This mirrors the pattern this codebase already uses elsewhere: `modules/payment_correction/__init__.py::adjust_payment()` never rewrites `fazle_cash_transactions` rows in place either — it creates a reversal transaction plus a new corrected transaction, preserving the original. The bill-revision design below is the same shape, applied to `wbom_billing_records`.
 
 ---
 

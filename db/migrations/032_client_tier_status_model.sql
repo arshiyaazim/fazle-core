@@ -8,7 +8,7 @@
 -- dry-run safety rule", added 2026-07-09, for the full incident write-up and
 -- the new dry-run methodology rule this caused). Owner reviewed and
 -- explicitly accepted keeping the fix rather than reverting it. Parts B-D
--- (the two new lookup tables and the two new wbom_contacts columns) were
+-- (the two new lookup tables and the two new fazle_contacts columns) were
 -- applied separately afterward, with explicit Owner approval, following
 -- test-harness schema check + scratch-DB restore-and-apply validation.
 -- Post-apply verification confirmed: both lookup tables at 4 rows each,
@@ -22,14 +22,14 @@
 -- docs/CLIENT_DOMAIN_IMPLEMENTATION_PLAN.md Phase 2B (Owner decisions,
 -- 2026-07-09). Implements the final, 4-dimension client model:
 --
---   relation_type  = IDENTITY            -> wbom_contacts.relation_type_id
+--   relation_type  = IDENTITY            -> fazle_contacts.relation_type_id
 --                    (Phase 2A, unchanged, not touched here)
---   client_tier    = BUSINESS VALUE      -> wbom_contacts.client_tier_id (NEW)
---   client_status  = BUSINESS LIFECYCLE  -> wbom_contacts.client_status_id (NEW)
---   is_active      = SYSTEM PERMISSION   -> wbom_contacts.is_active
+--   client_tier    = BUSINESS VALUE      -> fazle_contacts.client_tier_id (NEW)
+--   client_status  = BUSINESS LIFECYCLE  -> fazle_contacts.client_status_id (NEW)
+--   is_active      = SYSTEM PERMISSION   -> fazle_contacts.is_active
 --                    (Phase 2A, unchanged, not touched here)
 --
--- 'Blocked' is EXCLUSIVELY represented by wbom_contacts.is_active = false.
+-- 'Blocked' is EXCLUSIVELY represented by fazle_contacts.is_active = false.
 -- Neither wbom_client_tiers nor wbom_client_statuses may ever contain a
 -- 'Blocked' row -- this migration does not create one, and none should ever
 -- be added.
@@ -37,14 +37,14 @@
 -- Lookup-table model chosen (not a CHECK-constrained column): mirrors
 -- wbom_relation_types / wbom_business_types, the two existing sibling
 -- dimensions on this same table, rather than escort_roster_change_requests'
--- inline-CHECK pattern -- consistency across wbom_contacts' four dimensions
+-- inline-CHECK pattern -- consistency across fazle_contacts' four dimensions
 -- was judged more valuable here than the (also-valid) CHECK-constraint
 -- alternative; either would have satisfied the Owner's decision, this is an
 -- implementation detail per docs/CLIENT_DOMAIN_IMPLEMENTATION_PLAN.md.
 --
 -- Defaults -- disclosed decision, not a silent guess: NEITHER new FK column
 -- gets a column-level DEFAULT. Reasoning: `client_status` = 'Active' as a
--- blanket default would apply to every wbom_contacts row via ALTER TABLE ...
+-- blanket default would apply to every fazle_contacts row via ALTER TABLE ...
 -- ADD COLUMN ... DEFAULT semantics, including the ~1,950 vendor/employee/
 -- family/unclassified contacts for whom "client lifecycle" has no meaning.
 -- Leaving both columns NULL preserves "not applicable / not yet classified"
@@ -58,13 +58,13 @@
 --
 -- Bonus fix (found while building this, disclosed not smuggled in):
 -- migration 031 inserted wbom_relation_types id=6 ('Family') via an explicit
--- SELECT rather than nextval(), so wbom_relation_types_relation_type_id_seq
+-- SELECT rather than nextval(), so fazle_relation_types_relation_type_id_seq
 -- was left at 5 -- the next auto-generated insert would have collided with
 -- id=6. Advanced here.
 
 -- ── Part A: fix the sequence desync migration 031 introduced ──────────────────
 SELECT setval(
-    'wbom_relation_types_relation_type_id_seq',
+    'fazle_relation_types_relation_type_id_seq',
     GREATEST(6, (SELECT MAX(relation_type_id) FROM wbom_relation_types))
 );
 
@@ -106,15 +106,15 @@ WHERE NOT EXISTS (
     SELECT 1 FROM wbom_client_statuses WHERE wbom_client_statuses.client_status_id = v.client_status_id
 );
 
--- ── Part D: wbom_contacts new columns ──────────────────────────────────────────
+-- ── Part D: fazle_contacts new columns ──────────────────────────────────────────
 -- No column-level DEFAULT on either -- see header for reasoning. Nullable,
 -- idempotent (IF NOT EXISTS), FK-constrained to the lookup tables above.
 
-ALTER TABLE wbom_contacts
+ALTER TABLE fazle_contacts
     ADD COLUMN IF NOT EXISTS client_tier_id INTEGER
         REFERENCES wbom_client_tiers(client_tier_id);
 
-ALTER TABLE wbom_contacts
+ALTER TABLE fazle_contacts
     ADD COLUMN IF NOT EXISTS client_status_id INTEGER
         REFERENCES wbom_client_statuses(client_status_id);
 
@@ -123,7 +123,7 @@ ALTER TABLE wbom_contacts
 -- consistent with current practice, not a new gap introduced by this
 -- migration.
 
--- No backfill of existing wbom_contacts rows in this migration -- assigning
+-- No backfill of existing fazle_contacts rows in this migration -- assigning
 -- a tier/status to any of the 2,086 existing contacts is a business
 -- classification decision for whoever operates the future Billing/GL
 -- intake flow, not something to guess via migration.

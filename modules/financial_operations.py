@@ -1,7 +1,7 @@
 """Stage H5-H9 (2026-08-28) -- narrow financial operation adapter around
 the authoritative FPE cash-transaction functions.
 
-This module NEVER writes fpe_cash_transactions/fpe_unmatched_messages
+This module NEVER writes fazle_cash_transactions/fpe_unmatched_messages
 directly with raw SQL -- every mutation goes through the one existing
 authoritative function for that state change:
   - approve a pending transaction  -> modules.fazle_payroll_engine.routes.operator_approve()
@@ -9,7 +9,7 @@ authoritative function for that state change:
   - reverse a final transaction    -> modules.fazle_payroll_engine.accounting.reverse_transaction()
 
 This module does NOT grant authorization by itself. It assumes the
-caller (modules.admin_commands.process_admin_command) has already
+caller (modules.fazle_admin_commands.process_admin_command) has already
 resolved the caller into the trusted_admin_execution authority lane
 (modules.authority_lanes) and passed modules.rbac.check_permission() for
 the specific command ("cash_approve"/"cash_reject"/"cash_reverse",
@@ -51,7 +51,7 @@ _TXN_FIELDS = (
 
 
 async def resolve_cash_transaction(ref: str) -> dict:
-    """Resolve a human-typed reference to exactly one fpe_cash_transactions
+    """Resolve a human-typed reference to exactly one fazle_cash_transactions
     row. Accepts a bare numeric id, or a txn_ref prefix of at least 6
     characters (short enough to type, long enough that a collision is
     exceedingly unlikely -- and if one still occurs, the caller gets the
@@ -59,7 +59,7 @@ async def resolve_cash_transaction(ref: str) -> dict:
     as if it were resolved.
 
     Stage I (I2, real finding): a numeric-id/txn-ref lookup can match a
-    row that was already soft-deleted (fpe_cash_transactions.deleted_at
+    row that was already soft-deleted (fazle_cash_transactions.deleted_at
     IS NOT NULL, modules.admin_transactions.soft_delete_transaction() --
     the one authoritative deletion path, reverses ledger, never a
     physical delete). Resolution itself does not filter these out (an
@@ -74,7 +74,7 @@ async def resolve_cash_transaction(ref: str) -> dict:
 
     if ref.isdigit():
         row = await fetch_one(
-            f"SELECT {_TXN_FIELDS} FROM fpe_cash_transactions WHERE id = $1",
+            f"SELECT {_TXN_FIELDS} FROM fazle_cash_transactions WHERE id = $1",
             int(ref),
         )
         if row:
@@ -88,7 +88,7 @@ async def resolve_cash_transaction(ref: str) -> dict:
         }
 
     rows = await fetch_all(
-        f"SELECT {_TXN_FIELDS} FROM fpe_cash_transactions WHERE txn_ref LIKE $1 || '%' LIMIT 5",
+        f"SELECT {_TXN_FIELDS} FROM fazle_cash_transactions WHERE txn_ref LIKE $1 || '%' LIMIT 5",
         ref,
     )
     if not rows:
@@ -191,7 +191,7 @@ async def cash_reject(ref: str, reason: str, admin_phone: str) -> dict:
     Note (existing authoritative behavior, not invented here):
     operator_reject() marks the linked review submission 'rejected'; it
     does NOT change the transaction's own transaction_status -- the
-    fpe_cash_transactions row remains 'pending' (unresolved), matching
+    fazle_cash_transactions row remains 'pending' (unresolved), matching
     the pre-existing contract of that function. This adapter does not
     add a new state transition on top of it."""
     if not reason or not reason.strip():
@@ -272,7 +272,7 @@ async def cash_reverse(ref: str, reason: str, admin_phone: str) -> dict:
         return {"ok": False, "error": f"transaction {txn['txn_ref']} is itself a reversal entry -- cannot reverse a reversal", "txn": txn}
 
     existing_rev = await fetch_one(
-        "SELECT id, txn_ref FROM fpe_cash_transactions WHERE reversed_txn_id = $1",
+        "SELECT id, txn_ref FROM fazle_cash_transactions WHERE reversed_txn_id = $1",
         txn["id"],
     )
     if existing_rev:
@@ -383,7 +383,7 @@ async def cash_details(ref: str) -> dict:
     dup_note = ""
     if txn.get("transaction_status") == "pending" and not txn.get("deleted_at"):
         dup = await fetch_one(
-            "SELECT COUNT(*) AS n FROM fpe_cash_transactions "
+            "SELECT COUNT(*) AS n FROM fazle_cash_transactions "
             "WHERE transaction_status='pending' AND deleted_at IS NULL AND id != $1 "
             "AND employee_id = $2 AND amount = $3 AND txn_date = $4",
             txn["id"], txn.get("employee_id"), txn.get("amount"), txn.get("txn_date"),

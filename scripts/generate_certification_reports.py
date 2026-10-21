@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 """Generate certification reports from baseline, KB audit, registry, and traceability data."""
 from __future__ import annotations

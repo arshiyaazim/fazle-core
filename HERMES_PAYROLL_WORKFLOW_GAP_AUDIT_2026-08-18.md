@@ -9,6 +9,10 @@ builds on: HERMES_BUSINESS_CAPABILITY_MODULE_AUDIT_2026-08-17.md, KNOWLEDGE_EXTR
 
 # Fazle-Core Feature, Code–KB Gap & Hermes Capability Audit — 2026-08-18
 
+
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **No production code, data, feature flags, or services were touched in producing this report.**
 All example figures in the brief (phone numbers, IDs) were ignored per instruction; nothing below
 was searched for or matched against them. This report **builds on**, rather than repeats, three
@@ -27,11 +31,11 @@ actually reach through a registered tool today.**
 Fazle-core's payment pipeline is **two genuinely separate, correctly-separated systems**, exactly
 as the KB (`knowledge_base/05_workflows/cash_workflow.md`) describes and as code confirms:
 
-1. **Employee request → draft** (`modules/payment_workflow.py`, `fazle_payment_drafts` table) —
+1. **Employee request → draft** (`modules/fazle_payment_workflow.py`, `fazle_payment_drafts` table) —
    never writes a final ledger row by itself.
 2. **Admin decision → accountant instruction → parse → canonical transaction → ledger**
-   (`modules/admin_commands` → either `payment_workflow.finalize_payment()` **or**
-   `modules/draft_approval.approve_draft()` → both converge on the one real write path,
+   (`modules/fazle_admin_commands` → either `payment_workflow.finalize_payment()` **or**
+   `modules/fazle_draft_approval.approve_draft()` → both converge on the one real write path,
    `modules/fazle_payroll_engine/accounting.py::create_transaction()`).
 
 Verified against code line-by-line: the parser (`ID:` name-vs-phone disambiguation, payment-method
@@ -69,7 +73,7 @@ WhatsApp/Meta ─▶ bridge (webhook/poller) ─▶ modules/message_router (1417
                                                  │
                         ┌────────────────────────┼───────────────────────────────┐
                         ▼                         ▼                               ▼
-              modules/identity_brain      modules/payment_workflow        modules/admin_commands
+              modules/fazle_identity_brain      modules/fazle_payment_workflow        modules/fazle_admin_commands
               (726 lines, 7-tier trust-   (employee-request → draft;      (WhatsApp admin command
               tiered resolution)          fazle_payment_drafts)           grammar: PAID/ADVANCE/
                         │                         │                       APPROVE/EDIT/REJECT/DREJECT)
@@ -77,7 +81,7 @@ WhatsApp/Meta ─▶ bridge (webhook/poller) ─▶ modules/message_router (1417
               app.llm / hermes_dispatch   admin decides (approve/edit/reject)      │
               (customer-facing reply)             │         ┌──────────────────────┘
                                                    ▼         ▼
-                                    payment_workflow          modules/draft_approval
+                                    payment_workflow          modules/fazle_draft_approval
                                     .finalize_payment()        .approve_draft()/edit_draft()
                                     (PAID/ADVANCE cmds)        (APPROVE/EDIT/DREJECT cmds — Sprint-3B)
                                                    │         │
@@ -127,7 +131,7 @@ functions confirmed by direct count this session, up from "40+" in the 08-17 aud
 Inbound WhatsApp
   → modules/message_router (9-tier priority: family→escort→admin→supervisor→
     accountant→candidate→employee→known contacts→unknown)
-  → modules/identity_brain.detect_identity() (who/role/trust-tier)
+  → modules/fazle_identity_brain.detect_identity() (who/role/trust-tier)
   → intent detection: keyword-based per module (e.g. payment_workflow.is_advance_request(),
     recruitment_flow's own detectors) — NOT a centralized intent classifier for this path
     (app.llm.classify_intent_llm() exists but is used for the admin-console/social path,
@@ -138,7 +142,7 @@ Inbound WhatsApp
     Hermes/app.llm layered on top per feature flag, both gated through
     intelligent_generator.py::_safe_polish() before send (parent audit §5.3 — re-confirmed
     unchanged this session, not re-verified live)
-  → draft/approval/auto-send decision: modules/draft_approval + modules/drafts (generic reply
+  → draft/approval/auto-send decision: modules/fazle_draft_approval + modules/drafts (generic reply
     drafts) for anything not auto-sendable
   → outbound: modules/outbound (queue/retry/DLQ/circuit breaker)
 ```
@@ -172,7 +176,7 @@ never writes a final cash transaction").
 | Stage | Module |
 |---|---|
 | Message generation | `draft_approval::build_accountant_message()` (draft path) — formats to be parser-compatible; OR the admin's own free-text WhatsApp message (independent instruction path, no draft) |
-| Message transport | Standard WhatsApp bridge (`modules/outbound`, `modules/bridge_poller`) |
+| Message transport | Standard WhatsApp bridge (`modules/outbound`, `modules/fazle_bridge_poller`) |
 | Accountant identity/role | RBAC role check upstream in `message_router`/`admin_commands` (role hierarchy in `fazle_roles` per `.claude/CLAUDE.md`) — not re-traced line-by-line this session |
 | Parser | `modules/fazle_payroll_engine/parser.py::parse_message()` — verified §6 below |
 | Canonical transaction creation | `accounting.py::create_transaction()` |
@@ -404,9 +408,9 @@ Hermes create an employee? No tool found that does. Can Hermes modify payroll/le
 
 | Area | Coverage | Evidence |
 |---|---|---|
-| Payment parser (ID:/method/amount grammar) | Covered | `tests/unit/test_fpe_rules.py` and others (not individually re-read this session; parser code itself carries dated fix comments referencing specific incidents, a good sign of test-informed hardening) |
-| Employee resolution status | Covered | `tests/unit/test_fpe_employee_resolution_status.py` |
-| Unmatched-message notification | Covered | `tests/unit/test_fpe_unmatched_notification.py` |
+| Payment parser (ID:/method/amount grammar) | Covered | `tests/unit/test_fazle_rules.py` and others (not individually re-read this session; parser code itself carries dated fix comments referencing specific incidents, a good sign of test-informed hardening) |
+| Employee resolution status | Covered | `tests/unit/test_fazle_employee_resolution_status.py` |
+| Unmatched-message notification | Covered | `tests/unit/test_fazle_unmatched_notification.py` |
 | Unmatched-confirmation RBAC | Covered | `tests/unit/test_unmatched_confirmations_rbac.py`, `tests/e2e/test_unmatched_confirmations.py` |
 | Draft approval (Sprint-3B) | Covered | `tests/unit/test_sprint3b_draft_approval.py` |
 | Payment workflow (escort/advance draft + finalize) | Covered, substantially | `tests/unit/test_payment_workflow.py`, `tests/workflows/test_escort_payment_flow.py` (large file, many `finalize_payment` call sites), `tests/workflows/test_full_workflows.py` |

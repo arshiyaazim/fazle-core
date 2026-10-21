@@ -142,7 +142,7 @@ async def resolve_employee_identity(
 
     Priority:
         1. Employee ID (if provided)
-        2. Registered mobile (phone → wbom_employees)
+        2. Registered mobile (phone → fazle_employees_legacy)
         3. Employee DB lookup (master_mobile in escort programs)
         4. Name match
         5. Unknown
@@ -172,7 +172,7 @@ async def resolve_employee_identity(
     if employee_id:
         emp = await fetch_one(
             """SELECT employee_id, employee_name, employee_mobile, status
-               FROM wbom_employees WHERE employee_id = $1""",
+               FROM fazle_employees_legacy WHERE employee_id = $1""",
             employee_id,
         )
         if emp:
@@ -191,7 +191,7 @@ async def resolve_employee_identity(
         for variant in _phone_variants(phone):
             emp = await fetch_one(
                 """SELECT employee_id, employee_name, employee_mobile, status
-                   FROM wbom_employees WHERE employee_mobile = $1""",
+                   FROM fazle_employees_legacy WHERE employee_mobile = $1""",
                 variant,
             )
             if emp:
@@ -211,7 +211,7 @@ async def resolve_employee_identity(
             prog = await fetch_one(
                 """SELECT e.employee_id, e.employee_name, e.employee_mobile, e.status
                    FROM wbom_escort_programs p
-                   JOIN wbom_employees e ON e.employee_id = p.escort_employee_id
+                   JOIN fazle_employees_legacy e ON e.employee_id = p.escort_employee_id
                    WHERE p.master_mobile = $1
                    ORDER BY p.program_date DESC LIMIT 1""",
                 variant,
@@ -231,7 +231,7 @@ async def resolve_employee_identity(
     if name_hint:
         emp = await fetch_one(
             """SELECT employee_id, employee_name, employee_mobile, status
-               FROM wbom_employees
+               FROM fazle_employees_legacy
                WHERE employee_name ILIKE $1
                ORDER BY employee_id DESC LIMIT 1""",
             f"%{name_hint}%",

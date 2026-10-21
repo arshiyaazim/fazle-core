@@ -12,7 +12,7 @@ Version: 83b015994289
 
 ## Purpose
 
-Merges WhatsApp contacts from all three bridge sources into the central `wbom_contacts` and `fazle_unified_contacts` tables. Ensures that inbound messages can look up a human-readable display name for any phone number.
+Merges WhatsApp contacts from all three bridge sources into the central `fazle_contacts` and `fazle_unified_contacts` tables. Ensures that inbound messages can look up a human-readable display name for any phone number.
 
 ---
 
@@ -30,7 +30,7 @@ Merges WhatsApp contacts from all three bridge sources into the central `wbom_co
 
 ## Database Tables
 
-### `wbom_contacts` — Master Contact Table
+### `fazle_contacts` — Master Contact Table
 
 Primary contact lookup. One row per `(whatsapp_number, platform)`.
 
@@ -44,7 +44,7 @@ One row per normalized phone (PRIMARY KEY on `phone`). Used for fast display nam
 
 Columns: `phone`, `display_name`, `source_bridge`, `first_seen`, `last_updated`.
 
-**Same "longer name wins" upsert rule** as `wbom_contacts`.
+**Same "longer name wins" upsert rule** as `fazle_contacts`.
 
 ### `fazle_contact_aliases` — All Known Names
 
@@ -101,7 +101,7 @@ contacts = await loop.run_in_executor(None, _read_bridge_contacts, whatsapp_db, 
 
 `upsert_contact_from_message(phone, push_name, bridge_number)` — called on every inbound message. Insert-only, doesn't overwrite a better existing name.
 
-Write target: both `fazle_unified_contacts` and `wbom_contacts`, plus `_upsert_alias()` if push_name is non-empty.
+Write target: both `fazle_unified_contacts` and `fazle_contacts`, plus `_upsert_alias()` if push_name is non-empty.
 
 ---
 
@@ -159,4 +159,4 @@ Used by identity brain and message router to attach human-readable names to send
 - `phone_normalizer.md` — canonical 8801XXXXXXXXX format used as PK in contact tables
 - `identity_brain.md` — uses `get_display_name()` to attach name to sender context
 - `automation_pipeline.md` — `start_contact_sync_loop` started on app init
-- `database_rules.md` — `wbom_contacts` table ownership and schema
+- `database_rules.md` — `fazle_contacts` table ownership and schema

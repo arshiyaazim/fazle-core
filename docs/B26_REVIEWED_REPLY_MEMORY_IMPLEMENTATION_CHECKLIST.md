@@ -37,9 +37,9 @@ Not included in this first cut:
 
 - [ ] `app/config.py`
 - [ ] `app/main.py`
-- [ ] `modules/admin_commands/__init__.py`
+- [ ] `modules/fazle_admin_commands/__init__.py`
 - [ ] `modules/message_router/__init__.py`
-- [ ] `modules/bridge_poller/__init__.py`
+- [ ] `modules/fazle_bridge_poller/__init__.py`
 - [ ] `app/static/dashboard.html`
 - [ ] `docs/API.md`
 - [ ] `scripts/run_ci.sh`
@@ -120,7 +120,7 @@ Not included in this first cut:
 
 ## Backend Integration Checklist
 
-### `modules/admin_commands/__init__.py`
+### `modules/fazle_admin_commands/__init__.py`
 
 - [ ] Keep the `EDIT <id> <text>` command syntax unchanged
 - [ ] Update `_cmd_edit(...)` to fetch the full draft row, not only `id`
@@ -147,7 +147,7 @@ Not included in this first cut:
 - [ ] Extend draft persistence helper `_save_draft(...)` to accept optional metadata for reviewed-source markers
 - [ ] Extend `/admin/drafts` response to include stored `meta` needed by the dashboard
 
-### `modules/bridge_poller/__init__.py`
+### `modules/fazle_bridge_poller/__init__.py`
 
 - [ ] Extend `_save_draft(...)` to accept optional metadata for reviewed-source markers
 - [ ] Preserve draft-quality gate behavior on the bridge path

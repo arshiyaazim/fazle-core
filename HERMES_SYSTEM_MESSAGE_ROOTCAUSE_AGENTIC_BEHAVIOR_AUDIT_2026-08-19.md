@@ -1,5 +1,9 @@
 # System-Generated Message Root-Cause + Hermes Agentic Behavior Audit — 2026-08-19
 
+
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 Read-only audit. No production code, config, or data changed. Every claim
 below is traced to a source file, a live production row, or an exact
 message from the real Hermes conversation transcript — no phone+timestamp

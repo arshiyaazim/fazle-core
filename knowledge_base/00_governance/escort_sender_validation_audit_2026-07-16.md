@@ -8,6 +8,9 @@ runtime_index: true
 
 # Escort Program — Source-of-Truth Message Parser Audit & Fix Proposal
 
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 Requested by Owner following the S/N Provenance Report (garbage rows 869, 871, 873, 880
 traced to sender phone 01958122302 / 8801958122303 — not a registered admin or
 escort-client number). Owner's business rules (Rules 1-4 below) are authoritative and
@@ -51,7 +54,7 @@ covers all 4 config keys, not just `ADMIN_NUMBERS`.
 
 Two **independent** mechanisms, both DB/config-driven, both already enforced:
 
-- **Role classification (DB-driven):** `modules/identity_brain` assigns every inbound
+- **Role classification (DB-driven):** `modules/fazle_identity_brain` assigns every inbound
   contact an `identity_role` (e.g. `escort_client`, `client_escort_buyer`, `vip_client`,
   `repeat_client` — the set `_ESCORT_ROLES` at
   [message_router/__init__.py:77](../../modules/message_router/__init__.py#L77)).
@@ -67,7 +70,7 @@ Two **independent** mechanisms, both DB/config-driven, both already enforced:
 
 ```
 WhatsApp bridge (bridge1/bridge2/meta webhook)
-  -> modules/bridge_poller (or Meta webhook handler)
+  -> modules/fazle_bridge_poller (or Meta webhook handler)
   -> modules/message_router.route_message()
        -> identity = await detect_identity(sender, text)   [role classification]
        -> if role in _ESCORT_ROLES and _looks_like_escort_order(text):
@@ -185,7 +188,7 @@ predate the 2026-06-27 gate.** Zero such rows exist after that date (verified ab
 
 Financial-impact check (read-only): all 18 have `escort_employee_id IS NULL`,
 `total IS NULL`, `net_payable = 0.00` in `escort_roster_entries`, and **zero** rows in
-`fpe_cash_transactions` reference any of these `program_id`s. They are financially
+`fazle_cash_transactions` reference any of these `program_id`s. They are financially
 inert — no payroll run, ledger entry, or payment was ever computed against them.
 
 13 of the 18 are `status='expired'` (already visually distinct/de-emphasized in the

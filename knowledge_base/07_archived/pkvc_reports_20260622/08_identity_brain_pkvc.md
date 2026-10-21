@@ -18,17 +18,17 @@ runtime_index: false
 
 | # | Claim | Status | Evidence |
 |---|---|---|---|
-| 1 | Identity resolution uses 11-step priority algorithm | VERIFIED | `modules/identity_brain/__init__.py` `resolve_identity()` and `_ROLE_PRIORITY` dict — 11 steps confirmed |
+| 1 | Identity resolution uses 11-step priority algorithm | VERIFIED | `modules/fazle_identity_brain/__init__.py` `resolve_identity()` and `_ROLE_PRIORITY` dict — 11 steps confirmed |
 | 2 | Blocked check happens before step 1 (step 0) | VERIFIED | `app/message_router/__init__.py` `_should_silent_skip()` — runs before resolve_identity() |
-| 3 | Employee phone lookup tries 3 variants simultaneously | VERIFIED | `modules/identity_brain/__init__.py` — three phone format variants tried in parallel |
-| 4 | Employee secondary evidence: cash (A), attendance (B), roster (C), contacts (D) | VERIFIED | `modules/identity_brain/__init__.py` step 8 implementation |
+| 3 | Employee phone lookup tries 3 variants simultaneously | VERIFIED | `modules/fazle_identity_brain/__init__.py` — three phone format variants tried in parallel |
+| 4 | Employee secondary evidence: cash (A), attendance (B), roster (C), contacts (D) | VERIFIED | `modules/fazle_identity_brain/__init__.py` step 8 implementation |
 | 5 | `ROLE_PRIORITY` dict has exactly 15 roles | VERIFIED | `modules/role_classifier/__init__.py` — 15 entries: vip_client(10), manager(9), supervisor(8), client(7), employee(6), accountant(6), escort(5), security_guard(5), buyer(4), seller(4), vendor(3), candidate(3), family(2), friend(2), unknown(1) |
 | 6 | `_ROLE_PROMPTS` covers exactly 8 roles with Bangla text | VERIFIED | `modules/role_classifier/__init__.py` — 8 entries: vip_client, client, employee, candidate, manager, vendor, family, unknown |
 | 7 | `get_user_context()` reads `user_profiles` and `user_memory` | VERIFIED | `modules/role_classifier/__init__.py` lines 50–80: two DB queries confirmed |
 | 8 | `get_user_context()` returns 7-key dict | VERIFIED | Return statement: exists, phone, role, name, relationship_type, notes, memories, system_prompt_addition — actually **8 keys** for the `exists=True` branch; 5 keys for `exists=False`. |
 | 9 | `build_context_for_llm()` caps memories at 5 most recent | VERIFIED | `modules/role_classifier/__init__.py`: `memories[:5]` slice confirmed |
-| 10 | Confidence 1.0 for `fazle_contact_roles` exact match | VERIFIED | `modules/identity_brain/__init__.py` confidence scoring confirmed in Wave-2B read |
-| 11 | Employee primary phone → 0.95 confidence | VERIFIED | `modules/identity_brain/__init__.py` confidence scoring confirmed |
+| 10 | Confidence 1.0 for `fazle_contact_roles` exact match | VERIFIED | `modules/fazle_identity_brain/__init__.py` confidence scoring confirmed in Wave-2B read |
+| 11 | Employee primary phone → 0.95 confidence | VERIFIED | `modules/fazle_identity_brain/__init__.py` confidence scoring confirmed |
 
 ## Pre-Correction Issues Found and Fixed
 

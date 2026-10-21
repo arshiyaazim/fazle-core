@@ -51,7 +51,7 @@ metrics. Bind is loopback-only — public traffic terminates at nginx.
 ### Bridges
 Two Go binaries (`whatsapp-mcp`, `whatsapp2`) that maintain WhatsApp Web
 sessions and write messages into local SQLite stores. fazle-core polls
-both stores every 5s via `modules/bridge_poller`.
+both stores every 5s via `modules/fazle_bridge_poller`.
 
 ### PostgreSQL
 Primary data store (`asyncpg`). Migrations live in `db/migrations/*.sql`,
@@ -78,7 +78,7 @@ See `modules/scheduler.py`.
 
 1. Bridge poller picks up a new SQLite row.
 2. `message_router.process_message(msg)` is called.
-3. Intent classifier (`modules/intent`) labels it.
+3. Intent classifier (`modules/fazle_intent`) labels it.
 4. Routes to a workflow module (escort / recruitment / admin_commands).
 5. Workflow may insert a **draft** in `fazle_drafts` (pending approval).
 6. Admin sends `APPROVE 123` via WhatsApp → admin_commands marks the
@@ -89,7 +89,7 @@ See `modules/scheduler.py`.
 
 The effective conversational path is:
 
-`modules.bridge_poller.process_bridge_inbound` → `modules.message_router.process_message` → identity/role routing and conversation history → `modules.recruitment_flow.route_recruitment_message` when applicable → existing Recruitment session/turn decision and RAG/context retrieval → `shared.reply_policy.build_provider_context_package` → the shared reply policy consumed by `modules.hermes_dispatch` and the existing provider paths → policy/fact-check boundary → reply/outbound handling and persistence.
+`modules.fazle_bridge_poller.process_bridge_inbound` → `modules.message_router.process_message` → identity/role routing and conversation history → `modules.recruitment_flow.route_recruitment_message` when applicable → existing Recruitment session/turn decision and RAG/context retrieval → `shared.reply_policy.build_provider_context_package` → the shared reply policy consumed by `modules.hermes_dispatch` and the existing provider paths → policy/fact-check boundary → reply/outbound handling and persistence.
 
 `ProviderContextPackage` is provider-neutral and is a structured view over existing context; it is not a second memory store or RAG system. It carries:
 

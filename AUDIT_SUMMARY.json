@@ -1,4 +1,5 @@
 {
+  "_pre_unification_note": "Pre-unification schema note. Table names in this document refer to the pre-unification schema. See audits/prefix_unification_2026-10-21.md for the current table names.",
   "_stale_notice": "STALE as of 2026-07-08 — superseded by database_rules.md (2026-07-02 recount) and 2026-07-04/05 audits; do not treat these figures as current.",
   "audit_date": "2026-06-14T01:30:00Z",
   "app_location": "/home/azim/core/",
@@ -21,7 +22,10 @@
   "total_escort_programs": 316,
   "total_api_endpoints": 45,
   "total_frontend_pages": 5,
-  "ollama_models_installed": ["qwen2.5:3b", "qwen3:8b"],
+  "ollama_models_installed": [
+    "qwen2.5:3b",
+    "qwen3:8b"
+  ],
   "primary_ai_provider": "GitHub Models (openai/gpt-4o-mini)",
   "secondary_ai_provider": "Groq (llama-3.1-8b-instant)",
   "auto_reply_enabled": false,
@@ -29,13 +33,31 @@
   "recruitment_autoreply_enabled": true,
   "draft_creation_enabled": true,
   "bridges": {
-    "bridge1": {"number": "8801958122300", "label": "HR", "port": 8082, "status": "running"},
-    "bridge2": {"number": "8801880446111", "label": "OPS", "port": 8081, "status": "running"},
-    "meta": {"number": "8801958122322", "platform": "WhatsApp Cloud API + Messenger + FB", "status": "configured"}
+    "bridge1": {
+      "number": "8801958122300",
+      "label": "HR",
+      "port": 8082,
+      "status": "running"
+    },
+    "bridge2": {
+      "number": "8801880446111",
+      "label": "OPS",
+      "port": 8081,
+      "status": "running"
+    },
+    "meta": {
+      "number": "8801958122322",
+      "platform": "WhatsApp Cloud API + Messenger + FB",
+      "status": "configured"
+    }
   },
   "media_processor": {
     "port": 8090,
-    "capabilities": ["whisper_transcription", "tesseract_ocr", "pdf_extraction"],
+    "capabilities": [
+      "whisper_transcription",
+      "tesseract_ocr",
+      "pdf_extraction"
+    ],
     "whisper_model": "small",
     "auto_trigger_on_inbound": false
   },

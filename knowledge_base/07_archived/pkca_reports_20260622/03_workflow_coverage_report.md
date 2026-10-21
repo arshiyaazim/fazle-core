@@ -8,6 +8,9 @@ runtime_index: false
 
 # PKCA Report 03: Workflow Coverage Report
 
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **Date:** 2026-06-22
 **Mode:** Read-Only Analysis
 
@@ -17,12 +20,12 @@ runtime_index: false
 
 ### WF-01: Inbound Message Full Routing Workflow — 10% Covered
 
-**Source:** `modules/bridge_poller` + `modules/message_router`
+**Source:** `modules/fazle_bridge_poller` + `modules/message_router`
 
 **Production Workflow:**
 ```
 INBOUND → Bridge Poll (1–30s adaptive) → LID Resolution → Dedup
-→ OCR/Voice branch → Persist to wbom_whatsapp_messages → process_message()
+→ OCR/Voice branch → Persist to fazle_whatsapp_messages → process_message()
 → Silent-Skip Check → Identity Resolution → 15-Step Role Routing
 → Reply Delivery (cooldown→loop→flood→injection→poison checks → SEND or DRAFT)
 ```
@@ -189,7 +192,7 @@ UNKNOWN sends message with job keyword
 
 ### WF-06: Admin Command Workflow — 5% Covered
 
-**Source:** `modules/admin_commands` (1297L) + `modules/rbac` (341L)
+**Source:** `modules/fazle_admin_commands` (1297L) + `modules/rbac` (341L)
 
 **Production Workflow:**
 ```
@@ -274,7 +277,7 @@ EMPLOYEE requests advance or mentions release slip
 → Step 2 (STEP_SLIP): Employee sends image → ask for duty/release slip
 → Step 3 (STEP_METHOD): Employee sends image → ask for bKash/Nagad/cash number
 → Step 4 (STEP_DONE): Employee confirms payment method → create draft → send to admin
-→ Identity mismatch: sender not in wbom_employees but matches master_mobile → inform to use registered number
+→ Identity mismatch: sender not in fazle_employees_legacy but matches master_mobile → inform to use registered number
 ```
 
 **KB Documentation:** `01_employee_knowledge/faq_employee.md` mentions "duty selfie" and "bKash/Nagad number" requirement.
@@ -334,7 +337,7 @@ enqueue(recipient, body, source_bridge, idempotency_key)
 ```
 Sources: bridge1 (whatsapp1/store/whatsapp.db), bridge2 (bridges/bridge2/store/whatsapp.db), Meta webhook
 → Canonical phone: 8801XXXXXXXXXX (13-digit BD mobile)
-→ One row per phone in wbom_contacts (UNIQUE on whatsapp_number + platform)
+→ One row per phone in fazle_contacts (UNIQUE on whatsapp_number + platform)
 → display_name = longest of (full_name, push_name, saved_name)
 → Merge: update display_name only if new name is longer
 → Dedup: ON CONFLICT DO UPDATE

@@ -8,6 +8,9 @@ runtime_index: false
 
 # PKCA Report 08: AI Behavior Coverage Report
 
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **Date:** 2026-06-22
 **Mode:** Read-Only Analysis
 
@@ -151,7 +154,7 @@ Admin-curated reply learning system:
 
 ## AI Safety Gate — 0% Covered
 
-**Source:** `app/config.py` + `modules/bridge_poller` + `modules/message_router`
+**Source:** `app/config.py` + `modules/fazle_bridge_poller` + `modules/message_router`
 
 When `AI_SAFE_MODE=true`:
 - Long replies become drafts

@@ -105,7 +105,7 @@ ALLOWED_TRANSITIONS = {
 
 All transitions write to `wbom_payroll_approval_log` (actor, from_status, to_status, reason).
 
-**`PAYROLL PAID` also posts to the canonical FPE ledger (fixed 2026-07-15):** previously `mark_paid()` only performed the `wbom_payroll_runs` status flip and audit-log write above — it never wrote a `fpe_cash_transactions` row, meaning payroll payouts never appeared in the canonical cash ledger (`daily_cash_transaction_source_of_truth.md`). It now resolves the FPE employee via `fpe_employees.wbom_employee_id` and calls `create_transaction()` (category `salary`, status `final`) in the same transition. If no active FPE employee is linked to the WBOM employee, the transition **fails closed** — `PAYROLL PAID` returns an error and the run stays `locked`, rather than being marked paid with no ledger entry.
+**`PAYROLL PAID` also posts to the canonical FPE ledger (fixed 2026-07-15):** previously `mark_paid()` only performed the `wbom_payroll_runs` status flip and audit-log write above — it never wrote a `fazle_cash_transactions` row, meaning payroll payouts never appeared in the canonical cash ledger (`daily_cash_transaction_source_of_truth.md`). It now resolves the FPE employee via `fazle_employees.wbom_employee_id` and calls `create_transaction()` (category `salary`, status `final`) in the same transition. If no active FPE employee is linked to the WBOM employee, the transition **fails closed** — `PAYROLL PAID` returns an error and the run stays `locked`, rather than being marked paid with no ledger entry.
 
 ---
 
@@ -117,7 +117,7 @@ All transitions write to `wbom_payroll_approval_log` (actor, from_status, to_sta
 | Column | Type | Default | Notes |
 |---|---|---|---|
 | `run_id` | SERIAL | auto | PK |
-| `employee_id` | INT | — | FK → `wbom_employees(employee_id)` |
+| `employee_id` | INT | — | FK → `fazle_employees_legacy(employee_id)` |
 | `period_year` | INT | — | 4-digit year |
 | `period_month` | INT | — | 1–12 |
 | `status` | VARCHAR(20) | `'draft'` | State machine status (see ALLOWED_TRANSITIONS above) |
@@ -188,7 +188,7 @@ Immutable audit trail. One row per state transition.
 **Source:** `modules/payroll/__init__.py`
 
 1. **Idempotent:** If a non-cancelled run already exists for `(employee_id, period_year, period_month)`, returns the existing run — no recompute.
-2. Fetches `wbom_employees` for `basic_salary`.
+2. Fetches `fazle_employees_legacy` for `basic_salary`.
 3. Fetches `wbom_escort_programs` rows with `status='Completed'` and `COALESCE(end_date, program_date)` in the period.
 4. Sums `COALESCE(day_count, 1)` across all programs for `total_days`.
 5. `program_allowance = round(total_days × per_program_rate, 2)` where `per_program_rate` defaults to `DEFAULT_PER_PROGRAM_RATE = 400.0`.

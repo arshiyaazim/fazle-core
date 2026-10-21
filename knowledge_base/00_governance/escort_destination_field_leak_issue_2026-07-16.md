@@ -36,7 +36,7 @@ line — in every known case, `"Escort Name: <name>"` — instead of an empty
 value.
 
 Confirmed with a direct regex test against the real message text (message_id
-10678 in `wbom_whatsapp_messages`, the source of program_id 900):
+10678 in `fazle_whatsapp_messages`, the source of program_id 900):
 ```python
 >>> _CD_DEST_RE.search("...Destination: \nEscort Name: Sohedul Karim\n...").group(1)
 'Escort Name: Sohedul Karim'
@@ -61,7 +61,7 @@ more affected rows:
 | 906 | MV TRUONG MINH PROSPERITY | MV AL Morium | `Escort Name: Md Rubel` | 2026-06-26 | `_create_confirmed_from_admin` (auto_created=true) |
 | **938** | MV HORDA | MV Pavel-6 | `Escort Name: Anik Nath` | 2026-07-03 | `_update_program_confirmed` via `sqlite_backfill`/`bridge_confirmation` merge — **previously uncounted, not `auto_created`, different write path, same root cause** |
 
-Source messages found in `wbom_whatsapp_messages` for 900, 901, 906, and 938
+Source messages found in `fazle_whatsapp_messages` for 900, 901, 906, and 938
 all show the identical shape — an admin confirmation message with the
 `Destination:` line left blank, immediately followed by `Escort Name: <name>`
 on the next line. 902's specific source message was not individually located

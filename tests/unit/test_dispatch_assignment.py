@@ -42,7 +42,7 @@ async def _insert_program(test_db_pool, employee_id, **overrides):
 async def escort_employee(test_db_pool):
     async with test_db_pool.acquire() as conn:
         row = await conn.fetchrow("""
-            INSERT INTO wbom_employees (employee_mobile, employee_name, designation, status, basic_salary)
+            INSERT INTO fazle_employees_legacy (employee_mobile, employee_name, designation, status, basic_salary)
             VALUES ('8801811111111', 'Karim Escort', 'Escort', 'Active', 9000.00)
             RETURNING *
         """)
@@ -53,7 +53,7 @@ async def escort_employee(test_db_pool):
 async def other_escort_employee(test_db_pool):
     async with test_db_pool.acquire() as conn:
         row = await conn.fetchrow("""
-            INSERT INTO wbom_employees (employee_mobile, employee_name, designation, status, basic_salary)
+            INSERT INTO fazle_employees_legacy (employee_mobile, employee_name, designation, status, basic_salary)
             VALUES ('8801822222222', 'Rahim Escort', 'Escort', 'Active', 9000.00)
             RETURNING *
         """)
@@ -64,7 +64,7 @@ async def other_escort_employee(test_db_pool):
 async def inactive_escort_employee(test_db_pool):
     async with test_db_pool.acquire() as conn:
         row = await conn.fetchrow("""
-            INSERT INTO wbom_employees (employee_mobile, employee_name, designation, status, basic_salary)
+            INSERT INTO fazle_employees_legacy (employee_mobile, employee_name, designation, status, basic_salary)
             VALUES ('8801855555555', 'Inactive Escort', 'Escort', 'Inactive', 9000.00)
             RETURNING *
         """)
@@ -75,7 +75,7 @@ async def inactive_escort_employee(test_db_pool):
 async def non_escort_employee(test_db_pool):
     async with test_db_pool.acquire() as conn:
         row = await conn.fetchrow("""
-            INSERT INTO wbom_employees (employee_mobile, employee_name, designation, status, basic_salary)
+            INSERT INTO fazle_employees_legacy (employee_mobile, employee_name, designation, status, basic_salary)
             VALUES ('8801866666666', 'Office Person', 'Office Assistant', 'Active', 9000.00)
             RETURNING *
         """)
@@ -511,7 +511,7 @@ class TestAssignmentConcurrency:
         prog = await _insert_program(test_db_pool, escort_employee["employee_id"], status="confirmed")
         async with test_db_pool.acquire() as conn:
             third_emp = await conn.fetchrow("""
-                INSERT INTO wbom_employees (employee_mobile, employee_name, designation, status, basic_salary)
+                INSERT INTO fazle_employees_legacy (employee_mobile, employee_name, designation, status, basic_salary)
                 VALUES ('8801877777777', 'Third Escort', 'Escort', 'Active', 9000.00) RETURNING *""")
 
         async def attempt(emp_id):
@@ -597,7 +597,7 @@ class TestOverlapsEndpoint:
         async with test_db_pool.acquire() as conn:
             for i in range(3):
                 row = await conn.fetchrow(f"""
-                    INSERT INTO wbom_employees (employee_mobile, employee_name, designation, status, basic_salary)
+                    INSERT INTO fazle_employees_legacy (employee_mobile, employee_name, designation, status, basic_salary)
                     VALUES ('88019{i:07d}', 'Overlap Guy {i}', 'Escort', 'Active', 9000.00) RETURNING *""")
                 await _insert_program(test_db_pool, row["employee_id"],
                                        start_date=date(2026, 6, 1), end_date=date(2026, 6, 5), end_shift="N")

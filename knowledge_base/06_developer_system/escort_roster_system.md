@@ -30,7 +30,7 @@ differ. Both are correct for their respective context:
   - This is the **operational display** — what was worked
 
 - **Payment draft `gross_amount`** = `basic_salary / 30 × duty_days`
-  - `basic_salary` comes from the employee's HR profile (`wbom_employees.basic_salary`)
+  - `basic_salary` comes from the employee's HR profile (`fazle_employees_legacy.basic_salary`)
   - This is the **settlement amount** — based on HR pay grade
 
 When `basic_salary = shift_rate × 2 × 30` (e.g. 200 × 2 × 30 = 12,000), both

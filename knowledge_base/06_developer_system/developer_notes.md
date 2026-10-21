@@ -193,7 +193,7 @@ GET /api/wa/stream?last_id=0&last_draft_id=0
 ```
 
 **Source Function:** `sse_stream()` at line 720 of `modules/wa_chat_frontend/__init__.py`
-**DB Tables Read:** `wbom_whatsapp_messages` (messages), `fazle_draft_replies` (drafts), `wbom_contacts` (contact names)
+**DB Tables Read:** `fazle_whatsapp_messages` (messages), `fazle_draft_replies` (drafts), `fazle_contacts` (contact names)
 **Business Rule:** Draft events are only emitted for drafts with status NOT IN (`rejected`, `sent`, `approved`). The client tracks `last_id` and `last_draft_id` to resume without replay on reconnect.
 
 ---

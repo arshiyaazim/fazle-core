@@ -1,5 +1,8 @@
 # Phase 2 — Shared Core business read capability
 
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 Date: 2026-09-12
 State: `IMPLEMENTED / TARGETED_TESTED / NOT_DEPLOYED / NOT_LIVE_VERIFIED`
 
@@ -30,16 +33,16 @@ human.
 
 | Dataset | Core-Hermes | Observer-Hermes | Core authority | Read mechanism |
 |---|---|---|---|---|
-| Employee | Yes | Yes | `wbom_employees` | Fixed Core query; paged API |
+| Employee | Yes | Yes | `fazle_employees_legacy` | Fixed Core query; paged API |
 | Attendance | Yes | Yes | `wbom_attendance` + employee identity | Fixed Core query; paged API |
 | Duty | Yes | Yes | `wbom_escort_programs` | Fixed Core query; paged API |
 | Payroll | Yes | Yes | `wbom_payroll_runs` | Fixed Core query; paged API |
-| Salary | Yes | Yes | `wbom_employees.basic_salary` | Fixed Core query; paged API |
+| Salary | Yes | Yes | `fazle_employees_legacy.basic_salary` | Fixed Core query; paged API |
 | Advances | Yes | Yes | canonical FPE cash transactions | Fixed Core query; paged API |
 | Payments | Yes | Yes | canonical FPE cash transactions | Fixed Core query; paged API |
 | Escort programs | Yes | Yes | `wbom_escort_programs` | Fixed Core query; paged API |
 | Release records | Yes | Yes | confirmed `escort_evidence_event` stream | Fixed Core query; paged API; migration 083 prerequisite |
-| Clients/contacts | Yes | Yes | `wbom_contacts` | Fixed Core query; paged API |
+| Clients/contacts | Yes | Yes | `fazle_contacts` | Fixed Core query; paged API |
 | Recruitment | Yes | Yes | `fazle_recruitment_sessions` | Fixed Core query; paged API |
 | Bills/invoices | Yes | Yes | billing records + Core client profiles | Fixed Core query; paged API |
 | Conversation/message history | Yes | Yes | canonical WhatsApp message store | Fixed Core query; full body; paged API |

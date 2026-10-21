@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, patch
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-from modules import media_normalization as mn
+from modules import fazle_media_normalization as mn
 
 
 async def test_audio_transcript_replaces_placeholder():

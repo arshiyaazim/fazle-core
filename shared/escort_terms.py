@@ -5,8 +5,8 @@ The word "escort" alone is ambiguous in this codebase — it has meant BOTH
 sides of the escort service:
 
     escort_worker  — OUR employee: a security escort assigned to a vessel /
-                     lighter. A row in wbom_employees (designation ~ "escort")
-                     and/or fpe_employees; appears in wbom_escort_programs as
+                     lighter. A row in fazle_employees_legacy (designation ~ "escort")
+                     and/or fazle_employees; appears in wbom_escort_programs as
                      escort_employee_id / escort_name / escort_mobile. Managed
                      like any internal staff member (attendance, payroll,
                      manager-voice instructions).

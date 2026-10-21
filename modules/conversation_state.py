@@ -1,7 +1,7 @@
 """Stage D3-D7 (2026-08-28) -- cross-domain conversation state, derived
 from EXISTING authoritative business records, never stored redundantly on
 message rows and never a new mutable status column on
-wbom_whatsapp_messages (Stage D5's explicit preference: current state
+fazle_whatsapp_messages (Stage D5's explicit preference: current state
 belongs on the authoritative business record it already lives on, not
 copied onto every historical message).
 
@@ -108,8 +108,8 @@ def resolve_escort_state(status: Optional[str]) -> ConversationState:
 # Stage D7 found wbom_attendance.status but did not verify linkage. Traced
 # this stage: wbom_attendance has no phone column at all -- it links via
 # employee_id only. The authoritative phone->employee_id resolution
-# already exists in production (modules.identity_brain._lookup_employee /
-# _lookup_attendance_identity: wbom_employees.employee_mobile, normalized
+# already exists in production (modules.fazle_identity_brain._lookup_employee /
+# _lookup_attendance_identity: fazle_employees_legacy.employee_mobile, normalized
 # via the same _phone_variants() every other identity-resolution call in
 # this codebase already uses) -- reused here, not reinvented.
 #
@@ -139,12 +139,12 @@ def resolve_attendance_state(approved_at) -> ConversationState:
 
 
 # ── Cash / Payment (Stage E7) ────────────────────────────────────────────
-# fpe_cash_transactions has direct phone columns (employee_phone,
+# fazle_cash_transactions has direct phone columns (employee_phone,
 # employee_id_phone, payout_phone -- same "01XXXXXXXXX" canonical BD
-# format as escort's master_mobile/wbom_employees.employee_mobile,
+# format as escort's master_mobile/fazle_employees_legacy.employee_mobile,
 # normalized via the same modules.number_identity.canonical_phone()) and
-# a real FK to fpe_employees(id) -- the OTHER employee identity system
-# (see CLAUDE.md: wbom_employees/fpe_employees are bridged, not merged).
+# a real FK to fazle_employees(id) -- the OTHER employee identity system
+# (see CLAUDE.md: fazle_employees_legacy/fazle_employees are bridged, not merged).
 # transaction_status is the genuine, dominant, already-live state field
 # (confirmed live distribution: final=4390, pending=27, reversed=1) --
 # approval_status/review_status track the SAME pending/approved
@@ -152,10 +152,10 @@ def resolve_attendance_state(approved_at) -> ConversationState:
 # additional evidence but transaction_status alone already answers
 # "does this need company attention".
 CASH_STATE_MAP: dict[Optional[str], ConversationState] = {
-    None: {"state": "unclear", "next_actor": "unknown", "requires_action": False, "state_source": "fpe_cash_transactions.transaction_status"},
-    "pending": {"state": "waiting_for_company", "next_actor": "company", "requires_action": True, "state_source": "fpe_cash_transactions.transaction_status"},
-    "final": {"state": "resolved", "next_actor": "none", "requires_action": False, "state_source": "fpe_cash_transactions.transaction_status"},
-    "reversed": {"state": "resolved", "next_actor": "none", "requires_action": False, "state_source": "fpe_cash_transactions.transaction_status"},
+    None: {"state": "unclear", "next_actor": "unknown", "requires_action": False, "state_source": "fazle_cash_transactions.transaction_status"},
+    "pending": {"state": "waiting_for_company", "next_actor": "company", "requires_action": True, "state_source": "fazle_cash_transactions.transaction_status"},
+    "final": {"state": "resolved", "next_actor": "none", "requires_action": False, "state_source": "fazle_cash_transactions.transaction_status"},
+    "reversed": {"state": "resolved", "next_actor": "none", "requires_action": False, "state_source": "fazle_cash_transactions.transaction_status"},
 }
 
 

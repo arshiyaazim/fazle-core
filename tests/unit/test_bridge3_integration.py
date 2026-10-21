@@ -103,7 +103,7 @@ def test_get_bridge3_is_a_singleton():
 # ── Test 3: BRIDGE_CONFIGS ────────────────────────────────────────────────────
 
 def test_bridge_configs_has_all_three_bridges():
-    from modules.bridge_poller import BRIDGE_CONFIGS
+    from modules.fazle_bridge_poller import BRIDGE_CONFIGS
     names = [c["name"] for c in BRIDGE_CONFIGS]
     assert names == ["bridge1", "bridge2", "bridge3"], (
         f"BRIDGE_CONFIGS changed unexpectedly: {names} "
@@ -283,7 +283,7 @@ def test_identity_brain_does_not_recognize_bridge3_as_admin():
     a stale/leftover config value), _check_admin_settings() must not grant
     admin recognition for that phone via that field — the attribute is no
     longer read at all."""
-    from modules.identity_brain import _check_admin_settings
+    from modules.fazle_identity_brain import _check_admin_settings
 
     mock_settings = MagicMock()
     mock_settings.admin_number_list = []
@@ -301,7 +301,7 @@ def test_identity_brain_recognizes_bridge2_as_super_admin():
     """Bridge2 (8801880446111) is the canonical Super Admin identity —
     Owner-confirmed 2026-08-04. Recognized via admin_bridge2_number, same
     mechanism as before (unchanged for bridge1/bridge2)."""
-    from modules.identity_brain import _check_admin_settings
+    from modules.fazle_identity_brain import _check_admin_settings
 
     mock_settings = MagicMock()
     mock_settings.admin_number_list = []
@@ -322,7 +322,7 @@ def test_bridge_poller_fallback_bridge3_is_none():
     convention): the fallback-channel dict used for the customer-reply send path
     must map bridge1<->bridge2 exactly as before, and bridge3 to no fallback.
     """
-    import modules.bridge_poller as bp
+    import modules.fazle_bridge_poller as bp
     source = inspect.getsource(bp)
     assert '{"bridge1": "bridge2", "bridge2": "bridge1"}.get(bridge_name)' in source, (
         "Expected the bridge1/bridge2 fallback-channel mapping to be present "
@@ -334,13 +334,13 @@ def test_bridge_poller_fallback_bridge3_is_none():
 
 def test_inbound_query_excludes_own_outbound_messages():
     """
-    modules.bridge_poller._fetch_new_messages() is the single, shared,
+    modules.fazle_bridge_poller._fetch_new_messages() is the single, shared,
     bridge-agnostic function BRIDGE_CONFIGS-driven polling calls for every
     bridge (bridge1, bridge2, and now bridge3). Its SQL filters
     `WHERE is_from_me = 0`, so a bridge3 self-sent (Hermes) reply can never
     be re-ingested as a new inbound Admin command -- no new mechanism needed.
     """
-    from modules.bridge_poller import _fetch_new_messages
+    from modules.fazle_bridge_poller import _fetch_new_messages
 
     tmp_dir = tempfile.mkdtemp()
     db_path = os.path.join(tmp_dir, "messages.db")
@@ -383,12 +383,12 @@ def test_inbound_query_excludes_own_outbound_messages():
 
 # ── Test 12: Bridge3 Admin Recognition Channel (2026-08-04, un-reverses ───────
 # nothing -- this is a NEW, narrower, local mechanism, not a re-add of the
-# reversed global one; see modules.bridge_poller._is_bridge3_admin_recognition
+# reversed global one; see modules.fazle_bridge_poller._is_bridge3_admin_recognition
 # and its call site in _poll_bridge() for the full incident-history context.
 
 class TestBridge3AdminRecognitionChannel:
     def test_bridge3_message_from_bridge2_number_is_recognized(self, monkeypatch):
-        import modules.bridge_poller as bp
+        import modules.fazle_bridge_poller as bp
         mock_settings = MagicMock()
         mock_settings.bridge2_number = "8801880446111"
         monkeypatch.setattr(bp, "_settings", mock_settings)
@@ -396,7 +396,7 @@ class TestBridge3AdminRecognitionChannel:
         assert bp._is_bridge3_admin_recognition("bridge3", "8801880446111") is True
 
     def test_bridge3_message_from_other_number_is_not_recognized(self, monkeypatch):
-        import modules.bridge_poller as bp
+        import modules.fazle_bridge_poller as bp
         mock_settings = MagicMock()
         mock_settings.bridge2_number = "8801880446111"
         monkeypatch.setattr(bp, "_settings", mock_settings)
@@ -407,7 +407,7 @@ class TestBridge3AdminRecognitionChannel:
         """The check is channel-specific -- bridge2's own number arriving
         on bridge2 itself (its normal self-chat pattern) is a completely
         separate, pre-existing, unaffected code path, not this override."""
-        import modules.bridge_poller as bp
+        import modules.fazle_bridge_poller as bp
         mock_settings = MagicMock()
         mock_settings.bridge2_number = "8801880446111"
         monkeypatch.setattr(bp, "_settings", mock_settings)
@@ -415,7 +415,7 @@ class TestBridge3AdminRecognitionChannel:
         assert bp._is_bridge3_admin_recognition("bridge2", "8801880446111") is False
 
     def test_bridge1_channel_with_bridge2_number_is_not_recognized(self, monkeypatch):
-        import modules.bridge_poller as bp
+        import modules.fazle_bridge_poller as bp
         mock_settings = MagicMock()
         mock_settings.bridge2_number = "8801880446111"
         monkeypatch.setattr(bp, "_settings", mock_settings)
@@ -423,7 +423,7 @@ class TestBridge3AdminRecognitionChannel:
         assert bp._is_bridge3_admin_recognition("bridge1", "8801880446111") is False
 
     def test_empty_phone_is_not_recognized(self, monkeypatch):
-        import modules.bridge_poller as bp
+        import modules.fazle_bridge_poller as bp
         mock_settings = MagicMock()
         mock_settings.bridge2_number = "8801880446111"
         monkeypatch.setattr(bp, "_settings", mock_settings)
@@ -441,8 +441,8 @@ class TestBridge3AdminRecognitionChannel:
         documenting why it's excluded is fine and expected; an attribute
         access is not)."""
         import inspect
-        import modules.identity_brain as identity_brain
-        import modules.bridge_poller as bp
+        import modules.fazle_identity_brain as identity_brain
+        import modules.fazle_bridge_poller as bp
 
         src = inspect.getsource(identity_brain._check_admin_settings)
         assert ".admin_bridge3_number" not in src, (
@@ -457,7 +457,7 @@ class TestBridge3AdminRecognitionChannel:
         stale logic (same pattern as test_bridge_poller_fallback_bridge3_is_none
         above)."""
         import inspect
-        import modules.bridge_poller as bp
+        import modules.fazle_bridge_poller as bp
 
         src = inspect.getsource(bp._poll_bridge)
         assert "_is_bridge3_admin_recognition(bridge_name, phone)" in src

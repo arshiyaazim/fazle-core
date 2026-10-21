@@ -11,7 +11,7 @@
 --
 -- Same profit-estimation-only scope as the other three wage columns
 -- (db/migrations/034_client_billing_profiles.sql) -- must never feed into,
--- override, or be read by modules.payroll, modules.payment_workflow, or
+-- override, or be read by modules.payroll, modules.fazle_payment_workflow, or
 -- any real guard-payment calculation.
 --
 -- Additive, nullable, no default -- consistent with every other rate/wage

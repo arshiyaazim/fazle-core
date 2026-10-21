@@ -1,5 +1,9 @@
 # Hermes — Identity / Role / Intent / Content Capability Audit
 
+
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **Date:** 2026-08-18
 **Type:** Read-only investigation. No code, config, flags, DB, or service state changed.
 **Requested scope:** Can Hermes reliably determine Identity → Role → Intent → Content for an
@@ -55,8 +59,8 @@ tool that reads this table doesn't actually surface these columns.
 No. Identity, Role, and Intent determination already exist, are live, and are exercised
 continuously in production:
 
-- `modules/identity_brain` — canonical identity/role resolver (confirmed live via caller grep).
-- `modules/intent` — canonical intent classifier (pure function).
+- `modules/fazle_identity_brain` — canonical identity/role resolver (confirmed live via caller grep).
+- `modules/fazle_intent` — canonical intent classifier (pure function).
 - `modules/message_router` — canonical orchestrator that ties identity+role+intent+content together for a real WhatsApp turn.
 - `modules/recruitment_detector`, `modules/recruitment_flow` — recruitment-vertical intent/session layer built on top of the above.
 - `modules/contact_roles/routes.py` — admin CRUD over `fazle_contact_roles`, the seed table `identity_brain` reads first.
@@ -237,8 +241,8 @@ run.
 
 ## 11. Code Exists but Not Exposed to Hermes
 
-- `modules/identity_brain.detect_identity()` — full, safe, exception-proof, already the canonical implementation.
-- `modules/intent.classify()` — pure function, trivially safe to expose.
+- `modules/fazle_identity_brain.detect_identity()` — full, safe, exception-proof, already the canonical implementation.
+- `modules/fazle_intent.classify()` — pure function, trivially safe to expose.
 - `modules/recruitment_flow.recruitment_eligibility()` / `route_recruitment_message()` — recruitment-specific role+intent decisioning, unexposed.
 - `bridge_poller`'s persisted `identity_role`/`identity_confidence`/`intent_detected`/`workflow_triggered` columns — reachable in principle through the existing `/api/whatsapp/messages/lookup` route, just not selected.
 

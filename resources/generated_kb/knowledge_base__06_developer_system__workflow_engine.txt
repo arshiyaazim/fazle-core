@@ -12,7 +12,7 @@ Version: 2176d341b65d
 
 ## Overview
 
-`modules/message_router/__init__.py` is the single entry point for all inbound WhatsApp message routing. It is imported by both `app/main.py` (webhook path) and `modules/bridge_poller` (SQLite polling path).
+`modules/message_router/__init__.py` is the single entry point for all inbound WhatsApp message routing. It is imported by both `app/main.py` (webhook path) and `modules/fazle_bridge_poller` (SQLite polling path).
 
 **Return contract:** Every execution returns `(reply_text: str, admin_notification: dict | None)`. The router does NOT send anything — callers handle delivery.
 
@@ -41,7 +41,7 @@ Any sender whose resolved identity role is in this set triggers the escort clien
 _SILENT_SKIP_NAME_TOKENS: tuple[str, ...]  # 8 tokens — values developer-only
 ```
 
-If a sender's `wbom_contacts.display_name` contains any of these 8 lowercase tokens, the sender receives **no reply, no draft, no queue entry** (silent drop). Values are intentionally omitted from this KB article — they are internal guard strings that must not be exposed. Read directly from `modules/message_router/__init__.py` line 66.
+If a sender's `fazle_contacts.display_name` contains any of these 8 lowercase tokens, the sender receives **no reply, no draft, no queue entry** (silent drop). Values are intentionally omitted from this KB article — they are internal guard strings that must not be exposed. Read directly from `modules/message_router/__init__.py` line 66.
 
 ---
 
@@ -82,7 +82,7 @@ Replies to these roles are always drafted, regardless of intent — except `offi
 | Condition | Rule |
 |---|---|
 | Sender == `ACCOUNTANT_PHONE` setting | Skip — accountant messages handled by separate accountant flow when role is resolved |
-| `wbom_contacts.display_name` contains any of the 8 name tokens | Skip — internal office contacts must not receive AI replies |
+| `fazle_contacts.display_name` contains any of the 8 name tokens | Skip — internal office contacts must not receive AI replies |
 | `fazle_contact_roles.role == "blocked"` | Skip — admin-blocked numbers |
 
 On silent skip: `log.info("[SILENT_SKIP] ...")` then `return "", None`. No draft created, no notification sent.
@@ -206,7 +206,7 @@ Three sub-steps, each fail-safe:
 ```python
 db_ctx = await get_contact_context(sender)
 ```
-Queries `wbom_contacts` and `wbom_employees` for sender name, relation, designation, salary, status. Returns empty string if no match.
+Queries `fazle_contacts` and `fazle_employees_legacy` for sender name, relation, designation, salary, status. Returns empty string if no match.
 
 **Sub-step 15-B — RAG enrichment:**
 ```python
@@ -232,7 +232,7 @@ return clean_general_reply(reply), None
 
 ## Complaint-Phrase Guard
 
-The complaint-phrase guard is enforced **upstream in `modules/bridge_poller`**, before messages reach `process_message()`. Financial complaints (specific Bengali phrases) trigger forced draft regardless of intent or role. See `bridge_poller.md` (Phase 4 article, TBD) for the guard implementation.
+The complaint-phrase guard is enforced **upstream in `modules/fazle_bridge_poller`**, before messages reach `process_message()`. Financial complaints (specific Bengali phrases) trigger forced draft regardless of intent or role. See `bridge_poller.md` (Phase 4 article, TBD) for the guard implementation.
 
 Within `message_router` itself, the complaint handling lives at Step 10 for employees: intents `employee_salary_complaint`, `legal_issue`, `payment_issue` force `create_draft_reply()` with `draft_type="complaint"`.
 
@@ -242,7 +242,7 @@ Within `message_router` itself, the complaint handling lives at Step 10 for empl
 
 Returns the last 5 inbound message bodies for a sender phone number, in chronological order.
 
-- Table: `wbom_whatsapp_messages`
+- Table: `fazle_whatsapp_messages`
 - Filter: `direction='inbound'`
 - Order: `received_at DESC LIMIT 5`, then reversed before return (chronological)
 - Used by step 7/8 to pass conversation history to `generate_recruitment_reply()`
@@ -253,8 +253,8 @@ Returns the last 5 inbound message bodies for a sender phone number, in chronolo
 ## `get_contact_context(phone)`
 
 Builds a 1–2 line string with contact info:
-- Line 1 (if found): `"<relation_name>: <display_name> (<company_name>)"` from `wbom_contacts`
-- Line 2 (if found): `"কর্মী: <name>, <designation>, বেতন: ৳<basic_salary>, স্ট্যাটাস: <status>"` from `wbom_employees`
+- Line 1 (if found): `"<relation_name>: <display_name> (<company_name>)"` from `fazle_contacts`
+- Line 2 (if found): `"কর্মী: <name>, <designation>, বেতন: ৳<basic_salary>, স্ট্যাটাস: <status>"` from `fazle_employees_legacy`
 
 Phone lookup uses all variants from `phone_normalizer`. Returns empty string on exception.
 

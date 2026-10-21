@@ -21,8 +21,8 @@ create_transaction(req: TransactionCreateRequest) -> TransactionRow
 Located at [`core/modules/fazle_payroll_engine/accounting.py`](core/modules/fazle_payroll_engine/accounting.py:30).
 
 This function:
-- Inserts into `fpe_cash_transactions`
-- Calls `_upsert_ledger()` internally (which updates `fpe_employee_ledger`)
+- Inserts into `fazle_cash_transactions`
+- Calls `_upsert_ledger()` internally (which updates `fazle_employee_ledger`)
 - Writes to `fpe_accounting_audit_logs`
 
 ### §1.2 — No Parallel Financial Logic
@@ -30,8 +30,8 @@ This function:
 No parallel transaction engine, no direct ledger writes, no bypass paths.
 
 **PROHIBITED:**
-- Direct `INSERT INTO fpe_cash_transactions` outside `create_transaction()`
-- Direct `INSERT/UPDATE fpe_employee_ledger` outside `_upsert_ledger()`
+- Direct `INSERT INTO fazle_cash_transactions` outside `create_transaction()`
+- Direct `INSERT/UPDATE fazle_employee_ledger` outside `_upsert_ledger()`
 - Re-parsing an accountant message to create a transaction
 - Creating financial records from raw WhatsApp messages without draft approval
 
@@ -74,7 +74,7 @@ ingest_message() → match_or_create_employee()
     ↓
 create_transaction()  [CANONICAL]
     ↓
-fpe_cash_transactions + fpe_employee_ledger
+fazle_cash_transactions + fazle_employee_ledger
 ```
 
 **Use case:** Admin directly instructs accountant to make a payment (e.g., escort duty payment, salary disbursement).
@@ -94,7 +94,7 @@ draft_approval.approve_draft()
     ↓
 create_transaction()  [CANONICAL]
     ↓
-fpe_cash_transactions + fpe_employee_ledger
+fazle_cash_transactions + fazle_employee_ledger
 ```
 
 **Use case:** Employee requests advance, salary, or emergency payment through the conversation system.
@@ -114,7 +114,7 @@ draft_approval.approve_draft()
     ↓
 create_transaction()  [CANONICAL]
     ↓
-fpe_cash_transactions + fpe_employee_ledger
+fazle_cash_transactions + fazle_employee_ledger
 ```
 
 **Use case:** System-generated drafts from escort program completion, payroll runs, or operator-initiated payment requests.
@@ -143,7 +143,7 @@ The following components are PROTECTED. They may be called but NEVER modified wi
 | `match_or_create_employee()` | [`employee.py:94`](core/modules/fazle_payroll_engine/employee.py:94) | 🔒 LOCKED |
 | WhatsApp Admin ↔ Accountant Flow | [`message_router/__init__.py`](core/modules/message_router/__init__.py) | 🔒 LOCKED |
 | Existing Payroll Engine | [`fazle_payroll_engine/`](core/modules/fazle_payroll_engine/) | 🔒 LOCKED |
-| Existing Ledger Calculation | `fpe_employee_ledger` schema | 🔒 LOCKED |
+| Existing Ledger Calculation | `fazle_employee_ledger` schema | 🔒 LOCKED |
 | Existing Employee Identity Rules | [`employee.py`](core/modules/fazle_payroll_engine/employee.py) | 🔒 LOCKED |
 
 ### §3.1 — Additive-Only Rule
@@ -303,8 +303,8 @@ Any proposed amendment must:
 
 | Command | Format | Path | Creates Transaction? |
 |---------|--------|------|---------------------|
-| `PAID` | `PAID <id> <amount> <method>` | Path-1 | ✅ Yes (via finalize_payment → wbom_cash_transactions) |
-| `ADVANCE` | `ADVANCE <id> <amount> <method>` | Path-1 | ✅ Yes (via finalize_payment → wbom_cash_transactions) |
+| `PAID` | `PAID <id> <amount> <method>` | Path-1 | ✅ Yes (via finalize_payment → fazle_cash_transactions_archive) |
+| `ADVANCE` | `ADVANCE <id> <amount> <method>` | Path-1 | ✅ Yes (via finalize_payment → fazle_cash_transactions_archive) |
 
 ### Draft Reply Commands (Non-Financial)
 

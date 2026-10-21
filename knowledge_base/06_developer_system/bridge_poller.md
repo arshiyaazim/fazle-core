@@ -8,7 +8,7 @@ runtime_index: true
 
 # Bridge Poller
 **KB Article ID:** DEV-06-BRIDGE-POLLER
-**Source:** `modules/bridge_poller/__init__.py` (read 2026-06-23; ESX-WIRE update 2026-06-23 Session 10; routing update 2026-06-23 Session 11)
+**Source:** `modules/fazle_bridge_poller/__init__.py` (read 2026-06-23; ESX-WIRE update 2026-06-23 Session 10; routing update 2026-06-23 Session 11)
 **Visibility:** Developer only
 **Certified:** 2026-06-23 (Wave-4, W4-AUTH); updated Session 10/11
 
@@ -16,7 +16,7 @@ runtime_index: true
 
 ## Purpose
 
-The bridge poller is the primary ingest mechanism for WhatsApp messages arriving at the two WhatsApp bridge instances. It polls SQLite message stores every 1–30 seconds (adaptive), persists every real DM to `wbom_whatsapp_messages`, and feeds the message processing pipeline.
+The bridge poller is the primary ingest mechanism for WhatsApp messages arriving at the two WhatsApp bridge instances. It polls SQLite message stores every 1–30 seconds (adaptive), persists every real DM to `fazle_whatsapp_messages`, and feeds the message processing pipeline.
 
 ---
 
@@ -24,7 +24,7 @@ The bridge poller is the primary ingest mechanism for WhatsApp messages arriving
 
 | Message Type | Treatment |
 |---|---|
-| DMs (`@s.whatsapp.net`) | **ALWAYS persisted** to `wbom_whatsapp_messages` before any router/draft logic. No early return drops a real DM silently. |
+| DMs (`@s.whatsapp.net`) | **ALWAYS persisted** to `fazle_whatsapp_messages` before any router/draft logic. No early return drops a real DM silently. |
 | Groups (`@g.us`) | SKIPPED ENTIRELY at SQL level — not persisted, no draft, no reply |
 | Newsletters (`@newsletter`) | SKIPPED ENTIRELY at SQL level |
 | `status@broadcast` | SKIPPED ENTIRELY at SQL level |
@@ -257,7 +257,7 @@ Messages blocked by the outbound send-gate are recorded in `outbound_safety_inci
 | `processed_bridge_messages` | Inbound dedup safety net |
 | `processed_outgoing_escort_messages` | Outgoing dedup for RELEASE CONFIRMED scan |
 | `outbound_safety_incidents` | Blocked send audit log |
-| `wbom_whatsapp_messages` | All persisted DMs (destination of ingest) |
+| `fazle_whatsapp_messages` | All persisted DMs (destination of ingest) |
 
 ---
 
@@ -270,7 +270,7 @@ LID → phone resolution
     ↓
 processed_bridge_messages dedup check → skip if already seen
     ↓
-wbom_whatsapp_messages INSERT (ALWAYS for DMs)
+fazle_whatsapp_messages INSERT (ALWAYS for DMs)
     ↓
 contact_sync.upsert_contact_from_message()
     ↓

@@ -81,7 +81,7 @@ async def _fetch_from_db(limit: int) -> list[dict[str, Any]]:
     async with db_conn() as conn:
         samples: list[dict[str, Any]] = []
         table_specs = [
-            ("wbom_whatsapp_messages", ("message_body", "body", "content", "message_text"), ("sender_number", "phone", "contact_identifier"), ("received_at", "created_at", "timestamp")),
+            ("fazle_whatsapp_messages", ("message_body", "body", "content", "message_text"), ("sender_number", "phone", "contact_identifier"), ("received_at", "created_at", "timestamp")),
             ("wbom_inbound_messages", ("message_text", "message_body", "body", "content"), ("sender_number", "phone", "from_number"), ("received_at", "created_at", "timestamp")),
             ("fazle_message_archive", ("message_text", "message_body", "body", "content"), ("sender", "sender_number", "phone"), ("created_at", "received_at", "timestamp")),
         ]
@@ -227,7 +227,7 @@ def render_report(payload: dict[str, Any]) -> str:
         "Low risk in current state because the layer is inert and shadow-only. Medium risk if wired before resolving fee policy and LLM quality gates. High risk if connected directly to live sends or DB mutations without owner review, because old-style social automation could expose sensitive or contradictory operational information.",
         "",
         "## 8. exact modules/files involved",
-        "Current core: core/modules/message_router, core/modules/recruitment_flow, core/modules/intent, core/modules/knowledge_base, core/modules/reply_templates, core/modules/rag, core/app/ollama. New shadow files: core/modules/conversation_layer and core/scripts/shadow_recruitment_conversation_layer.py. Old reference files: ai-call-platform/fazle-system/brain/prompt_router.py, brain/owner_control/response_playbooks.py, brain/knowledge/recruitment_canonical.md, social-engine/webhooks.py, social-engine/whatsapp.py.",
+        "Current core: core/modules/message_router, core/modules/recruitment_flow, core/modules/fazle_intent, core/modules/knowledge_base, core/modules/reply_templates, core/modules/rag, core/app/ollama. New shadow files: core/modules/conversation_layer and core/scripts/shadow_recruitment_conversation_layer.py. Old reference files: ai-call-platform/fazle-system/brain/prompt_router.py, brain/owner_control/response_playbooks.py, brain/knowledge/recruitment_canonical.md, social-engine/webhooks.py, social-engine/whatsapp.py.",
         "",
         "## 9. recommended architecture",
         "Keep message_router authoritative. Add conversation_layer as a read-only adapter: it receives sender/text/history, reads KB/RAG/templates, generates a candidate reply, classifies safety, and returns metadata. A future integration should place it only after recruitment intent is confirmed and before outbound delivery, with feature flags, audit logging, and owner review for uncertain replies.",

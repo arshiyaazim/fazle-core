@@ -58,7 +58,7 @@ class Test2InactiveEmployeeKBReply:
         # Mark employee inactive
         async with test_db_pool.acquire() as conn:
             await conn.execute(
-                "UPDATE wbom_employees SET status='Inactive' WHERE employee_id=$1",
+                "UPDATE fazle_employees_legacy SET status='Inactive' WHERE employee_id=$1",
                 seed_employee["employee_id"],
             )
 
@@ -284,13 +284,13 @@ class Test8NoTransaction:
 
         # Count before
         async with test_db_pool.acquire() as conn:
-            before = await conn.fetchval("SELECT COUNT(*) FROM wbom_cash_transactions")
+            before = await conn.fetchval("SELECT COUNT(*) FROM fazle_cash_transactions_archive")
 
         await _run_full_conversation(test_db_pool, phone, emp_id, "অগ্রিম চাই")
 
         # Count after
         async with test_db_pool.acquire() as conn:
-            after = await conn.fetchval("SELECT COUNT(*) FROM wbom_cash_transactions")
+            after = await conn.fetchval("SELECT COUNT(*) FROM fazle_cash_transactions_archive")
 
         assert before == after  # unchanged
 
@@ -310,12 +310,12 @@ class Test9NoLedger:
 
         # Check fazle_payment_drafts count before (drafts ARE created, but no ledger)
         async with test_db_pool.acquire() as conn:
-            txn_before = await conn.fetchval("SELECT COUNT(*) FROM wbom_cash_transactions")
+            txn_before = await conn.fetchval("SELECT COUNT(*) FROM fazle_cash_transactions_archive")
 
         await _run_full_conversation(test_db_pool, phone, emp_id, "অগ্রিম চাই")
 
         async with test_db_pool.acquire() as conn:
-            txn_after = await conn.fetchval("SELECT COUNT(*) FROM wbom_cash_transactions")
+            txn_after = await conn.fetchval("SELECT COUNT(*) FROM fazle_cash_transactions_archive")
             # Draft should exist but with status pending (not 'sent' which would mean finalized)
             draft_status = await conn.fetchval(
                 "SELECT status FROM fazle_payment_drafts WHERE employee_id=$1 ORDER BY id DESC LIMIT 1",
@@ -338,8 +338,8 @@ class Test10WhatsAppRegression:
         # The employee_conversation module does NOT import or modify
         # admin_commands, payment_workflow.finalize_payment, or the
         # accountant forward logic.  Verify the imports are intact.
-        from modules import admin_commands  # noqa: F401
-        from modules.payment_workflow import finalize_payment  # noqa: F401
+        from modules import fazle_admin_commands# noqa: F401
+        from modules.fazle_payment_workflow import finalize_payment  # noqa: F401
 
         # Verify employee_conversation does NOT call protected functions.
         # Use AST to check actual imports/calls (not docstring mentions).
@@ -365,7 +365,7 @@ class Test10WhatsAppRegression:
         assert "_upsert_ledger" not in calls
         assert "finalize_payment" not in calls
         assert "modules.fazle_payroll_engine.accounting" not in imports
-        assert "modules.payment_workflow" not in imports
+        assert "modules.fazle_payment_workflow" not in imports
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -504,17 +504,17 @@ class TestRegressionProtectedComponents:
         assert "parse_message" not in calls
 
     def test_no_wbom_cash_transactions_write(self):
-        """employee_conversation must never INSERT into wbom_cash_transactions."""
+        """employee_conversation must never INSERT into fazle_cash_transactions_archive."""
         import modules.employee_conversation as ec_mod
         with open(ec_mod.__file__) as f:
             source = f.read()
-        assert "INSERT INTO wbom_cash_transactions" not in source
-        assert "UPDATE wbom_cash_transactions" not in source
+        assert "INSERT INTO fazle_cash_transactions_archive" not in source
+        assert "UPDATE fazle_cash_transactions_archive" not in source
 
     def test_no_finalize_payment_call(self):
         imports, calls = self._source_lines()
         assert "finalize_payment" not in calls
-        assert "modules.payment_workflow" not in imports
+        assert "modules.fazle_payment_workflow" not in imports
 
     async def test_employee_balance_unchanged(self, test_db_pool, seed_employee):
         """Employee balance (basic_salary) must not change after draft creation."""
@@ -528,7 +528,7 @@ class TestRegressionProtectedComponents:
 
         async with test_db_pool.acquire() as conn:
             salary_before = await conn.fetchval(
-                "SELECT basic_salary FROM wbom_employees WHERE employee_id=$1",
+                "SELECT basic_salary FROM fazle_employees_legacy WHERE employee_id=$1",
                 emp_id,
             )
 
@@ -536,7 +536,7 @@ class TestRegressionProtectedComponents:
 
         async with test_db_pool.acquire() as conn:
             salary_after = await conn.fetchval(
-                "SELECT basic_salary FROM wbom_employees WHERE employee_id=$1",
+                "SELECT basic_salary FROM fazle_employees_legacy WHERE employee_id=$1",
                 emp_id,
             )
 

@@ -55,7 +55,7 @@ class TestProposal31NeverReinterpreted:
         """The exact live shape of proposal #31 -- action_type=
         business_record_review, evidence_refs=[txn_id, txn_ref] only, NO
         proposed_operation entry. Approving/executing it must remain a
-        pure acknowledgement, never touch fpe_cash_transactions."""
+        pure acknowledgement, never touch fazle_cash_transactions."""
         from modules.business_action_execution import execute_approved_business_action
         action = {
             "id": 31, "action_type": "business_record_review", "domain": "cash",
@@ -171,6 +171,6 @@ class TestProposalRejectNeverMutatesTarget:
         import inspect
         from modules.hermes_tasks import reject_action
         src = inspect.getsource(reject_action)
-        assert "fpe_cash_transactions" not in src
+        assert "fazle_cash_transactions" not in src
         assert "operator_approve" not in src
         assert "operator_reject" not in src

@@ -86,7 +86,7 @@ All pre-existing features (chat, model list, memory stats/history, file upload/O
 
 **Before this work:** `POST /api/wa/contacts/{phone}/block|unblock` (pre-existing) wrote a `phone_block.{phone}` flag into `fazle_runtime_settings`, but nothing read it — a dead control.
 
-**Now (Step 3):** `modules.bridge_poller._is_draft_always()` checks `phone_block.{phone}` first, before its existing static `DRAFT_ALWAYS_PHONES`/role/name-prefix checks. If `"true"`, that phone's messages are always drafted for admin review, never auto-sent.
+**Now (Step 3):** `modules.fazle_bridge_poller._is_draft_always()` checks `phone_block.{phone}` first, before its existing static `DRAFT_ALWAYS_PHONES`/role/name-prefix checks. If `"true"`, that phone's messages are always drafted for admin review, never auto-sent.
 
 Three ways to toggle it, all converging on the same `fazle_runtime_settings` key:
 1. Web: the existing block/unblock button in `wa_chat.html`.
@@ -136,7 +136,7 @@ Read/write via `modules.admin_directives`: `save_directive()`, `list_directives(
 
 **Component 1 — WhatsApp admin AI commands:** revert `modules/message_router/__init__.py`'s Step 6 diff (14 lines: 1 import + 1 if-block). Every other admin command (`PAID`, `APPROVE`, `chat_history`, etc.) is on a different, unaffected code path.
 
-**Component 2 — Auto-reply gate (`bridge_poller` + `planner_worker`):** disable per-number without any code change via `POST /api/wa/contacts/{phone}/unblock` or `AUTOREPLY ON <phone>`. To revert the code entirely, revert **both** `modules/bridge_poller/__init__.py` (Step 3) **and** `modules/social_auto_reply/planner_worker.py` (Step 7 fix) together — they are now interdependent (`_is_draft_always` is `async`, awaited in both call sites); reverting only one half reintroduces a bug.
+**Component 2 — Auto-reply gate (`bridge_poller` + `planner_worker`):** disable per-number without any code change via `POST /api/wa/contacts/{phone}/unblock` or `AUTOREPLY ON <phone>`. To revert the code entirely, revert **both** `modules/fazle_bridge_poller/__init__.py` (Step 3) **and** `modules/social_auto_reply/planner_worker.py` (Step 7 fix) together — they are now interdependent (`_is_draft_always` is `async`, awaited in both call sites); reverting only one half reintroduces a bug.
 
 **Component 3 — Admin directives DB table:** revert `modules/admin_directives/*` and the `/admin/directives` routes in `app/main.py` first; `DROP TABLE fazle_admin_directives;` is safe afterward (confirmed zero FK dependencies in either direction).
 
@@ -178,7 +178,7 @@ No new standalone `.env` variables were introduced — every new control uses th
 | `db/migrations/059_admin_directives.sql` | Created | `fazle_admin_directives` schema |
 | `modules/admin_directives/__init__.py` | Created | Directive CRUD |
 | `modules/admin_directives/router.py` | Created | WhatsApp command dispatch |
-| `modules/bridge_poller/__init__.py` | Modified | Wire `phone_block.{phone}` into `_is_draft_always()`, made async |
+| `modules/fazle_bridge_poller/__init__.py` | Modified | Wire `phone_block.{phone}` into `_is_draft_always()`, made async |
 | `modules/ai_console/registry.py` | Modified | `RT-015`, `BUS-015`, `BUS-016` |
 | `modules/ai_console/live_adapters.py` | Modified | 3 new handlers |
 | `modules/observability/db_queries.py` | Created | `get_recent_errors()` |

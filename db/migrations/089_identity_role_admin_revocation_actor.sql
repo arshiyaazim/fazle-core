@@ -12,7 +12,7 @@ ALTER TABLE wbom_identity_links
     ADD COLUMN IF NOT EXISTS revoked_by_admin_id BIGINT
         REFERENCES fazle_admins(id) ON DELETE SET NULL;
 
-CREATE INDEX IF NOT EXISTS idx_wbom_identity_links_revocation_actor
+CREATE INDEX IF NOT EXISTS idx_fazle_identity_links_revocation_actor
     ON wbom_identity_links (revoked_by_admin_id, revoked_at)
     WHERE revoked_at IS NOT NULL;
 

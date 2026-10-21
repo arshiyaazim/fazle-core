@@ -1,4 +1,8 @@
 # Sprint-3A Owner Report
+
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 ## Employee Conversation + Verification + Knowledge Base + Draft Generation
 
 **Date:** 2026-06-28
@@ -267,7 +271,7 @@ The following protected components were NOT modified and NOT called by `employee
 | Cash Ledger unchanged | `wbom_cash_transactions` count before/after | ✅ Verified (Test-8, Test-9) |
 | Employee Balance unchanged | `basic_salary` before/after | ✅ Verified |
 | Payroll unchanged | `wbom_payroll_runs` count before/after | ✅ Verified |
-| WhatsApp Accounting unchanged | `modules.admin_commands` importable | ✅ Verified |
+| WhatsApp Accounting unchanged | `modules.fazle_admin_commands` importable | ✅ Verified |
 | Existing Admin Payment Flow unchanged | `payment_workflow.finalize_payment` importable | ✅ Verified |
 | Existing `test_payment_workflow.py` | 23 tests | ✅ All PASS |
 | Existing `test_draft_reply.py` | 10 tests | ✅ All PASS |

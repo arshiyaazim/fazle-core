@@ -2,7 +2,7 @@
 Fazle Core — Payroll & Payment Logic (Phase 4G)
 
 Answers employee questions about salary, payments, duty count.
-Uses: fpe_cash_transactions, wbom_employees, wbom_escort_programs, wbom_salary_records
+Uses: fazle_cash_transactions, fazle_employees_legacy, wbom_escort_programs, wbom_salary_records
 
 NEVER fabricates amounts. If data is missing → returns under_review=True.
 """
@@ -56,21 +56,21 @@ async def get_payroll_summary(employee_id: int) -> PayrollSummary:
     # Employee base info
     emp = await fetch_one(
         """SELECT employee_id, employee_name, designation, basic_salary, status
-           FROM wbom_employees WHERE employee_id = $1""",
+           FROM fazle_employees_legacy WHERE employee_id = $1""",
         employee_id,
     )
     if not emp:
         return _empty_summary(employee_id)
 
-    # C1B: Payments this month from canonical fpe_cash_transactions.
-    # fpe_cash_transactions.employee_id FKs to fpe_employees(id), not the
+    # C1B: Payments this month from canonical fazle_cash_transactions.
+    # fazle_cash_transactions.employee_id FKs to fazle_employees(id), not the
     # WBOM employee_id used everywhere else in this function -- same
     # cross-system ID bug fixed in compute_run() (2026-07-18). Resolve the
-    # linked, active fpe_employees row first; no link -> no payment history
+    # linked, active fazle_employees row first; no link -> no payment history
     # (matches this function's existing "missing data -> under_review=True"
     # contract, not an error).
     fpe_link = await fetch_one(
-        "SELECT id FROM fpe_employees WHERE wbom_employee_id=$1 AND status='active'",
+        "SELECT id FROM fazle_employees WHERE wbom_employee_id=$1 AND status='active'",
         employee_id,
     )
     fpe_id = fpe_link["id"] if fpe_link else None
@@ -78,7 +78,7 @@ async def get_payroll_summary(employee_id: int) -> PayrollSummary:
     if fpe_id is not None:
         month_txns = await fetch_all(
             """SELECT amount, payout_method, txn_date, transaction_status
-               FROM fpe_cash_transactions
+               FROM fazle_cash_transactions
                WHERE employee_id = $1
                  AND txn_date >= $2
                  AND transaction_status = 'final'
@@ -87,7 +87,7 @@ async def get_payroll_summary(employee_id: int) -> PayrollSummary:
         )
         last_txn = await fetch_one(
             """SELECT amount, payout_method, txn_date
-               FROM fpe_cash_transactions
+               FROM fazle_cash_transactions
                WHERE employee_id = $1
                  AND transaction_status = 'final'
                ORDER BY txn_date DESC
@@ -95,7 +95,7 @@ async def get_payroll_summary(employee_id: int) -> PayrollSummary:
             fpe_id,
         )
         total_paid = await fetch_val(
-            "SELECT COALESCE(SUM(amount), 0) FROM fpe_cash_transactions "
+            "SELECT COALESCE(SUM(amount), 0) FROM fazle_cash_transactions "
             "WHERE employee_id = $1 AND transaction_status = 'final'",
             fpe_id,
         )

@@ -28,7 +28,7 @@ from shared.system_message import is_automated_system_message
 # ── F6 now covers bridge1 / bridge2 / bridge3 ───────────────────────────────
 
 def test_f6_gate_covers_all_three_whatsapp_bridges_not_meta():
-    from modules import bridge_poller as bp
+    from modules import fazle_bridge_poller as bp
     src = inspect.getsource(bp)
     # the F6 branch
     i = src.index("is_automated_system_message(text)")
@@ -64,7 +64,7 @@ def test_customer_reply_enqueues_use_inbound_bridge_as_source():
     """Every customer-facing enqueue in the poller's inbound path binds
     source_bridge to `bridge_name` (the bridge the message arrived on).
     No customer-reply enqueue may hard-code a different bridge or fan out."""
-    from modules import bridge_poller as bp
+    from modules import fazle_bridge_poller as bp
     src = inspect.getsource(bp._poll_bridge) if hasattr(bp, "_poll_bridge") else inspect.getsource(bp)
 
     # find the customer/non-admin reply dispatch region and check the enqueue calls
@@ -81,7 +81,7 @@ def test_customer_reply_enqueues_use_inbound_bridge_as_source():
 def test_no_fanout_one_inbound_at_most_one_customer_enqueue():
     """The customer/non-admin reply block must not loop over bridges or
     enqueue to more than one bridge for a single inbound."""
-    from modules import bridge_poller as bp
+    from modules import fazle_bridge_poller as bp
     src = inspect.getsource(bp)
     # the block that sends a customer reply
     start = src.index("# STEP 7: loop detection")
@@ -109,7 +109,7 @@ async def test_bridge3_held_even_with_global_recruitment_and_employee_true(monke
 
     monkeypatch.setattr("modules.wa_chat_frontend.get_runtime_setting", fake_get)
 
-    from modules.bridge_poller import _bridge_outbound_held, _bridge_pairing_state
+    from modules.fazle_bridge_poller import _bridge_outbound_held, _bridge_pairing_state
     held, state = await _bridge_outbound_held("bridge3")
     assert held is True
     # bridge1/bridge2 are released (unset) — the global toggles enable them

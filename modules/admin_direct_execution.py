@@ -122,7 +122,7 @@ async def execute_trusted_employee_creation(
     if not norm_mobile:
         return {"ok": False, "stage": "parse", "error": f"invalid mobile number: {parsed['employee_mobile']!r}"}
     existing = await fetch_one(
-        "SELECT employee_id, employee_name, status FROM wbom_employees WHERE employee_mobile = $1",
+        "SELECT employee_id, employee_name, status FROM fazle_employees_legacy WHERE employee_mobile = $1",
         norm_mobile,
     )
     if existing:

@@ -44,7 +44,7 @@ If the sender is the configured `ACCOUNTANT_PHONE`, the message is silently skip
 **Condition 3 — Blocked role:**
 If `fazle_contact_roles` contains `role='blocked'` for this phone, the message is silently skipped before any other check.
 
-**Business Rule:** Silent-skip means: no reply, no draft, no AI call, no log to the customer. The message is still saved to `wbom_whatsapp_messages`.
+**Business Rule:** Silent-skip means: no reply, no draft, no AI call, no log to the customer. The message is still saved to `fazle_whatsapp_messages`.
 
 **Example:** A message from "Al-Aqsa Operations Group" display name will never receive an auto-reply.
 
@@ -133,9 +133,9 @@ Method map:
 
 If this shorthand is detected in admin-accountant payment conversation, the system performs a final payment write to the canonical daily cash transaction ledger.
 
-- Canonical transaction table: `fpe_cash_transactions`
-- Legacy table is not used for new writes: `wbom_cash_transactions`
-- A missing employee is auto-created in `wbom_employees` from the authoritative instruction identity mobile.
+- Canonical transaction table: `fazle_cash_transactions`
+- Legacy table is not used for new writes: `fazle_cash_transactions_archive`
+- A missing employee is auto-created in `fazle_employees_legacy` from the authoritative instruction identity mobile.
 - The payment is stored as a finalized payroll-engine transaction with source channel `admin-accountant-instruction`.
 
 ### Idempotency and Safety
@@ -143,7 +143,7 @@ If this shorthand is detected in admin-accountant payment conversation, the syst
 - If the same source message is processed again, duplicate prevention keeps only one canonical transaction.
 - Existing auto-send/draft gates for other message classes remain unchanged.
 
-**Source Module:** `modules/payment_ingest`
+**Source Module:** `modules/fazle_payment_ingest`
 **Source Function:** `parse_admin_cash_shorthand()`, `ingest_admin_cash_entry()`, `_match_or_create_instruction_employee()`
 **Ledger Engine:** `modules/fazle_payroll_engine/payment_event.py`, `modules/fazle_payroll_engine/accounting.py`
 
@@ -180,8 +180,8 @@ After admin fills escort name and escort mobile and sends the completed slip fro
 1. The draft is confirmed (or created if no draft row is found) in `wbom_escort_programs`.
 2. Program is synced to escort roster DB (`escort_roster_entries`) via roster sync.
 3. Escort identity is auto-resolved/created in employee DB:
-	- `wbom_employees` row is created/updated from escort mobile.
-	- linked `fpe_employees` identity row is ensured.
+	- `fazle_employees_legacy` row is created/updated from escort mobile.
+	- linked `fazle_employees` identity row is ensured.
 4. Finalized slip is routed back to the originating client number.
 
 This completion message therefore acts as both:
@@ -193,7 +193,7 @@ This completion message therefore acts as both:
 
 Prefix-based contacts are protected by draft gates (`draft_name_prefixes`, `draft_always_names`) so non-safe flows stay under admin review.
 
-**Source Module:** `modules/message_router`, `modules/bridge_poller`, `modules/escort`, `modules/escort_roster/db.py`
+**Source Module:** `modules/message_router`, `modules/fazle_bridge_poller`, `modules/escort`, `modules/escort_roster/db.py`
 **Source Function:** `_should_silent_skip()`, `_is_draft_always()`, `handle_escort_client_message()`, `handle_admin_escort_completion()`, `_resolve_escort_employee_id()`
 
 ---

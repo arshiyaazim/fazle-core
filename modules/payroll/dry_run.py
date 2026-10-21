@@ -3,7 +3,7 @@ Fazle Core — Office Payroll: eligibility preview, dry run, reconciliation
 (Owner decision, 2026-07-10/11).
 
 Pure read/compute. Never mutates wbom_payroll_runs, wbom_payroll_run_items,
-fpe_cash_transactions, fazle_payment_drafts, or wbom_attendance.
+fazle_cash_transactions, fazle_payment_drafts, or wbom_attendance.
 
 Canonical formula: basic_salary / calendar_days_in_month * approved_duty_days.
 Duty days come only from wbom_attendance rows whose entry_source is
@@ -117,7 +117,7 @@ async def eligibility_preview(year: int, month: int) -> list[dict]:
 
     employees = await fetch_all(
         "SELECT employee_id, employee_name, designation, status, basic_salary "
-        "FROM wbom_employees ORDER BY employee_id"
+        "FROM fazle_employees_legacy ORDER BY employee_id"
     )
     results = []
     for emp_row in employees:
@@ -220,7 +220,7 @@ async def reconciliation_report(year: int, month: int) -> dict:
 
     orphans = await fetch_all(
         """SELECT wa.employee_id, COUNT(*) AS c FROM wbom_attendance wa
-           LEFT JOIN wbom_employees we ON we.employee_id = wa.employee_id
+           LEFT JOIN fazle_employees_legacy we ON we.employee_id = wa.employee_id
            WHERE we.employee_id IS NULL AND wa.attendance_date BETWEEN $1 AND $2
            GROUP BY wa.employee_id""",
         period_start, period_end,

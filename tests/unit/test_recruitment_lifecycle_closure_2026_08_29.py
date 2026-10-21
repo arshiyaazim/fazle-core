@@ -317,12 +317,12 @@ async def test_R18_candidate_links_to_employee_once(test_db_pool):
     async with test_db_pool.acquire() as c:
         await c.execute("DELETE FROM wbom_candidate_conversations")
         await c.execute("DELETE FROM wbom_candidates")
-        await c.execute("DELETE FROM wbom_employees")
+        await c.execute("DELETE FROM fazle_employees_legacy")
         cid = await c.fetchval(
             "INSERT INTO wbom_candidates (phone, funnel_stage, score, score_bucket, post_intake_status, full_name) "
             "VALUES ('8801812345678','scored',0,'cold','joining_ready','Karim') RETURNING candidate_id")
         eid = await c.fetchval(
-            "INSERT INTO wbom_employees (employee_name, employee_mobile, designation) "
+            "INSERT INTO fazle_employees_legacy (employee_name, employee_mobile, designation) "
             "VALUES ('Karim','01812345678','Escort') RETURNING employee_id")  # 01-form, candidate is 8801-form
     res = await rf.link_candidate_to_employee("01812345678", eid, employee_name="Karim")
     assert res["linked"] is True and res["candidate_id"] == cid
@@ -343,9 +343,9 @@ async def test_R18b_never_silently_repoints_to_different_employee(test_db_pool):
     db._pool = test_db_pool
     async with test_db_pool.acquire() as c:
         await c.execute("DELETE FROM wbom_candidates")
-        await c.execute("DELETE FROM wbom_employees")
-        e1 = await c.fetchval("INSERT INTO wbom_employees (employee_name, employee_mobile, designation) VALUES ('A','01900000001','Escort') RETURNING employee_id")
-        e2 = await c.fetchval("INSERT INTO wbom_employees (employee_name, employee_mobile, designation) VALUES ('B','01900000002','Escort') RETURNING employee_id")
+        await c.execute("DELETE FROM fazle_employees_legacy")
+        e1 = await c.fetchval("INSERT INTO fazle_employees_legacy (employee_name, employee_mobile, designation) VALUES ('A','01900000001','Escort') RETURNING employee_id")
+        e2 = await c.fetchval("INSERT INTO fazle_employees_legacy (employee_name, employee_mobile, designation) VALUES ('B','01900000002','Escort') RETURNING employee_id")
         await c.execute(
             "INSERT INTO wbom_candidates (phone, funnel_stage, score, score_bucket, linked_employee_id) "
             "VALUES ('8801900000001','scored',0,'cold',$1)", e1)
@@ -363,13 +363,13 @@ async def test_R19_continuity_survives_phone_change(test_db_pool):
     db._pool = test_db_pool
     async with test_db_pool.acquire() as c:
         await c.execute("DELETE FROM wbom_candidates")
-        await c.execute("DELETE FROM wbom_employees")
-        eid = await c.fetchval("INSERT INTO wbom_employees (employee_name, employee_mobile, designation) VALUES ('Karim','01555000001','Escort') RETURNING employee_id")
+        await c.execute("DELETE FROM fazle_employees_legacy")
+        eid = await c.fetchval("INSERT INTO fazle_employees_legacy (employee_name, employee_mobile, designation) VALUES ('Karim','01555000001','Escort') RETURNING employee_id")
         cid = await c.fetchval(
             "INSERT INTO wbom_candidates (phone, funnel_stage, score, score_bucket, linked_employee_id) "
             "VALUES ('8801555000001','scored',0,'cold',$1) RETURNING candidate_id", eid)
         # employee's phone later changes entirely
-        await c.execute("UPDATE wbom_employees SET employee_mobile='01999888777' WHERE employee_id=$1", eid)
+        await c.execute("UPDATE fazle_employees_legacy SET employee_mobile='01999888777' WHERE employee_id=$1", eid)
         found = await c.fetchval("SELECT candidate_id FROM wbom_candidates WHERE linked_employee_id=$1", eid)
     assert found == cid
 
@@ -403,7 +403,7 @@ async def test_R21_recruitment_history_retrievable_after_conversion(test_db_pool
 
 @pytest.mark.asyncio
 async def test_R20_employee_identity_outranks_candidate():
-    from modules.identity_brain import _ROLE_PRIORITY
+    from modules.fazle_identity_brain import _ROLE_PRIORITY
     assert _ROLE_PRIORITY["employee"] > _ROLE_PRIORITY["candidate"]
 
 
@@ -481,7 +481,7 @@ async def test_nl_shortlist_intent_is_phoneless_and_admin_readable(test_db_pool)
         await c.execute(
             "INSERT INTO wbom_candidates (phone, funnel_stage, score, score_bucket, post_intake_status, full_name, job_preference) "
             "VALUES ('8801755000001','scored',5,'cold','joining_ready','Karim','Escort')")
-    from modules.admin_commands.nl_router import classify_nl_intent, process_nl_admin_query
+    from modules.fazle_admin_commands.nl_router import classify_nl_intent, process_nl_admin_query
     assert classify_nl_intent("যারা চাকরি করতে রাজি তাদের দেখাও") == "willing_candidates"
     out = await process_nl_admin_query("রেডি লোকদের list দাও", "8801700000001")
     assert "Karim" in out and "8801755000001" in out

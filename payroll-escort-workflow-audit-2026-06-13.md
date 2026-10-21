@@ -1,5 +1,9 @@
 # Payroll Engine, Employee Finance & Escort Operations Audit
 
+
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **Audit date:** 2026-06-13  
 **Mode:** Read-only code and live database inspection  
 **Scope:** Employee onboarding, payroll, salary/advance requests, accountant cashbook, escort orders, roster, release, food/conveyance, media processing, AI reply, and learning
@@ -790,7 +794,7 @@ However, several original architectural gaps remain:
 | Escort payment calculation | Audit said payment draft selected missing `shift_type`; amount used `basic_salary / 30`, with inconsistent food/conveyance treatment. | `create_escort_payment_draft()` now selects valid program fields: `shift`, `end_shift`, `day_count`, `food_bill`, `conveyance`. Net payable is `(basic_salary / 30 * duty_days) - food_bill - conveyance - advances`. | Query breakage fixed; formula is more structured, but rate unification is still incomplete. |
 | Advance deduction | Audit said previous advances were deducted from last 60 days, not tied to program/period. | Current escort payment draft deducts advances only when `employee_id`, `program_id`, current payroll month, and non-reversed conditions match. | Improved specificity. |
 | Payment approval | Admin `PAID`/`ADVANCE` finalizes draft, writes WBOM cash transaction, sends accountant message. | Same final approval shape remains. `finalize_payment()` is transactional and idempotent by `payment-draft:<draft_id>`, but it does not call `sync_wbom_transaction()`. | WBOM idempotency improved, FPE canonical posting still missing. |
-| WBOM -> FPE sync | Audit noted `wbom_fpe_sync` existed but was outdated/not automatically invoked. | `modules/payment_ingest/wbom_fpe_sync.py` now has a current adapter using `match_or_create_employee()` and `create_transaction()`, plus date-range backfill. It is still not wired into `finalize_payment()` or payroll paid transitions. | Adapter improved; automatic write-path integration still pending. |
+| WBOM -> FPE sync | Audit noted `wbom_fpe_sync` existed but was outdated/not automatically invoked. | `modules/fazle_data_sync/__init__.py` now has a current adapter using `match_or_create_employee()` and `create_transaction()`, plus date-range backfill. It is still not wired into `finalize_payment()` or payroll paid transitions. | Adapter improved; automatic write-path integration still pending. |
 | Monthly payroll | WBOM payroll computes basic salary + completed escort days * fixed rate - WBOM advances; state machine draft -> reviewed -> approved -> locked -> paid. | Same model remains. `mark_paid()` updates payroll run state and audit log but does not create an FPE transaction. | Largely unchanged. |
 | Roster projection | Audit said roster is a secondary projection but also directly editable, causing ambiguity. | `sync_program_to_roster()` projection remains, and release finalization now upserts roster transactionally. Direct roster editing paths still exist. | Projection sync improved; two-way source ambiguity remains. |
 | Safe mode / internal operational sends | Audit identified admin notifications being suppressed when auto-reply was disabled, then noted a fix for internal notifications. | Current knowledge base indicates production activation changed `AUTO_REPLY_ENABLED=true` on 2026-06-23, and code has admin approval/draft paths that bypass the customer auto-reply gate. | Current runtime policy changed from the original snapshot; verify `.env` during ops audit. |

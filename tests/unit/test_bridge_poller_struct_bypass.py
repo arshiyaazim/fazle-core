@@ -2,7 +2,7 @@
 2026-08-24 (Owner BREAK_GLASS_APPROVED narrow STRUCT bypass for Hermes live
 Bridge-3 Recruitment/Employee conversational authority):
 
-Verify the patched STRUCT guard logic at modules/bridge_poller/__init__.py
+Verify the patched STRUCT guard logic at modules/fazle_bridge_poller/__init__.py
 lines 2248-2281 correctly:
 
   - bypasses length/table/headings heuristic for msg_intent in {recruitment, employee_inquiry}
@@ -23,7 +23,7 @@ STRUCT_TABLE_PIPE_MIN = 2
 
 def check_struct_guard(reply: str, msg_intent: str):
     """Verbatim copy of the patched STRUCT guard logic at
-    modules/bridge_poller/__init__.py:2266-2281.
+    modules/fazle_bridge_poller/__init__.py:2266-2281.
 
     Returns (decision, reason):
       decision is "ALLOW" or "BLOCK".

@@ -7,6 +7,10 @@ runtime_index: true
 ---
 
 # Module Alignment Report — Phase 4 Step 5
+
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **Program:** Organizational Brain Validation
 **Date:** 2026-06-22
 **Mode:** READ-ONLY AUDIT — No production code changed
@@ -225,7 +229,7 @@ Coverage % = (knowledge actually documented in KB) / (total knowledge that shoul
 
 | Dimension | Finding |
 |---|---|
-| Missing Knowledge | `fpe_employee_ledger` schema not documented; normalization rules (payment deduplication, amount matching thresholds) not documented; `fpe_unmatched_messages` review queue behavior not documented; `ai_enhance_parse()` (Ollama-based parse recovery at confidence < 0.7) not documented |
+| Missing Knowledge | `fazle_employee_ledger` schema not documented; normalization rules (payment deduplication, amount matching thresholds) not documented; `fpe_unmatched_messages` review queue behavior not documented; `ai_enhance_parse()` (Ollama-based parse recovery at confidence < 0.7) not documented |
 | Undocumented Workflow | Reconcile flow (accounting_worker creates transaction, checks duplicates, updates ledger) not fully in KB; reversal process (`REVERSAL` command) not documented; historical_sync_worker backfill completion criteria not documented |
 | Hidden Rules | `FPE_CASH_AUTHORIZED_PHONES` — only these phones can issue Cash commands; `FPE_INCOME_AUTHORIZED_PHONES` — only these can issue Income commands; silence of unauthorized senders (no error reply) not documented |
 | Visibility Risk | **CRITICAL:** FPE processes real financial transactions (bKash, Nagad, cash). None of this may be exposed to candidates or employees. Rule is in KB but the engine processes sensitive data the LLM must never access |
@@ -445,7 +449,7 @@ The original report covered 17 modules. A further audit on 2026-06-23 identified
 |---|---|
 | Missing Knowledge | All 28 API endpoints undocumented (contacts, messages, drafts, groups, settings, SSE stream); group broadcast feature not documented; per-number auto-reply block via `/block` endpoint not in KB; settings persistence (role-based auto-reply toggles stored to DB) not documented |
 | Undocumented Workflow | SSE real-time stream (`/api/wa/stream`) — event types (new messages + new drafts) not documented; contact book sync trigger flow not documented; cursor-paginated conversation history not documented |
-| Hidden Rules | Admin UI uses cursor pagination (not offset) for messages; group broadcast sends to each member individually (not a WA group send); contact deletion deletes from `wbom_contacts` only (does not delete WA contact) |
+| Hidden Rules | Admin UI uses cursor pagination (not offset) for messages; group broadcast sends to each member individually (not a WA group send); contact deletion deletes from `fazle_contacts` only (does not delete WA contact) |
 | Visibility Risk | MEDIUM — admin UI exposes conversation history, draft content, and auto-reply settings. Unauthorized access to this UI would expose all processed WhatsApp content |
 | Conflict Risk | None detected |
 | KB Article Mapping | None |
@@ -481,7 +485,7 @@ The original report covered 17 modules. A further audit on 2026-06-23 identified
 
 | Dimension | Finding |
 |---|---|
-| Missing Knowledge | `EmployeeCreate` model fields (13 fields: employee_name, employee_mobile, designation, joining_date, bkash_number, nagad_number, basic_salary, nid_number, emergency_contact, address, bank_account) not in KB; after INSERT, auto-seeds FPE via `match_or_create_employee` (non-fatal) — not documented; deactivation propagates to `fpe_employees` — not documented |
+| Missing Knowledge | `EmployeeCreate` model fields (13 fields: employee_name, employee_mobile, designation, joining_date, bkash_number, nagad_number, basic_salary, nid_number, emergency_contact, address, bank_account) not in KB; after INSERT, auto-seeds FPE via `match_or_create_employee` (non-fatal) — not documented; deactivation propagates to `fazle_employees` — not documented |
 | Undocumented Workflow | CRUD flow (create → FPE seed → return); deactivate flow (status='Inactive' → propagate to FPE); reactivation flow; employee search by name/phone |
 | Hidden Rules | `employee_mobile` is immutable after creation (identity anchor); deactivation is soft (status='Inactive', not deletion); FPE seed on employee creation fails silently (non-fatal) |
 | Visibility Risk | LOW (internal admin) |
@@ -538,7 +542,7 @@ The original report covered 17 modules. A further audit on 2026-06-23 identified
 
 | Dimension | Finding |
 |---|---|
-| Missing Knowledge | 5-step verification funnel (request → selfie → duty/release slip → payment method → draft creation) not fully documented; release slip fast-path (skip selfie if image already sent) not documented; identity mismatch handling (sender phone not in wbom_employees but matches master_mobile in wbom_escort_programs) not documented |
+| Missing Knowledge | 5-step verification funnel (request → selfie → duty/release slip → payment method → draft creation) not fully documented; release slip fast-path (skip selfie if image already sent) not documented; identity mismatch handling (sender phone not in fazle_employees_legacy but matches master_mobile in wbom_escort_programs) not documented |
 | Undocumented Workflow | Full advance request flow (5 steps); release slip flow (conditional 4-step); identity mismatch branch |
 | Hidden Rules | Sessions stored in `fazle_draft_replies` table (same table as drafts, reusing intent='verification'); identity mismatch sends a specific message asking employee to use registered number — this message content not in KB |
 | Visibility Risk | LOW (employee-facing, no sensitive data disclosed except the identity mismatch message) |

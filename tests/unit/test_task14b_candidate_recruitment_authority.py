@@ -364,7 +364,7 @@ async def test_H_accountant_report_command_never_reaches_semantic_gate(monkeypat
     gate_mock = AsyncMock(return_value=SemanticDecision(domain="no_match"))
     report_mock = AsyncMock(return_value="report handled")
     with (
-        patch("modules.admin_commands.is_report_command", MagicMock(return_value=True)),
+        patch("modules.fazle_admin_commands.is_report_command", MagicMock(return_value=True)),
         patch.object(router, "process_admin_command", report_mock),
         patch("modules.hermes_dispatch.semantic_gate", gate_mock),
         patch("modules.preflight_guard.is_feature_active", _flags(task13_candidate_recruitment_authoritative=True)),
@@ -382,7 +382,7 @@ async def test_I_admin_command_never_reaches_semantic_gate(monkeypatch):
     monkeypatch.setattr(router, "detect_identity", AsyncMock(return_value=identity))
     gate_mock = AsyncMock(return_value=SemanticDecision(domain="no_match"))
     with (
-        patch("modules.admin_commands.is_admin_command", MagicMock(return_value=True)),
+        patch("modules.fazle_admin_commands.is_admin_command", MagicMock(return_value=True)),
         patch.object(router, "process_admin_command", AsyncMock(return_value=("APPROVED", None))),
         patch("modules.hermes_dispatch.semantic_gate", gate_mock),
         patch("modules.preflight_guard.is_feature_active", _flags(task13_candidate_recruitment_authoritative=True)),

@@ -11,7 +11,7 @@ non-reproducible against the current parser (Phase 2 §2) before being
 folded into this batch.
 
 All 10 verified financially inert: escort_employee_id IS NULL,
-net_payable = 0.00, zero fpe_cash_transactions references.
+net_payable = 0.00, zero fazle_cash_transactions references.
 
 Run once: /home/azim/.venv/bin/python scripts/cleanup_legacy_expired_escort_rows_20260716.py
 """

@@ -11,7 +11,7 @@ Version: 061db330fa45
 
 ## A. Executive Summary
 
-After reading all key production files (`app/main.py`, `modules/message_router`, `modules/payment_workflow`, `modules/recruitment_flow`, `modules/attendance`, `modules/escort`, `modules/admin_commands`, `modules/rag`, `modules/escort_roster/calculations.py`, `db/migrate.py`) and every knowledge_base file in the new role-centric structure (`01`–`07` folders), the following is confirmed:
+After reading all key production files (`app/main.py`, `modules/message_router`, `modules/fazle_payment_workflow`, `modules/recruitment_flow`, `modules/attendance`, `modules/escort`, `modules/fazle_admin_commands`, `modules/rag`, `modules/escort_roster/calculations.py`, `db/migrate.py`) and every knowledge_base file in the new role-centric structure (`01`–`07` folders), the following is confirmed:
 
 **Good news:** The new knowledge_base architecture is structurally sound. Folder layout, visibility levels, cross-references, and the conflict-resolution decisions (C1–C9) are correctly applied.
 
@@ -52,7 +52,7 @@ Steps extracted from `modules/message_router/__init__.py`:
 
 Three independent triggers, any one causes skip:
 1. **Accountant phone match**: `settings.accountant_phone` → always skip
-2. **Display name tokens**: contact `display_name` in `wbom_contacts` contains any of: `"al-aqsa"`, `"escort"`, `"client"`, `"operation"`, `"tcis"`, `"gms"`, `"dalal"`, `"office"`
+2. **Display name tokens**: contact `display_name` in `fazle_contacts` contains any of: `"al-aqsa"`, `"escort"`, `"client"`, `"operation"`, `"tcis"`, `"gms"`, `"dalal"`, `"office"`
 3. **Blocked role**: `fazle_contact_roles.role = 'blocked'` for sender phone → skip
 
 Result: no reply, no draft, no admin notification. Silent discard.
@@ -319,12 +319,12 @@ From `app/main.py`:
 ### B16. DB Tables — Authoritative List
 
 **Core wbom_ tables (must not be renamed):**
-- `wbom_employees` — employee records
-- `wbom_contacts` — contact book with display_name, whatsapp_number, is_active
-- `wbom_whatsapp_messages` — all inbound/outbound messages
+- `fazle_employees_legacy` — employee records
+- `fazle_contacts` — contact book with display_name, whatsapp_number, is_active
+- `fazle_whatsapp_messages` — all inbound/outbound messages
 - `wbom_escort_programs` — escort program records
 - `wbom_attendance` — attendance records
-- `wbom_cash_transactions` — payment/advance/conveyance transaction ledger
+- `fazle_cash_transactions_archive` — payment/advance/conveyance transaction ledger
 - `wbom_relation_types` — contact relationship types
 
 **fazle_ tables (created by migrations):**

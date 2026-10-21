@@ -2,10 +2,10 @@
 -- Immutable ledger approach: never delete/modify original transactions.
 -- Reversals write a counter-row; adjustments link to the original draft.
 
--- ── Extend wbom_cash_transactions ─────────────────────────────────────────────
-ALTER TABLE wbom_cash_transactions
+-- ── Extend fazle_cash_transactions_archive ─────────────────────────────────────────────
+ALTER TABLE fazle_cash_transactions_archive
     ADD COLUMN IF NOT EXISTS is_reversed    BOOLEAN   DEFAULT false,
-    ADD COLUMN IF NOT EXISTS reversal_of    INTEGER   REFERENCES wbom_cash_transactions(transaction_id),
+    ADD COLUMN IF NOT EXISTS reversal_of    INTEGER   REFERENCES fazle_cash_transactions_archive(transaction_id),
     ADD COLUMN IF NOT EXISTS correction_note TEXT;
 
 -- ── Extend fazle_payment_drafts ───────────────────────────────────────────────

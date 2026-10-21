@@ -133,7 +133,7 @@ Owner, not something to infer and silently build.
    `complete`/`scored`.
 7. No recruitment semantic change (V2, Hermes, answer-first) may gain
    financial transaction authority — verified in WS5: zero recruitment/
-   Hermes-attributed rows in `fpe_cash_transactions`, ever.
+   Hermes-attributed rows in `fazle_cash_transactions`, ever.
 
 ### Golden regression suite
 

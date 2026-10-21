@@ -21,8 +21,8 @@ CREATE TABLE IF NOT EXISTS fpe_wa_messages (
     CONSTRAINT fpe_wa_messages_unique UNIQUE (wa_message_id, source)
 );
 
-CREATE INDEX IF NOT EXISTS idx_fpe_wam_chat   ON fpe_wa_messages(chat_jid, timestamp_wa DESC);
-CREATE INDEX IF NOT EXISTS idx_fpe_wam_source ON fpe_wa_messages(source, timestamp_wa DESC);
+CREATE INDEX IF NOT EXISTS idx_fazle_wam_chat   ON fpe_wa_messages(chat_jid, timestamp_wa DESC);
+CREATE INDEX IF NOT EXISTS idx_fazle_wam_source ON fpe_wa_messages(source, timestamp_wa DESC);
 
 -- ── 2. Per-message processing FSM ────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS fpe_message_processing_state (
@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS fpe_message_processing_state (
     CONSTRAINT fpe_mps_unique UNIQUE (fpe_wa_message_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_fpe_mps_status ON fpe_message_processing_state(status, queued_at);
+CREATE INDEX IF NOT EXISTS idx_fazle_mps_status ON fpe_message_processing_state(status, queued_at);
 
 -- ── 3. Parser results (what was extracted from each message) ──────────────────
 CREATE TABLE IF NOT EXISTS fpe_parser_results (
@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS fpe_parser_results (
 );
 
 -- ── 4. Employees ──────────────────────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS fpe_employees (
+CREATE TABLE IF NOT EXISTS fazle_employees (
     id                BIGSERIAL    PRIMARY KEY,
     employee_code     TEXT         UNIQUE,             -- EMP-00001 (auto-assigned)
     full_name         TEXT         NOT NULL,
@@ -67,28 +67,28 @@ CREATE TABLE IF NOT EXISTS fpe_employees (
     updated_at        TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_fpe_emp_primary_phone ON fpe_employees(primary_phone);
-CREATE INDEX IF NOT EXISTS idx_fpe_emp_id_phone      ON fpe_employees(employee_id_phone);
-CREATE INDEX IF NOT EXISTS idx_fpe_emp_name_norm     ON fpe_employees(name_normalized);
+CREATE INDEX IF NOT EXISTS idx_fazle_emp_primary_phone ON fazle_employees(primary_phone);
+CREATE INDEX IF NOT EXISTS idx_fazle_emp_id_phone      ON fazle_employees(employee_id_phone);
+CREATE INDEX IF NOT EXISTS idx_fazle_emp_name_norm     ON fazle_employees(name_normalized);
 
 -- ── 5. Employee aliases (multi-phone / multi-name per employee) ───────────────
 CREATE TABLE IF NOT EXISTS fpe_employee_aliases (
     id           BIGSERIAL   PRIMARY KEY,
-    employee_id  BIGINT      NOT NULL REFERENCES fpe_employees(id) ON DELETE CASCADE,
+    employee_id  BIGINT      NOT NULL REFERENCES fazle_employees(id) ON DELETE CASCADE,
     alias_type   TEXT        NOT NULL,   -- 'phone' | 'name' | 'employee_id'
     alias_value  TEXT        NOT NULL,
     created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT fpe_aliases_unique UNIQUE (alias_type, alias_value)
 );
 
-CREATE INDEX IF NOT EXISTS idx_fpe_aliases_lookup ON fpe_employee_aliases(alias_type, alias_value);
+CREATE INDEX IF NOT EXISTS idx_fazle_aliases_lookup ON fpe_employee_aliases(alias_type, alias_value);
 
 -- ── 6. Cash transactions (immutable accounting events) ───────────────────────
-CREATE TABLE IF NOT EXISTS fpe_cash_transactions (
+CREATE TABLE IF NOT EXISTS fazle_cash_transactions (
     id                  BIGSERIAL     PRIMARY KEY,
     txn_ref             TEXT          UNIQUE NOT NULL,   -- fpe-TXN-<sha256_8>
     fpe_wa_message_id   BIGINT        REFERENCES fpe_wa_messages(id),
-    employee_id         BIGINT        REFERENCES fpe_employees(id),
+    employee_id         BIGINT        REFERENCES fazle_employees(id),
     employee_name_raw   TEXT,                            -- as parsed
     amount              NUMERIC(12,2) NOT NULL,
     payout_phone        TEXT,                            -- 01XXXXXXXXX
@@ -98,20 +98,20 @@ CREATE TABLE IF NOT EXISTS fpe_cash_transactions (
     -- salary | advance | bonus | deduction | correction
     source_message_text TEXT,
     is_reversal         BOOLEAN       NOT NULL DEFAULT FALSE,
-    reversed_txn_id     BIGINT        REFERENCES fpe_cash_transactions(id),
+    reversed_txn_id     BIGINT        REFERENCES fazle_cash_transactions(id),
     accounting_period   TEXT,                            -- YYYY-MM
     created_at          TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
     created_by          TEXT          NOT NULL DEFAULT 'fpe_engine'
 );
 
-CREATE INDEX IF NOT EXISTS idx_fpe_txn_employee ON fpe_cash_transactions(employee_id, txn_date);
-CREATE INDEX IF NOT EXISTS idx_fpe_txn_period   ON fpe_cash_transactions(accounting_period);
-CREATE INDEX IF NOT EXISTS idx_fpe_txn_phone    ON fpe_cash_transactions(payout_phone);
+CREATE INDEX IF NOT EXISTS idx_fazle_txn_employee ON fazle_cash_transactions(employee_id, txn_date);
+CREATE INDEX IF NOT EXISTS idx_fazle_txn_period   ON fazle_cash_transactions(accounting_period);
+CREATE INDEX IF NOT EXISTS idx_fazle_txn_phone    ON fazle_cash_transactions(payout_phone);
 
 -- ── 7. Employee ledger (running totals per employee per month) ────────────────
-CREATE TABLE IF NOT EXISTS fpe_employee_ledger (
+CREATE TABLE IF NOT EXISTS fazle_employee_ledger (
     id                BIGSERIAL     PRIMARY KEY,
-    employee_id       BIGINT        NOT NULL REFERENCES fpe_employees(id),
+    employee_id       BIGINT        NOT NULL REFERENCES fazle_employees(id),
     accounting_period TEXT          NOT NULL,   -- YYYY-MM
     opening_balance   NUMERIC(12,2) NOT NULL DEFAULT 0,
     total_earned      NUMERIC(12,2) NOT NULL DEFAULT 0,
@@ -120,7 +120,7 @@ CREATE TABLE IF NOT EXISTS fpe_employee_ledger (
     closing_balance   NUMERIC(12,2) NOT NULL DEFAULT 0,
     txn_count         INT           NOT NULL DEFAULT 0,
     last_updated      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-    CONSTRAINT fpe_ledger_unique UNIQUE (employee_id, accounting_period)
+    CONSTRAINT fazle_ledger_unique UNIQUE (employee_id, accounting_period)
 );
 
 -- ── 8. Unmatched messages (parse failure or no employee match) ────────────────
@@ -147,7 +147,7 @@ CREATE TABLE IF NOT EXISTS fpe_accounting_audit_logs (
     created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_fpe_audit_entity ON fpe_accounting_audit_logs(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_fazle_audit_entity ON fpe_accounting_audit_logs(entity_type, entity_id);
 
 -- ── 10. Sync checkpoints (resume-safe per bridge source) ─────────────────────
 CREATE TABLE IF NOT EXISTS fpe_sync_checkpoints (

@@ -45,16 +45,16 @@ A "Knowledge Unit" (KU) is one distinct, documentable fact about how the product
 | **modules/escort_roster** | sync_program, sync_all, recalculate, get_summary | 6 | 1 | 5 | 17% |
 | **modules/escort_slip_extractor** | EscortSlipResult, doc types, blacklist, signatures | 18 | 0 | 18 | 0% |
 | **modules/fazle_payroll_engine** | 5 workers, FPE SM, MessageType, 4 tables, routes | 20 | 0 | 20 | 0% |
-| **modules/identity_brain** | 11 roles, 8 sources, algorithm, confidence | 20 | 6 | 14 | 30% |
-| **modules/media_normalization** | OCR candidate detection, placeholder text | 6 | 1 | 5 | 17% |
+| **modules/fazle_identity_brain** | 11 roles, 8 sources, algorithm, confidence | 20 | 6 | 14 | 30% |
+| **modules/fazle_media_normalization** | OCR candidate detection, placeholder text | 6 | 1 | 5 | 17% |
 | **modules/memory_extractor** | Fact extraction, user_profiles, user_memory, should_update_kb | 8 | 0 | 8 | 0% |
-| **modules/message_archive** | save_message, canonical_phone, message_hash, critical_contact | 6 | 0 | 6 | 0% |
+| **modules/fazle_message_archive** | save_message, canonical_phone, message_hash, critical_contact | 6 | 0 | 6 | 0% |
 | **modules/observability** | inc/gauge/observe, Prometheus /metrics | 6 | 0 | 6 | 0% |
 | **modules/outbound** | Queue states, DLQ, backoff, circuit breaker, multi-channel | 15 | 0 | 15 | 0% |
 | **modules/payment** | Thin re-export, no logic | 1 | 1 | 0 | 100% |
 | **modules/payment_correction** | DORMANT: 0 callers, 3 functions | 3 | 0 | 3 | 0% |
-| **modules/payment_ingest** | SMS parser, cash shorthand parser | 8 | 1 | 7 | 12% |
-| **modules/payment_workflow** | Draft creation, advance keywords, daily rate formula | 15 | 4 | 11 | 27% |
+| **modules/fazle_payment_ingest** | SMS parser, cash shorthand parser | 8 | 1 | 7 | 12% |
+| **modules/fazle_payment_workflow** | Draft creation, advance keywords, daily rate formula | 15 | 4 | 11 | 27% |
 | **modules/payroll** | State machine, ALLOWED_TRANSITIONS, idempotency, compute | 12 | 0 | 12 | 0% |
 | **modules/payroll_logic** | PayrollSummary TypedDict, under_review, duty_count_30d | 5 | 1 | 4 | 20% |
 | **modules/rag** | BM25, chunk, tokenizer, safety filters, stop words | 18 | 3 | 15 | 17% |
@@ -104,7 +104,7 @@ A "Knowledge Unit" (KU) is one distinct, documentable fact about how the product
 |---|---|---|
 | `modules/attendance` | 40% | `05_workflows/attendance_workflow.md` |
 | `modules/recruitment_flow` | 33% | `04_business_rules/recruitment_business_rules.md` |
-| `modules/identity_brain` | 30% | `03_ai_identity/identity_overview.md` |
-| `modules/payment_workflow` | 27% | `05_workflows/payment_workflow.md` |
+| `modules/fazle_identity_brain` | 30% | `03_ai_identity/identity_overview.md` |
+| `modules/fazle_payment_workflow` | 27% | `05_workflows/payment_workflow.md` |
 | `modules/attendance_parser` | 25% | `05_workflows/attendance_workflow.md` |
 | `modules/escort` | 20% | `05_workflows/escort_workflow.md` |

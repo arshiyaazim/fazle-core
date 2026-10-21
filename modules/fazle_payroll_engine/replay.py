@@ -1,7 +1,7 @@
 """
 Bridge1 DM Historical Replay
 =============================
-Replays bridge1 messages stored in wbom_whatsapp_messages (via bridge_poller)
+Replays bridge1 messages stored in fazle_whatsapp_messages (via bridge_poller)
 that have never been ingested into fpe_wa_messages.
 
 Usage:
@@ -9,7 +9,7 @@ Usage:
     python -m modules.fazle_payroll_engine.replay [--since YYYY-MM-DD] [--dry-run]
 
 The script:
-1. Reads wbom_whatsapp_messages WHERE platform='bridge1'
+1. Reads fazle_whatsapp_messages WHERE platform='bridge1'
    AND (optionally) timestamp >= since
 2. For each message, calls ingest_message() — idempotent, safe to re-run
 3. Prints a summary at the end
@@ -65,7 +65,7 @@ async def _do_replay(since, dry_run, _fetch, ingest_message, IngestionRequest) -
 
     log.info("Replay bridge1 DMs since=%s  dry_run=%s", since_dt.isoformat(), dry_run)
 
-    # wbom_whatsapp_messages schema: message_id (PK), sender_number, message_body,
+    # fazle_whatsapp_messages schema: message_id (PK), sender_number, message_body,
     # direction, platform, received_at — no raw WA msg ID, no chat_jid stored.
     # We derive: wa_message_id = 'wbom_' + message_id (stable, avoids collision
     # with historical-sync which uses raw SQLite IDs).
@@ -77,7 +77,7 @@ async def _do_replay(since, dry_run, _fetch, ingest_message, IngestionRequest) -
             message_body,
             direction,
             received_at
-        FROM wbom_whatsapp_messages
+        FROM fazle_whatsapp_messages
         WHERE platform = 'bridge1'
           AND direction = 'inbound'
           AND received_at >= $1

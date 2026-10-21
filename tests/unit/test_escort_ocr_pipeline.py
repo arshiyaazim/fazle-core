@@ -23,14 +23,14 @@ pytestmark = pytest.mark.unit
 # ── 1. _find_bridge_image_file() ──────────────────────────────────────────────
 
 @pytest.mark.xfail(
-    reason="_find_bridge_image_file not yet implemented in modules.bridge_poller",
+    reason="_find_bridge_image_file not yet implemented in modules.fazle_bridge_poller",
     strict=True,
 )
 class TestFindBridgeImageFile:
     """Unit tests for the helper that reconstructs the bridge image file path."""
 
     def _fn(self, messages_db: str, chat_jid: str, timestamp_str: str) -> Optional[str]:
-        from modules.bridge_poller import _find_bridge_image_file
+        from modules.fazle_bridge_poller import _find_bridge_image_file
         return _find_bridge_image_file(messages_db, chat_jid, timestamp_str)
 
     def test_finds_exact_timestamp_match(self, tmp_path):

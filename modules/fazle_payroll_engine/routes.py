@@ -203,14 +203,14 @@ async def _mark_stale_employees_inactive() -> int:
         """
         WITH latest_paid AS (
             SELECT employee_id, MAX(txn_date) AS last_payment_date
-            FROM fpe_cash_transactions
+            FROM fazle_cash_transactions
             WHERE employee_id IS NOT NULL
               AND NOT is_reversal
               AND deleted_at IS NULL
             GROUP BY employee_id
         )
         SELECT e.id
-        FROM fpe_employees e
+        FROM fazle_employees e
         JOIN latest_paid lp ON lp.employee_id = e.id
         WHERE e.status = 'active'
           AND lp.last_payment_date < $1
@@ -222,7 +222,7 @@ async def _mark_stale_employees_inactive() -> int:
         return 0
 
     await execute(
-        "UPDATE fpe_employees SET status = 'inactive', updated_at = NOW() "
+        "UPDATE fazle_employees SET status = 'inactive', updated_at = NOW() "
         "WHERE id = ANY($1::int[]) AND status = 'active'",
         employee_ids,
     )
@@ -251,7 +251,7 @@ async def _resolve_review_employee_candidate(
         phone_row = await fetch_one(
             """
             SELECT e.id, e.full_name, e.employee_id_phone, e.primary_phone, e.canonical_employee_id
-            FROM fpe_employees e
+            FROM fazle_employees e
             LEFT JOIN fpe_employee_aliases a
               ON a.employee_id = e.id AND a.alias_type = 'phone'
             WHERE e.status = 'active'
@@ -280,7 +280,7 @@ async def _resolve_review_employee_candidate(
             name_rows = await fetch_all(
                 """
                 SELECT id, canonical_employee_id, full_name, primary_phone, employee_id_phone
-                FROM fpe_employees
+                FROM fazle_employees
                 WHERE status = 'active'
                   AND (
                     name_normalized = $1
@@ -317,7 +317,7 @@ async def _resolve_review_employee_candidate(
 @router.get("/health")
 async def health():
     total_msgs = await fetch_val("SELECT COUNT(*) FROM fpe_wa_messages") or 0
-    total_txns = await fetch_val("SELECT COUNT(*) FROM fpe_cash_transactions WHERE NOT is_reversal") or 0
+    total_txns = await fetch_val("SELECT COUNT(*) FROM fazle_cash_transactions WHERE NOT is_reversal") or 0
     pending = await fetch_val(
         "SELECT COUNT(*) FROM fpe_message_processing_state WHERE status='pending'"
     ) or 0
@@ -421,9 +421,9 @@ async def list_transactions(
                            AS employee_display_id_phone,
             COALESCE(c.primary_phone, e.primary_phone, t.payout_phone)
                            AS employee_display_phone
-        FROM fpe_cash_transactions t
-        LEFT JOIN fpe_employees e ON e.id = t.employee_id
-        LEFT JOIN fpe_employees c
+        FROM fazle_cash_transactions t
+        LEFT JOIN fazle_employees e ON e.id = t.employee_id
+        LEFT JOIN fazle_employees c
                ON c.id = COALESCE(e.canonical_employee_id, e.id)
         WHERE {where.replace('employee_id', 't.employee_id')
                     .replace('accounting_period', 't.accounting_period')
@@ -441,7 +441,7 @@ async def list_transactions(
                    COALESCE(SUM(amount),0)::numeric AS total_amount,
                    MIN(txn_date) AS first_txn,
                    MAX(txn_date) AS last_txn
-              FROM fpe_cash_transactions WHERE {where}""",
+              FROM fazle_cash_transactions WHERE {where}""",
         *params[:-2],
     )
     summary = dict(summary_row) if summary_row else {"total": 0, "total_amount": 0, "first_txn": None, "last_txn": None}
@@ -486,9 +486,9 @@ async def get_transaction(txn_id: int):
                               AS employee_display_id_phone,
                COALESCE(c.primary_phone, e.primary_phone, t.payout_phone)
                               AS employee_display_phone
-        FROM fpe_cash_transactions t
-        LEFT JOIN fpe_employees e ON e.id = t.employee_id
-        LEFT JOIN fpe_employees c
+        FROM fazle_cash_transactions t
+        LEFT JOIN fazle_employees e ON e.id = t.employee_id
+        LEFT JOIN fazle_employees c
                ON c.id = COALESCE(e.canonical_employee_id, e.id)
         WHERE t.id = $1
         """,
@@ -516,7 +516,7 @@ async def reverse_txn(txn_id: int, req: ReversalRequest):
 @router.post("/transactions/manual", dependencies=[Depends(_require_admin_role)])
 async def create_manual_txn(req: ManualTxnRequest):
     emp = await fetch_one(
-        "SELECT id, status FROM fpe_employees WHERE id = $1",
+        "SELECT id, status FROM fazle_employees WHERE id = $1",
         req.employee_id,
     )
     if not emp:
@@ -610,7 +610,7 @@ async def list_employees(
     where_sql = " AND ".join(where)
 
     total = await fetch_val(
-        f"SELECT COUNT(*) FROM fpe_employees e WHERE {where_sql}", *params
+        f"SELECT COUNT(*) FROM fazle_employees e WHERE {where_sql}", *params
     )
 
     params.extend([limit, offset])
@@ -639,7 +639,7 @@ async def list_employees(
                e.employee_id_phone, e.department, e.status,
                e.basic_salary, e.designation, e.joining_date,
                  e.created_source, e.created_at
-          FROM fpe_employees e
+          FROM fazle_employees e
           WHERE {where_sql}
           ORDER BY {inner_order}
           LIMIT ${len(params) - 1} OFFSET ${len(params)}
@@ -647,7 +647,7 @@ async def list_employees(
         members AS (
           SELECT c.id AS canon_id, m.id AS member_id
           FROM canon c
-          JOIN fpe_employees m
+          JOIN fazle_employees m
             ON m.id = c.id OR m.canonical_employee_id = c.id
         ),
         agg AS (
@@ -656,7 +656,7 @@ async def list_employees(
                  COALESCE(SUM(t.amount),0)  AS total_paid,
                  MAX(t.txn_date)            AS last_payment_date
           FROM members mb
-          LEFT JOIN fpe_cash_transactions t
+          LEFT JOIN fazle_cash_transactions t
                  ON t.employee_id = mb.member_id AND t.is_reversal = FALSE
           GROUP BY mb.canon_id
         ),
@@ -664,7 +664,7 @@ async def list_employees(
            SELECT mb.canon_id,
                COALESCE(SUM(l.total_advance), 0) AS total_advance
            FROM members mb
-           LEFT JOIN fpe_employee_ledger l ON l.employee_id = mb.member_id
+           LEFT JOIN fazle_employee_ledger l ON l.employee_id = mb.member_id
            GROUP BY mb.canon_id
          ),
         aliases AS (
@@ -774,13 +774,13 @@ async def search_employees(
 
     if phone_norm:
         for r in await fetch_all(
-            "SELECT id FROM fpe_employees WHERE employee_id_phone = $1 LIMIT $2",
+            "SELECT id FROM fazle_employees WHERE employee_id_phone = $1 LIMIT $2",
             phone_norm, limit,
         ):
             _add(r["id"], "employee_id_phone", 1)
     if phone_norm and len(matches) < limit:
         for r in await fetch_all(
-            "SELECT id FROM fpe_employees WHERE primary_phone = $1 LIMIT $2",
+            "SELECT id FROM fazle_employees WHERE primary_phone = $1 LIMIT $2",
             phone_norm, limit,
         ):
             _add(r["id"], "primary_phone", 2)
@@ -797,14 +797,14 @@ async def search_employees(
     # with no distinction, inconsistent with every other tier here.
     if name_norm and len(matches) < limit:
         for r in await fetch_all(
-            "SELECT id FROM fpe_employees WHERE name_normalized = $1 AND status = 'active' LIMIT $2",
+            "SELECT id FROM fazle_employees WHERE name_normalized = $1 AND status = 'active' LIMIT $2",
             name_norm, limit,
         ):
             _add(r["id"], "name_exact", 4)
     if name_norm and len(matches) < limit:
         for r in await fetch_all(
             "SELECT a.employee_id FROM fpe_employee_aliases a "
-            "JOIN fpe_employees e ON e.id = a.employee_id "
+            "JOIN fazle_employees e ON e.id = a.employee_id "
             "WHERE a.alias_type = 'name' AND a.alias_value = $1 AND e.status = 'active' LIMIT $2",
             name_norm, limit,
         ):
@@ -816,7 +816,7 @@ async def search_employees(
             fuzz = None
         if fuzz is not None:
             cand = await fetch_all(
-                "SELECT id, name_normalized FROM fpe_employees "
+                "SELECT id, name_normalized FROM fazle_employees "
                 "WHERE name_normalized IS NOT NULL AND status = 'active'"
             )
             scored: list[tuple[int, float]] = []
@@ -834,7 +834,7 @@ async def search_employees(
     for src_id, match_type, prio in matches:
         src_row = await fetch_one(
             "SELECT id, canonical_employee_id, full_name, primary_phone, "
-            "name_normalized, employee_code FROM fpe_employees WHERE id = $1",
+            "name_normalized, employee_code FROM fazle_employees WHERE id = $1",
             src_id,
         )
         if not src_row:
@@ -911,14 +911,14 @@ async def suggest_employees(
         # Tier 1: exact employee_id_phone
         if phone_norm:
             for r in await fetch_all(
-                "SELECT id FROM fpe_employees WHERE employee_id_phone = $1",
+                "SELECT id FROM fazle_employees WHERE employee_id_phone = $1",
                 phone_norm,
             ):
                 _bump(r["id"], 1.00, "employee_id_phone")
         # Tier 2: exact primary_phone OR payout_phone (via txn lookup)
         if phone_norm:
             for r in await fetch_all(
-                "SELECT id FROM fpe_employees WHERE primary_phone = $1",
+                "SELECT id FROM fazle_employees WHERE primary_phone = $1",
                 phone_norm,
             ):
                 _bump(r["id"], 0.95, "primary_phone")
@@ -929,7 +929,7 @@ async def suggest_employees(
             ):
                 _bump(r["employee_id"], 0.93, "alias_phone")
             for r in await fetch_all(
-                "SELECT DISTINCT employee_id FROM fpe_cash_transactions "
+                "SELECT DISTINCT employee_id FROM fazle_cash_transactions "
                 "WHERE payout_phone = $1 AND employee_id IS NOT NULL LIMIT 20",
                 phone_norm,
             ):
@@ -938,7 +938,7 @@ async def suggest_employees(
         if digits_tail:
             like = f"%{digits_tail}%"
             for r in await fetch_all(
-                "SELECT id FROM fpe_employees "
+                "SELECT id FROM fazle_employees "
                 "WHERE employee_id_phone LIKE $1 OR primary_phone LIKE $1 LIMIT 20",
                 like,
             ):
@@ -953,7 +953,7 @@ async def suggest_employees(
 
         # Tier 3: exact normalized name / full_name
         for r in await fetch_all(
-            "SELECT id FROM fpe_employees "
+            "SELECT id FROM fazle_employees "
             "WHERE lower(name_normalized) = $1 OR lower(full_name) = $1",
             qlow,
         ):
@@ -963,7 +963,7 @@ async def suggest_employees(
         # ("al-momin" == "al momin" == "almomin" → all collapse to "almomin")
         if q_collapsed and len(q_collapsed) >= 2:
             for r in await fetch_all(
-                "SELECT id FROM fpe_employees "
+                "SELECT id FROM fazle_employees "
                 "WHERE regexp_replace(lower(coalesce(full_name,'')), '[^a-z0-9]+', '', 'g') = $1",
                 q_collapsed,
             ):
@@ -986,7 +986,7 @@ async def suggest_employees(
 
         # Tier 5: prefix on full_name / aliases
         for r in await fetch_all(
-            "SELECT id FROM fpe_employees "
+            "SELECT id FROM fazle_employees "
             "WHERE lower(full_name) LIKE $1 OR lower(name_normalized) LIKE $1 LIMIT 30",
             prefix_like,
         ):
@@ -1001,7 +1001,7 @@ async def suggest_employees(
         # Tier 5b: prefix on COLLAPSED form
         if col_prefix and len(q_collapsed) >= 2:
             for r in await fetch_all(
-                "SELECT id FROM fpe_employees "
+                "SELECT id FROM fazle_employees "
                 "WHERE regexp_replace(lower(coalesce(full_name,'')), '[^a-z0-9]+', '', 'g') LIKE $1 "
                 "LIMIT 30",
                 col_prefix,
@@ -1018,7 +1018,7 @@ async def suggest_employees(
 
         # Tier 6: substring (helpful for middle-of-name)
         for r in await fetch_all(
-            "SELECT id FROM fpe_employees "
+            "SELECT id FROM fazle_employees "
             "WHERE lower(full_name) LIKE $1 LIMIT 30",
             substr_like,
         ):
@@ -1027,7 +1027,7 @@ async def suggest_employees(
         # Tier 6a: substring on COLLAPSED form (e.g. "momin" → "almomin")
         if col_substr and len(q_collapsed) >= 3:
             for r in await fetch_all(
-                "SELECT id FROM fpe_employees "
+                "SELECT id FROM fazle_employees "
                 "WHERE regexp_replace(lower(coalesce(full_name,'')), '[^a-z0-9]+', '', 'g') LIKE $1 "
                 "LIMIT 30",
                 col_substr,
@@ -1044,7 +1044,7 @@ async def suggest_employees(
             # Also scan historical raw names — recovers employees referenced
             # only via free-form WhatsApp text like "Al-Momin 01714958528(N) 500/-"
             for r in await fetch_all(
-                "SELECT DISTINCT employee_id FROM fpe_cash_transactions "
+                "SELECT DISTINCT employee_id FROM fazle_cash_transactions "
                 "WHERE employee_id IS NOT NULL "
                 "  AND regexp_replace(lower(coalesce(employee_name_raw,'')), '[^a-z0-9]+', '', 'g') LIKE $1 "
                 "LIMIT 30",
@@ -1062,7 +1062,7 @@ async def suggest_employees(
                         similarity(coalesce(name_normalized,''), $1),
                         similarity(regexp_replace(lower(coalesce(full_name,'')), '[^a-z0-9]+', '', 'g'), $2)
                     ) AS sim
-                    FROM fpe_employees
+                    FROM fazle_employees
                     WHERE (lower(coalesce(full_name,'')) % $1
                         OR coalesce(name_normalized,'') % $1
                         OR regexp_replace(lower(coalesce(full_name,'')), '[^a-z0-9]+', '', 'g') % $2)
@@ -1103,7 +1103,7 @@ async def suggest_employees(
                             similarity(lower(coalesce(employee_name_raw,'')), $1),
                             similarity(regexp_replace(lower(coalesce(employee_name_raw,'')), '[^a-z0-9]+', '', 'g'), $2)
                         )) AS sim
-                    FROM fpe_cash_transactions
+                    FROM fazle_cash_transactions
                     WHERE employee_id IS NOT NULL
                       AND (lower(coalesce(employee_name_raw,'')) % $1
                         OR regexp_replace(lower(coalesce(employee_name_raw,'')), '[^a-z0-9]+', '', 'g') % $2)
@@ -1128,7 +1128,7 @@ async def suggest_employees(
     for src_id, (score, mt) in candidates.items():
         src_row = await fetch_one(
             "SELECT id, canonical_employee_id, full_name, primary_phone, "
-            "name_normalized, employee_code FROM fpe_employees WHERE id = $1",
+            "name_normalized, employee_code FROM fazle_employees WHERE id = $1",
             src_id,
         )
         if not src_row:
@@ -1144,13 +1144,13 @@ async def suggest_employees(
     for cid, (score, mt) in canon_best.items():
         emp = await fetch_one(
             "SELECT id, full_name, employee_id_phone, primary_phone, status "
-            "FROM fpe_employees WHERE id = $1",
+            "FROM fazle_employees WHERE id = $1",
             cid,
         )
         if not emp:
             continue
         member_ids_rows = await fetch_all(
-            "SELECT id FROM fpe_employees WHERE id=$1 OR canonical_employee_id=$1",
+            "SELECT id FROM fazle_employees WHERE id=$1 OR canonical_employee_id=$1",
             cid,
         )
         member_ids = [r["id"] for r in member_ids_rows] or [cid]
@@ -1162,11 +1162,11 @@ async def suggest_employees(
         name_aliases = sorted({a["alias_value"] for a in alias_rows if a["alias_value"]})
         # Also pull historical raw names that match the search query — these
         # surface variants like "Al-Momin" that exist only inside transaction
-        # rows (employee_name_raw) and not in fpe_employees.full_name.
+        # rows (employee_name_raw) and not in fazle_employees.full_name.
         raw_aliases: list[str] = []
         if q_collapsed and len(q_collapsed) >= 2:
             raw_rows = await fetch_all(
-                "SELECT DISTINCT employee_name_raw FROM fpe_cash_transactions "
+                "SELECT DISTINCT employee_name_raw FROM fazle_cash_transactions "
                 "WHERE employee_id = ANY($1::int[]) "
                 "  AND employee_name_raw IS NOT NULL "
                 "  AND regexp_replace(lower(employee_name_raw), '[^a-z0-9]+', '', 'g') LIKE $2 "
@@ -1177,7 +1177,7 @@ async def suggest_employees(
         agg = await fetch_one(
             "SELECT COALESCE(SUM(amount),0) AS total_paid, "
             "MAX(txn_date) AS last_activity, COUNT(*)::bigint AS total_txns "
-            "FROM fpe_cash_transactions "
+            "FROM fazle_cash_transactions "
             "WHERE employee_id = ANY($1::int[]) AND is_reversal = FALSE",
             member_ids,
         )
@@ -1242,7 +1242,7 @@ async def list_employee_edit_requests(status: Optional[str] = Query(None)):
                r.status, r.reject_reason, r.submitted_at, r.reviewed_by, r.reviewed_at,
                COALESCE(e.full_name, e.employee_id_phone, e.primary_phone, '(unnamed)') AS employee_display_name
         FROM fpe_employee_edit_requests r
-        LEFT JOIN fpe_employees e ON e.id = r.employee_id
+        LEFT JOIN fazle_employees e ON e.id = r.employee_id
         {where}
         ORDER BY r.submitted_at DESC
         """,
@@ -1258,7 +1258,7 @@ async def list_employee_edit_requests(status: Optional[str] = Query(None)):
 
 @router.get("/employees/{emp_id}", dependencies=[Depends(_require_admin_role)])
 async def get_employee(emp_id: int):
-    emp = await fetch_one("SELECT * FROM fpe_employees WHERE id = $1", emp_id)
+    emp = await fetch_one("SELECT * FROM fazle_employees WHERE id = $1", emp_id)
     if not emp:
         raise HTTPException(404, "Employee not found")
     # Always resolve to canonical for display purposes
@@ -1266,7 +1266,7 @@ async def get_employee(emp_id: int):
     canon_id = canon["id"]
 
     member_ids_rows = await fetch_all(
-        "SELECT id FROM fpe_employees WHERE id = $1 OR canonical_employee_id = $1",
+        "SELECT id FROM fazle_employees WHERE id = $1 OR canonical_employee_id = $1",
         canon_id,
     )
     member_ids = [r["id"] for r in member_ids_rows]
@@ -1279,7 +1279,7 @@ async def get_employee(emp_id: int):
     ledger = await fetch_all(
         """
         SELECT accounting_period, total_paid, total_advance, closing_balance, txn_count
-        FROM fpe_employee_ledger
+        FROM fazle_employee_ledger
         WHERE employee_id = ANY($1::int[])
         ORDER BY accounting_period DESC
         LIMIT 12
@@ -1292,7 +1292,7 @@ async def get_employee(emp_id: int):
                COALESCE(SUM(amount),0) AS total_paid,
                MAX(txn_date) AS last_payment_date,
                MIN(txn_date) AS first_payment_date
-        FROM fpe_cash_transactions
+        FROM fazle_cash_transactions
         WHERE employee_id = ANY($1::int[]) AND is_reversal = FALSE
         """,
         member_ids,
@@ -1300,11 +1300,11 @@ async def get_employee(emp_id: int):
     # Same total_advance source as the /employees list endpoint's ledger_agg
     # CTE, so this modal's Net Balance matches the list view's figure.
     advance_agg = await fetch_val(
-        "SELECT COALESCE(SUM(total_advance), 0) FROM fpe_employee_ledger WHERE employee_id = ANY($1::int[])",
+        "SELECT COALESCE(SUM(total_advance), 0) FROM fazle_employee_ledger WHERE employee_id = ANY($1::int[])",
         member_ids,
     )
     canon_full = await fetch_one(
-        "SELECT * FROM fpe_employees WHERE id = $1", canon_id
+        "SELECT * FROM fazle_employees WHERE id = $1", canon_id
     )
     name_aliases = [a["alias_value"] for a in aliases if a["alias_type"] == "name"]
     display_name = (
@@ -1346,10 +1346,10 @@ async def update_employee(emp_id: int, payload: dict):
       - aliases          (list[{alias_type, alias_value}]) — additive only
 
     STRICTLY FORBIDDEN:
-      - Mutating fpe_cash_transactions (ownership / amount / txn_ref) — never done.
+      - Mutating fazle_cash_transactions (ownership / amount / txn_ref) — never done.
       - Hard-deleting any employee row.
     """
-    emp = await fetch_one("SELECT * FROM fpe_employees WHERE id = $1", emp_id)
+    emp = await fetch_one("SELECT * FROM fazle_employees WHERE id = $1", emp_id)
     if not emp:
         raise HTTPException(404, "Employee not found")
 
@@ -1368,7 +1368,7 @@ async def update_employee(emp_id: int, payload: dict):
     # ── Detect collision on employee_id_phone → soft-merge
     if new_idphone and new_idphone != emp["employee_id_phone"]:
         existing = await fetch_one(
-            "SELECT id, canonical_employee_id FROM fpe_employees "
+            "SELECT id, canonical_employee_id FROM fazle_employees "
             "WHERE employee_id_phone = $1 AND id <> $2 AND status = 'active' LIMIT 1",
             new_idphone, emp_id,
         )
@@ -1398,7 +1398,7 @@ async def update_employee(emp_id: int, payload: dict):
         sets.append("updated_at = NOW()")
         params.append(emp_id)
         await execute(
-            f"UPDATE fpe_employees SET {', '.join(sets)} WHERE id = ${i}",
+            f"UPDATE fazle_employees SET {', '.join(sets)} WHERE id = ${i}",
             *params,
         )
 
@@ -1465,7 +1465,7 @@ async def _collect_canonical_profile(canon_id: int) -> Optional[dict]:
         SELECT id, employee_code, full_name, primary_phone,
                employee_id_phone, canonical_employee_id, name_normalized,
                status, created_source, created_at
-        FROM fpe_employees WHERE id = $1
+        FROM fazle_employees WHERE id = $1
         """,
         canon_id,
     )
@@ -1474,7 +1474,7 @@ async def _collect_canonical_profile(canon_id: int) -> Optional[dict]:
 
     # All employee rows that resolve to this canonical (canonical itself + duplicates)
     member_ids_rows = await fetch_all(
-        "SELECT id FROM fpe_employees WHERE id = $1 OR canonical_employee_id = $1",
+        "SELECT id FROM fazle_employees WHERE id = $1 OR canonical_employee_id = $1",
         canon_id,
     )
     member_ids = [r["id"] for r in member_ids_rows]
@@ -1528,7 +1528,7 @@ async def employee_transaction_history(
     """
     src = await fetch_one(
         "SELECT id, canonical_employee_id, full_name, primary_phone, "
-        "name_normalized, employee_code FROM fpe_employees WHERE id = $1",
+        "name_normalized, employee_code FROM fazle_employees WHERE id = $1",
         emp_id,
     )
     if not src:
@@ -1559,7 +1559,7 @@ async def employee_transaction_history(
                COALESCE(SUM(t.amount), 0) AS total_paid,
                MIN(t.txn_date) AS first_transaction,
                MAX(t.txn_date) AS last_transaction
-        FROM fpe_cash_transactions t
+        FROM fazle_cash_transactions t
         WHERE {where_sql}
         """,
         *params,
@@ -1585,8 +1585,8 @@ async def employee_transaction_history(
                COALESCE(e.employee_id_phone, e.primary_phone, t.payout_phone)
                                   AS employee_display_id_phone,
                e.employee_id_phone AS original_employee_id_phone
-        FROM fpe_cash_transactions t
-        LEFT JOIN fpe_employees e ON e.id = t.employee_id
+        FROM fazle_cash_transactions t
+        LEFT JOIN fazle_employees e ON e.id = t.employee_id
         WHERE {where_sql}
         ORDER BY t.txn_date DESC, t.id DESC
         LIMIT ${len(page_params) - 1} OFFSET ${len(page_params)}
@@ -1654,7 +1654,7 @@ async def get_ledger(emp_id: int, periods: int = Query(12, le=36)):
         """
         SELECT accounting_period, opening_balance, total_earned, total_paid,
                total_advance, closing_balance, txn_count, last_updated
-        FROM fpe_employee_ledger
+        FROM fazle_employee_ledger
         WHERE employee_id = $1
         ORDER BY accounting_period DESC
         LIMIT $2
@@ -1739,7 +1739,7 @@ async def pipeline_stats():
     method_totals = await fetch_all(
         """
         SELECT payout_method, COUNT(*) as txn_count, SUM(amount) as total_amount
-        FROM fpe_cash_transactions
+        FROM fazle_cash_transactions
         WHERE NOT is_reversal
         GROUP BY payout_method
         ORDER BY total_amount DESC NULLS LAST
@@ -1851,7 +1851,7 @@ async def normalization_canonical(employee_id: int):
 # ── Zero-loss admin: reconciliation / needs-review / DLQ / gap scan ──────────
 #
 # Architectural rule (do NOT relax):
-#   Only verified accounting entries belong in fpe_cash_transactions.
+#   Only verified accounting entries belong in fazle_cash_transactions.
 #   Detected money awaiting verification lives in fpe_unmatched_messages and
 #   is surfaced through /admin/needs-review. Promotion to the ledger goes
 #   through create_transaction() so the same idempotency + audit trail
@@ -2362,7 +2362,7 @@ async def admin_salary_summary():
             COUNT(*) FILTER (WHERE basic_salary <> 10000)::bigint AS non_10000_count,
             COALESCE(MIN(basic_salary), 0)::numeric AS min_salary,
             COALESCE(MAX(basic_salary), 0)::numeric AS max_salary
-        FROM fpe_employees
+        FROM fazle_employees
         """
     )
     return {
@@ -2384,7 +2384,7 @@ async def admin_apply_uniform_salary(payload: dict):
     actor = (payload.get("applied_by") or "admin_ui").strip() or "admin_ui"
     changed = await fetch_val(
         "WITH updated AS ("
-        "  UPDATE fpe_employees "
+        "  UPDATE fazle_employees "
         "  SET basic_salary = $1, updated_at = NOW() "
         "  WHERE basic_salary IS DISTINCT FROM $1 "
         "  RETURNING 1"
@@ -2394,7 +2394,7 @@ async def admin_apply_uniform_salary(payload: dict):
     if changed is None:
         changed = 0
 
-    total = await fetch_val("SELECT COUNT(*) FROM fpe_employees") or 0
+    total = await fetch_val("SELECT COUNT(*) FROM fazle_employees") or 0
     await execute(
         """
         INSERT INTO fpe_accounting_audit_logs
@@ -2496,15 +2496,15 @@ async def list_cash_transactions(
 
     where = " AND ".join(conditions)
     total = await fetch_val(
-        f"SELECT COUNT(*) FROM fpe_cash_transactions t "
-        f"LEFT JOIN fpe_employees e ON e.id = t.employee_id WHERE {where}",
+        f"SELECT COUNT(*) FROM fazle_cash_transactions t "
+        f"LEFT JOIN fazle_employees e ON e.id = t.employee_id WHERE {where}",
         *params,
     ) or 0
 
     summary_row = await fetch_one(
         f"SELECT COALESCE(SUM(t.amount),0)::numeric AS total_amount "
-        f"FROM fpe_cash_transactions t "
-        f"LEFT JOIN fpe_employees e ON e.id = t.employee_id WHERE {where}",
+        f"FROM fazle_cash_transactions t "
+        f"LEFT JOIN fazle_employees e ON e.id = t.employee_id WHERE {where}",
         *params,
     )
     total_amount = float(summary_row["total_amount"]) if summary_row else 0.0
@@ -2526,8 +2526,8 @@ async def list_cash_transactions(
             t.is_reversal,
             t.created_at,
             COALESCE(e.employee_id_phone, e.primary_phone, t.payout_phone) AS employee_id_phone
-        FROM fpe_cash_transactions t
-        LEFT JOIN fpe_employees e ON e.id = t.employee_id
+        FROM fazle_cash_transactions t
+        LEFT JOIN fazle_employees e ON e.id = t.employee_id
         WHERE {where}
         ORDER BY t.created_at DESC, t.id DESC
         LIMIT ${i} OFFSET ${i+1}
@@ -2563,8 +2563,8 @@ async def get_cash_transaction(txn_id: int):
                COALESCE(t.employee_name_raw, e.full_name, '(unknown)') AS employee_name,
                COALESCE(e.employee_id_phone, e.primary_phone, t.payout_phone) AS employee_id_phone,
                e.department, e.status AS employee_status
-        FROM fpe_cash_transactions t
-        LEFT JOIN fpe_employees e ON e.id = t.employee_id
+        FROM fazle_cash_transactions t
+        LEFT JOIN fazle_employees e ON e.id = t.employee_id
         WHERE t.id = $1
         """,
         txn_id,
@@ -2610,7 +2610,7 @@ async def list_staging_payments(
 
     total = await fetch_val(
         f"SELECT COUNT(*) FROM wbom_staging_payments s "
-        f"LEFT JOIN wbom_employees e ON e.employee_id = s.matched_employee_id "
+        f"LEFT JOIN fazle_employees_legacy e ON e.employee_id = s.matched_employee_id "
         f"{where}",
         *params,
     ) or 0
@@ -2633,7 +2633,7 @@ async def list_staging_payments(
             s.approved_by,
             COALESCE(e.employee_name, s.extracted_name, '(unknown)') AS employee_name
         FROM wbom_staging_payments s
-        LEFT JOIN wbom_employees e ON e.employee_id = s.matched_employee_id
+        LEFT JOIN fazle_employees_legacy e ON e.employee_id = s.matched_employee_id
         {where}
         ORDER BY s.created_at DESC
         LIMIT ${i} OFFSET ${i+1}
@@ -2701,7 +2701,7 @@ async def list_income_transactions(
     where = " AND ".join(conditions)
     total = await fetch_val(
         f"SELECT COUNT(*) FROM fpe_income_transactions t "
-        f"LEFT JOIN fpe_employees e ON e.id = t.employee_id WHERE {where}",
+        f"LEFT JOIN fazle_employees e ON e.id = t.employee_id WHERE {where}",
         *params,
     ) or 0
 
@@ -2714,7 +2714,7 @@ async def list_income_transactions(
             COALESCE(SUM(t.amount) FILTER (WHERE t.txn_date >= date_trunc('month', CURRENT_DATE)), 0)
                                                                                    AS month_amount
         FROM fpe_income_transactions t
-        LEFT JOIN fpe_employees e ON e.id = t.employee_id
+        LEFT JOIN fazle_employees e ON e.id = t.employee_id
         WHERE {where}
         """,
         *params,
@@ -2742,7 +2742,7 @@ async def list_income_transactions(
             COALESCE(e.employee_id_phone, e.primary_phone, t.reported_by_phone) AS employee_id_phone,
             (t.employee_id IS NOT NULL AND e.created_source = 'income_command') AS auto_created_employee
         FROM fpe_income_transactions t
-        LEFT JOIN fpe_employees e ON e.id = t.employee_id
+        LEFT JOIN fazle_employees e ON e.id = t.employee_id
         WHERE {where}
         ORDER BY t.created_at DESC, t.id DESC
         LIMIT ${i} OFFSET ${i+1}
@@ -2772,7 +2772,7 @@ async def get_income_transaction(income_id: int):
                e.department, e.status AS employee_status,
                (t.employee_id IS NOT NULL AND e.created_source = 'income_command') AS auto_created_employee
         FROM fpe_income_transactions t
-        LEFT JOIN fpe_employees e ON e.id = t.employee_id
+        LEFT JOIN fazle_employees e ON e.id = t.employee_id
                 WHERE t.id = $1
                     AND t.deleted_at IS NULL
         """,
@@ -2811,7 +2811,7 @@ async def create_income_transaction(req: IncomeCreateRequest):
         phone_rows = await fetch_all(
             """
             SELECT e.id, e.canonical_employee_id
-            FROM fpe_employees e
+            FROM fazle_employees e
             LEFT JOIN fpe_employee_aliases ap
               ON ap.employee_id = e.id AND ap.alias_type = 'phone'
             WHERE e.status = 'active'
@@ -2834,8 +2834,8 @@ async def create_income_transaction(req: IncomeCreateRequest):
         if employee_id is None:
             emp = await fetch_one(
                 "SELECT e.id, e.canonical_employee_id "
-                "FROM fpe_cash_transactions t "
-                "JOIN fpe_employees e ON e.id = t.employee_id "
+                "FROM fazle_cash_transactions t "
+                "JOIN fazle_employees e ON e.id = t.employee_id "
                 "WHERE t.payout_phone = $1 AND t.employee_id IS NOT NULL "
                 "ORDER BY t.txn_date DESC, t.id DESC LIMIT 1",
                 mobile,
@@ -2852,7 +2852,7 @@ async def create_income_transaction(req: IncomeCreateRequest):
                 name_phone_rows = await fetch_all(
                     """
                     SELECT e.id, e.canonical_employee_id
-                    FROM fpe_employees e
+                    FROM fazle_employees e
                     LEFT JOIN fpe_employee_aliases an
                       ON an.employee_id = e.id AND an.alias_type = 'name'
                     LEFT JOIN fpe_employee_aliases ap
@@ -2880,7 +2880,7 @@ async def create_income_transaction(req: IncomeCreateRequest):
                 name_rows = await fetch_all(
                     """
                     SELECT e.id, e.canonical_employee_id
-                    FROM fpe_employees e
+                    FROM fazle_employees e
                     LEFT JOIN fpe_employee_aliases an
                       ON an.employee_id = e.id AND an.alias_type = 'name'
                     WHERE e.status = 'active'
@@ -2960,7 +2960,7 @@ async def operator_submit(req: OperatorSubmitRequest):
     """
     Operator submits a pending transaction entry.
     Creates a row in fpe_unmatched_messages with review_status='operator_pending'
-    AND a pending fpe_cash_transactions row (transaction_status='pending').
+    AND a pending fazle_cash_transactions row (transaction_status='pending').
     Ledger is NOT touched until admin approval.
     """
     # Stage I (I3, 2026-08-29): a real finding -- 4 REGTEST_-tagged
@@ -2994,7 +2994,7 @@ async def operator_submit(req: OperatorSubmitRequest):
 
     # Validate employee exists
     emp = await fetch_one(
-        "SELECT id, full_name, status FROM fpe_employees WHERE id = $1",
+        "SELECT id, full_name, status FROM fazle_employees WHERE id = $1",
         req.employee_id,
     )
     if not emp:
@@ -3133,7 +3133,7 @@ async def operator_pending_list(
                e.full_name AS resolved_employee_name,
                e.employee_id_phone AS resolved_employee_phone
         FROM fpe_unmatched_messages u
-        LEFT JOIN fpe_employees e ON e.id = u.resolved_employee_id
+        LEFT JOIN fazle_employees e ON e.id = u.resolved_employee_id
         WHERE u.review_status = 'operator_pending'
         ORDER BY u.created_at DESC
         LIMIT $1 OFFSET $2
@@ -3179,7 +3179,7 @@ async def operator_approve(
         raise HTTPException(409, f"Submission is not pending (status={row['review_status']})")
 
     # Validate employee
-    emp = await fetch_one("SELECT id, status FROM fpe_employees WHERE id = $1", employee_id)
+    emp = await fetch_one("SELECT id, status FROM fazle_employees WHERE id = $1", employee_id)
     if not emp:
         raise HTTPException(400, "Employee not found")
     if emp["status"] != "active":
@@ -3211,7 +3211,7 @@ async def operator_approve(
     pending_txn = await fetch_one(
         "SELECT id, txn_ref, transaction_status, employee_id, amount, payout_method, "
         "txn_date, txn_category, accounting_period, source_message_id "
-        "FROM fpe_cash_transactions WHERE id = $1",
+        "FROM fazle_cash_transactions WHERE id = $1",
         pending_txn_id,
     )
     if not pending_txn:
@@ -3243,7 +3243,7 @@ async def operator_approve(
             # Promote to final: update status and stamp approval
             await execute(
                 """
-                UPDATE fpe_cash_transactions
+                UPDATE fazle_cash_transactions
                 SET transaction_status = 'final',
                     approval_status = 'approved',
                     approved_by = $2,
@@ -3403,7 +3403,7 @@ async def submit_employee_edit_request(
     writing directly (admin/superadmin still write directly via the existing
     PATCH/PUT endpoints -- see saveUnifiedEmployeeEdit() in payroll.html)."""
     emp = await fetch_one(
-        "SELECT id, wbom_employee_id FROM fpe_employees WHERE id = $1", emp_id
+        "SELECT id, wbom_employee_id FROM fazle_employees WHERE id = $1", emp_id
     )
     if not emp:
         raise HTTPException(404, "Employee not found")

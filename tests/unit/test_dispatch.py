@@ -130,7 +130,7 @@ async def _insert_program(test_db_pool, employee_id, **overrides):
 async def escort_employee(test_db_pool):
     async with test_db_pool.acquire() as conn:
         row = await conn.fetchrow("""
-            INSERT INTO wbom_employees (employee_mobile, employee_name, designation, status, basic_salary)
+            INSERT INTO fazle_employees_legacy (employee_mobile, employee_name, designation, status, basic_salary)
             VALUES ('8801811111111', 'Karim Escort', 'Escort', 'Active', 9000.00)
             RETURNING *
         """)
@@ -141,7 +141,7 @@ async def escort_employee(test_db_pool):
 async def other_escort_employee(test_db_pool):
     async with test_db_pool.acquire() as conn:
         row = await conn.fetchrow("""
-            INSERT INTO wbom_employees (employee_mobile, employee_name, designation, status, basic_salary)
+            INSERT INTO fazle_employees_legacy (employee_mobile, employee_name, designation, status, basic_salary)
             VALUES ('8801822222222', 'Rahim Escort', 'Escort', 'Active', 9000.00)
             RETURNING *
         """)
@@ -259,7 +259,7 @@ class TestAvailability:
         from modules.dispatch import list_escort_workers
         async with test_db_pool.acquire() as conn:
             row = await conn.fetchrow("""
-                INSERT INTO wbom_employees (employee_mobile, employee_name, designation, status, basic_salary)
+                INSERT INTO fazle_employees_legacy (employee_mobile, employee_name, designation, status, basic_salary)
                 VALUES ('8801833333333', 'Inactive Guy', 'Escort', 'Inactive', 9000.00)
                 RETURNING *
             """)
@@ -272,7 +272,7 @@ class TestAvailability:
         from modules.dispatch import list_escort_workers
         async with test_db_pool.acquire() as conn:
             row = await conn.fetchrow("""
-                INSERT INTO wbom_employees (employee_mobile, employee_name, designation, status, basic_salary)
+                INSERT INTO fazle_employees_legacy (employee_mobile, employee_name, designation, status, basic_salary)
                 VALUES ('8801844444444', 'Office Person', 'Office Assistant', 'Active', 9000.00)
                 RETURNING *
             """)
@@ -415,7 +415,7 @@ class TestDispatchAPI:
         async with test_db_pool.acquire() as conn:
             for i in range(5):
                 await conn.execute("""
-                    INSERT INTO wbom_employees (employee_mobile, employee_name, designation, status, basic_salary)
+                    INSERT INTO fazle_employees_legacy (employee_mobile, employee_name, designation, status, basic_salary)
                     VALUES ($1, $2, 'Escort', 'Active', 9000.00)
                 """, f"88018{i:08d}", f"Guard {i}")
         r = await client.get("/api/dispatch/availability?page_size=2&page=1")

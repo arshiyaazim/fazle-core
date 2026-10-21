@@ -16,7 +16,7 @@ just documented):
     -- nothing here duplicates their logic, this module only decides WHEN to
     call them and WITH what corroboration.
   - A known employee (active or inactive, phone already on file in
-    wbom_employees) never reaches this module at all -- identity_brain
+    fazle_employees_legacy) never reaches this module at all -- identity_brain
     resolves them to Tier 10 before message_router ever calls Route B. So
     "employee claim" here is, by construction, always a phone that did NOT
     match -- and it NEVER gets direct Tier 10 access. It always produces an
@@ -263,7 +263,7 @@ async def _check_employee_claim_handoff(
         f"resolution={identity.get('resolution')} verified={verified}\n\n"
         f"Message: {text}\n\n"
         "This sender was NOT granted employee access. If genuine, correct/link "
-        "their phone number on the wbom_employees record -- they will then be "
+        "their phone number on the fazle_employees_legacy record -- they will then be "
         "recognized automatically on their next message via the normal, "
         "unchanged Tier 10 path. No action here grants access directly."
     )
@@ -306,7 +306,7 @@ async def _check_escort_operational_handoff(
 
     # Multi-message: fields may be spread across turns (e.g. mother vessel in
     # an earlier message, lighter+mobile in this one). Use ONLY the governed
-    # conversation history Route B already fetched (wbom_whatsapp_messages),
+    # conversation history Route B already fetched (fazle_whatsapp_messages),
     # never anything from Ollama's own output.
     if not history:
         return None
@@ -352,7 +352,7 @@ async def record_ollama_failure(
         # Uses placeholder+update so the real draft ID appears in the text.
         draft_id_created = None
         try:
-            from modules.bridge_poller import _build_admin_review_draft
+            from modules.fazle_bridge_poller import _build_admin_review_draft
             draft_body_placeholder = _build_admin_review_draft(
                 sender_name=sender_name or sender,
                 sender_mobile=sender,

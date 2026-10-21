@@ -111,10 +111,10 @@ class TestEscortFullWorkflow:
 
         # ── Step 4: Admin sends [RELEASE CONFIRMED] ───────────────────────────
         # The admin-typed RELEASE <id> command was deliberately deprecated
-        # (2026-06-19, modules/admin_commands/__init__.py::_cmd_release) in
+        # (2026-06-19, modules/fazle_admin_commands/__init__.py::_cmd_release) in
         # favor of this admin-confirmation-gated flow. It's normally triggered
         # by bridge_poller detecting an is_from_me=1 outbound [RELEASE
-        # CONFIRMED] message (modules/bridge_poller/__init__.py ~line 1151) —
+        # CONFIRMED] message (modules/fazle_bridge_poller/__init__.py ~line 1151) —
         # calling handle_admin_release_confirmation() directly here exercises
         # the same real production entry point without needing to fake the
         # SQLite outbound-message polling layer.
@@ -171,18 +171,18 @@ class TestEscortFullWorkflow:
         r = await client.post("/webhook/mcp2", json=paid_payload)
         assert r.status_code in (200, 202)
 
-        # fpe_cash_transactions is the only canonical cash ledger table
+        # fazle_cash_transactions is the only canonical cash ledger table
         # (Owner Directive 2026-06-29, CLAUDE.md) -- finalize_payment() never
-        # writes wbom_cash_transactions (legacy). Matched by phone rather than
-        # employee_id since fpe_cash_transactions.employee_id FKs to
-        # fpe_employees(id), a distinct ID space from wbom_employees.
+        # writes fazle_cash_transactions_archive (legacy). Matched by phone rather than
+        # employee_id since fazle_cash_transactions.employee_id FKs to
+        # fazle_employees(id), a distinct ID space from fazle_employees_legacy.
         # employee_phone is stored normalized (leading "88" country code
         # stripped, e.g. "01811111111"), while seed_employee's fixture value
         # carries the "88" prefix (confirmed empirically 2026-07-18).
         normalized_mobile = seed_employee["employee_mobile"].removeprefix("88")
         async with test_db_pool.acquire() as conn:
             txn = await conn.fetchrow(
-                "SELECT * FROM fpe_cash_transactions WHERE employee_phone=$1 LIMIT 1",
+                "SELECT * FROM fazle_cash_transactions WHERE employee_phone=$1 LIMIT 1",
                 normalized_mobile,
             )
         assert txn is not None, "Cash transaction should be recorded"
@@ -251,13 +251,13 @@ class TestAdvanceWorkflow:
         r = await client.post("/webhook/mcp2", json=approve_payload)
         assert r.status_code in (200, 202)
 
-        # fpe_cash_transactions is the only canonical cash ledger table
+        # fazle_cash_transactions is the only canonical cash ledger table
         # (Owner Directive 2026-06-29) -- ADVANCE approval routes through
         # admin_commands._cmd_paid() -> finalize_payment(), which never
-        # writes wbom_cash_transactions (legacy).
+        # writes fazle_cash_transactions_archive (legacy).
         async with test_db_pool.acquire() as conn:
             txn = await conn.fetchrow(
-                "SELECT * FROM fpe_cash_transactions WHERE txn_category='advance' LIMIT 1"
+                "SELECT * FROM fazle_cash_transactions WHERE txn_category='advance' LIMIT 1"
             )
         assert txn is not None
         assert float(txn["amount"]) == pytest.approx(2000.0)
@@ -269,25 +269,25 @@ class TestAdvanceWorkflow:
         import app.database as db_module
         db_module._pool = test_db_pool
 
-        # fpe_cash_transactions is the only canonical cash ledger table
-        # (Owner Directive 2026-06-29) -- wbom_cash_transactions is legacy
+        # fazle_cash_transactions is the only canonical cash ledger table
+        # (Owner Directive 2026-06-29) -- fazle_cash_transactions_archive is legacy
         # and compute_run() never reads it. employee_id here FKs to
-        # fpe_employees(id), NOT wbom_employees(employee_id) -- a real
-        # fpe_employees row linked via wbom_employee_id is required, matching
+        # fazle_employees(id), NOT fazle_employees_legacy(employee_id) -- a real
+        # fazle_employees row linked via wbom_employee_id is required, matching
         # the pattern in tests/unit/test_payroll.py::TestMarkPaidLedger.
         async with test_db_pool.acquire() as conn:
-            # Deliberately consume an id first so fpe_employees.id cannot
+            # Deliberately consume an id first so fazle_employees.id cannot
             # coincidentally equal seed_employee's wbom employee_id in a
             # fresh truncated test DB (both sequences would otherwise start
             # at 1) -- that coincidence would silently mask the real bug
             # this test is meant to catch. See the KNOWN BUG note below.
             await conn.execute("""
-                INSERT INTO fpe_employees
+                INSERT INTO fazle_employees
                     (employee_code, full_name, name_normalized, status)
                 VALUES ('EMP-DECOY', 'Decoy', 'decoy', 'inactive')
             """)
             fpe_row = await conn.fetchrow("""
-                INSERT INTO fpe_employees
+                INSERT INTO fazle_employees
                     (employee_code, full_name, name_normalized, primary_phone,
                      status, wbom_employee_id)
                 VALUES ('EMP-ADV1', $1, $2, $3, 'active', $4)
@@ -302,7 +302,7 @@ class TestAdvanceWorkflow:
                 "wbom employee_id for this test to be meaningful"
             )
             await conn.execute("""
-                INSERT INTO fpe_cash_transactions
+                INSERT INTO fazle_cash_transactions
                     (txn_ref, employee_id, amount, txn_date, txn_category, transaction_status)
                 VALUES ('test-advance-1', $1, 1000, '2026-05-10', 'advance', 'final')
             """, fpe_id)
@@ -317,11 +317,11 @@ class TestAdvanceWorkflow:
 
         # FIXED 2026-07-18 (was a KNOWN BUG documented in Phase 1G):
         # compute_run()'s advances query now resolves the linked, active
-        # fpe_employees row via wbom_employee_id first (matching
+        # fazle_employees row via wbom_employee_id first (matching
         # mark_paid()'s existing pattern in the same file) before querying
-        # fpe_cash_transactions.employee_id -- see
+        # fazle_cash_transactions.employee_id -- see
         # management_decisions.md's payroll advance identity fix record.
-        # Seeded via a correctly wbom_employee_id-linked fpe_employees row
+        # Seeded via a correctly wbom_employee_id-linked fazle_employees row
         # (not a coincidental id match, per the decoy-row invariant above),
         # so this assertion now genuinely proves the fix rather than
         # accidentally passing.
@@ -354,13 +354,13 @@ class TestPayrollWorkflow:
                     program_date='2026-05-01', end_date='2026-05-05'
                 WHERE program_id=$1
             """, program_id)
-            # mark_paid() fails closed without an active fpe_employees row
+            # mark_paid() fails closed without an active fazle_employees row
             # linked via wbom_employee_id (2026-07-15 fix, see
             # knowledge_base/06_developer_system/payroll_module.md) --
             # matches the pattern in
             # tests/unit/test_payroll.py::TestMarkPaidLedger._link_fpe_employee.
             await conn.execute("""
-                INSERT INTO fpe_employees
+                INSERT INTO fazle_employees
                     (employee_code, full_name, name_normalized, primary_phone,
                      status, wbom_employee_id)
                 VALUES ('EMP-PAYROLL1', $1, $2, $3, 'active', $4)
@@ -471,7 +471,7 @@ class TestPaymentCorrectionWorkflow:
         # is (draft_id, approved_amount, method) -- no admin_phone param --
         # and it sets fazle_payment_drafts.status='sent' + .transaction_id
         # on success.
-        from modules.payment_workflow import finalize_payment
+        from modules.fazle_payment_workflow import finalize_payment
         result = await finalize_payment(
             draft_id=seed_payment_draft["id"],
             approved_amount=1500.0,
@@ -479,9 +479,9 @@ class TestPaymentCorrectionWorkflow:
         )
         assert "error" not in result, result
 
-        # Confirm the canonical transaction exists. fpe_cash_transactions is
+        # Confirm the canonical transaction exists. fazle_cash_transactions is
         # the only canonical cash ledger table (Owner Directive 2026-06-29);
-        # wbom_cash_transactions is legacy and finalize_payment() never
+        # fazle_cash_transactions_archive is legacy and finalize_payment() never
         # writes it.
         async with test_db_pool.acquire() as conn:
             draft_row = await conn.fetchrow(
@@ -505,7 +505,7 @@ class TestPaymentCorrectionWorkflow:
 
         async with test_db_pool.acquire() as conn:
             reversal = await conn.fetchrow(
-                "SELECT * FROM fpe_cash_transactions WHERE reversed_txn_id=$1",
+                "SELECT * FROM fazle_cash_transactions WHERE reversed_txn_id=$1",
                 original_id,
             )
         assert reversal is not None

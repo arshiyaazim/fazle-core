@@ -1,12 +1,12 @@
 """
 Fazle Core — Admin Employee CRUD Routes
-Phase 18B: Safe Add/Edit/Deactivate on top of wbom_employees.
+Phase 18B: Safe Add/Edit/Deactivate on top of fazle_employees_legacy.
 
 Rules:
   - NEVER hard-delete rows (soft-delete via status='Inactive')
   - employee_mobile is immutable (identity anchor)
   - After INSERT, pre-seed FPE via match_or_create_employee (non-fatal)
-  - Deactivate propagates to fpe_employees by phone (non-fatal)
+  - Deactivate propagates to fazle_employees by phone (non-fatal)
   - All mutations require X-Internal-Key header
 """
 import logging
@@ -133,7 +133,7 @@ async def _seed_fpe(name: str, mobile: str, wbom_employee_id: int | None = None)
         # Set the WBOM link so both tables stay in sync
         if result and wbom_employee_id:
             await _exec(
-                """UPDATE fpe_employees
+                """UPDATE fazle_employees
                    SET wbom_employee_id = $1,
                        resolution_status = CASE WHEN resolution_status = 'unresolved'
                                                  THEN 'resolved' ELSE resolution_status END
@@ -148,13 +148,13 @@ async def _seed_fpe(name: str, mobile: str, wbom_employee_id: int | None = None)
 
 @router.post("/employees", dependencies=[Depends(_require_api_key)], status_code=201)
 async def create_employee(body: EmployeeCreate):
-    """Create a new employee in wbom_employees, then pre-seed FPE."""
+    """Create a new employee in fazle_employees_legacy, then pre-seed FPE."""
     norm_mobile = normalize_bd_phone(body.employee_mobile)
     if not norm_mobile:
         raise HTTPException(400, f"Invalid mobile number: {body.employee_mobile!r}")
 
     existing = await fetch_one(
-        "SELECT employee_id FROM wbom_employees WHERE employee_mobile = $1",
+        "SELECT employee_id FROM fazle_employees_legacy WHERE employee_mobile = $1",
         norm_mobile,
     )
     if existing:
@@ -167,7 +167,7 @@ async def create_employee(body: EmployeeCreate):
     joining_date = body.joining_date if body.joining_date and body.joining_date.strip() else None
 
     emp_id = await fetch_val(
-        """INSERT INTO wbom_employees
+        """INSERT INTO fazle_employees_legacy
                (employee_name, employee_mobile, designation, joining_date,
                 bkash_number, nagad_number, basic_salary, nid_number,
                 emergency_contact, address, bank_account, status,
@@ -188,7 +188,7 @@ async def create_employee(body: EmployeeCreate):
     )
 
     row = await fetch_one(
-        "SELECT * FROM wbom_employees WHERE employee_id = $1", emp_id
+        "SELECT * FROM fazle_employees_legacy WHERE employee_id = $1", emp_id
     )
 
     await _seed_fpe(body.employee_name, norm_mobile, wbom_employee_id=emp_id)
@@ -223,7 +223,7 @@ async def list_employees(
     page_size: int = Query(50, ge=1, le=200),
     sort: str = Query("name_asc"),
 ):
-    """List wbom_employees with filter/search/pagination."""
+    """List fazle_employees_legacy with filter/search/pagination."""
     # Normalize status — DB stores 'Active'/'Inactive'
     status_val = "Active" if status.lower() in ("active", "1", "true") else "Inactive"
     offset = (page - 1) * page_size
@@ -255,12 +255,12 @@ async def list_employees(
     order_sql = sort_map.get(sort, "employee_name ASC")
 
     total = await fetch_val(
-        f"SELECT COUNT(*) FROM wbom_employees WHERE {where_sql}",
+        f"SELECT COUNT(*) FROM fazle_employees_legacy WHERE {where_sql}",
         *params,
     )
 
     rows = await fetch_all(
-        f"""SELECT * FROM wbom_employees
+        f"""SELECT * FROM fazle_employees_legacy
             WHERE {where_sql}
             ORDER BY {order_sql}
             LIMIT ${idx} OFFSET ${idx + 1}""",
@@ -285,7 +285,7 @@ async def get_employee_by_phone(phone: str):
     if not norm:
         raise HTTPException(400, f"Invalid phone: {phone!r}")
     row = await fetch_one(
-        "SELECT * FROM wbom_employees WHERE employee_mobile = $1", norm
+        "SELECT * FROM fazle_employees_legacy WHERE employee_mobile = $1", norm
     )
     if not row:
         raise HTTPException(404, "No WBOM employee found for that phone")
@@ -298,25 +298,25 @@ async def get_employee_by_phone(phone: str):
 async def get_employee(emp_id: int):
     """Get single wbom employee with related record counts."""
     row = await fetch_one(
-        "SELECT * FROM wbom_employees WHERE employee_id = $1", emp_id
+        "SELECT * FROM fazle_employees_legacy WHERE employee_id = $1", emp_id
     )
     if not row:
         raise HTTPException(404, "Employee not found")
 
-    # fpe_cash_transactions.employee_id FKs to fpe_employees(id), not this
+    # fazle_cash_transactions.employee_id FKs to fazle_employees(id), not this
     # WBOM emp_id -- same cross-system ID bug fixed in compute_run()
-    # (2026-07-18). Resolve the linked, active fpe_employees row first;
+    # (2026-07-18). Resolve the linked, active fazle_employees row first;
     # $2 is NULL (matches nothing) when there is no link, so txn_count
     # correctly reads 0 rather than counting an unrelated employee's rows.
     fpe_link = await fetch_one(
-        "SELECT id FROM fpe_employees WHERE wbom_employee_id=$1 AND status='active'",
+        "SELECT id FROM fazle_employees WHERE wbom_employee_id=$1 AND status='active'",
         emp_id,
     )
     fpe_id = fpe_link["id"] if fpe_link else None
 
     counts = await fetch_one(
         """SELECT
-               (SELECT COUNT(*) FROM fpe_cash_transactions   WHERE employee_id=$2 AND transaction_status='final') AS txn_count,
+               (SELECT COUNT(*) FROM fazle_cash_transactions   WHERE employee_id=$2 AND transaction_status='final') AS txn_count,
                (SELECT COUNT(*) FROM wbom_escort_programs    WHERE escort_employee_id=$1) AS escort_count,
                (SELECT COUNT(*) FROM wbom_attendance         WHERE employee_id=$1) AS attendance_count,
                (SELECT COUNT(*) FROM wbom_salary_records     WHERE employee_id=$1) AS salary_record_count
@@ -334,9 +334,9 @@ async def get_employee(emp_id: int):
 
 @router.put("/employees/{emp_id}", dependencies=[Depends(_require_admin_role)])
 async def update_employee(emp_id: int, body: EmployeeUpdate):
-    """Update safe operational fields on wbom_employees."""
+    """Update safe operational fields on fazle_employees_legacy."""
     existing = await fetch_one(
-        "SELECT employee_id FROM wbom_employees WHERE employee_id = $1", emp_id
+        "SELECT employee_id FROM fazle_employees_legacy WHERE employee_id = $1", emp_id
     )
     if not existing:
         raise HTTPException(404, "Employee not found")
@@ -363,8 +363,8 @@ async def update_employee(emp_id: int, body: EmployeeUpdate):
         # Convert empty string to NULL for optional fields
         if field not in ("employee_name", "designation", "status") and val == "":
             val = None
-        # joining_date is a DATE column in both wbom_employees and
-        # fpe_employees; EmployeeUpdate carries it as a plain ISO string
+        # joining_date is a DATE column in both fazle_employees_legacy and
+        # fazle_employees; EmployeeUpdate carries it as a plain ISO string
         # (see class docstring), which asyncpg will not auto-cast.
         if field == "joining_date" and val is not None:
             try:
@@ -378,7 +378,7 @@ async def update_employee(emp_id: int, body: EmployeeUpdate):
 
     if len(set_parts) == 1:  # only updated_at — nothing to do
         row = await fetch_one(
-            "SELECT * FROM wbom_employees WHERE employee_id=$1", emp_id
+            "SELECT * FROM fazle_employees_legacy WHERE employee_id=$1", emp_id
         )
         return {"employee": _row_to_dict(row)}
 
@@ -386,11 +386,11 @@ async def update_employee(emp_id: int, body: EmployeeUpdate):
     set_sql = ", ".join(set_parts)
 
     await execute(
-        f"UPDATE wbom_employees SET {set_sql} WHERE employee_id = ${idx}",
+        f"UPDATE fazle_employees_legacy SET {set_sql} WHERE employee_id = ${idx}",
         *params,
     )
 
-    # Propagate to the linked FPE employee row — fpe_employees is what the
+    # Propagate to the linked FPE employee row — fazle_employees is what the
     # Employees list/detail panel actually display, and unlike `status`
     # (synced in deactivate_employee()/reactivate_employee() below) these
     # three fields previously had no write-back path at all, so edits here
@@ -406,7 +406,7 @@ async def update_employee(emp_id: int, body: EmployeeUpdate):
             fpe_params = list(fpe_sync_fields.values())
             fpe_params.append(emp_id)
             await execute(
-                f"UPDATE fpe_employees SET {', '.join(fpe_set_parts)}, updated_at = now() "
+                f"UPDATE fazle_employees SET {', '.join(fpe_set_parts)}, updated_at = now() "
                 f"WHERE wbom_employee_id = ${len(fpe_params)}",
                 *fpe_params,
             )
@@ -414,7 +414,7 @@ async def update_employee(emp_id: int, body: EmployeeUpdate):
             log.warning("[admin_employees] FPE field sync failed emp_id=%d: %s", emp_id, exc)
 
     row = await fetch_one(
-        "SELECT * FROM wbom_employees WHERE employee_id=$1", emp_id
+        "SELECT * FROM fazle_employees_legacy WHERE employee_id=$1", emp_id
     )
     log.info("[admin_employees] updated employee_id=%d", emp_id)
     return {"employee": _row_to_dict(row)}
@@ -424,10 +424,10 @@ async def update_employee(emp_id: int, body: EmployeeUpdate):
 
 @router.patch("/employees/{emp_id}/deactivate", dependencies=[Depends(_require_admin_role)])
 async def deactivate_employee(emp_id: int):
-    """Soft-delete: set wbom_employees.status='Inactive' and sync to FPE."""
+    """Soft-delete: set fazle_employees_legacy.status='Inactive' and sync to FPE."""
     row = await fetch_one(
         "SELECT employee_id, employee_name, employee_mobile, status "
-        "FROM wbom_employees WHERE employee_id=$1",
+        "FROM fazle_employees_legacy WHERE employee_id=$1",
         emp_id,
     )
     if not row:
@@ -438,7 +438,7 @@ async def deactivate_employee(emp_id: int):
 
     # Soft-delete in WBOM
     await execute(
-        "UPDATE wbom_employees SET status='Inactive', updated_at=now() WHERE employee_id=$1",
+        "UPDATE fazle_employees_legacy SET status='Inactive', updated_at=now() WHERE employee_id=$1",
         emp_id,
     )
 
@@ -446,7 +446,7 @@ async def deactivate_employee(emp_id: int):
     try:
         mobile = row["employee_mobile"]
         await execute(
-            """UPDATE fpe_employees
+            """UPDATE fazle_employees
                SET status='inactive', updated_at=now()
                WHERE (primary_phone=$1 OR employee_id_phone=$1)
                  AND status != 'inactive'""",
@@ -467,13 +467,13 @@ async def deactivate_employee(emp_id: int):
 
 @router.patch("/employees/{emp_id}/reactivate", dependencies=[Depends(_require_admin_role)])
 async def reactivate_employee(emp_id: int):
-    """Reverse of deactivate_employee() above: set wbom_employees.status='Active'
+    """Reverse of deactivate_employee() above: set fazle_employees_legacy.status='Active'
     and sync to FPE. Mirrors that function's propagation logic exactly, just
     flipped -- added so Status has a symmetric, properly cross-system-synced
     path in both directions (previously only the Inactive direction did)."""
     row = await fetch_one(
         "SELECT employee_id, employee_name, employee_mobile, status "
-        "FROM wbom_employees WHERE employee_id=$1",
+        "FROM fazle_employees_legacy WHERE employee_id=$1",
         emp_id,
     )
     if not row:
@@ -483,14 +483,14 @@ async def reactivate_employee(emp_id: int):
         return {"ok": True, "message": "Already active", "employee_id": emp_id}
 
     await execute(
-        "UPDATE wbom_employees SET status='Active', updated_at=now() WHERE employee_id=$1",
+        "UPDATE fazle_employees_legacy SET status='Active', updated_at=now() WHERE employee_id=$1",
         emp_id,
     )
 
     try:
         mobile = row["employee_mobile"]
         await execute(
-            """UPDATE fpe_employees
+            """UPDATE fazle_employees
                SET status='active', updated_at=now()
                WHERE (primary_phone=$1 OR employee_id_phone=$1)
                  AND status != 'active'""",
@@ -517,27 +517,27 @@ class LinkFpeRequest(BaseModel):
 @router.post("/employees/link-fpe", dependencies=[Depends(_require_admin_role)])
 async def link_fpe_to_wbom(body: LinkFpeRequest):
     """One-at-a-time manual linking for the wbom-link-review.html tool --
-    always targets exactly one fpe_employees row by primary key (id), never
+    always targets exactly one fazle_employees row by primary key (id), never
     a bulk WHERE clause. Refuses to overwrite an existing link (caller must
     confirm each pair by eye first; this just performs the single UPDATE)."""
     fpe = await fetch_one(
-        "SELECT id, full_name, wbom_employee_id FROM fpe_employees WHERE id = $1",
+        "SELECT id, full_name, wbom_employee_id FROM fazle_employees WHERE id = $1",
         body.fpe_id,
     )
     if not fpe:
-        raise HTTPException(404, f"fpe_employees.id={body.fpe_id} not found")
+        raise HTTPException(404, f"fazle_employees.id={body.fpe_id} not found")
     if fpe["wbom_employee_id"] is not None:
-        raise HTTPException(409, f"fpe_employees.id={body.fpe_id} already linked to wbom_employee_id={fpe['wbom_employee_id']}")
+        raise HTTPException(409, f"fazle_employees.id={body.fpe_id} already linked to wbom_employee_id={fpe['wbom_employee_id']}")
 
     wbom = await fetch_one(
-        "SELECT employee_id, employee_name FROM wbom_employees WHERE employee_id = $1",
+        "SELECT employee_id, employee_name FROM fazle_employees_legacy WHERE employee_id = $1",
         body.wbom_id,
     )
     if not wbom:
-        raise HTTPException(404, f"wbom_employees.employee_id={body.wbom_id} not found")
+        raise HTTPException(404, f"fazle_employees_legacy.employee_id={body.wbom_id} not found")
 
     await execute(
-        """UPDATE fpe_employees
+        """UPDATE fazle_employees
            SET wbom_employee_id = $1,
                resolution_status = CASE WHEN resolution_status = 'unresolved'
                                          THEN 'resolved' ELSE resolution_status END,
@@ -583,34 +583,34 @@ class CreateAndLinkRequest(BaseModel):
 @router.post("/employees/create-and-link", dependencies=[Depends(_require_admin_role)])
 async def create_and_link_wbom(body: CreateAndLinkRequest):
     """One-at-a-time tool for app/static/wbom-create-link.html -- creates a
-    real wbom_employees row (admin-provided designation, never a guessed
+    real fazle_employees_legacy row (admin-provided designation, never a guessed
     default) for an FPE employee that has no WBOM record at all, then links
     it. Rejects 'Unknown' designation at the model level so this can't be
     used to recreate migration 047's rejected bulk-fabrication approach one
     row at a time."""
     fpe = await fetch_one(
         "SELECT id, full_name, primary_phone, employee_id_phone, wbom_employee_id, status "
-        "FROM fpe_employees WHERE id = $1",
+        "FROM fazle_employees WHERE id = $1",
         body.fpe_id,
     )
     if not fpe:
-        raise HTTPException(404, f"fpe_employees.id={body.fpe_id} not found")
+        raise HTTPException(404, f"fazle_employees.id={body.fpe_id} not found")
     if fpe["wbom_employee_id"] is not None:
-        raise HTTPException(409, f"fpe_employees.id={body.fpe_id} already linked to wbom_employee_id={fpe['wbom_employee_id']}")
+        raise HTTPException(409, f"fazle_employees.id={body.fpe_id} already linked to wbom_employee_id={fpe['wbom_employee_id']}")
 
     mobile = fpe["primary_phone"] or fpe["employee_id_phone"]
     if not mobile:
-        raise HTTPException(400, f"fpe_employees.id={body.fpe_id} has no phone number -- cannot create a wbom_employees row (employee_mobile is required)")
+        raise HTTPException(400, f"fazle_employees.id={body.fpe_id} has no phone number -- cannot create a fazle_employees_legacy row (employee_mobile is required)")
 
     existing = await fetch_one(
-        "SELECT employee_id FROM wbom_employees WHERE employee_mobile = $1", mobile
+        "SELECT employee_id FROM fazle_employees_legacy WHERE employee_mobile = $1", mobile
     )
     if existing:
-        raise HTTPException(409, f"wbom_employees already has a row for mobile {mobile} (employee_id={existing['employee_id']}) -- use link-fpe instead of create-and-link")
+        raise HTTPException(409, f"fazle_employees_legacy already has a row for mobile {mobile} (employee_id={existing['employee_id']}) -- use link-fpe instead of create-and-link")
 
     wbom_status = "Active" if fpe["status"] == "active" else "Inactive"
     new_wbom_id = await fetch_val(
-        """INSERT INTO wbom_employees
+        """INSERT INTO fazle_employees_legacy
                (employee_name, employee_mobile, designation, basic_salary, status,
                 created_at, updated_at)
            VALUES ($1, $2, $3, $4, $5, now(), now())
@@ -619,7 +619,7 @@ async def create_and_link_wbom(body: CreateAndLinkRequest):
     )
 
     await execute(
-        """UPDATE fpe_employees
+        """UPDATE fazle_employees
            SET wbom_employee_id = $1,
                resolution_status = CASE WHEN resolution_status = 'unresolved'
                                          THEN 'resolved' ELSE resolution_status END,

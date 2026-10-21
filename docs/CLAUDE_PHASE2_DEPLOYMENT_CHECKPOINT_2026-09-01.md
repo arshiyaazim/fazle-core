@@ -1,5 +1,8 @@
 # CLAUDE PHASE-2 — DEPLOYMENT & OBSERVATION CHECKPOINT
 
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **Recovery authority for the owner-authorized review → deploy → observe workflow.**
 Resume with `RESUME CLAUDE PHASE2 OBSERVATION REVIEW` (post-observation) or from current git + this file.
 No secrets, no full customer phone numbers in this file.
@@ -79,7 +82,7 @@ Evidence above. No production mutation.
 
 **c44d80d — 2 LOW items:**
 1. `whatsapp_messages_query` (`?phone=`) and `/api/whatsapp/contact/summary` reference the migration-078 column `resolved_phone` in their WHERE without a schema guard → would 500 on a DB missing 078. **Mitigated:** production HAS 078; new check 5b BLOCKS a deploy without it; the whole feature depends on 078. Acceptable as-is; documented.
-2. Migration `078` file comment named the removed `persist_inbound_central()` helper and claimed a non-existent `process_bridge_inbound pre-check` consumer for `idx_wbom_msg_canonical_key`. → **FIXED** in the working tree (comment only; migration is applied, `db/migrate.py` skips by basename so no re-run) — pending a "review corrections" commit.
+2. Migration `078` file comment named the removed `persist_inbound_central()` helper and claimed a non-existent `process_bridge_inbound pre-check` consumer for `idx_fazle_msg_canonical_key`. → **FIXED** in the working tree (comment only; migration is applied, `db/migrate.py` skips by basename so no re-run) — pending a "review corrections" commit.
 
 **No critical/high defect. Earlier agent's conclusions independently re-verified against code + live DB.**
 

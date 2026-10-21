@@ -1,7 +1,7 @@
 """
 Unit tests — Phase 1B.2 escort-client identity and routing convergence.
 
-Covers the canonical resolver (modules.identity_brain.resolve_escort_client_identity
+Covers the canonical resolver (modules.fazle_identity_brain.resolve_escort_client_identity
 and its integration into detect_identity()), the verified/unverified routing
 split in modules.message_router, and the escort module's unverified-path
 labeling. See knowledge_base/00_governance/management_decisions.md, Session
@@ -29,21 +29,21 @@ def _contact_row(display_name: str, relation: str = "unknown", phone: str = "880
 
 class TestVerifiedIdentitySources:
     async def test_env_phone_match_is_verified(self, monkeypatch):
-        from modules.identity_brain import detect_identity
+        from modules.fazle_identity_brain import detect_identity
         import modules.escort as escort_module
 
         monkeypatch.setattr(escort_module, "_escort_client_phone_list", lambda: ["8801811111111"])
 
-        with patch("modules.identity_brain.fetch_one", new=AsyncMock(return_value=None)):
+        with patch("modules.fazle_identity_brain.fetch_one", new=AsyncMock(return_value=None)):
             result = await detect_identity("8801811111111", "")
 
         assert result["identity_role"] == "client_escort_buyer"
         assert result["identity_source"] == "env_phone"
 
     async def test_stored_role_match_is_verified(self):
-        from modules.identity_brain import detect_identity
+        from modules.fazle_identity_brain import detect_identity
 
-        with patch("modules.identity_brain.fetch_one", new=AsyncMock(
+        with patch("modules.fazle_identity_brain.fetch_one", new=AsyncMock(
             return_value=_seed_row("client_escort_buyer"),
         )):
             result = await detect_identity("8801811111111", "")
@@ -62,12 +62,12 @@ class TestVerifiedIdentitySources:
         "escort-client",
     ])
     async def test_contact_name_marker_match_is_verified(self, name):
-        from modules.identity_brain import detect_identity
+        from modules.fazle_identity_brain import detect_identity
 
-        with patch("modules.identity_brain.fetch_one", new=AsyncMock(side_effect=[
+        with patch("modules.fazle_identity_brain.fetch_one", new=AsyncMock(side_effect=[
             None,                       # seed miss
-            None,                       # employee wbom_employees miss
-            None,                       # employee fpe_employees fallback miss
+            None,                       # employee fazle_employees_legacy miss
+            None,                       # employee fazle_employees fallback miss
             None,                       # cash miss
             None,                       # attendance miss
             None,                       # escort_roster miss
@@ -86,9 +86,9 @@ class TestVerifiedIdentitySources:
         "",
     ])
     async def test_unrelated_contact_name_not_verified(self, name):
-        from modules.identity_brain import detect_identity
+        from modules.fazle_identity_brain import detect_identity
 
-        with patch("modules.identity_brain.fetch_one", new=AsyncMock(side_effect=[
+        with patch("modules.fazle_identity_brain.fetch_one", new=AsyncMock(side_effect=[
             None, None, None, None, None, None,
             _contact_row(name),
         ])):
@@ -100,9 +100,9 @@ class TestVerifiedIdentitySources:
         """_lookup_seed()'s own query already filters is_active/status — an
         inactive row simply never returns from fetch_one, so this is
         equivalent to no seed row at all."""
-        from modules.identity_brain import detect_identity
+        from modules.fazle_identity_brain import detect_identity
 
-        with patch("modules.identity_brain.fetch_one", new=AsyncMock(side_effect=[
+        with patch("modules.fazle_identity_brain.fetch_one", new=AsyncMock(side_effect=[
             None,  # inactive seed row filtered out by _lookup_seed's own SQL
             None, None, None, None, None,
             None,  # no contact either
@@ -120,12 +120,12 @@ class TestSourcePriority:
         (Step 3.7) — a stored row, whatever it says, takes priority. Here the
         stored row itself says client_escort_buyer, so this also confirms
         env_phone doesn't need to fire for the same result."""
-        from modules.identity_brain import detect_identity
+        from modules.fazle_identity_brain import detect_identity
         import modules.escort as escort_module
 
         monkeypatch.setattr(escort_module, "_escort_client_phone_list", lambda: ["8801811111111"])
 
-        with patch("modules.identity_brain.fetch_one", new=AsyncMock(
+        with patch("modules.fazle_identity_brain.fetch_one", new=AsyncMock(
             return_value=_seed_row("vendor"),
         )):
             result = await detect_identity("8801811111111", "")
@@ -135,12 +135,12 @@ class TestSourcePriority:
         assert result["identity_role"] == "vendor"
 
     async def test_env_phone_wins_over_contact_name_marker(self, monkeypatch):
-        from modules.identity_brain import detect_identity
+        from modules.fazle_identity_brain import detect_identity
         import modules.escort as escort_module
 
         monkeypatch.setattr(escort_module, "_escort_client_phone_list", lambda: ["8801811111111"])
 
-        with patch("modules.identity_brain.fetch_one", new=AsyncMock(return_value=None)):
+        with patch("modules.fazle_identity_brain.fetch_one", new=AsyncMock(return_value=None)):
             result = await detect_identity("8801811111111", "")
 
         # env_phone fires at Step 3.7, before Step 4's contact lookup even runs.
@@ -157,12 +157,12 @@ class TestPhoneNormalizationEquivalence:
         "1811111111",
     ])
     async def test_equivalent_phone_forms_match_same_allowlist_entry(self, monkeypatch, raw):
-        from modules.identity_brain import detect_identity
+        from modules.fazle_identity_brain import detect_identity
         import modules.escort as escort_module
 
         monkeypatch.setattr(escort_module, "_escort_client_phone_list", lambda: ["8801811111111"])
 
-        with patch("modules.identity_brain.fetch_one", new=AsyncMock(return_value=None)):
+        with patch("modules.fazle_identity_brain.fetch_one", new=AsyncMock(return_value=None)):
             result = await detect_identity(raw, "")
 
         assert result["identity_role"] == "client_escort_buyer", f"{raw!r} should match"
@@ -173,23 +173,23 @@ class TestPhoneNormalizationEquivalence:
 
 class TestEmptyAllowlistSemantics:
     async def test_empty_list_unknown_sender_not_verified(self, monkeypatch):
-        from modules.identity_brain import detect_identity
+        from modules.fazle_identity_brain import detect_identity
         import modules.escort as escort_module
 
         monkeypatch.setattr(escort_module, "_escort_client_phone_list", lambda: [])
 
-        with patch("modules.identity_brain.fetch_one", new=AsyncMock(return_value=None)):
+        with patch("modules.fazle_identity_brain.fetch_one", new=AsyncMock(return_value=None)):
             result = await detect_identity("8801900000000", "ordinary hello")
 
         assert result["identity_role"] == "unknown"
 
     async def test_empty_list_stored_role_still_verified(self, monkeypatch):
-        from modules.identity_brain import detect_identity
+        from modules.fazle_identity_brain import detect_identity
         import modules.escort as escort_module
 
         monkeypatch.setattr(escort_module, "_escort_client_phone_list", lambda: [])
 
-        with patch("modules.identity_brain.fetch_one", new=AsyncMock(
+        with patch("modules.fazle_identity_brain.fetch_one", new=AsyncMock(
             return_value=_seed_row("client_escort_buyer"),
         )):
             result = await detect_identity("8801811111111", "")
@@ -197,12 +197,12 @@ class TestEmptyAllowlistSemantics:
         assert result["identity_role"] == "client_escort_buyer"
 
     async def test_empty_list_contact_marker_still_verified(self, monkeypatch):
-        from modules.identity_brain import detect_identity
+        from modules.fazle_identity_brain import detect_identity
         import modules.escort as escort_module
 
         monkeypatch.setattr(escort_module, "_escort_client_phone_list", lambda: [])
 
-        with patch("modules.identity_brain.fetch_one", new=AsyncMock(side_effect=[
+        with patch("modules.fazle_identity_brain.fetch_one", new=AsyncMock(side_effect=[
             None, None, None, None, None, None,
             _contact_row("Escort ABC Shipping"),
         ])):
@@ -216,12 +216,12 @@ class TestEmptyAllowlistSemantics:
         never silently promote an unknown, never-before-seen sender to a
         persistent verified client_escort_buyer identity just because their
         message looks escort-shaped."""
-        from modules.identity_brain import detect_identity
+        from modules.fazle_identity_brain import detect_identity
         import modules.escort as escort_module
 
         monkeypatch.setattr(escort_module, "_escort_client_phone_list", lambda: [])
 
-        with patch("modules.identity_brain.fetch_one", new=AsyncMock(return_value=None)):
+        with patch("modules.fazle_identity_brain.fetch_one", new=AsyncMock(return_value=None)):
             result = await detect_identity("8801900000000", "MV GOLDEN STAR lighter escort lagbe")
 
         assert result["identity_role"] != "client_escort_buyer"
@@ -233,12 +233,12 @@ class TestEmptyAllowlistSemantics:
 
 class TestCanonicalResolverContract:
     async def test_verified_result_shape(self, monkeypatch):
-        from modules.identity_brain import resolve_escort_client_identity
+        from modules.fazle_identity_brain import resolve_escort_client_identity
         import modules.escort as escort_module
 
         monkeypatch.setattr(escort_module, "_escort_client_phone_list", lambda: ["8801811111111"])
 
-        with patch("modules.identity_brain.fetch_one", new=AsyncMock(return_value=None)):
+        with patch("modules.fazle_identity_brain.fetch_one", new=AsyncMock(return_value=None)):
             result = await resolve_escort_client_identity("8801811111111", "", "8801811111111@s.whatsapp.net")
 
         assert result["is_escort_client"] is True
@@ -249,9 +249,9 @@ class TestCanonicalResolverContract:
         assert result["original_jid"] == "8801811111111@s.whatsapp.net"
 
     async def test_unverified_message_content_result_shape(self):
-        from modules.identity_brain import resolve_escort_client_identity
+        from modules.fazle_identity_brain import resolve_escort_client_identity
 
-        with patch("modules.identity_brain.fetch_one", new=AsyncMock(return_value=None)):
+        with patch("modules.fazle_identity_brain.fetch_one", new=AsyncMock(return_value=None)):
             result = await resolve_escort_client_identity(
                 "8801900000000", "MV GOLDEN STAR lighter escort lagbe",
             )
@@ -262,9 +262,9 @@ class TestCanonicalResolverContract:
         assert result["source"] == "unverified_message_content"
 
     async def test_ordinary_sender_result_shape(self):
-        from modules.identity_brain import resolve_escort_client_identity
+        from modules.fazle_identity_brain import resolve_escort_client_identity
 
-        with patch("modules.identity_brain.fetch_one", new=AsyncMock(return_value=None)):
+        with patch("modules.fazle_identity_brain.fetch_one", new=AsyncMock(return_value=None)):
             result = await resolve_escort_client_identity("8801900000000", "hello there")
 
         assert result["is_escort_client"] is False
@@ -279,12 +279,12 @@ class TestAuthorityIsolation:
     async def test_env_phone_match_does_not_affect_admin_check(self, monkeypatch):
         """An escort-client env-phone match must never be confused with an
         admin — admin resolution (Step 1) runs first and is untouched."""
-        from modules.identity_brain import detect_identity
+        from modules.fazle_identity_brain import detect_identity
         import modules.escort as escort_module
 
         monkeypatch.setattr(escort_module, "_escort_client_phone_list", lambda: ["8801700000001"])
 
-        with patch("modules.identity_brain.fetch_one", new=AsyncMock(return_value=None)):
+        with patch("modules.fazle_identity_brain.fetch_one", new=AsyncMock(return_value=None)):
             with patch("app.config.get_settings") as mock_settings:
                 mock_settings.return_value.admin_number_list = ["8801700000001"]
                 mock_settings.return_value.admin_meta_number = ""
@@ -298,11 +298,11 @@ class TestAuthorityIsolation:
 
     async def test_seed_accountant_still_wins_over_env_escort_phone(self, monkeypatch):
         import modules.escort as escort_module
-        from modules.identity_brain import detect_identity
+        from modules.fazle_identity_brain import detect_identity
 
         monkeypatch.setattr(escort_module, "_escort_client_phone_list", lambda: ["8801811111111"])
 
-        with patch("modules.identity_brain.fetch_one", new=AsyncMock(
+        with patch("modules.fazle_identity_brain.fetch_one", new=AsyncMock(
             return_value=_seed_row("accountant"),
         )):
             result = await detect_identity("8801811111111", "")
@@ -474,7 +474,7 @@ class TestWebhookLidResolutionParity:
         mocking that, this test attempts a real network call and can hang/
         timeout depending on unrelated test ordering/state. Unrelated to the
         LID resolution behavior itself, just test hygiene."""
-        import modules.bridge_poller as poller_module
+        import modules.fazle_bridge_poller as poller_module
         import modules.route_b as route_b
 
         monkeypatch.setattr(route_b, "ollama_generate_reply", AsyncMock(return_value="ধন্যবাদ।"))
@@ -497,7 +497,7 @@ class TestWebhookLidResolutionParity:
 
         async with test_db_pool.acquire() as conn:
             row = await conn.fetchrow(
-                "SELECT sender_number FROM wbom_whatsapp_messages WHERE message_body = $1",
+                "SELECT sender_number FROM fazle_whatsapp_messages WHERE message_body = $1",
                 unique_text,
             )
         assert row is not None
@@ -515,7 +515,7 @@ class TestWebhookLidResolutionParity:
         mock_all_services: see the note on the sibling test above — an
         unresolved/unknown sender's generic text otherwise reaches the real
         AI reply path."""
-        import modules.bridge_poller as poller_module
+        import modules.fazle_bridge_poller as poller_module
         import modules.route_b as route_b
 
         monkeypatch.setattr(poller_module, "_load_lid_map", lambda whatsapp_db: {})
@@ -535,7 +535,7 @@ class TestWebhookLidResolutionParity:
 
         async with test_db_pool.acquire() as conn:
             row = await conn.fetchrow(
-                "SELECT sender_number FROM wbom_whatsapp_messages WHERE message_body = $1",
+                "SELECT sender_number FROM fazle_whatsapp_messages WHERE message_body = $1",
                 unique_text,
             )
         assert row is not None

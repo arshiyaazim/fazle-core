@@ -1,6 +1,6 @@
 """
 Fazle Core — Admin Transaction CRUD Routes
-Phase 19: Add / Edit / Soft-Delete on fpe_cash_transactions + smart employee matching.
+Phase 19: Add / Edit / Soft-Delete on fazle_cash_transactions + smart employee matching.
 
 Rules:
   - NEVER hard-delete financial history
@@ -429,7 +429,7 @@ async def resolve_or_create_employee(
     payout_phone: Optional[str],
 ) -> dict:
     """
-    Return an fpe_employees row, creating one if needed.
+    Return an fazle_employees row, creating one if needed.
 
     2026-08-30 (Owner Phase 1 — employee identity authority): this now
     delegates to the ONE canonical FPE resolver,
@@ -441,7 +441,7 @@ async def resolve_or_create_employee(
         phone never resolves to, or creates, a different employee;
       * a phone match wins over any name match;
       * existing rows match regardless of active/inactive status (no
-        idx_fpe_emp_phone_unique duplicate-key crash);
+        idx_fazle_emp_phone_unique duplicate-key crash);
       * a previously unseen identity phone is a new person even when the name
         matches an existing employee.
 
@@ -458,7 +458,7 @@ async def resolve_or_create_employee(
     if res is not None:
         row = await fetch_one(
             "SELECT id, employee_code, full_name, primary_phone, employee_id_phone "
-            "FROM fpe_employees WHERE id = $1",
+            "FROM fazle_employees WHERE id = $1",
             res.employee_id,
         )
         if row:
@@ -486,7 +486,7 @@ async def _create_admin_employee(
     primary_phone: Optional[str],
 ) -> dict:
     """
-    Insert a new fpe_employees row with sequential EMP-XXXXX code.
+    Insert a new fazle_employees row with sequential EMP-XXXXX code.
     Uses the same pattern as the WhatsApp auto-create path.
     """
     from modules.fazle_payroll_engine.employee import normalize_name
@@ -496,7 +496,7 @@ async def _create_admin_employee(
     async with db_conn() as conn:
         new_id: int = await conn.fetchval(
             """
-            INSERT INTO fpe_employees
+            INSERT INTO fazle_employees
                 (full_name, name_normalized, primary_phone, employee_id_phone,
                  status, created_source, resolution_status, confidence_score)
             VALUES ($1, $2, $3, $4, 'active', 'admin_manual', 'auto_created', 1.0)
@@ -510,7 +510,7 @@ async def _create_admin_employee(
         # Assign EMP-XXXXX code (same pattern as WhatsApp auto-create)
         code = f"EMP-{new_id:05d}"
         await conn.execute(
-            "UPDATE fpe_employees SET employee_code = $1 WHERE id = $2",
+            "UPDATE fazle_employees SET employee_code = $1 WHERE id = $2",
             code, new_id,
         )
 
@@ -583,7 +583,7 @@ async def add_admin_transaction(body: AdminTxnCreate, key: str = Depends(_requir
     txn = await create_transaction(req)
 
     log.info("[admin_txn] created txn id=%d emp=%d ref=%s", txn.id, emp["id"], txn.txn_ref[:16])
-    new_row = await fetch_one("SELECT updated_at FROM fpe_cash_transactions WHERE id = $1", txn.id)
+    new_row = await fetch_one("SELECT updated_at FROM fazle_cash_transactions WHERE id = $1", txn.id)
     return {
         "ok": True,
         "transaction_id": txn.id,
@@ -612,7 +612,7 @@ async def edit_admin_transaction(
         "SELECT id, employee_id, employee_name_raw, amount, payout_phone, "
         "payout_method, txn_date, txn_category, accounting_period, deleted_at, "
         "updated_at, source_message_text "
-        "FROM fpe_cash_transactions WHERE id = $1",
+        "FROM fazle_cash_transactions WHERE id = $1",
         txn_id,
     )
     if not row:
@@ -673,7 +673,7 @@ async def edit_admin_transaction(
 
     params.append(txn_id)
     await execute(
-        f"UPDATE fpe_cash_transactions SET {', '.join(sets)} WHERE id = ${i}",
+        f"UPDATE fazle_cash_transactions SET {', '.join(sets)} WHERE id = ${i}",
         *params,
     )
 
@@ -711,7 +711,7 @@ async def edit_admin_transaction(
         await _adjust_ledger(employee_id, new_period, new_amount, new_cat)
 
     log.info("[admin_txn] edited txn id=%d", txn_id)
-    new_row = await fetch_one("SELECT updated_at FROM fpe_cash_transactions WHERE id = $1", txn_id)
+    new_row = await fetch_one("SELECT updated_at FROM fazle_cash_transactions WHERE id = $1", txn_id)
     return {"ok": True, "transaction_id": txn_id, "updated_at": new_row["updated_at"].isoformat() if new_row and new_row["updated_at"] else None}
 
 
@@ -729,7 +729,7 @@ async def soft_delete_transaction(
 
     row = await fetch_one(
         "SELECT id, employee_id, amount, txn_category, accounting_period, deleted_at "
-        "FROM fpe_cash_transactions WHERE id = $1",
+        "FROM fazle_cash_transactions WHERE id = $1",
         txn_id,
     )
     if not row:
@@ -739,7 +739,7 @@ async def soft_delete_transaction(
 
     now = datetime.utcnow()
     await execute(
-        "UPDATE fpe_cash_transactions SET deleted_at = $1, deleted_by = $2 WHERE id = $3",
+        "UPDATE fazle_cash_transactions SET deleted_at = $1, deleted_by = $2 WHERE id = $3",
         now, deleted_by, txn_id,
     )
 
