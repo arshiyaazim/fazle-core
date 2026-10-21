@@ -38,7 +38,7 @@ by `start_fpe()` at application startup. Each statement is idempotent
 
 | File | Purpose |
 |------|---------|
-| `001_fpe_schema.sql` | Core tables: fpe_wa_messages, fpe_employees, fpe_cash_transactions, fpe_employee_ledger, fpe_unmatched_messages, fpe_accounting_audit_logs |
+| `001_fpe_schema.sql` | Core tables: fpe_wa_messages, fazle_employees, fazle_cash_transactions, fazle_employee_ledger, fpe_unmatched_messages, fpe_accounting_audit_logs |
 | `002_fpe_normalization.sql` | Soft-link, review queue, normalization audit |
 | `003_fpe_search_indexes.sql` | Search-optimized indexes |
 | `004_fpe_zero_loss.sql` | Review queue enrichment, DLQ, gap scan |
@@ -54,9 +54,9 @@ by `start_fpe()` at application startup. Each statement is idempotent
 
 | Table | Purpose |
 |-------|---------|
-| `fpe_employees` | **Canonical employee table** — identity + HR profile (basic_salary, designation, joining_date). Soft-linked to `wbom_employees` via `wbom_employee_id`. |
-| `fpe_cash_transactions` | **Canonical immutable cash transaction ledger** — all payments end here via `create_transaction()`. Never mutated; corrections use reversal rows. |
-| `fpe_employee_ledger` | Running totals per employee per month (total_earned, total_paid, total_advance, closing_balance) |
+| `fazle_employees` | **Canonical employee table** — identity + HR profile (basic_salary, designation, joining_date). Soft-linked to `fazle_employees_legacy` via `wbom_employee_id`. |
+| `fazle_cash_transactions` | **Canonical immutable cash transaction ledger** — all payments end here via `create_transaction()`. Never mutated; corrections use reversal rows. |
+| `fazle_employee_ledger` | Running totals per employee per month (total_earned, total_paid, total_advance, closing_balance) |
 | `fpe_wa_messages` | Immutable raw WhatsApp message store |
 | `fpe_unmatched_messages` | Zero-loss review queue — detected money not yet in ledger |
 | `fpe_accounting_audit_logs` | Immutable audit log for every transaction lifecycle event |
@@ -74,13 +74,13 @@ by `start_fpe()` at application startup. Each statement is idempotent
 
 ## Employee Identity (2026-07-02)
 
-`fpe_employees` is now the **single canonical employee table** for the entire
+`fazle_employees` is now the **single canonical employee table** for the entire
 platform. It carries both identity fields (phone, name) and HR profile fields
 (basic_salary, designation, joining_date). All employee creation paths
 (WhatsApp parser, escort program confirmation, frontend Add Employee) now
-create or link `fpe_employees` rows.
+create or link `fazle_employees` rows.
 
-Cross-reference with `wbom_employees` is maintained via `wbom_employee_id`
+Cross-reference with `fazle_employees_legacy` is maintained via `wbom_employee_id`
 soft-link. Migration 011 backfilled all 178 WBOM employees into FPE.
 
 ## Adding a Migration

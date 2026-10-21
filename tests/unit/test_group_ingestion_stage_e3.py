@@ -1,12 +1,12 @@
 """Stage E2/E3/E5 (2026-08-28) -- controlled Office-group ingestion.
 
-modules.bridge_poller._fetch_new_messages()'s new approved_group_jids
+modules.fazle_bridge_poller._fetch_new_messages()'s new approved_group_jids
 parameter, and structural/source-inspection proof that the group-message
 short-circuit (persistence only, never automation) is positioned before
 every automation-triggering step in _poll_bridge()'s loop body -- the
 same source-inspection convention this repo already established for
 proving deep pipeline wiring (see e.g. TestHermesRelayReplyOriginPreserved
-/ router-guard source checks in test_wbom_actor_attribution_stage_b.py)
+/ router-guard source checks in test_fazle_actor_attribution_stage_b.py)
 when a full integration mock of _poll_bridge() itself isn't practical.
 """
 from __future__ import annotations
@@ -19,7 +19,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-import modules.bridge_poller as bp
+import modules.fazle_bridge_poller as bp
 
 
 def _make_messages_db(rows: list[tuple]) -> str:
@@ -105,7 +105,7 @@ class TestGroupShortCircuitOrdering:
         persist_idx = src.index("core_message_id = await _save_raw_core_copy(bridge_name, msg, phone, text)")
         shortcircuit_idx = src.index('_group_chat_jid.endswith("@g.us")')
         ocr_idx = src.index('if msg.get("media_type") == "image" and has_meaningful_text(text):')
-        identity_idx = src.index("from modules.identity_brain import detect_identity")
+        identity_idx = src.index("from modules.fazle_identity_brain import detect_identity")
         routing_idx = src.index("await process_bridge_inbound(")
 
         assert persist_idx < shortcircuit_idx < ocr_idx

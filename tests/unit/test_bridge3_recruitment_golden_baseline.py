@@ -74,7 +74,7 @@ def test_age_rejects_dob_shaped_text():
 
 # ─── B1/B7 Invariant 1 & 2: fast reply under cooldown must be processed ────
 # (protects the exact b7a302d regression -- see
-# modules.bridge_poller.process_bridge_inbound's cooldown gate)
+# modules.fazle_bridge_poller.process_bridge_inbound's cooldown gate)
 
 async def test_fast_age_reply_saves_and_advances_step():
     """A candidate answering the active age question -- regardless of how

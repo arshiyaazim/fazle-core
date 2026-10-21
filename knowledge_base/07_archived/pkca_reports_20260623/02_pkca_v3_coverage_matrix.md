@@ -23,7 +23,7 @@ runtime_index: false
 | `knowledge_base/06_developer_system/intent_classifier.md` | NEW KB article | P2 `intent` 28% → 85% |
 | `knowledge_base/06_developer_system/accountant_summary.md` | NEW KB article | P3 `accountant_summary` 3% → 85% |
 | `knowledge_base/06_developer_system/attendance_parser.md` | NEW KB article | P2 `attendance_parser` 62% → 78% |
-| `modules/bridge_poller/__init__.py` ESX-WIRE | Production code | Step 2 OCR → `escort_slip_extractor`; `bridge_poller.md` NOT yet updated → freshness gap |
+| `modules/fazle_bridge_poller/__init__.py` ESX-WIRE | Production code | Step 2 OCR → `escort_slip_extractor`; `bridge_poller.md` NOT yet updated → freshness gap |
 | `knowledge_base/00_governance/management_decisions.md` | Updated | Session 10 ESX-WIRE authorization + field mapping documented |
 | `scripts/rebuild_qdrant.py` | New tool | Standalone rebuild; Qdrant rebuilt 2026-06-23 — 251 points in `fazle_rag_chunks` |
 

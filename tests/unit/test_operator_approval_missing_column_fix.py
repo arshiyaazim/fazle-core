@@ -70,7 +70,7 @@ def _mock_rbac(monkeypatch):
 
 async def _submit_operator_candidate(test_db_pool, employee_id: int) -> dict:
     """Real POST /api/fpe/operator/submit -- creates a genuine operator_pending
-    row + linked pending fpe_cash_transactions row, same as production."""
+    row + linked pending fazle_cash_transactions row, same as production."""
     import app.database as db_module
     db_module._pool = test_db_pool
 
@@ -114,7 +114,7 @@ class TestOperatorApprovalFix:
         pending_txn_id = submitted["pending_txn_id"]
 
         txn_count_before = await fetch_val(
-            "SELECT COUNT(*) FROM fpe_cash_transactions WHERE employee_id = $1", emp_id
+            "SELECT COUNT(*) FROM fazle_cash_transactions WHERE employee_id = $1", emp_id
         )
         audit_count_before = await fetch_val(
             "SELECT COUNT(*) FROM fpe_accounting_audit_logs WHERE entity_id = $1 AND entity_type = 'transaction'",
@@ -122,7 +122,7 @@ class TestOperatorApprovalFix:
         )
         ledger_before = await fetch_all(
             "SELECT accounting_period, total_paid, total_advance, total_earned, txn_count "
-            "FROM fpe_employee_ledger WHERE employee_id = $1 ORDER BY accounting_period",
+            "FROM fazle_employee_ledger WHERE employee_id = $1 ORDER BY accounting_period",
             emp_id,
         )
 
@@ -150,7 +150,7 @@ class TestOperatorApprovalFix:
         assert body["txn_id"] == pending_txn_id
 
         txn = await fetch_one(
-            "SELECT id, transaction_status, approval_status, employee_id, amount FROM fpe_cash_transactions WHERE id = $1",
+            "SELECT id, transaction_status, approval_status, employee_id, amount FROM fazle_cash_transactions WHERE id = $1",
             pending_txn_id,
         )
         assert txn["transaction_status"] == "final"
@@ -159,7 +159,7 @@ class TestOperatorApprovalFix:
 
         # No duplicate transaction created.
         txn_count_after = await fetch_val(
-            "SELECT COUNT(*) FROM fpe_cash_transactions WHERE employee_id = $1", emp_id
+            "SELECT COUNT(*) FROM fazle_cash_transactions WHERE employee_id = $1", emp_id
         )
         assert txn_count_after == txn_count_before
 
@@ -176,7 +176,7 @@ class TestOperatorApprovalFix:
         # see accounting.py's _upsert_ledger()).
         ledger_after = await fetch_all(
             "SELECT accounting_period, total_paid, total_advance, total_earned, txn_count "
-            "FROM fpe_employee_ledger WHERE employee_id = $1 ORDER BY accounting_period",
+            "FROM fazle_employee_ledger WHERE employee_id = $1 ORDER BY accounting_period",
             emp_id,
         )
         assert len(ledger_after) == len(ledger_before) + 1, (
@@ -272,7 +272,7 @@ class TestOperatorApprovalFix:
 
         ledger_before = await fetch_all(
             "SELECT accounting_period, total_paid, total_advance, total_earned, txn_count "
-            "FROM fpe_employee_ledger WHERE employee_id = $1 ORDER BY accounting_period",
+            "FROM fazle_employee_ledger WHERE employee_id = $1 ORDER BY accounting_period",
             emp_id,
         )
 
@@ -302,7 +302,7 @@ class TestOperatorApprovalFix:
         # Transaction must still be 'pending' -- the finalize UPDATE
         # (same connection/transaction) must have rolled back.
         txn = await fetch_one(
-            "SELECT transaction_status FROM fpe_cash_transactions WHERE id = $1", pending_txn_id
+            "SELECT transaction_status FROM fazle_cash_transactions WHERE id = $1", pending_txn_id
         )
         assert txn["transaction_status"] == "pending"
 
@@ -310,7 +310,7 @@ class TestOperatorApprovalFix:
         # connection/transaction) must have rolled back too.
         ledger_after = await fetch_all(
             "SELECT accounting_period, total_paid, total_advance, total_earned, txn_count "
-            "FROM fpe_employee_ledger WHERE employee_id = $1 ORDER BY accounting_period",
+            "FROM fazle_employee_ledger WHERE employee_id = $1 ORDER BY accounting_period",
             emp_id,
         )
         assert ledger_after == ledger_before

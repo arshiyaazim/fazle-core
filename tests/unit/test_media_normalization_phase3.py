@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from modules import media_normalization as mn
+from modules import fazle_media_normalization as mn
 
 pytestmark = pytest.mark.unit
 

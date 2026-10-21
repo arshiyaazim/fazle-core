@@ -146,7 +146,7 @@ The SPA at `app/static/escort-roster.html` has 5 tabs:
 - `modules/escort/` — Order parser, confirmation handler, auto-employee create
 - `modules/escort_lifecycle/` — Release/close workflow, attendance backfill
 - `modules/escort_slip_extractor/` — OCR slip extraction from images
-- `modules/payment_workflow/` — Payment draft creation after release
+- `modules/fazle_payment_workflow/` — Payment draft creation after release
 - `modules/fazle_payroll_engine/` — Employee matching, accounting ledger
 
 ## Knowledge Base

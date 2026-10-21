@@ -52,7 +52,7 @@ def test_escort_terms_canonicalisation():
 
 @pytest.mark.asyncio
 async def test_lookup_employee_by_name_strips_escort_prefix():
-    from modules.identity_brain import _lookup_employee_by_name
+    from modules.fazle_identity_brain import _lookup_employee_by_name
 
     seen: list = []
 
@@ -63,7 +63,7 @@ async def test_lookup_employee_by_name_strips_escort_prefix():
                     "designation": "Escort", "status": "Active"}
         return None
 
-    with patch("modules.identity_brain.fetch_one", new=AsyncMock(side_effect=fake_fetch_one)):
+    with patch("modules.fazle_identity_brain.fetch_one", new=AsyncMock(side_effect=fake_fetch_one)):
         row = await _lookup_employee_by_name("Escort Saimun")
 
     assert row is not None and row["employee_id"] == 11
@@ -72,8 +72,8 @@ async def test_lookup_employee_by_name_strips_escort_prefix():
 
 @pytest.mark.asyncio
 async def test_lookup_employee_by_name_none_for_unknown():
-    from modules.identity_brain import _lookup_employee_by_name
-    with patch("modules.identity_brain.fetch_one", new=AsyncMock(return_value=None)):
+    from modules.fazle_identity_brain import _lookup_employee_by_name
+    with patch("modules.fazle_identity_brain.fetch_one", new=AsyncMock(return_value=None)):
         assert await _lookup_employee_by_name("Escort Nobody") is None
 
 
@@ -83,19 +83,19 @@ def _no_evidence_patches():
     """Patch out every identity source ABOVE Step 4.5 so a phone reaches the
     CSV-pattern branch cleanly."""
     return [
-        patch("modules.identity_brain._lookup_employee", new=AsyncMock(return_value=None)),
-        patch("modules.identity_brain._lookup_cash_identity", new=AsyncMock(return_value=None)),
-        patch("modules.identity_brain._lookup_attendance_identity", new=AsyncMock(return_value=None)),
-        patch("modules.identity_brain._lookup_escort_roster", new=AsyncMock(return_value=None)),
-        patch("modules.identity_brain._lookup_contact", new=AsyncMock(return_value=None)),
-        patch("modules.identity_brain._matches_env_escort_phone", new=lambda p: False),
-        patch("modules.identity_brain.fetch_one", new=AsyncMock(return_value=None)),
+        patch("modules.fazle_identity_brain._lookup_employee", new=AsyncMock(return_value=None)),
+        patch("modules.fazle_identity_brain._lookup_cash_identity", new=AsyncMock(return_value=None)),
+        patch("modules.fazle_identity_brain._lookup_attendance_identity", new=AsyncMock(return_value=None)),
+        patch("modules.fazle_identity_brain._lookup_escort_roster", new=AsyncMock(return_value=None)),
+        patch("modules.fazle_identity_brain._lookup_contact", new=AsyncMock(return_value=None)),
+        patch("modules.fazle_identity_brain._matches_env_escort_phone", new=lambda p: False),
+        patch("modules.fazle_identity_brain.fetch_one", new=AsyncMock(return_value=None)),
     ]
 
 
 @pytest.mark.asyncio
 async def test_escort_named_contact_with_employee_evidence_is_worker():
-    from modules.identity_brain import detect_identity
+    from modules.fazle_identity_brain import detect_identity
 
     ctx = _no_evidence_patches()
     for p in ctx:
@@ -103,7 +103,7 @@ async def test_escort_named_contact_with_employee_evidence_is_worker():
     try:
         with patch("modules.owner_contact_registry.is_owner_managed_contact", new=lambda p: True), \
              patch("modules.contact_sync.get_display_name", new=AsyncMock(return_value="Escort Saimun")), \
-             patch("modules.identity_brain._lookup_employee_by_name",
+             patch("modules.fazle_identity_brain._lookup_employee_by_name",
                    new=AsyncMock(return_value={"employee_id": 11, "employee_name": "Saimun",
                                                "designation": "Escort", "status": "Active"})):
             result = await detect_identity("8801933333333", "boss kal duty ache?")
@@ -117,7 +117,7 @@ async def test_escort_named_contact_with_employee_evidence_is_worker():
 
 @pytest.mark.asyncio
 async def test_escort_named_contact_without_any_evidence_is_not_client_from_prefix():
-    from modules.identity_brain import detect_identity
+    from modules.fazle_identity_brain import detect_identity
 
     ctx = _no_evidence_patches()
     for p in ctx:
@@ -125,7 +125,7 @@ async def test_escort_named_contact_without_any_evidence_is_not_client_from_pref
     try:
         with patch("modules.owner_contact_registry.is_owner_managed_contact", new=lambda p: True), \
              patch("modules.contact_sync.get_display_name", new=AsyncMock(return_value="Escort Random Person")), \
-             patch("modules.identity_brain._lookup_employee_by_name", new=AsyncMock(return_value=None)):
+             patch("modules.fazle_identity_brain._lookup_employee_by_name", new=AsyncMock(return_value=None)):
             result = await detect_identity("8801944444444", "hello")
     finally:
         for p in ctx:
@@ -137,16 +137,16 @@ async def test_escort_named_contact_without_any_evidence_is_not_client_from_pref
 
 @pytest.mark.asyncio
 async def test_genuine_escort_client_phone_still_classified_client():
-    from modules.identity_brain import detect_identity
+    from modules.fazle_identity_brain import detect_identity
 
     ctx = [
-        patch("modules.identity_brain._lookup_employee", new=AsyncMock(return_value=None)),
-        patch("modules.identity_brain._lookup_cash_identity", new=AsyncMock(return_value=None)),
-        patch("modules.identity_brain._lookup_attendance_identity", new=AsyncMock(return_value=None)),
-        patch("modules.identity_brain._lookup_escort_roster", new=AsyncMock(return_value=None)),
-        patch("modules.identity_brain._lookup_contact", new=AsyncMock(return_value=None)),
-        patch("modules.identity_brain.fetch_one", new=AsyncMock(return_value=None)),
-        patch("modules.identity_brain._matches_env_escort_phone", new=lambda p: True),
+        patch("modules.fazle_identity_brain._lookup_employee", new=AsyncMock(return_value=None)),
+        patch("modules.fazle_identity_brain._lookup_cash_identity", new=AsyncMock(return_value=None)),
+        patch("modules.fazle_identity_brain._lookup_attendance_identity", new=AsyncMock(return_value=None)),
+        patch("modules.fazle_identity_brain._lookup_escort_roster", new=AsyncMock(return_value=None)),
+        patch("modules.fazle_identity_brain._lookup_contact", new=AsyncMock(return_value=None)),
+        patch("modules.fazle_identity_brain.fetch_one", new=AsyncMock(return_value=None)),
+        patch("modules.fazle_identity_brain._matches_env_escort_phone", new=lambda p: True),
     ]
     for p in ctx:
         p.start()

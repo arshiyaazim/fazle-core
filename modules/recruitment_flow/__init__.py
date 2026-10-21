@@ -2562,7 +2562,7 @@ async def link_candidate_to_employee(
 ) -> dict:
     """GAP 1 — link the originating candidate record to a newly created
     employee, exactly once, keyed by canonical phone (last-9 match, since
-    wbom_candidates.phone and wbom_employees.employee_mobile use
+    wbom_candidates.phone and fazle_employees_legacy.employee_mobile use
     inconsistent 01.../8801... formats in production).
 
     Best-effort and non-fatal: the caller (employee-creation path) must not

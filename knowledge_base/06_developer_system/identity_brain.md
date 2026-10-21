@@ -8,7 +8,7 @@ runtime_index: true
 
 # Identity Brain
 **KB Article ID:** DEV-06-IDENTITY-BRAIN
-**Sources:** `modules/identity_brain/__init__.py` (393 lines — read 2026-06-23), `modules/role_classifier/__init__.py`
+**Sources:** `modules/fazle_identity_brain/__init__.py` (393 lines — read 2026-06-23), `modules/role_classifier/__init__.py`
 **Visibility:** Developer / Admin only — do NOT set `safe_for_customer=True`
 **Certified:** 2026-06-23 (Wave-3, W3P2-AUTH)
 
@@ -36,9 +36,9 @@ The identity brain resolves every contact to exactly one role using an ordered, 
 | 3 | accountant | `fazle_contact_roles` (role=accountant) | — |
 | 4 | vip_client | `fazle_contact_roles` (role=vip_client) | — |
 | 5 | client_escort_buyer | `fazle_contact_roles` (role=client_escort_buyer) | — |
-| 6 | repeat_client | `fpe_cash_transactions` history | — |
+| 6 | repeat_client | `fazle_cash_transactions` history | — |
 | 7 | vendor | `fazle_contact_roles` (role=vendor) | — |
-| 8 | employee | `wbom_employees` (3 phone variants) | A: cash transactions, B: attendance records, C: escort roster, D: contact DB |
+| 8 | employee | `fazle_employees_legacy` (3 phone variants) | A: cash transactions, B: attendance records, C: escort roster, D: contact DB |
 | 9 | supervisor | `fazle_contact_roles` (role=supervisor) | — |
 | 10 | candidate | `fazle_recruitment_sessions` (active session) | — |
 | 11 | unknown | fallback (no match) | — |
@@ -48,15 +48,15 @@ The identity brain resolves every contact to exactly one role using an ordered, 
 **Removed (Owner decision, 2026-07-11):** A "blocked" special case previously existed here (hard-silent-skip before step 1). It has been permanently removed along with all related code, routes, UI, and the short-lived `fpe_identity_anomalies` tracking table (migrations 041/042). There is no "blocked number" concept in this system — a sender is either a known role or unknown; unknown senders trigger no business action but are not tracked or specially skipped.
 
 **Employee secondary evidence (Step 8):**
-When the primary phone lookup in `wbom_employees` fails, the system tries four secondary evidence sources in order:
-- A: `fpe_cash_transactions` — any payment record with this phone
+When the primary phone lookup in `fazle_employees_legacy` fails, the system tries four secondary evidence sources in order:
+- A: `fazle_cash_transactions` — any payment record with this phone
 - B: `wbom_attendance` — any attendance record with this phone
 - C: `escort_roster_entries` — any roster entry
-- D: `wbom_contacts` — contact DB match
+- D: `fazle_contacts` — contact DB match
 
 **Validation:** Phone lookup always tries three variants simultaneously: `01XXXXXXXXX`, `880XXXXXXXXX`, `+880XXXXXXXXX`
 
-**Source Module:** `modules/identity_brain/__init__.py`
+**Source Module:** `modules/fazle_identity_brain/__init__.py`
 **Source Function:** `detect_identity(phone, text="")` (393 lines — read 2026-06-23)
 **PKCA Report:** 11_identity_coverage_report.md
 **Management Authority:** Production evidence; documented 2026-06-22
@@ -69,15 +69,15 @@ When the primary phone lookup in `wbom_employees` fails, the system tries four s
 
 1. `settings` (admin)
 2. `seed_rule` (`fazle_contact_roles`)
-3. `db_employee` (`wbom_employees` phone match — a *genuine* employee record)
-4. **`cash_payment` / `attendance`** (`fpe_cash_transactions` / `wbom_attendance` — incidental "operational evidence," NOT a genuine employee record) — **as of 2026-08-01, skipped entirely for any phone on the `ESCORT_CLIENT_PHONES` allowlist**, see fix below
+3. `db_employee` (`fazle_employees_legacy` phone match — a *genuine* employee record)
+4. **`cash_payment` / `attendance`** (`fazle_cash_transactions` / `wbom_attendance` — incidental "operational evidence," NOT a genuine employee record) — **as of 2026-08-01, skipped entirely for any phone on the `ESCORT_CLIENT_PHONES` allowlist**, see fix below
 5. `escort_roster` (active `wbom_escort_programs` duty)
 6. `env_phone` (explicit `ESCORT_CLIENT_PHONES` match → `client_escort_buyer`)
-7. `db_contact` (`wbom_contacts` relation / contact-name "escort" marker)
+7. `db_contact` (`fazle_contacts` relation / contact-name "escort" marker)
 8. `text_hint` (candidate keywords, then unverified escort-content keywords)
 9. `unknown`
 
-**Real incident and fix:** a phone explicitly configured in `ESCORT_CLIENT_PHONES` received a single incidental cash payment months into an ongoing client relationship (`fpe_cash_transactions` auto-creates an employee stub for any WhatsApp-shorthand payout recipient regardless of their other roles — see `05_workflows/cash_workflow.md`'s missing-name-handling section). From that day forward `_lookup_cash_identity()` matched this phone on every message and returned role `employee` (source `cash_payment`, confidence 86) **before step 6 (`env_phone`) ever ran** — permanently overriding the explicit allowlist entry with no way to self-correct. Fixed by having steps 4's two lookups (`_lookup_cash_identity`, `_lookup_attendance_identity`) skip entirely when the phone matches `ESCORT_CLIENT_PHONES`; step 3's *genuine* `db_employee` record is intentionally still allowed to override, since that's a materially stronger signal than an incidental payment/attendance row.
+**Real incident and fix:** a phone explicitly configured in `ESCORT_CLIENT_PHONES` received a single incidental cash payment months into an ongoing client relationship (`fazle_cash_transactions` auto-creates an employee stub for any WhatsApp-shorthand payout recipient regardless of their other roles — see `05_workflows/cash_workflow.md`'s missing-name-handling section). From that day forward `_lookup_cash_identity()` matched this phone on every message and returned role `employee` (source `cash_payment`, confidence 86) **before step 6 (`env_phone`) ever ran** — permanently overriding the explicit allowlist entry with no way to self-correct. Fixed by having steps 4's two lookups (`_lookup_cash_identity`, `_lookup_attendance_identity`) skip entirely when the phone matches `ESCORT_CLIENT_PHONES`; step 3's *genuine* `db_employee` record is intentionally still allowed to override, since that's a materially stronger signal than an incidental payment/attendance row.
 
 A second, independent bug compounded this and would have blocked the fix above on its own: `modules.escort._escort_client_phone_list()` returns canonical `01XXXXXXXXX` form (changed from `880`-form in commit `6aca81e`, 2026-07-20, to fix that function's *other* two callers), but `identity_brain._normalize_phone()` always produces `8801XXXXXXXXX` form — so step 6's direct string-equality check could never have matched any configured client from 2026-07-20 onward, regardless of step ordering. The 2026-07-20 commit's own audit explicitly claimed identity_brain "already compares self-consistently" — that claim was wrong for this one call site. Fixed by comparing against every canonical phone variant (`_phone_variants()`) instead of raw equality.
 
@@ -91,7 +91,7 @@ A second, independent bug compounded this and would have blocked the fix above o
 
 ## Identity Brain Module Constants
 
-Source: `modules/identity_brain/__init__.py` — all values read directly from code 2026-06-23
+Source: `modules/fazle_identity_brain/__init__.py` — all values read directly from code 2026-06-23
 
 ### `_ROLE_PRIORITY` — Numeric Priority Weights
 
@@ -168,7 +168,7 @@ Each resolved identity carries two confidence fields in the returned dict:
 - `identity_confidence`: raw integer (0–100)
 - `confidence`: float (0.0–1.0) = `identity_confidence / 100`
 
-Actual values from code (source: `detect_identity()` call sites in `modules/identity_brain/__init__.py`):
+Actual values from code (source: `detect_identity()` call sites in `modules/fazle_identity_brain/__init__.py`):
 
 | Resolution Path | `identity_confidence` | `confidence` float | Source |
 |---|---|---|---|
@@ -208,11 +208,11 @@ This section previously documented a `role='blocked'` hard-silent-skip step. The
 |---|---|---|
 | Contact roles | `fazle_contact_roles` | Steps 1–5, 7, 9 |
 | Admin registry | `fazle_admins` | Step 1 (admin) |
-| Employee registry | `wbom_employees` | Step 8 (primary) |
-| Cash transactions | `wbom_cash_transactions` | Step 8 (secondary A) |
+| Employee registry | `fazle_employees_legacy` | Step 8 (primary) |
+| Cash transactions | `fazle_cash_transactions_archive` | Step 8 (secondary A) |
 | Attendance records | `wbom_attendance` | Step 8 (secondary B) |
 | Escort roster | `escort_roster_entries` | Step 8 (secondary C) |
-| Contact book | `wbom_contacts` | Step 8 (secondary D) |
+| Contact book | `fazle_contacts` | Step 8 (secondary D) |
 | Recruitment sessions | `fazle_recruitment_sessions` | Step 10 (candidate) |
 
 ---
@@ -320,7 +320,7 @@ Each resolved role injects a Bangla language-style directive into the LLM system
 - `06_developer_system/automation_pipeline.md` — memory_extractor that populates `user_memory`
 - `role_permissions.md`
 
-**Superseded module (2026-08-12, Owner-directed audit):** `modules/user_role/__init__.py`'s `detect_role()` is an older, pre-identity_brain role resolver with zero live callers today (only its `normalize_phone` wrapper is still used, and one of its two remaining callers is itself in `archive/deprecated/`). Every role/lookup capability it had is covered here, mostly more comprehensively — including the admin-settings check, employee lookup with FPE fallback, and contact/relation mapping. Its one relation value with no direct equivalent here (`relation_name == "partner"`) was confirmed via a live-DB query (2026-08-12) to never actually occur in `wbom_contacts.relation` in production — not a real gap. Safe to delete `modules/user_role/__init__.py` when convenient.
+**Superseded module (2026-08-12, Owner-directed audit):** `modules/user_role/__init__.py`'s `detect_role()` is an older, pre-identity_brain role resolver with zero live callers today (only its `normalize_phone` wrapper is still used, and one of its two remaining callers is itself in `archive/deprecated/`). Every role/lookup capability it had is covered here, mostly more comprehensively — including the admin-settings check, employee lookup with FPE fallback, and contact/relation mapping. Its one relation value with no direct equivalent here (`relation_name == "partner"`) was confirmed via a live-DB query (2026-08-12) to never actually occur in `fazle_contacts.relation` in production — not a real gap. Safe to delete `modules/user_role/__init__.py` when convenient.
 
 ---
 
@@ -330,4 +330,4 @@ Each resolved role injects a Bangla language-style directive into the LLM system
 |---|---|---|
 | 2026-06-22 | Wave-2B: Added role_classifier module documentation — ROLE_PRIORITY lookup (15 roles), _ROLE_PROMPTS (8 roles, Bangla prompt injection), get_user_context() function (7-key output dict), build_context_for_llm() function, visibility rules, cross references. Previous article was 103 lines (identity_brain resolution algorithm only). | KSP Wave-2B |
 | 2026-06-22 | PKVC correction: "14 roles" corrected to "15 roles" in revision history. Production `ROLE_PRIORITY` dict has 15 entries. | KSP PKVC |
-| 2026-06-23 | Wave-3 Phase 2 (W3P2-AUTH): Added Identity Brain Module Constants section — `_ROLE_PRIORITY` numeric table (11 entries), `_CANDIDATE_KEYWORDS` exact list (10 terms), `_ESCORT_CONTENT_RE` description; corrected confidence score table (actual code values); corrected admin detection mechanism (settings-based, not fazle_admins); corrected candidate step number (Step 5 text_hint, not Step 10 recruitment_sessions). Source: `modules/identity_brain/__init__.py` read directly. | Wave-3 Agent |
+| 2026-06-23 | Wave-3 Phase 2 (W3P2-AUTH): Added Identity Brain Module Constants section — `_ROLE_PRIORITY` numeric table (11 entries), `_CANDIDATE_KEYWORDS` exact list (10 terms), `_ESCORT_CONTENT_RE` description; corrected confidence score table (actual code values); corrected admin detection mechanism (settings-based, not fazle_admins); corrected candidate step number (Step 5 text_hint, not Step 10 recruitment_sessions). Source: `modules/fazle_identity_brain/__init__.py` read directly. | Wave-3 Agent |

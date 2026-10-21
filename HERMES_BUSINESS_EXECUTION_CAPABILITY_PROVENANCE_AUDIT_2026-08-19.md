@@ -1,5 +1,9 @@
 # Hermes Business Execution Capability & Provenance Audit — 2026-08-19
 
+
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 Read-only audit. No production code, schema, config, git history, mode, or
 services touched. No message sent, no draft approved, no payment executed.
 This is a second pass the same day as
@@ -55,7 +59,7 @@ operational co-worker.** Concretely:
   review). In every one of these cases the canonical Fazle-Core logic
   already exists, is production-tested, and is reachable today only
   through the admin's own literal WhatsApp text commands
-  (`modules/admin_commands`) or the web dashboard — never through
+  (`modules/fazle_admin_commands`) or the web dashboard — never through
   anything Hermes can call. This is the single largest gap, and it is a
   **capability-exposure gap, not a missing-logic gap** — nothing new needs
   to be invented, only exposed.
@@ -91,7 +95,7 @@ Legend: ✅ Full · ⚠️ Partial · ❌ Missing · 🔒 Permission/mode blocke
 | Attendance | ✅ `get_attendance` | ✅ | ❌ `POST /admin/attendance/draft` exists (`modules/attendance/routes.py:168`), no tool | ❌ approval goes through `finalize_attendance_draft()` via `fazle_draft_replies` only when intent="attendance" — reachable via existing `approve_draft` MCP tool **for that one path only** | ❌ direct `POST/PUT/DELETE /admin/attendance` has no tool | ❌ |
 | Escort Operations / Roster | ✅ `get_escort_programs`, `get_escort_report` | ✅ | ❌ `POST /` (roster create, `modules/escort_roster/routes.py:597`) exists, no tool | ❌ change-request approve/reject (`:768-790`) exists, no tool | ❌ `PATCH/DELETE/{id}/recalculate/sync` all exist, no tool | ❌ |
 | Client / Escort Buyer | ✅ via roster/contacts reads | ✅ | ❌ `escort-clients` CRUD routes exist (`escort_roster/routes.py:286-299`), no tool | — | ❌ | ❌ |
-| Accounting / Cash / Ledger | ✅ `get_cash_transactions`, `get_cash_report` | ⚠️ transaction-level yes; ledger-level no tool at all | ❌ | ❌ FPE `operator/{id}/approve|reject` (`fazle_payroll_engine/routes.py:3090,3243`) exists, no tool; `fazle_payment_drafts` approval (`modules/draft_approval`) exists, no tool — see D | ❌ manual txn create/reverse routes exist (`fazle_payroll_engine/routes.py:493,502`), no tool | ❌ no `get_ledger`/`employee_transaction_history` tool |
+| Accounting / Cash / Ledger | ✅ `get_cash_transactions`, `get_cash_report` | ⚠️ transaction-level yes; ledger-level no tool at all | ❌ | ❌ FPE `operator/{id}/approve|reject` (`fazle_payroll_engine/routes.py:3090,3243`) exists, no tool; `fazle_payment_drafts` approval (`modules/fazle_draft_approval`) exists, no tool — see D | ❌ manual txn create/reverse routes exist (`fazle_payroll_engine/routes.py:493,502`), no tool | ❌ no `get_ledger`/`employee_transaction_history` tool |
 | WhatsApp / Communication | ✅ `audit_lookup_whatsapp_messages`, `get_recent_messages`, message-body lookup (sister audit A) | ✅ | ✅ `draft_whatsapp_reply` | ✅ `approve_draft` (fazle_draft_replies only) | ✅ `send_whatsapp_message` (RUN+confirm, superadmin) | ⚠️ send result returned inline; no independent re-fetch tool for delivery status |
 | Draft / Approval workflows | ✅ `audit_get_drafts` | ✅ | ✅ (reply drafts only) | ⚠️ full for `fazle_draft_replies`, ❌ for `fazle_payment_drafts` (headline finding, Section D) | ⚠️ same split | ⚠️ same split |
 | Super Admin → Hermes instructions | ✅ `lookup_decisions`, `get_mode_state` | ✅ | — | — | 🔒 correctly gated everywhere a real write exists (Section G) | ✅ `chosen_action`/mode/RBAC all independently auditable |
@@ -148,7 +152,7 @@ downstream would still bottom out in a heuristic at the very first hop.
 
 ```text
 inbound message / employee_conversation flow / payment_ingest
-    → parsing (modules/employee_conversation, modules/payment_ingest)
+    → parsing (modules/employee_conversation, modules/fazle_payment_ingest)
     → employee resolution (identity_brain / FPE employee fallback)
     → fazle_payment_drafts INSERT, status='pending'
         (call sites: modules/employee_conversation/__init__.py:590,
@@ -157,7 +161,7 @@ inbound message / employee_conversation flow / payment_ingest
          modules/route_b/__init__.py:194,
          modules/fazle_payroll_engine/workers.py:667)
     → admin reviews (web dashboard, or WhatsApp text commands)
-    → modules.draft_approval.approve_draft(draft_id, amount, method, admin_phone)
+    → modules.fazle_draft_approval.approve_draft(draft_id, amount, method, admin_phone)
         (modules/draft_approval/__init__.py:423)
         → create_canonical_transaction()  (:295) — writes fpe_cash_transactions-equivalent
         → ledger upsert (inside create_canonical_transaction)
@@ -171,7 +175,7 @@ caller is `modules/admin_commands/__init__.py` (`_cmd_approved`,
 `_cmd_dredit`, `_cmd_dreject` at `:900-990`), which itself is only reached
 when the **admin** types a literal command (`APPROVED <id> <amount>
 <method>`, `DREDIT …`, `DREJECT …`) directly into WhatsApp. Grepped for
-any HTTP route wrapping `modules.draft_approval` — **none exists**
+any HTTP route wrapping `modules.fazle_draft_approval` — **none exists**
 (`grep -rln draft_approval` across `app/` returns nothing). It is not
 reachable from `fazle-mcp` under any tool name, and it is a structurally
 different table/module from the one Hermes's `approve_draft` tool
@@ -435,13 +439,13 @@ better once this exists)
 
 **Phase 2 — Payment-draft action coverage** (highest business value)
 - *Problem*: Section D's capability-exposure gap.
-- *Reuse*: `modules.draft_approval.approve_draft/edit_draft/reject_draft`
+- *Reuse*: `modules.fazle_draft_approval.approve_draft/edit_draft/reject_draft`
   entirely as-is — zero new business logic.
 - *Missing*: one new admin-RBAC-gated HTTP route per action (mirroring
   `/api/drafts/{id}/approve`'s existing shape) plus one new MCP tool per
   action, gated identically to `send_whatsapp_message`
   (`RUN` mode + `confirm=True` + superadmin — this is real money moving).
-- *Files*: new `app/main.py` routes or a small `modules/draft_approval`
+- *Files*: new `app/main.py` routes or a small `modules/fazle_draft_approval`
   `routes.py`; new `fazle-mcp/payment_draft_tools.py`.
 - *Schema impact*: none.
 - *Permission impact*: reuses existing `COMMAND_ROLE`/RBAC pattern.

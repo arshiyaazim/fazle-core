@@ -473,7 +473,7 @@ async def fetch_recent_messages(days: int, excluded_numbers: set[str]) -> list[d
                     received_at,
                     classification,
                     status
-                FROM wbom_whatsapp_messages
+                FROM fazle_whatsapp_messages
                 WHERE received_at >= NOW() - ($1::int * INTERVAL '1 day')
                   AND message_body IS NOT NULL
                   AND COALESCE(message_body, '') <> ''
@@ -536,7 +536,7 @@ def write_json(analyses: list[LeadAnalysis], path: Path, days: int, total_rows: 
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "mode": "read_only_shadow_analysis",
         "date_range_days": days,
-        "source_table": "wbom_whatsapp_messages",
+        "source_table": "fazle_whatsapp_messages",
         "total_rows_scanned": total_rows,
         "detected_recruitment_leads": len(analyses),
         "summary_counts": dict(Counter(a.classification for a in analyses)),
@@ -572,7 +572,7 @@ def render_report(analyses: list[LeadAnalysis], days: int, total_rows: int) -> s
         "",
         f"Generated: {datetime.now(timezone.utc).isoformat()}",
         "Mode: read-only shadow analysis. No sends, no DB mutations, no schema changes, no operational workflow calls.",
-        f"Date range: last {days} days from `wbom_whatsapp_messages.received_at`.",
+        f"Date range: last {days} days from `fazle_whatsapp_messages.received_at`.",
         f"Rows scanned: {total_rows}",
         f"Detected recruitment leads: {len(analyses)}",
         "",

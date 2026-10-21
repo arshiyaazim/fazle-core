@@ -3,7 +3,7 @@ Unit tests -- Phase E forensic-investigation fixes (2026-08-04, follow-up
 session after the initial bridge3 restart surfaced real Admin<->Hermes
 failures). Covers three root causes found via live production tracing:
 
-1. modules.bridge_poller: AI_SAFE_MODE (and the rest of the customer-facing
+1. modules.fazle_bridge_poller: AI_SAFE_MODE (and the rest of the customer-facing
    safety cascade) was incorrectly applying to Admin<->Hermes replies,
    silently diverting them to drafts the Admin never checks on WhatsApp.
 2. modules.ai_console.provider_registry: cash_ledger_summary (BUS-006) had
@@ -11,8 +11,8 @@ failures). Covers three root causes found via live production tracing:
    generic LLM chat-completion that ignored it in favor of irrelevant RAG
    text -- producing a vague non-answer despite real data being available.
 3. modules.ai_readonly_tools: get_daily_payments()/get_employee_month_
-   payments() queried fpe_cash_transactions directly with a bad column
-   reference (fpe_employees.employee_id, which doesn't exist -- the real PK
+   payments() queried fazle_cash_transactions directly with a bad column
+   reference (fazle_employees.employee_id, which doesn't exist -- the real PK
    is .id) AND the fazle_ai_reader role (what production actually uses) has
    no SELECT grant on that raw table at all, only on the sanctioned
    ai_read_cash_transactions view -- confirmed empirically via
@@ -44,7 +44,7 @@ class TestCrossBridgeLoopGuard:
     brake that used to stop this incidentally."""
 
     def test_loop_guard_precedes_direct_send_in_source(self):
-        import modules.bridge_poller as bp
+        import modules.fazle_bridge_poller as bp
         source = inspect.getsource(bp)
         admin_block = source[source.index('if id_role == "admin":'):]
         i_guard = admin_block.index("LOOP_GUARD")
@@ -55,12 +55,12 @@ class TestCrossBridgeLoopGuard:
         """Replying to the Admin's own number via the SAME bridge it
         arrived on (the established self-chat pattern) must NOT be
         treated as a cross-bridge bounce."""
-        import modules.bridge_poller as bp
+        import modules.fazle_bridge_poller as bp
         source = inspect.getsource(bp)
         assert "if name != bridge_name and num" in source
 
     def test_guard_checks_all_three_bridge_numbers(self):
-        import modules.bridge_poller as bp
+        import modules.fazle_bridge_poller as bp
         source = inspect.getsource(bp)
         admin_block = source[source.index('if id_role == "admin":'):source.index('if id_role == "admin":') + 2500]
         for bridge_num_ref in ("bridge1_number", "bridge2_number", "bridge3_number"):
@@ -69,7 +69,7 @@ class TestCrossBridgeLoopGuard:
 
 class TestAdminHermesSafetyBypass:
     def test_admin_branch_precedes_customer_cascade_in_source(self):
-        import modules.bridge_poller as bp
+        import modules.fazle_bridge_poller as bp
         source = inspect.getsource(bp)
         reply_block = source[source.index("    if reply:"):]
         i_admin_check = reply_block.index('id_role == "admin"')
@@ -80,7 +80,7 @@ class TestAdminHermesSafetyBypass:
         )
 
     def test_admin_direct_send_uses_admin_hermes_purpose(self):
-        import modules.bridge_poller as bp
+        import modules.fazle_bridge_poller as bp
         source = inspect.getsource(bp)
         assert "admin-hermes-reply:" in source
         # The customer-cascade's own purpose label must be unchanged.
@@ -90,7 +90,7 @@ class TestAdminHermesSafetyBypass:
         """Regression guard: the external/customer-facing safety cascade
         (the `else` branch) must be completely untouched -- same gates,
         same order, same behavior."""
-        import modules.bridge_poller as bp
+        import modules.fazle_bridge_poller as bp
         source = inspect.getsource(bp)
         for marker in (
             "AI_SAFE_MODE",
@@ -163,13 +163,13 @@ class TestCashLedgerSummaryExactAnswer:
 class TestAiReadonlyToolsCashQueries:
     def test_no_query_references_raw_fpe_cash_transactions_table(self):
         """fazle_ai_reader (the role production actually uses) has no
-        SELECT grant on fpe_cash_transactions -- only on the
+        SELECT grant on fazle_cash_transactions -- only on the
         ai_read_cash_transactions view. Any direct reference to the raw
         table in these two functions would always fail in production."""
         import modules.ai_readonly_tools as art
         for fn in (art.get_daily_payments, art.get_employee_month_payments):
             source = inspect.getsource(fn)
-            assert "FROM fpe_cash_transactions" not in source, (
+            assert "FROM fazle_cash_transactions" not in source, (
                 f"{fn.__name__} still queries the raw table directly -- "
                 "fazle_ai_reader cannot SELECT from it, must use "
                 "ai_read_cash_transactions"
@@ -177,9 +177,9 @@ class TestAiReadonlyToolsCashQueries:
             assert "FROM ai_read_cash_transactions" in source
 
     def test_no_bad_employee_id_column_reference_remains(self):
-        """Regression guard for the original bug: fpe_employees' PK is
+        """Regression guard for the original bug: fazle_employees' PK is
         `id`, not `employee_id` -- confirmed via the real FK constraint
-        (fpe_cash_transactions_employee_id_fkey -> fpe_employees.id)."""
+        (fazle_cash_transactions_employee_id_fkey -> fazle_employees.id)."""
         import modules.ai_readonly_tools as art
         source = inspect.getsource(art)
         assert "e.employee_id" not in source

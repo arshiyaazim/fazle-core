@@ -37,10 +37,10 @@ from app.database import init_db, close_db, fetch_one, fetch_all, fetch_val, exe
 from app.bridge import get_bridge1, get_bridge2, get_bridge3
 from app.logging_setup import setup_logging
 from app import llm as ai
-from modules.intent import classify
-from modules.bridge_poller import start_pollers
+from modules.fazle_intent import classify
+from modules.fazle_bridge_poller import start_pollers
 from modules.escort_slip_extractor import extract_escort_slip, test_report as escort_test_report
-from modules.payment_workflow import create_escort_payment_draft, finalize_payment, create_advance_request_draft
+from modules.fazle_payment_workflow import create_escort_payment_draft, finalize_payment, create_advance_request_draft
 from modules.message_router import process_message, get_primary_admin
 from modules.health_monitor import check_system_health as c1b_health_check
 from modules import outbound as outbound_queue
@@ -55,7 +55,7 @@ from modules.dispatch.routes import router as dispatch_router
 from modules.client_billing.routes import router as client_billing_router
 from modules.attendance.routes import router as attendance_router
 from modules.drafts.routes import router as drafts_router
-from modules.draft_approval.routes import router as draft_approval_router
+from modules.fazle_draft_approval.routes import router as draft_approval_router
 from modules.hermes_tasks.routes import router as hermes_tasks_router
 from modules.kb_upload.routes import router as kb_upload_router
 from modules.admin_employees import router as admin_employees_router
@@ -179,7 +179,7 @@ async def _force_draft_by_saved_contact_name(sender_clean: str) -> bool:
     try:
         if sender_clean in settings.draft_always_phone_set:
             return True
-        # Match against saved display_name in wbom_contacts (whatsapp platform).
+        # Match against saved display_name in fazle_contacts (whatsapp platform).
         # Token rules:
         # - contains any `draft_always_names` substring OR
         # - startswith any `draft_name_prefixes`
@@ -194,7 +194,7 @@ async def _force_draft_by_saved_contact_name(sender_clean: str) -> bool:
         contact = None
         for v in variants:
             contact = await fetch_one(
-                "SELECT display_name FROM wbom_contacts WHERE whatsapp_number = $1 AND platform='whatsapp' LIMIT 1",
+                "SELECT display_name FROM fazle_contacts WHERE whatsapp_number = $1 AND platform='whatsapp' LIMIT 1",
                 v,
             )
             if contact:
@@ -605,7 +605,7 @@ async def _should_recruitment_autoreply(sender_clean: str, text: str) -> bool:
     # Step 1: identity lookup — degrade gracefully to 'unknown' on any error.
     role = "unknown"
     try:
-        from modules.identity_brain import detect_identity
+        from modules.fazle_identity_brain import detect_identity
         identity = await detect_identity(sender_clean, text)
         role = identity.get("identity_role") or identity.get("role") or "unknown"
     except Exception as e:
@@ -617,7 +617,7 @@ async def _should_recruitment_autoreply(sender_clean: str, text: str) -> bool:
     # Step 2: eligibility decision — explicit keywords must still fire even when
     # identity is unknown (e.g. 'চাকরি দরকার', 'is there any job').
     try:
-        from modules.intent import classify as classify_intent
+        from modules.fazle_intent import classify as classify_intent
         from modules.recruitment_flow import recruitment_eligibility
         decision = await recruitment_eligibility(
             sender_clean, text, role=role, intent=classify_intent(text),
@@ -765,13 +765,13 @@ async def _existing_columns(table: str, candidates: tuple[str, ...]) -> set[str]
 
 async def _whatsapp_message_time_expr() -> tuple[str, str]:
     """
-    Return a safe timestamp expression for wbom_whatsapp_messages reports.
+    Return a safe timestamp expression for fazle_whatsapp_messages reports.
 
     Production uses received_at; older/generated code sometimes assumed
     created_at. This helper makes dashboard/report queries schema-aware.
     """
     column = await _first_existing_column(
-        "wbom_whatsapp_messages",
+        "fazle_whatsapp_messages",
         ("received_at", "source_timestamp", "processed_at", "created_at"),
     )
     if not column:
@@ -827,7 +827,7 @@ def _probe_cpu() -> dict:
 async def _build_health(deep: bool = False) -> dict:
     # 2026-08-05 (health coverage completion): bridge3 added alongside
     # bridge1/bridge2, same probes -- bridge3 is configured (BRIDGE_CONFIGS,
-    # .env), actively polled (modules.bridge_poller writes a
+    # .env), actively polled (modules.fazle_bridge_poller writes a
     # "bridge_poller:bridge3" fazle_service_heartbeats row on every cycle,
     # exactly like bridge1/bridge2 already do), and has its own message
     # store -- it was simply never added to this aggregate view when it was
@@ -862,7 +862,7 @@ async def _build_health(deep: bool = False) -> dict:
     llm_p = await _safe_llm() if deep else {"status": "skipped", "reason": "deep health only"}
     # 2026-08-28 (health-probe path fix): these three used to be hardcoded
     # literal paths, independent of settings.bridge{1,2,3}_db_path -- the
-    # config Bridge1's own poller already reads (see modules.bridge_poller,
+    # config Bridge1's own poller already reads (see modules.fazle_bridge_poller,
     # which logs its real "SQLite path=..." on every start). That divergence
     # meant a config-only path correction (P1, Bridge1 store-path mismatch)
     # fixed the actual poller but left this dashboard probe silently still
@@ -1179,7 +1179,7 @@ async def whatsapp_message_stats(hours: int = 24):
                        WHERE is_processed = false
                          AND {msg_time_expr} < NOW() - INTERVAL '1 hour'
                    ) AS stuck_over_1h
-              FROM wbom_whatsapp_messages
+              FROM fazle_whatsapp_messages
              GROUP BY platform
              ORDER BY total DESC
             """
@@ -1244,13 +1244,13 @@ async def whatsapp_messages_lookup(
         where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
         params.append(limit)
         candidates = _METADATA_COLUMNS + _CONTENT_COLUMNS + ("classification",)
-        present = await _existing_columns("wbom_whatsapp_messages", candidates)
+        present = await _existing_columns("fazle_whatsapp_messages", candidates)
         selected = ["metadata_json->'provenance' AS provenance" if c == "metadata_json" else c
                     for c in candidates if c in present]
         rows = await fetch_all(
             f"""
             SELECT {", ".join(selected) or "message_id"}
-              FROM wbom_whatsapp_messages
+              FROM fazle_whatsapp_messages
               {where_clause}
              ORDER BY received_at DESC
              LIMIT ${len(params)}
@@ -1268,7 +1268,7 @@ async def whatsapp_messages_lookup(
 # Objective: stop treating get_recent_messages(limit=N)-style raw dumps as
 # the normal way Hermes investigates conversations -- filtering/bounding
 # happens in SQL, before message bodies are ever returned, not after.
-# Extends this same canonical table/endpoint family (wbom_whatsapp_messages,
+# Extends this same canonical table/endpoint family (fazle_whatsapp_messages,
 # /api/whatsapp/messages/*) rather than a new framework/service.
 
 @app.post("/admin/inbound/{message_id}/reconcile", dependencies=[Depends(require_command("inbound_recovery"))])
@@ -1308,7 +1308,7 @@ def _parse_time_filter(value: str, param_name: str):
     ::timestamptz cast on the SQL side does NOT make it accept a raw
     Python str (confirmed live: 'expected a datetime.date or
     datetime.datetime instance, got str'). Same ISO-parse + Z-suffix +
-    UTC-default convention as modules.bridge_poller._parse_source_timestamp,
+    UTC-default convention as modules.fazle_bridge_poller._parse_source_timestamp,
     reused here for consistency rather than inventing a second one."""
     from datetime import datetime as _dt, timezone as _tz
     try:
@@ -1337,7 +1337,7 @@ async def whatsapp_messages_query(
     cursor: str = "",
 ):
     """General bounded, filtered retrieval over canonical
-    wbom_whatsapp_messages -- the Stage C answer to "don't dump 300 raw
+    fazle_whatsapp_messages -- the Stage C answer to "don't dump 300 raw
     messages and make Hermes discard 250 of them". All filters are bound
     query parameters (no arbitrary SQL, same contract as the sibling
     /lookup endpoint above). Deterministic pagination via
@@ -1433,7 +1433,7 @@ async def whatsapp_messages_query(
         # Schema-tolerance: an older DB (or the test schema) may lack an
         # optional column such as `status` — select only what actually exists
         # rather than 500 on `column "..." does not exist`.
-        _present = await _existing_columns("wbom_whatsapp_messages", columns)
+        _present = await _existing_columns("fazle_whatsapp_messages", columns)
         columns = tuple(c for c in columns if c in _present) or ("message_id",)
         columns = tuple("metadata_json->'provenance' AS provenance" if c == "metadata_json" else c for c in columns)
         # Fetch one extra row to determine has_more without a second COUNT query.
@@ -1442,7 +1442,7 @@ async def whatsapp_messages_query(
         rows = await fetch_all(
             f"""
             SELECT {", ".join(columns)}
-              FROM wbom_whatsapp_messages
+              FROM fazle_whatsapp_messages
               {where_clause}
              ORDER BY received_at DESC, message_id DESC
              LIMIT ${len(params)}
@@ -1510,7 +1510,7 @@ async def whatsapp_conversation_history(
 
         where_clause = f"WHERE {' AND '.join(conditions)}"
         columns = _METADATA_COLUMNS + _CONTENT_COLUMNS
-        present = await _existing_columns("wbom_whatsapp_messages", columns)
+        present = await _existing_columns("fazle_whatsapp_messages", columns)
         columns = tuple(c for c in columns if c in present)
         columns = tuple("metadata_json->'provenance' AS provenance" if c == "metadata_json" else c for c in columns)
         fetch_limit = limit + 1
@@ -1518,7 +1518,7 @@ async def whatsapp_conversation_history(
         rows = await fetch_all(
             f"""
             SELECT {", ".join(columns)}
-              FROM wbom_whatsapp_messages
+              FROM fazle_whatsapp_messages
               {where_clause}
              ORDER BY received_at DESC, message_id DESC
              LIMIT ${len(params)}
@@ -1626,7 +1626,7 @@ async def whatsapp_conversations_attention(
                     conversation_key, platform, canonical_phone, sender_number,
                     direction, actor_type, intent_detected, workflow_triggered,
                     received_at AS last_message_at, message_id
-                  FROM wbom_whatsapp_messages
+                  FROM fazle_whatsapp_messages
                   {where_clause}
                  ORDER BY conversation_key, received_at DESC, message_id DESC
             ) latest
@@ -1670,7 +1670,7 @@ async def whatsapp_conversations_attention(
         attendance_status: dict = {}
         cash_status: dict = {}
         # Each lookup only runs when the current domain filter could
-        # actually need it (or no filter is given) -- fpe_cash_transactions
+        # actually need it (or no filter is given) -- fazle_cash_transactions
         # in particular is a large table (~4.4k rows across 3 UNIONed phone
         # columns); no need to scan it for a domain="recruitment" call.
         _need = domain or ""
@@ -1704,14 +1704,14 @@ async def whatsapp_conversations_attention(
                 # Stage E6: wbom_attendance has no phone column -- links
                 # via employee_id only. Reuses the same authoritative
                 # phone->employee resolution already live in production
-                # (modules.identity_brain._lookup_attendance_identity):
-                # wbom_employees.employee_mobile, latest attendance row
+                # (modules.fazle_identity_brain._lookup_attendance_identity):
+                # fazle_employees_legacy.employee_mobile, latest attendance row
                 # per employee.
                 att_rows = await fetch_all(
                     """
                     SELECT DISTINCT ON (phone) phone, approved_at FROM (
                         SELECT e.employee_mobile AS phone, a.approved_at, a.attendance_id
-                          FROM wbom_employees e
+                          FROM fazle_employees_legacy e
                           JOIN wbom_attendance a ON a.employee_id = e.employee_id
                          WHERE e.employee_mobile IS NOT NULL AND e.employee_mobile != ''
                     ) both_sides
@@ -1724,7 +1724,7 @@ async def whatsapp_conversations_attention(
                         attendance_status[norm] = r["approved_at"]
 
             if _need in ("", "cash"):
-                # Stage E7: fpe_cash_transactions has direct phone columns
+                # Stage E7: fazle_cash_transactions has direct phone columns
                 # in the same canonical BD format -- normalized the same
                 # way. transaction_status is the genuine, dominant,
                 # already-live state field (live distribution:
@@ -1732,13 +1732,13 @@ async def whatsapp_conversations_attention(
                 cash_rows = await fetch_all(
                     """
                     SELECT DISTINCT ON (phone) phone, transaction_status FROM (
-                        SELECT employee_phone AS phone, transaction_status, id FROM fpe_cash_transactions
+                        SELECT employee_phone AS phone, transaction_status, id FROM fazle_cash_transactions
                          WHERE employee_phone IS NOT NULL AND employee_phone != ''
                         UNION ALL
-                        SELECT employee_id_phone AS phone, transaction_status, id FROM fpe_cash_transactions
+                        SELECT employee_id_phone AS phone, transaction_status, id FROM fazle_cash_transactions
                          WHERE employee_id_phone IS NOT NULL AND employee_id_phone != ''
                         UNION ALL
-                        SELECT payout_phone AS phone, transaction_status, id FROM fpe_cash_transactions
+                        SELECT payout_phone AS phone, transaction_status, id FROM fazle_cash_transactions
                          WHERE payout_phone IS NOT NULL AND payout_phone != ''
                     ) both_sides
                     ORDER BY phone, id DESC
@@ -1844,7 +1844,7 @@ async def office_group_activity(start_time: str = "", limit: int = 20, include_b
         rows = await fetch_all(
             f"""
             SELECT {", ".join(columns)}
-              FROM wbom_whatsapp_messages
+              FROM fazle_whatsapp_messages
              WHERE {' AND '.join(conditions)}
              ORDER BY received_at DESC, message_id DESC
              LIMIT ${len(params)}
@@ -1922,7 +1922,7 @@ async def recruitment_interested_candidates(start: str, end: str = ""):
     """Exhaustive, date-range job-interest search (2026-08-21, Owner
     Correction 2 / regression case ...1609). Answers "who messaged about a
     job between X and Y" without relying on get_recent_messages(limit=N)'s
-    silent truncation, and without a per-bridge cap: wbom_whatsapp_messages
+    silent truncation, and without a per-bridge cap: fazle_whatsapp_messages
     is the single unified inbound store across every ingest path this
     system has (bridge1, bridge2, bridge3, meta/WhatsApp Cloud, and the
     legacy 'whatsapp' platform value -- verified live, 2026-08-21: all 5
@@ -1964,7 +1964,7 @@ async def recruitment_interested_candidates(start: str, end: str = ""):
         rows = await fetch_all(
             """
             SELECT canonical_phone, sender_number, platform, received_at, message_body
-              FROM wbom_whatsapp_messages
+              FROM fazle_whatsapp_messages
              WHERE direction = 'inbound'
                AND received_at >= $1 AND received_at < $2
              ORDER BY received_at ASC
@@ -2050,7 +2050,7 @@ async def recruitment_interested_candidates(start: str, end: str = ""):
 # Closes the capability-exposure gap found in
 # HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md: Hermes
 # had no tool reaching the canonical resolvers (identity_brain.detect_identity,
-# modules.intent.classify) even though both are the same live, production
+# modules.fazle_intent.classify) even though both are the same live, production
 # logic message_router already uses for every real WhatsApp turn. Thin,
 # read-only pass-throughs -- no new classification logic here.
 @app.get("/api/identity/resolve", dependencies=[Depends(require_api_key)])
@@ -2060,7 +2060,7 @@ async def api_resolve_identity(phone: str, text: str = ""):
     stripped from the result -- more sensitive than anything else exposed to
     Hermes today (get_employees/get_contacts don't return bkash_number
     either), and not needed for identity/role/intent purposes."""
-    from modules.identity_brain import detect_identity
+    from modules.fazle_identity_brain import detect_identity
     result = await detect_identity(phone, text)
     return {k: v for k, v in result.items() if k not in ("bkash_number", "basic_salary")}
 
@@ -2070,8 +2070,8 @@ async def api_verify_employee_claim(
     claimed_name: str = "", claimed_role: str = "",
     sender_phone: str = "", employee_id: Optional[int] = None,
 ):
-    """Verify a claim like "Karim is supervisor" against fpe_employees --
-    thin pass-through to modules.identity_brain.claim_verification.
+    """Verify a claim like "Karim is supervisor" against fazle_employees --
+    thin pass-through to modules.fazle_identity_brain.claim_verification.
     verify_employee_claim(). Read-only. This is deliberately NOT the same
     thing as /api/identity/resolve above -- that resolves the message
     SENDER's own phone-backed identity; this resolves an arbitrary
@@ -2079,7 +2079,7 @@ async def api_verify_employee_claim(
     module's docstring for the exact outcome contract (not_found/
     ambiguous/role_mismatch/verified/verified_inactive) -- never guesses
     on ambiguity."""
-    from modules.identity_brain.claim_verification import verify_employee_claim
+    from modules.fazle_identity_brain.claim_verification import verify_employee_claim
     return await verify_employee_claim(
         claimed_name=claimed_name or None, claimed_role=claimed_role or None,
         sender_phone=sender_phone or None, employee_id=employee_id,
@@ -2089,8 +2089,8 @@ async def api_verify_employee_claim(
 @app.get("/api/identity/search-by-name", dependencies=[Depends(require_api_key)])
 async def api_search_identity_by_name(name: str, limit: int = 10):
     """Name -> candidate phone number(s). Searches the trusted identity
-    tables ONLY (wbom_employees / wbom_contacts[platform='whatsapp'] /
-    fazle_contact_roles / fpe_employees), dedup'd by phone.
+    tables ONLY (fazle_employees_legacy / fazle_contacts[platform='whatsapp'] /
+    fazle_contact_roles / fazle_employees), dedup'd by phone.
 
     Contract (never guesses on a name alone):
       * 0 candidates -> {"resolved": null, "ambiguous": false, "candidates": []}
@@ -2098,7 +2098,7 @@ async def api_search_identity_by_name(name: str, limit: int = 10):
       * 2+           -> {"resolved": null, "ambiguous": true, "candidates": [...]}
     The caller must disambiguate a `ambiguous: true` result (e.g. ask which
     person) before acting — do not pick one arbitrarily."""
-    from modules.identity_resolver import search_identity_by_name
+    from modules.fazle_identity_resolver import search_identity_by_name
     try:
         limit = min(max(int(limit or 10), 1), 25)
     except (TypeError, ValueError):
@@ -2122,7 +2122,7 @@ async def api_whatsapp_contact_summary(phone: str, recent_limit: int = 5):
     seen + per-platform message counts + the last few messages (source and
     direction preserved on every row). The 'give me everything about this
     number' summary. Read-only."""
-    from modules.identity_brain import detect_identity
+    from modules.fazle_identity_brain import detect_identity
     try:
         recent_limit = min(max(int(recent_limit or 5), 1), 20)
     except (TypeError, ValueError):
@@ -2145,7 +2145,7 @@ async def api_whatsapp_contact_summary(phone: str, recent_limit: int = 5):
         by_platform = await fetch_all(
             f"""SELECT platform, direction, count(*) AS n,
                        min(received_at) AS first_seen, max(received_at) AS last_seen
-                  FROM wbom_whatsapp_messages
+                  FROM fazle_whatsapp_messages
                  WHERE {_match}
                  GROUP BY platform, direction
                  ORDER BY platform, direction""",
@@ -2155,7 +2155,7 @@ async def api_whatsapp_contact_summary(phone: str, recent_limit: int = 5):
             f"""SELECT message_id, platform, direction, received_at, message_type,
                        identity_role, intent_detected, workflow_triggered,
                        LEFT(COALESCE(message_body, ''), 240) AS message_body
-                  FROM wbom_whatsapp_messages
+                  FROM fazle_whatsapp_messages
                  WHERE {_match}
                  ORDER BY received_at DESC, message_id DESC
                  LIMIT {recent_limit + 1}""",
@@ -2191,7 +2191,7 @@ async def api_classify_intent(text: str):
     approximation of live routing, not an exact replay of it. For the
     actual intent+method a specific past message was routed with, use
     /api/hermes/decisions/lookup instead. No DB access, no LLM call here."""
-    from modules.intent import classify
+    from modules.fazle_intent import classify
     return {"intent": classify(text)}
 
 
@@ -2606,7 +2606,7 @@ async def _handle_meta_message(msg: dict, value: dict):
         text = msg.get("text", {}).get("body", "").strip()
     elif msg_type in ("image", "audio", "document", "video"):
         try:
-            from modules.media_normalization import normalize_meta_media_message
+            from modules.fazle_media_normalization import normalize_meta_media_message
             normalized_media = await normalize_meta_media_message(msg)
             text = normalized_media["text"]
             if normalized_media["meta"].get("normalized"):
@@ -2636,7 +2636,7 @@ async def _handle_meta_message(msg: dict, value: dict):
 
     if message_id:
         existing = await fetch_one(
-            """SELECT 1 FROM wbom_whatsapp_messages
+            """SELECT 1 FROM fazle_whatsapp_messages
                WHERE platform='meta' AND direction='inbound' AND source_message_ref=$1
                LIMIT 1""",
             message_id,
@@ -2649,7 +2649,7 @@ async def _handle_meta_message(msg: dict, value: dict):
     # inbound only. When OFF, behaviour is exactly as before.
     _p2 = {}
     try:
-        from modules.identity_resolver import is_phase2_identity_enabled, resolve_inbound_identity, SOURCE_UNKNOWN
+        from modules.fazle_identity_resolver import is_phase2_identity_enabled, resolve_inbound_identity, SOURCE_UNKNOWN
         if is_phase2_identity_enabled():
             _ident = await resolve_inbound_identity(
                 platform="meta",
@@ -2710,7 +2710,7 @@ async def _finish_meta_inbound(msg, sender, text, message_id, queue_key, msg_typ
 
     # 2026-07-21: identity-first routing — social_auto_reply retired for
     # WhatsApp DM traffic (bridge1/bridge2/meta share one routing path now;
-    # see modules.bridge_poller.process_bridge_inbound / modules.route_b).
+    # see modules.fazle_bridge_poller.process_bridge_inbound / modules.route_b).
     # If 'meta' is absent from AUTO_REPLY_SOURCES the row is still persisted
     # above; only reply/draft generation is skipped. (As of 2026-08 'meta'
     # IS in the live list, so this guard normally passes through.)
@@ -2798,7 +2798,7 @@ async def _meta_channel_duplicate_delivery(channel: str, external_message_id: st
         return False
     try:
         existing = await fetch_one(
-            """SELECT 1 FROM wbom_whatsapp_messages
+            """SELECT 1 FROM fazle_whatsapp_messages
                WHERE platform=$1 AND direction='inbound' AND source_message_ref=$2
                LIMIT 1""",
             channel, external_message_id,
@@ -2914,7 +2914,7 @@ async def _handle_messenger_message(messaging: dict):
     regardless of platform and would independently plan+send its OWN
     reply for the same event — a genuine double-reply. Once migrated,
     Messenger bypasses that table entirely, the same way WhatsApp-via-meta
-    already does (wbom_whatsapp_messages only)."""
+    already does (fazle_whatsapp_messages only)."""
     sender_id = messaging.get("sender", {}).get("id", "")
     text = messaging.get("message", {}).get("text", "").strip()
     if not sender_id or not text:
@@ -2983,7 +2983,7 @@ async def _handle_instagram_message(messaging: dict):
     Messenger), so there is no legacy fallback path here. Gated behind
     meta_instagram_inbound (default OFF, same staged-activation pattern
     as Messenger's migration). While OFF, the message is still saved
-    (wbom_whatsapp_messages, platform="instagram") for history/audit but
+    (fazle_whatsapp_messages, platform="instagram") for history/audit but
     never reaches Hermes or gets a reply — "receive/test webhook traffic
     safely before enabling Hermes live replies" (Owner Phase 18).
 
@@ -3175,7 +3175,7 @@ async def _handle_bridge_event(payload: dict, source: str):
             resolved_phone = None
             if whatsapp_db:
                 try:
-                    from modules.bridge_poller import _load_lid_map
+                    from modules.fazle_bridge_poller import _load_lid_map
                     lid_map = await asyncio.to_thread(_load_lid_map, whatsapp_db)
                     resolved_phone = lid_map.get(sender_lid)
                 except Exception as _lid_err:
@@ -3190,7 +3190,7 @@ async def _handle_bridge_event(payload: dict, source: str):
         pre_marked = False
         if dedup_id:
             try:
-                from modules.bridge_poller import _is_processed, _mark_processed
+                from modules.fazle_bridge_poller import _is_processed, _mark_processed
                 if await _is_processed(dedup_id, source):
                     log.debug(f"[{source.upper()}] webhook dedup: already processed dedup_id={dedup_id}")
                     continue
@@ -3211,7 +3211,7 @@ async def _handle_bridge_event(payload: dict, source: str):
 
         # Detect identity before saving so DB record has role/confidence metadata
         try:
-            from modules.identity_brain import detect_identity as _detect_id
+            from modules.fazle_identity_brain import detect_identity as _detect_id
             _identity = await _detect_id(sender_clean, text)
             _id_role = _identity["identity_role"]
             _id_conf = _identity["identity_confidence"]
@@ -3226,7 +3226,7 @@ async def _handle_bridge_event(payload: dict, source: str):
         # candidate/…) from detect_identity is never overwritten.
         _p2_kw: dict = {}
         try:
-            from modules.identity_resolver import (
+            from modules.fazle_identity_resolver import (
                 is_phase2_identity_enabled, resolve_inbound_identity, SOURCE_UNKNOWN,
             )
             if is_phase2_identity_enabled():
@@ -3287,14 +3287,14 @@ async def _handle_bridge_event(payload: dict, source: str):
 
         # 2026-07-21: identity-first routing — social_auto_reply's keyword
         # gate is retired here too (mirrors the same change in
-        # modules.bridge_poller._poll_bridge). Every inbound mcp1/mcp2
+        # modules.fazle_bridge_poller._poll_bridge). Every inbound mcp1/mcp2
         # message now reaches process_bridge_inbound() unconditionally,
         # which dispatches Route A vs Route B by sender identity via
         # modules.message_router.process_message() instead of by content.
 
         # Sync-only sources: message is saved, no reply, no draft, no admin notify.
         if source not in settings.auto_reply_source_list:
-            from modules.bridge_poller import _mark_core_queue_status
+            from modules.fazle_bridge_poller import _mark_core_queue_status
             await _mark_core_queue_status(source, {"id": dedup_id}, "skipped", "sync_only")
             log.debug(f"[{source.upper()}] sync-only, skipping reply/draft for {sender_clean}")
             continue
@@ -3303,12 +3303,12 @@ async def _handle_bridge_event(payload: dict, source: str):
         # (mirrors the SQLite poller's own `unresolved:` skip). The row is
         # already persisted above; we only skip reply/draft generation.
         if str(sender_clean).startswith("unresolved:"):
-            from modules.bridge_poller import _mark_core_queue_status
+            from modules.fazle_bridge_poller import _mark_core_queue_status
             await _mark_core_queue_status(source, {"id": dedup_id}, "skipped", "unresolved_identity")
             log.info(f"[{source.upper()}] unresolved LID — row saved, routing skipped: {sender_clean}")
             continue
 
-        from modules.bridge_poller import _mark_core_queue_status, is_media_placeholder
+        from modules.fazle_bridge_poller import _mark_core_queue_status, is_media_placeholder
         from modules.outbound import _pairing_held
         from shared.system_message import is_automated_system_message
         chat_jid = str(event.get("chat_jid") or event.get("chatId") or sender)
@@ -3325,7 +3325,7 @@ async def _handle_bridge_event(payload: dict, source: str):
         _forward_to_agent_if_admin(sender_clean, text, source)
 
         # Full production pipeline — identical to bridge_poller path
-        from modules.bridge_poller import process_bridge_inbound
+        from modules.fazle_bridge_poller import process_bridge_inbound
         await process_bridge_inbound(
             source, sender_clean, text,
             id_role=_id_role, id_conf=_id_conf, id_name=_id_name,
@@ -3441,7 +3441,7 @@ async def api_payment_ingest(body: dict):
     """Batch 12: Ingest a bKash/Nagad/Rocket SMS or admin paste.
     Body: {text: str, sender_number?: str, message_id?: int, auto_finalize?: bool}
     """
-    from modules.payment_ingest import ingest_payment_sms
+    from modules.fazle_payment_ingest import ingest_payment_sms
     text = (body.get("text") or "").strip()
     if not text:
         raise HTTPException(status_code=400, detail="Missing text")
@@ -3600,9 +3600,9 @@ async def wbom_link_review_spa():
 @app.get("/dashboard/legacy", response_class=HTMLResponse)
 async def dashboard_legacy():
     try:
-        emp_count     = await fetch_one("SELECT COUNT(*) as n FROM wbom_employees WHERE LOWER(status)='active'")
-        contact_count = await fetch_one("SELECT COUNT(*) as n FROM wbom_contacts")
-        msg_count     = await fetch_one("SELECT COUNT(*) as n FROM wbom_whatsapp_messages")
+        emp_count     = await fetch_one("SELECT COUNT(*) as n FROM fazle_employees_legacy WHERE LOWER(status)='active'")
+        contact_count = await fetch_one("SELECT COUNT(*) as n FROM fazle_contacts")
+        msg_count     = await fetch_one("SELECT COUNT(*) as n FROM fazle_whatsapp_messages")
         escort_count  = await fetch_one("SELECT COUNT(*) as n FROM wbom_escort_programs")
         try:
             recruit_count = await fetch_one("SELECT COUNT(*) as n FROM fazle_recruitment_sessions")
@@ -3776,7 +3776,7 @@ async def _save_message(
     return_message_id: bool = False,
 ):
     """actor_type/actor_id (2026-08-28, Stage B1/B4): same attribution
-    concept as modules.bridge_poller._save_message's own actor_type/
+    concept as modules.fazle_bridge_poller._save_message's own actor_type/
     actor_id -- who/what produced this row, never identity_role (the
     counterparty). Every existing caller here is either genuine inbound
     (external_user) or fazle-core's own Meta auto-reply cascade
@@ -3798,7 +3798,7 @@ async def _save_message(
         except Exception:
             _canon = None
     try:
-        table = "wbom_whatsapp_messages"
+        table = "fazle_whatsapp_messages"
         candidate_columns = (
             "sender_number",
             "message_body",
@@ -3894,7 +3894,7 @@ async def _save_message(
         if return_message_id:
             if not source_message_ref or "metadata_json" not in present_columns:
                 raise RuntimeError("Inbound provenance requires source ID and metadata_json")
-            from modules.bridge_poller import _core_message_hash
+            from modules.fazle_bridge_poller import _core_message_hash
             columns.append("message_hash")
             values.append(_core_message_hash(source, source_message_ref))
             row = await fetch_one(
@@ -3927,7 +3927,7 @@ async def _record_meta_delivery_state(message_id: str, state: str, error: str = 
         return
     try:
         await execute(
-            """UPDATE wbom_whatsapp_messages
+            """UPDATE fazle_whatsapp_messages
                SET metadata_json=COALESCE(metadata_json, '{}'::jsonb) ||
                    jsonb_build_object('processing_state', $2::text, 'processing_error', $3::text)
                WHERE platform='meta' AND direction='inbound' AND source_message_ref=$1""",
@@ -4091,7 +4091,7 @@ async def api_extract_escort_slip(body: dict):
         if mobile:
             mob_norm = "".join(ch for ch in str(mobile) if ch.isdigit())[-11:]
             emp = await fetch_one(
-                "SELECT employee_id FROM wbom_employees "
+                "SELECT employee_id FROM fazle_employees_legacy "
                 "WHERE regexp_replace(employee_mobile,'\\D','','g') LIKE '%'||$1 LIMIT 1",
                 mob_norm,
             )
@@ -4859,7 +4859,7 @@ async def send_whatsapp_message(payload: dict, key: str = Depends(require_api_ke
     )
     deduped = idempotency_key is not None and queue_id is None
     # Owner directive (2026-08-27, recovery-sweep safety-review pass): this
-    # endpoint used to write straight into wbom_whatsapp_messages here,
+    # endpoint used to write straight into fazle_whatsapp_messages here,
     # immediately after enqueue() returned a queue_id -- but enqueue()
     # only guarantees the row was ACCEPTED, not that transport delivery
     # ever succeeds (fazle_outbound_queue retries up to max_attempts=3
@@ -4918,11 +4918,11 @@ async def b20_overview():
             return int(r["n"]) if r and r.get("n") is not None else 0
         msg_time_expr, msg_time_column = await _whatsapp_message_time_expr()
         out["counts"] = {
-            "active_employees": await _n("SELECT COUNT(*) AS n FROM wbom_employees WHERE LOWER(status)='active'"),
-            "contacts": await _n("SELECT COUNT(*) AS n FROM wbom_contacts"),
-            "messages": await _n("SELECT COUNT(*) AS n FROM wbom_whatsapp_messages"),
+            "active_employees": await _n("SELECT COUNT(*) AS n FROM fazle_employees_legacy WHERE LOWER(status)='active'"),
+            "contacts": await _n("SELECT COUNT(*) AS n FROM fazle_contacts"),
+            "messages": await _n("SELECT COUNT(*) AS n FROM fazle_whatsapp_messages"),
             "messages_last_24h": await _n(
-                f"SELECT COUNT(*) AS n FROM wbom_whatsapp_messages WHERE {msg_time_expr} > NOW() - INTERVAL '24 hours'"
+                f"SELECT COUNT(*) AS n FROM fazle_whatsapp_messages WHERE {msg_time_expr} > NOW() - INTERVAL '24 hours'"
             ),
             "escort_programs": await _n("SELECT COUNT(*) AS n FROM wbom_escort_programs"),
             "recruitment_leads": await _n("SELECT COUNT(*) AS n FROM fazle_recruitment_sessions"),

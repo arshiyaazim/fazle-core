@@ -1,9 +1,12 @@
 Source: knowledge_base/00_governance/kb_certification.md
-SHA256: 91b188b0dc9eac7c6219385e8299466c78d72a4b9b8d549119daa63ecce3a34a
-Version: 91b188b0dc9e
+SHA256: 52487e506e410eb5dd584124e253344a2f602a5ee1937f488900f584c83087fb
+Version: 52487e506e41
 
 # Knowledge Base Certification
 
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 Certification confirms that the active Knowledge Base is fit for runtime AI use.
 
 ## Certification Checks
@@ -24,3 +27,37 @@ python3 scripts/audit_kb_structure.py
 python3 scripts/build_traceability_matrix.py
 python3 scripts/generate_certification_reports.py
 ```
+
+### Re-certification run — 2026-08-12 (Phase 1, Owner-directed)
+
+Re-ran all three scripts (previous run: 2026-06-24, per this file's own
+prior `last_verified`). Full output: `reports/kb_audit/kb_audit_report.md`,
+`reports/traceability_matrix.md`, `reports/certification/*.md`,
+`reports/certification/certification_scores.json`.
+
+First pass found 6 files missing required frontmatter fields
+(`last_verified`/`owner`/`runtime_index`/`status`/`title`), including,
+notably, **`CANONICAL_BUSINESS_RULES.md` itself** — the document this
+repo's own doc-precedence stack treats as the single most authoritative
+business-rule source. The other 5:
+`incidents/2026-07-17_test_postgres_public_exposure.md`,
+`06_developer_system/admin_ai_engine.md`,
+`06_developer_system/writer_authority.md`, and both
+`07_archived/legacy_*/ARCHIVE_NOTICE.md` files. All 6 fixed same-day
+(frontmatter added, matching each file's actual status — the two
+archived-folder files got `runtime_index: false`/`status: archived`,
+matching `kb_manifest.yaml`'s protected-paths rule for `07_archived/`).
+Re-ran the audit after fixing: 0 missing metadata, 0 stale files.
+
+| Score | Result | Basis |
+|---|---|---|
+| KB Coverage | **100%** | 224 files scanned, all with clean metadata, 0 stale, 0 duplicate-content groups |
+| AI Readiness | **100%** | All 4 checks pass (ollama_memory, ai_readonly_tools, sync script, migration 012 all present) |
+| Module Coverage | *not computable this run* | Requires `reports/baseline/baseline_inventory.json`, which does not exist in this checkout — this is a missing-input gap, not a measured 0% |
+| Workflow Coverage | *not computable this run* | Same missing-baseline cause |
+| Operations Readiness | *not computable this run (3 of 4 checks depend on the same missing baseline)* | The one directly-checkable item (`modules/operations_health` exists) passes |
+
+**Not attempted this run**: regenerating `reports/baseline/baseline_inventory.json`
+(a separate, earlier-stage script not covered by the three re-certification
+scripts above) — needed before Module/Workflow/Operations Coverage can be
+computed for real. Flagged for a future, separately-scoped pass.

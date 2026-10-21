@@ -131,7 +131,7 @@ Each section below covers: Business Purpose, Canonical Workflow, Canonical Entit
 
 **Business Purpose:** Control which WhatsApp admin commands each authenticated admin/staff member is allowed to execute, ranked by sensitivity.
 
-**Canonical Workflow:** Admin sends a command via WhatsApp → `modules/admin_commands` matches it to a command name → `modules/rbac.check_permission()` looks up the admin's role level via `fazle_admin_roles` → `fazle_roles` → compares against the command's required role → **fails closed** on any lookup exception (fixed 2026-07-09, see `docs/PRODUCTION_CERTIFICATION_v1.0.md`) → allowed or denied, both paths write `fazle_audit_log`... actually audit table name should be confirmed against code, not assumed (see Structural Rules).
+**Canonical Workflow:** Admin sends a command via WhatsApp → `modules/fazle_admin_commands` matches it to a command name → `modules/rbac.check_permission()` looks up the admin's role level via `fazle_admin_roles` → `fazle_roles` → compares against the command's required role → **fails closed** on any lookup exception (fixed 2026-07-09, see `docs/PRODUCTION_CERTIFICATION_v1.0.md`) → allowed or denied, both paths write `fazle_audit_log`... actually audit table name should be confirmed against code, not assumed (see Structural Rules).
 
 **Canonical Entity Names:** "Role" = a named permission tier (`fazle_roles.name`) with a numeric `level` for ranking. "Admin" = an authenticated WhatsApp operator (`fazle_admins`), not to be confused with "Owner" (the business owner, who is also an admin but with `superadmin` role).
 
@@ -149,7 +149,7 @@ Each section below covers: Business Purpose, Canonical Workflow, Canonical Entit
 
 **Validation Rules:** Every admin command must appear in `COMMAND_ROLE` or fall back to `DEFAULT_REQUIRED_ROLE`; there is no "no role required" path for any admin command.
 
-**Related Modules:** `modules/rbac`, `modules/admin_commands`.
+**Related Modules:** `modules/rbac`, `modules/fazle_admin_commands`.
 
 **Related Documents:** `docs/PRODUCTION_CERTIFICATION_v1.0.md` (Security Status), `docs/MODULE_MAP.md`.
 
@@ -173,7 +173,7 @@ Each section below covers: Business Purpose, Canonical Workflow, Canonical Entit
 
 **Canonical APIs:** `modules/attendance/__init__.py::save_attendance(employee_id, attendance_date, status="Present", location="", recorded_by="system", remarks="", entry_source="legacy", approval_channel=None, approved_by=None, source_draft_id=None, conn=None)`, `finalize_attendance_draft(draft_id, *, channel, actor)` (the shared approval service). `modules/attendance/crud.py::create_manual_attendance/update_manual_attendance/delete_manual_attendance/list_attendance/lookup_employee_by_id/suggest_employees_by_name` (2026-07-11, manual CRUD — `POST /admin/attendance` rejects a duplicate employee+date with 409, unlike the parser-approval path's idempotent upsert).
 
-**Canonical Status Values:** `Present`, `Half Day`, `Absent` (extended 2026-07-11 for manual entry; the escort-side self-report/backfill paths still only ever write `Present`). `wbom_employees.status` uses `Active` (capitalized) as its confirmed value — note the capitalization convention differs from the lowercase RBAC/admin status values (`active`) — this is a real, minor naming/casing inconsistency, recorded here rather than silently normalized.
+**Canonical Status Values:** `Present`, `Half Day`, `Absent` (extended 2026-07-11 for manual entry; the escort-side self-report/backfill paths still only ever write `Present`). `fazle_employees_legacy.status` uses `Active` (capitalized) as its confirmed value — note the capitalization convention differs from the lowercase RBAC/admin status values (`active`) — this is a real, minor naming/casing inconsistency, recorded here rather than silently normalized.
 
 **Known Legacy Variants:** `ops_attendance` exists live in production with no migration record anywhere in this repo (found during the 2026-07-09 schema-drift diff, `docs/PRODUCTION_CERTIFICATION_v1.0.md` Database Status) — it is presumed to be a legacy/superseded table from an older "ops_*" system, not a second active attendance pipeline, but this has **not been individually confirmed**; treat as **Legacy** pending verification, not as a second canonical source.
 
@@ -193,15 +193,15 @@ Each section below covers: Business Purpose, Canonical Workflow, Canonical Entit
 
 **Business Purpose:** Pay employees, including a monthly basic salary and, for guards, escort-duty pay on top of it.
 
-**Canonical Workflow — basic salary (this one is real, in active use):** Admin types a WhatsApp `PAID <draft_id> <amount> <method>` or equivalent command (free-typed amount) → `modules/admin_commands` → `fazle_payroll_engine.accounting.create_transaction()` (the one, Constitution-Article-I-mandated writer) → `fpe_cash_transactions` (`txn_category='salary'`). **Confirmed live**: 2,606 real WhatsApp-sourced salary transactions exist in production as of 2026-07-09.
+**Canonical Workflow — basic salary (this one is real, in active use):** Admin types a WhatsApp `PAID <draft_id> <amount> <method>` or equivalent command (free-typed amount) → `modules/fazle_admin_commands` → `fazle_payroll_engine.accounting.create_transaction()` (the one, Constitution-Article-I-mandated writer) → `fazle_cash_transactions` (`txn_category='salary'`). **Confirmed live**: 2,606 real WhatsApp-sourced salary transactions exist in production as of 2026-07-09.
 
 **Canonical Workflow — escort-duty pay (this one is NOT actually in use — see Owner Changeable Rules below):** `modules/payroll::compute_run()` is supposed to aggregate `wbom_escort_programs` into a monthly `wbom_payroll_runs` row with a `draft → reviewed → approved → locked → paid` state machine. **Production evidence, 2026-07-09: all 703 rows are stuck in `status='draft'`, all with `total_programs=0`.** This pipeline has never actually paid anyone for escort duty in production.
 
 **Canonical Entity Names:** "Payroll run" = one `wbom_payroll_runs` row per (employee, period_year, period_month). "Payment draft" = a `fazle_payment_drafts` row awaiting admin approval — a different, narrower concept than a payroll run (a draft is per-event; a run is per-month-aggregate).
 
-**Canonical Database Tables:** `wbom_payroll_runs`, `wbom_payroll_run_items`, `wbom_payroll_approval_log` (the monthly-aggregate system); `fazle_payment_drafts` (the per-event draft system); `fpe_cash_transactions` (the only table real money is ever actually recorded in, regardless of which upstream system suggested the amount).
+**Canonical Database Tables:** `wbom_payroll_runs`, `wbom_payroll_run_items`, `wbom_payroll_approval_log` (the monthly-aggregate system); `fazle_payment_drafts` (the per-event draft system); `fazle_cash_transactions` (the only table real money is ever actually recorded in, regardless of which upstream system suggested the amount).
 
-**Canonical APIs:** `modules/payroll::compute_run(employee_id, period_year, period_month, computed_by, per_program_rate=None)`, `submit_run/approve_run/lock_run/mark_paid/cancel_run`. `modules/payment_workflow::create_escort_payment_draft(employee_id, escort_program_id, override_days, source)`, `finalize_payment(draft_id, approved_amount, method)`.
+**Canonical APIs:** `modules/payroll::compute_run(employee_id, period_year, period_month, computed_by, per_program_rate=None)`, `submit_run/approve_run/lock_run/mark_paid/cancel_run`. `modules/fazle_payment_workflow::create_escort_payment_draft(employee_id, escort_program_id, override_days, source)`, `finalize_payment(draft_id, approved_amount, method)`.
 
 **Canonical Status Values:** Payroll run state machine: `draft → reviewed → approved → locked → paid`, with `cancelled` reachable from any non-`paid` state (`modules/payroll/__init__.py::ALLOWED_TRANSITIONS`). Payment draft status: `pending`/`approved`/`rejected`/`sent`/`expired` (confirmed all 47 real escort-payment drafts ended in `expired`).
 
@@ -215,7 +215,7 @@ Formula 1 — escort/vessel-duty pay (canonical for Escort-designation employees
     the guard's own basic_salary). Matches modules/escort_roster/
     calculations.py::calculate_pay's existing, already-correct shift-rate
     model.
-    modules/payment_workflow::create_escort_payment_draft (FIXED 2026-07-10,
+    modules/fazle_payment_workflow::create_escort_payment_draft (FIXED 2026-07-10,
     was previously using basic_salary/30 -- Formula 3, wrong for escort duty):
         gross_amount = duty_days × DEFAULT_DAILY_RATE (400tk/day)
         net_payable  = gross_amount − food_bill + conveyance − advances
@@ -251,14 +251,14 @@ formula is rewritten to match Formula 3.
 Actual production payment path for basic salary today, unchanged: admin
 types a free amount in "PAID <id> <amount> <method>"; the system records
 exactly that number via create_transaction(), with no cross-check against
-Formula 3 either. fpe_cash_transactions.program_id is NULL on all 3,671
+Formula 3 either. fazle_cash_transactions.program_id is NULL on all 3,671
 real transactions.
 ```
 
 ### Office-Staff Eligibility Rule (Owner decision, 2026-07-10/11, canonical)
 
 An employee is Office Staff (and therefore eligible for Formula 3, never Formula 1) when, per `modules/payroll/eligibility.py::classify_office_staff` (the single centralized helper -- do not duplicate this logic):
-1. `status='Active'` (case-sensitive, matching `wbom_employees`'s own confirmed casing).
+1. `status='Active'` (case-sensitive, matching `fazle_employees_legacy`'s own confirmed casing).
 2. `designation` is not `'Escort'` (case-insensitive).
 3. Not an obvious bookkeeping/test/placeholder record (best-effort name-substring heuristic — disclosed as imperfect, not a guarantee).
 4. `basic_salary > 0`.
@@ -266,11 +266,11 @@ An employee is Office Staff (and therefore eligible for Formula 3, never Formula
 
 **Confirmed production result (2026-07-11): 0 of 188 employees are currently eligible** — 184 are Escort-designation (excluded by rule #2), and the remaining 4 non-Escort records each fail a different gate (one inactive, two with `basic_salary=0`, one flagged as a likely bookkeeping/test row). This is a **data-state condition, not an implementation failure** — the eligibility pipeline is built and verified correct against real production data; it is simply dormant until a real, active, positively-salaried office employee exists.
 
-**Structural Rules:** Regardless of which formula policy the Owner picks, `fpe_cash_transactions` remains the only table real money is recorded in, and `create_transaction()` remains the only function allowed to write it (Article I) — that structural rule does not change no matter which pay-formula policy wins.
+**Structural Rules:** Regardless of which formula policy the Owner picks, `fazle_cash_transactions` remains the only table real money is recorded in, and `create_transaction()` remains the only function allowed to write it (Article I) — that structural rule does not change no matter which pay-formula policy wins.
 
 **Validation Rules:** None currently enforced between the admin-typed `PAID` amount and any formula's suggested figure — this is the concrete control gap this document exists to surface, not to silently patch. A future fix should validate the typed amount against the Owner-chosen canonical formula and require override confirmation on mismatch, per the certification report's recommendation.
 
-**Related Modules:** `modules/payroll`, `modules/payment_workflow`, `modules/escort_roster`, `modules/fazle_payroll_engine`, `modules/admin_commands`.
+**Related Modules:** `modules/payroll`, `modules/fazle_payment_workflow`, `modules/escort_roster`, `modules/fazle_payroll_engine`, `modules/fazle_admin_commands`.
 
 **Related Documents:** `docs/PRODUCTION_CERTIFICATION_v1.0.md` (Finance/Payroll Status — full evidence), `docs/NEXT_IMPLEMENTATION_QUEUE.md` Tier 0, `BUSINESS-CONSTITUTION.md` Article I.
 
@@ -295,11 +295,11 @@ An employee is Office Staff (and therefore eligible for Formula 3, never Formula
 
 **Business Purpose:** Record every real movement of money — salary, advances, bonuses, deductions, corrections — in one place that the whole business trusts.
 
-**Canonical Workflow:** Any real money movement → `modules/fazle_payroll_engine/accounting.py::create_transaction()` → `fpe_cash_transactions` (Constitution Article I). One documented exception exists: `reverse_transaction()` inserts the reversal row **directly**, not through `create_transaction()` (`accounting.py:157`) — this is a structural fact worth naming explicitly, not silently glossing over, since Article I says "exactly one function creates a financial transaction." Whether `reverse_transaction()`'s direct insert is an intentional, audited exception (it does set `is_reversal=TRUE` and links `reversed_txn_id`) or a gap in Article I's own enforcement is an open structural question — flagged here, not resolved unilaterally.
+**Canonical Workflow:** Any real money movement → `modules/fazle_payroll_engine/accounting.py::create_transaction()` → `fazle_cash_transactions` (Constitution Article I). One documented exception exists: `reverse_transaction()` inserts the reversal row **directly**, not through `create_transaction()` (`accounting.py:157`) — this is a structural fact worth naming explicitly, not silently glossing over, since Article I says "exactly one function creates a financial transaction." Whether `reverse_transaction()`'s direct insert is an intentional, audited exception (it does set `is_reversal=TRUE` and links `reversed_txn_id`) or a gap in Article I's own enforcement is an open structural question — flagged here, not resolved unilaterally.
 
-**Canonical Entity Names:** "Transaction" always means one `fpe_cash_transactions` row. `wbom_cash_transactions` is a **separate, legacy, read-only reference table** (per Owner directive 2026-06-29) — never write to it; it exists for historical/reference queries only.
+**Canonical Entity Names:** "Transaction" always means one `fazle_cash_transactions` row. `fazle_cash_transactions_archive` is a **separate, legacy, read-only reference table** (per Owner directive 2026-06-29) — never write to it; it exists for historical/reference queries only.
 
-**Canonical Database Tables:** `fpe_cash_transactions` (canonical, all real money). `wbom_cash_transactions` (Legacy, read-only reference — do not write). `fpe_employee_ledger` (per-employee-per-period running balance, not a transaction log). `fpe_income_transactions` (a **separate** table for income, written by `create_income_transaction()` — explicitly does not touch `fpe_cash_transactions` or `fpe_employee_ledger`, per its own docstring).
+**Canonical Database Tables:** `fazle_cash_transactions` (canonical, all real money). `fazle_cash_transactions_archive` (Legacy, read-only reference — do not write). `fazle_employee_ledger` (per-employee-per-period running balance, not a transaction log). `fpe_income_transactions` (a **separate** table for income, written by `create_income_transaction()` — explicitly does not touch `fazle_cash_transactions` or `fazle_employee_ledger`, per its own docstring).
 
 **Canonical APIs:** `create_transaction()`, `reverse_transaction()` (`modules/fazle_payroll_engine/accounting.py`). `tools/repair_fpe_transactions.py` is a separate, explicitly-labeled repair tool (its own dry-run mode and its own audit table `fpe_transaction_repairs`) — not part of the normal write path, used only for manual data correction.
 
@@ -309,17 +309,17 @@ An employee is Office Staff (and therefore eligible for Formula 3, never Formula
 
 **Canonical Status Values — `approval_status`** (`ApprovalStatus` enum, `models.py:60-63`): `approved`, `rejected`, `pending_review`.
 
-**Canonical Status Values — `review_status` on `fpe_cash_transactions`** (`ReviewStatus` enum, `models.py:66-70`): `pending`, `reviewed`, `auto_resolved`, `dismissed`.
+**Canonical Status Values — `review_status` on `fazle_cash_transactions`** (`ReviewStatus` enum, `models.py:66-70`): `pending`, `reviewed`, `auto_resolved`, `dismissed`.
 
 **Known Legacy Variants / Naming Collision (important structural finding):** A **different** column, also named `review_status`, exists on `fpe_unmatched_messages` (`modules/fazle_payroll_engine/migrations/002_fpe_normalization.sql:71`) with a **different vocabulary**: `pending`, `promoted`, `operator_pending`, `reviewed`, `rejected`. Same column name, two unrelated vocabularies on two different tables — exactly the kind of structural drift this document exists to name. **Rule going forward: do not assume `review_status` means the same thing on every table — check which table before trusting the vocabulary.** A future rename (e.g. `message_review_status` on `fpe_unmatched_messages`) would resolve this, but is not made unilaterally here — recorded as a known collision, not silently fixed.
 
 **Owner Changeable Rules:** None — the 5 `txn_category` values and 4 `transaction_status` values are structural (application logic branches on them), not business policy in the "Owner can add a 6th category tomorrow without a code change" sense.
 
-**Structural Rules:** `fpe_cash_transactions` is the only table Phase 2b's General Ledger work may read as the cost-side source of truth. `wbom_cash_transactions` must never be written to by any new code. **AI read-access rule (added 2026-08-02, Owner-confirmed):** no live financial AI answer — Chat, Hermes, `modules/ai_readonly_tools`, `modules/ai_console`, or any future AI-facing tool — may read cash-transaction data from `wbom_cash_transactions`, and none may aggregate/mix both tables. `wbom_cash_transactions` may only be read for explicitly-labeled historical migration analysis, never presented as a current answer. See `ai_read_cash_transactions` in `ai_readonly_data_access.md`.
+**Structural Rules:** `fazle_cash_transactions` is the only table Phase 2b's General Ledger work may read as the cost-side source of truth. `fazle_cash_transactions_archive` must never be written to by any new code. **AI read-access rule (added 2026-08-02, Owner-confirmed):** no live financial AI answer — Chat, Hermes, `modules/ai_readonly_tools`, `modules/ai_console`, or any future AI-facing tool — may read cash-transaction data from `fazle_cash_transactions_archive`, and none may aggregate/mix both tables. `fazle_cash_transactions_archive` may only be read for explicitly-labeled historical migration analysis, never presented as a current answer. See `ai_read_cash_transactions` in `ai_readonly_data_access.md`.
 
-**Validation Rules:** No DB-level CHECK constraint enforces any of the 4 enum column value-sets on `fpe_cash_transactions` (confirmed — plain TEXT columns) — validation is entirely at the Python/Pydantic layer via the enum classes in `models.py`. A direct SQL INSERT bypassing the Python layer (as `tools/repair_fpe_transactions.py` does, deliberately, with its own safeguards) is not blocked by the database itself.
+**Validation Rules:** No DB-level CHECK constraint enforces any of the 4 enum column value-sets on `fazle_cash_transactions` (confirmed — plain TEXT columns) — validation is entirely at the Python/Pydantic layer via the enum classes in `models.py`. A direct SQL INSERT bypassing the Python layer (as `tools/repair_fpe_transactions.py` does, deliberately, with its own safeguards) is not blocked by the database itself.
 
-**Related Modules:** `modules/fazle_payroll_engine`, `modules/payment_workflow`, `modules/payment_ingest`, `modules/admin_commands`, `modules/payment_correction`.
+**Related Modules:** `modules/fazle_payroll_engine`, `modules/fazle_payment_workflow`, `modules/fazle_payment_ingest`, `modules/fazle_admin_commands`, `modules/payment_correction`.
 
 **Related Documents:** `BUSINESS-CONSTITUTION.md` Article I, `docs/PRODUCTION_CERTIFICATION_v1.0.md` Finance Status.
 
@@ -347,7 +347,7 @@ An employee is Office Staff (and therefore eligible for Formula 3, never Formula
 
 **Validation Rules:** Add CHECK constraints to both tables' `status` columns as a Tier-1/Tier-2 hygiene item — today, any string can be written and nothing enforces the documented set.
 
-**Related Modules:** `modules/payment_workflow`, `modules/draft_approval`, `modules/drafts`, `modules/admin_commands`, `modules/draft_quality`, `modules/wa_chat_frontend`.
+**Related Modules:** `modules/fazle_payment_workflow`, `modules/fazle_draft_approval`, `modules/drafts`, `modules/fazle_admin_commands`, `modules/draft_quality`, `modules/wa_chat_frontend`.
 
 **Related Documents:** `docs/MODULE_MAP.md`.
 
@@ -373,7 +373,7 @@ An employee is Office Staff (and therefore eligible for Formula 3, never Formula
 
 **Validation Rules:** Recommend adding CHECK constraints to `fazle_payment_drafts.status` and `fazle_draft_replies.status` following `escort_roster_change_requests`'s pattern.
 
-**Related Modules:** `modules/draft_approval`, `modules/payroll`, `modules/escort_roster`.
+**Related Modules:** `modules/fazle_draft_approval`, `modules/payroll`, `modules/escort_roster`.
 
 **Related Documents:** `docs/PRODUCTION_CERTIFICATION_v1.0.md`.
 
@@ -385,9 +385,9 @@ An employee is Office Staff (and therefore eligible for Formula 3, never Formula
 
 **Canonical Workflow:** None exists yet.
 
-**Canonical Entity Names:** N/A — not yet built. Do not confuse `fpe_employee_ledger` (see below) with a general ledger; they are unrelated concepts that happen to share the word "ledger."
+**Canonical Entity Names:** N/A — not yet built. Do not confuse `fazle_employee_ledger` (see below) with a general ledger; they are unrelated concepts that happen to share the word "ledger."
 
-**Canonical Database Tables:** **Confirmed via exhaustive grep (2026-07-09): zero hits for `chart_of_accounts`, `general_ledger`, `ledger_entry`, `debit`, or `credit` anywhere in `modules/` or `db/migrations/`.** This vocabulary does not exist in the codebase today. The only ledger-like table is `fpe_employee_ledger` — a per-employee-per-period **running-balance** table (`opening_balance`, `total_earned`, `total_paid`, `total_advance`, `closing_balance`, `txn_count`), **not** a double-entry ledger (no account dimension, no debit/credit pair).
+**Canonical Database Tables:** **Confirmed via exhaustive grep (2026-07-09): zero hits for `chart_of_accounts`, `general_ledger`, `ledger_entry`, `debit`, or `credit` anywhere in `modules/` or `db/migrations/`.** This vocabulary does not exist in the codebase today. The only ledger-like table is `fazle_employee_ledger` — a per-employee-per-period **running-balance** table (`opening_balance`, `total_earned`, `total_paid`, `total_advance`, `closing_balance`, `txn_count`), **not** a double-entry ledger (no account dimension, no debit/credit pair).
 
 **Canonical APIs:** None yet.
 
@@ -413,7 +413,7 @@ An employee is Office Staff (and therefore eligible for Formula 3, never Formula
 
 **Canonical Workflow:** `create_income_transaction()` (`modules/fazle_payroll_engine/accounting.py`) writes `fpe_income_transactions` directly.
 
-**Canonical Entity Names:** "Income transaction" is a **structurally separate concept from "Cash Transaction" above** — `fpe_income_transactions` does not touch `fpe_cash_transactions` or `fpe_employee_ledger` (confirmed via the function's own docstring). Do not assume income and expense/payroll cash movements share a table or a reconciliation path today — they don't.
+**Canonical Entity Names:** "Income transaction" is a **structurally separate concept from "Cash Transaction" above** — `fpe_income_transactions` does not touch `fazle_cash_transactions` or `fazle_employee_ledger` (confirmed via the function's own docstring). Do not assume income and expense/payroll cash movements share a table or a reconciliation path today — they don't.
 
 **Canonical Database Tables:** `fpe_income_transactions`.
 
@@ -425,7 +425,7 @@ An employee is Office Staff (and therefore eligible for Formula 3, never Formula
 
 **Owner Changeable Rules:** Income categorization/sourcing is a policy question, once Client Billing (below) exists to actually generate income records tied to invoices.
 
-**Structural Rules:** Until Phase 2b (Billing/GL) is built, `fpe_income_transactions` and `fpe_cash_transactions` are two disconnected ledgers — a GL layer will need to define how they reconcile; that link does not exist today.
+**Structural Rules:** Until Phase 2b (Billing/GL) is built, `fpe_income_transactions` and `fazle_cash_transactions` are two disconnected ledgers — a GL layer will need to define how they reconcile; that link does not exist today.
 
 **Validation Rules:** Not verified this pass.
 
@@ -439,7 +439,7 @@ An employee is Office Staff (and therefore eligible for Formula 3, never Formula
 
 **Business Purpose:** Track money the business spends that is not employee payroll (e.g. operational costs).
 
-**Canonical Workflow:** **Not found as a distinct concept in this pass.** No dedicated "expense" table or module was located; employee-facing cost movements go through `fpe_cash_transactions` (categories `salary`/`advance`/`bonus`/`deduction`/`correction` — see Cash Transaction above), which does not include a general business-expense category.
+**Canonical Workflow:** **Not found as a distinct concept in this pass.** No dedicated "expense" table or module was located; employee-facing cost movements go through `fazle_cash_transactions` (categories `salary`/`advance`/`bonus`/`deduction`/`correction` — see Cash Transaction above), which does not include a general business-expense category.
 
 **Canonical Entity Names:** Not established — **Not verified / not yet built as a distinct entity.**
 
@@ -491,45 +491,45 @@ An employee is Office Staff (and therefore eligible for Formula 3, never Formula
 
 **Business Purpose:** Represent a person who works for the company (guard/escort/office staff) consistently enough that payroll, attendance, escort assignment, and identity resolution all agree on who they mean.
 
-**Canonical Workflow:** There are genuinely **two separate employee systems** in this codebase, bridged by an explicit soft-link, not merged: `wbom_employees` (the operational system — attendance, escort assignment, basic salary) and `fpe_employees` (the payroll-engine's own employee record, used for transaction normalization and dedup). `fpe_employees.wbom_employee_id` (added additively, `modules/fazle_payroll_engine/migrations/008_unification.sql:12`) is the real cross-system link, backfilled by phone-number matching. **Two bridges exist, serving different purposes — not one superseding the other, corrected 2026-07-17 (this document previously named only the first):** `modules/payment_ingest/wbom_fpe_sync.py::sync_wbom_transaction()`/`backfill_wbom_to_fpe()` is a **historical/backfill migration adapter** (its own header: "WBOM → FPE Historical Migration Adapter (Phase 7)"), routing through the well-guarded `fazle_payroll_engine.employee.match_or_create_employee()`. `modules/payment_ingest/fpe_bridge.py::resolve_fpe_employee_for_wbom_employee()`/`create_fpe_transaction_from_ingest()` is the **live, real-time bridge** used by the actual admin→accountant WhatsApp shorthand path (`ingest_admin_cash_entry()`) every time an accountant types a cash instruction — this is the one audited and partially fixed 2026-07-17 (Session 20 Phase 2, S20-10: added a `payout_mobile` fallback search to `_match_or_create_instruction_employee()` in `modules/payment_ingest/__init__.py`, since it previously only ever tried one collapsed lookup value). Both bridges can auto-create an `fpe_employees` row on a miss; `resolve_fpe_employee_for_wbom_employee()`'s own creating INSERT leaves `resolution_status` at its schema default (`'unresolved'`) even when it sets `wbom_employee_id` in the same statement — a known, documented, non-broken metadata staleness (see `modules/reports::_b_unresolved_fpe_employees()`'s `linked_but_mislabeled` bucket, which exists specifically to separate these rows from genuinely-unlinked ones).
+**Canonical Workflow:** There are genuinely **two separate employee systems** in this codebase, bridged by an explicit soft-link, not merged: `fazle_employees_legacy` (the operational system — attendance, escort assignment, basic salary) and `fazle_employees` (the payroll-engine's own employee record, used for transaction normalization and dedup). `fazle_employees.wbom_employee_id` (added additively, `modules/fazle_payroll_engine/migrations/008_unification.sql:12`) is the real cross-system link, backfilled by phone-number matching. **Two bridges exist, serving different purposes — not one superseding the other, corrected 2026-07-17 (this document previously named only the first):** `modules/fazle_data_sync/__init__.py::sync_wbom_transaction()`/`backfill_wbom_to_fpe()` is a **historical/backfill migration adapter** (its own header: "WBOM → FPE Historical Migration Adapter (Phase 7)"), routing through the well-guarded `fazle_payroll_engine.employee.match_or_create_employee()`. `modules/fazle_payment_ingest/fpe_bridge.py::resolve_fpe_employee_for_wbom_employee()`/`create_fpe_transaction_from_ingest()` is the **live, real-time bridge** used by the actual admin→accountant WhatsApp shorthand path (`ingest_admin_cash_entry()`) every time an accountant types a cash instruction — this is the one audited and partially fixed 2026-07-17 (Session 20 Phase 2, S20-10: added a `payout_mobile` fallback search to `_match_or_create_instruction_employee()` in `modules/fazle_payment_ingest/__init__.py`, since it previously only ever tried one collapsed lookup value). Both bridges can auto-create an `fazle_employees` row on a miss; `resolve_fpe_employee_for_wbom_employee()`'s own creating INSERT leaves `resolution_status` at its schema default (`'unresolved'`) even when it sets `wbom_employee_id` in the same statement — a known, documented, non-broken metadata staleness (see `modules/reports::_b_unresolved_fazle_employees()`'s `linked_but_mislabeled` bucket, which exists specifically to separate these rows from genuinely-unlinked ones).
 
 **Canonical Entity Names — important, easily-confused pair:**
-- `fpe_employees.canonical_employee_id` — **self-referential within `fpe_employees` only** (`REFERENCES fpe_employees(id)`). Used to mark a duplicate FPE row resolved to another FPE row (dedup **within** the payroll-engine's own employee table), tracked via `fpe_employee_resolution_links`. **This is NOT a cross-system link.**
-- `fpe_employees.wbom_employee_id` — the actual **cross-system** soft-link to `wbom_employees.employee_id`.
+- `fazle_employees.canonical_employee_id` — **self-referential within `fazle_employees` only** (`REFERENCES fazle_employees(id)`). Used to mark a duplicate FPE row resolved to another FPE row (dedup **within** the payroll-engine's own employee table), tracked via `fpe_employee_resolution_links`. **This is NOT a cross-system link.**
+- `fazle_employees.wbom_employee_id` — the actual **cross-system** soft-link to `fazle_employees_legacy.employee_id`.
 - These two names look similar and are easy to confuse; they solve different problems. Do not use one where the other is meant.
 
-**Canonical Database Tables:** `wbom_employees` (PK `employee_id`, operational system — attendance, escort, basic salary). `fpe_employees` (PK `id`, payroll-normalization system). `escort_roster_entries`, `wbom_escort_programs.escort_employee_id` (FK → `wbom_employees.employee_id`).
+**Canonical Database Tables:** `fazle_employees_legacy` (PK `employee_id`, operational system — attendance, escort, basic salary). `fazle_employees` (PK `id`, payroll-normalization system). `escort_roster_entries`, `wbom_escort_programs.escort_employee_id` (FK → `fazle_employees_legacy.employee_id`).
 
-**Canonical APIs:** `modules/fazle_payroll_engine/employee.py::match_or_create_employee(payout_phone, employee_id_phone, ...)` (resolves/creates on the FPE side). `shared/identity_map.py::resolve_employee()` (resolves on the `wbom_employees` side only — does **not** itself bridge to `fpe_employees`), `validate_payment_identity()`, `sender_to_employee()`.
+**Canonical APIs:** `modules/fazle_payroll_engine/employee.py::match_or_create_employee(payout_phone, employee_id_phone, ...)` (resolves/creates on the FPE side). `shared/identity_map.py::resolve_employee()` (resolves on the `fazle_employees_legacy` side only — does **not** itself bridge to `fazle_employees`), `validate_payment_identity()`, `sender_to_employee()`.
 
-**Updated 2026-07-13 — display-consistency fix, not a schema/naming change:** `payroll.html`'s Add Attendance form did its employee lookup purely against `wbom_employees` (via `modules.attendance.crud`), unlike every other form on the page (Add Payment, Manual Entry, Search), which all resolve through `fpe_employees` and show `employee_id_phone`. `modules.attendance.crud.lookup_employee_by_id()`/`suggest_employees_by_name()` now also attach `employee_id_phone` via a read-only scalar subquery, preferring `fpe_employees.wbom_employee_id` (the cross-system link described above) when it already exists, falling back to matching `employee_mobile`/`bkash_number`/`nagad_number` against `fpe_employees.primary_phone`/`employee_id_phone`. This does not create or write any link — it is `NULL` when no `fpe_employees` row has ever been matched to that `wbom_employees` row (common for office staff who have never been through a payment flow).
+**Updated 2026-07-13 — display-consistency fix, not a schema/naming change:** `payroll.html`'s Add Attendance form did its employee lookup purely against `fazle_employees_legacy` (via `modules.attendance.crud`), unlike every other form on the page (Add Payment, Manual Entry, Search), which all resolve through `fazle_employees` and show `employee_id_phone`. `modules.attendance.crud.lookup_employee_by_id()`/`suggest_employees_by_name()` now also attach `employee_id_phone` via a read-only scalar subquery, preferring `fazle_employees.wbom_employee_id` (the cross-system link described above) when it already exists, falling back to matching `employee_mobile`/`bkash_number`/`nagad_number` against `fazle_employees.primary_phone`/`employee_id_phone`. This does not create or write any link — it is `NULL` when no `fazle_employees` row has ever been matched to that `fazle_employees_legacy` row (common for office staff who have never been through a payment flow).
 
-**Canonical Status Values:** `wbom_employees.status = 'Active'` (capitalized — see the casing note in the Attendance section; this is the same inconsistency, not a new one).
+**Canonical Status Values:** `fazle_employees_legacy.status = 'Active'` (capitalized — see the casing note in the Attendance section; this is the same inconsistency, not a new one).
 
 ### Naming Rule — employee phone/mobile number (the single largest naming-drift finding in this pass)
 
 `shared/identity_map.py` already contains hand-written prior art documenting exactly this problem (quoted directly, this document ratifies and extends it rather than re-deriving it):
 
 ```
-employee_id        → wbom_employees.employee_id          (PK, internal integer)
-employee_mobile    → wbom_employees.employee_mobile      (operational WhatsApp contact) — CANONICAL for "an employee's phone"
-payout_phone       → fpe_cash_transactions.payout_phone   (payment destination — MAY differ from employee_mobile)
-payment_mobile     → wbom_cash_transactions.payment_mobile (historical transaction record)
+employee_id        → fazle_employees_legacy.employee_id          (PK, internal integer)
+employee_mobile    → fazle_employees_legacy.employee_mobile      (operational WhatsApp contact) — CANONICAL for "an employee's phone"
+payout_phone       → fazle_cash_transactions.payout_phone   (payment destination — MAY differ from employee_mobile)
+payment_mobile     → fazle_cash_transactions_archive.payment_mobile (historical transaction record)
 sender_phone       → derived from WhatsApp JID at message-receive time
 candidate_phone    → recruitment tables (an applicant, NOT yet an employee)
-escort_employee_id → wbom_escort_programs.escort_employee_id (FK → wbom_employees)
+escort_employee_id → wbom_escort_programs.escort_employee_id (FK → fazle_employees_legacy)
 ```
 
-Confirmed via repo-wide grep, the full real picture is **larger** than that comment alone documents — on `wbom_cash_transactions` alone there are **four** distinct phone-shaped columns (`payment_mobile`, `employee_phone`, `payment_number`, plus the joined `wbom_employees.employee_mobile`):
+Confirmed via repo-wide grep, the full real picture is **larger** than that comment alone documents — on `fazle_cash_transactions_archive` alone there are **four** distinct phone-shaped columns (`payment_mobile`, `employee_phone`, `payment_number`, plus the joined `fazle_employees_legacy.employee_mobile`):
 
 ```
-Canonical:   employee_mobile   (wbom_employees — "an employee's operational WhatsApp contact number")
-Aliases:     employee_phone    (wbom_cash_transactions — a DIFFERENT column on the same table as payment_mobile)
-             payment_mobile    (wbom_cash_transactions — yet another phone-shaped column)
-             payment_number    (wbom_cash_transactions — bKash/Nagad account number, payment-channel-specific)
-             primary_phone     (fpe_employees — the FPE-side canonical phone, its own separate concept)
-             payout_phone      (fpe_cash_transactions — payment destination; explicitly documented to MAY differ from employee_mobile)
-             employee_id_phone (fpe_employees — parsed from a WhatsApp "ID: 01XXXXXXXXX" field, a third distinct FPE-side phone concept)
+Canonical:   employee_mobile   (fazle_employees_legacy — "an employee's operational WhatsApp contact number")
+Aliases:     employee_phone    (fazle_cash_transactions_archive — a DIFFERENT column on the same table as payment_mobile)
+             payment_mobile    (fazle_cash_transactions_archive — yet another phone-shaped column)
+             payment_number    (fazle_cash_transactions_archive — bKash/Nagad account number, payment-channel-specific)
+             primary_phone     (fazle_employees — the FPE-side canonical phone, its own separate concept)
+             payout_phone      (fazle_cash_transactions — payment destination; explicitly documented to MAY differ from employee_mobile)
+             employee_id_phone (fazle_employees — parsed from a WhatsApp "ID: 01XXXXXXXXX" field, a third distinct FPE-side phone concept)
 Deprecated:  none — all of the above are structurally different concepts (contact number vs. payment destination vs. ID-field-parsed number), not simply typos of one canonical name. Collapsing them into one column would lose real information (a guard's contact number and their bKash payout number are legitimately allowed to differ).
 Future:      no rename recommended — the real fix is documentation (this section), not a schema change. The risk this drift creates is a developer assuming two of these are interchangeable when they are not; `employee_mobile ≠ payout_phone (always)` per identity_map.py's own explicit warning.
 ```
@@ -538,11 +538,11 @@ Future:      no rename recommended — the real fix is documentation (this secti
 
 **Owner Changeable Rules:** None specific to naming — this is structural.
 
-**Structural Rules:** Never assume `employee_mobile` and `payout_phone` are the same value for a given employee — always resolve them independently via the appropriate table. `canonical_employee_id` and `wbom_employee_id` on `fpe_employees` must never be confused (see above) — any new code touching employee dedup/cross-system resolution must cite `shared/identity_map.py` and this section before adding a new resolver.
+**Structural Rules:** Never assume `employee_mobile` and `payout_phone` are the same value for a given employee — always resolve them independently via the appropriate table. `canonical_employee_id` and `wbom_employee_id` on `fazle_employees` must never be confused (see above) — any new code touching employee dedup/cross-system resolution must cite `shared/identity_map.py` and this section before adding a new resolver.
 
 **Validation Rules:** Not verified this pass beyond the naming map above.
 
-**Related Modules:** `modules/fazle_payroll_engine` (employee.py, normalization.py), `modules/payment_ingest` (wbom_fpe_sync.py), `shared/identity_map.py`.
+**Related Modules:** `modules/fazle_payroll_engine` (employee.py, normalization.py), `modules/fazle_payment_ingest` (wbom_fpe_sync.py), `shared/identity_map.py`.
 
 **Related Documents:** `shared/identity_map.py` (source of the original concept map), `docs/PRODUCTION_CERTIFICATION_v1.0.md`.
 
@@ -556,7 +556,7 @@ Future:      no rename recommended — the real fix is documentation (this secti
 
 **Canonical Entity Names:** "AI tool" = one named, read-only function in `modules/ai_readonly_tools` (e.g. `get_contact_summary`, `get_payment_summary`, `get_escort_program_status`, `get_payroll_run_status`). There is no generic "ask the database anything" capability, by design.
 
-**Canonical Database Tables:** `ai_read_contacts`, `ai_read_employees`, `ai_read_recent_messages`, `ai_read_escort_programs`, `ai_read_attendance_summary`, `ai_read_payroll_runs`, `ai_read_recruitment_leads`, `ai_read_module_bridge_status`, `ai_read_kb_articles`, `ai_read_billing_outstanding`, `ai_read_cash_transactions` (**`fpe_cash_transactions` only — never `wbom_cash_transactions`**, see Cash Transaction §Structural Rules above; DDL pending as of 2026-08-02) — 11 total, a dedicated, restricted set of read-optimized views/tables, distinct from the production tables they source from. (Corrected 2026-08-02 — this list previously named only 5 of the then-9/10 approved views; see `ai_readonly_data_access.md` for the full, authoritative list, which this section should be kept in sync with rather than duplicating in detail.)
+**Canonical Database Tables:** `ai_read_contacts`, `ai_read_employees`, `ai_read_recent_messages`, `ai_read_escort_programs`, `ai_read_attendance_summary`, `ai_read_payroll_runs`, `ai_read_recruitment_leads`, `ai_read_module_bridge_status`, `ai_read_kb_articles`, `ai_read_billing_outstanding`, `ai_read_cash_transactions` (**`fazle_cash_transactions` only — never `fazle_cash_transactions_archive`**, see Cash Transaction §Structural Rules above; DDL pending as of 2026-08-02) — 11 total, a dedicated, restricted set of read-optimized views/tables, distinct from the production tables they source from. (Corrected 2026-08-02 — this list previously named only 5 of the then-9/10 approved views; see `ai_readonly_data_access.md` for the full, authoritative list, which this section should be kept in sync with rather than duplicating in detail.)
 
 **Canonical APIs:** `modules/ai_readonly_tools::run_tool()` (dispatcher), plus 14 named tools (`get_contact_summary`, `get_contacts_list`, `get_recent_messages`, `get_payment_summary`, `get_escort_program_status`, `get_attendance_summary`, `get_payroll_run_status`, `get_daily_payments`, `get_employee_month_payments`, `get_lighter_assignment`, `get_recruitment_leads`, `get_employee_list`, `get_module_bridge_status`, `get_kb_articles`), plus `fetch_web_page` (read-only HTTP GET, not a DB tool).
 
@@ -706,13 +706,13 @@ Future:      no rename recommended — the real fix is documentation (this secti
 
 **Route A / Route B split:** every sender resolves to Route A (admin, accountant, client/buyer roles, family, employee/staff, `internal_coordinator` — the existing tiers above, KB/template/multi-provider `ai.generate_reply()` chain) or Route B (escort, security_guard, candidate, unknown — `modules/route_b`, Ollama only, no Groq/GitHub fallback). Route B is deliberately positioned *after* every existing operational safety tier (escort-order parsing, attendance, Sprint-3A advance flow) so none of that mature logic is preempted — it only claims what would otherwise fall through to the generic KB/AI-fallback tiers. `SOCIAL_AUTO_REPLY_SINGLE_ENGINE`/`_requires_legacy_workflow()`'s content-based fork to `modules/social_auto_reply` was removed for the three WhatsApp entry points (`bridge_poller`, `/webhook/meta`, `/webhook/mcp1`/`mcp2`) — `social_auto_reply` itself is unmodified and remains the live engine for Facebook Messenger DMs and Facebook Page comments only.
 
-**Route A — No Auto Reply, name-based gate (2026-07-22):** within the Route B population, a sender whose *saved contact name* contains Client/Escort/Office/Operation/Accountant/Security Guard/Al-Aqsa/Al-Manaratayn/আল-আকসা/আল-মানারাতাইন/Al-Rifa'i anywhere (substring, not prefix) gets no AI/generic/recruitment reply at all — enforced both by `_should_silent_skip()` (early, `wbom_contacts.display_name`) and a backstop immediately before `handle_route_b_message()` is called (`identity_brain`'s resolved name, for contacts not yet synced). Escort-named contacts get one exception: a genuinely order-shaped message (mother vessel + lighter vessel + a mobile number) is still routed to `handle_escort_client_message()` for a structured admin-review draft — the sender still gets no reply, only the destination differs. Full policy: `../05_workflows/whatsapp_reply_workflow.md` §14.
+**Route A — No Auto Reply, name-based gate (2026-07-22):** within the Route B population, a sender whose *saved contact name* contains Client/Escort/Office/Operation/Accountant/Security Guard/Al-Aqsa/Al-Manaratayn/আল-আকসা/আল-মানারাতাইন/Al-Rifa'i anywhere (substring, not prefix) gets no AI/generic/recruitment reply at all — enforced both by `_should_silent_skip()` (early, `fazle_contacts.display_name`) and a backstop immediately before `handle_route_b_message()` is called (`identity_brain`'s resolved name, for contacts not yet synced). Escort-named contacts get one exception: a genuinely order-shaped message (mother vessel + lighter vessel + a mobile number) is still routed to `handle_escort_client_message()` for a structured admin-review draft — the sender still gets no reply, only the destination differs. Full policy: `../05_workflows/whatsapp_reply_workflow.md` §14.
 
-**Route B Conversation Handoff (built 2026-07-22, `ROUTE_B_HANDOFF_ENABLED=false` — NOT YET ACTIVE):** `modules.route_b_handoff` lets Route B transfer a conversation to an existing canonical workflow (recruitment intake, an employee-claim admin review, or — separately flagged, also inactive — an escort-order draft) once identity/intent becomes clear. `employee` was NOT added to `ROUTE_B_ROLES`; a phone already on file in `wbom_employees` (Active or Inactive) still never reaches Route B, so an "employee claim" handoff can never grant Tier 10 access directly — it always produces an admin-review draft, verified or not. Ollama only ever supplies a hint category (`app.ollama.classify_route_b_category()`, Ollama-only); every state-changing call is an existing, unmodified canonical function. Full policy: `../05_workflows/whatsapp_reply_workflow.md` §15.
+**Route B Conversation Handoff (built 2026-07-22, `ROUTE_B_HANDOFF_ENABLED=false` — NOT YET ACTIVE):** `modules.route_b_handoff` lets Route B transfer a conversation to an existing canonical workflow (recruitment intake, an employee-claim admin review, or — separately flagged, also inactive — an escort-order draft) once identity/intent becomes clear. `employee` was NOT added to `ROUTE_B_ROLES`; a phone already on file in `fazle_employees_legacy` (Active or Inactive) still never reaches Route B, so an "employee claim" handoff can never grant Tier 10 access directly — it always produces an admin-review draft, verified or not. Ollama only ever supplies a hint category (`app.ollama.classify_route_b_category()`, Ollama-only); every state-changing call is an existing, unmodified canonical function. Full policy: `../05_workflows/whatsapp_reply_workflow.md` §15.
 
 **Canonical Entity Names:** "Role" (who the sender is: `family`, `admin`, `accountant`, `employee`, `escort`, `security_guard`, `internal_coordinator`, `candidate`/`new_lead`/`unknown`) is a distinct concept from "Intent" (what they want: `recruitment`, `client_order`, `escort_duty`, `attendance`, `slip_submission`, `employee_salary_complaint`, `legal_issue`, `payment_issue`, `salary_query`, `payment_due`, `office_location`, `unknown`). Do not conflate role and intent — a message has exactly one role (the sender's identity classification) and one intent (the message's classified purpose), evaluated by different tiers.
 
-**Canonical Database Tables:** N/A directly (routing logic, not its own storage) — reads identity from `modules/identity_brain`, dispatches into the domain modules covered elsewhere in this document.
+**Canonical Database Tables:** N/A directly (routing logic, not its own storage) — reads identity from `modules/fazle_identity_brain`, dispatches into the domain modules covered elsewhere in this document.
 
 **Canonical APIs:** The tiered routing function in `modules/message_router/__init__.py` (main entry point).
 
@@ -726,7 +726,7 @@ Future:      no rename recommended — the real fix is documentation (this secti
 
 **Validation Rules:** Not verified beyond the tier/intent vocabulary above.
 
-**Related Modules:** `modules/message_router`, `modules/identity_brain`, `modules/intent`, `modules/route_b`, `modules/bridge_poller`.
+**Related Modules:** `modules/message_router`, `modules/fazle_identity_brain`, `modules/fazle_intent`, `modules/route_b`, `modules/fazle_bridge_poller`.
 
 **Related Documents:** `docs/DEVELOPER_GUIDE.md` §H, `docs/MODULE_MAP.md`, `../05_workflows/whatsapp_reply_workflow.md`.
 
@@ -758,7 +758,7 @@ Deprecated:  none formally — but the read filter mixing lowercase 'confirmed' 
              a case-sensitive TEXT column with no CHECK constraint means a query like this only works if every writer
              happens to match the exact casing the reader expects, which is not guaranteed anywhere by the schema.
 Future:      pick one casing convention (this document recommends lowercase, matching every other status vocabulary
-             found elsewhere in this system except wbom_employee_requests.status and wbom_employees.status — see
+             found elsewhere in this system except wbom_employee_requests.status and fazle_employees_legacy.status — see
              Attendance/Approval sections) and add a DB-level CHECK constraint, following escort_roster_change_requests's
              existing pattern (the one status column in this whole codebase that already does this correctly).
 ```
@@ -816,7 +816,7 @@ Canonical:   mother_vessel / lighter_vessel (paired columns — the dominant DB 
              defined identically on wbom_escort_programs, escort_roster_entries, and escort_order_lighters)
 Aliases:     vessel_name  — never a DB column; only an OCR-extraction dict key / regex label
              vessel       — a collapsed single-field alias used only in modules/ocr_processor and
-                             modules/bridge_poller, which fold mother_vessel/lighter_vessel into one key
+                             modules/fazle_bridge_poller, which fold mother_vessel/lighter_vessel into one key
 Deprecated:  none — vessel_name/vessel are legitimate OCR/extraction-layer conveniences, not schema drift,
              as long as they're translated back to mother_vessel/lighter_vessel before reaching a DB write.
 Future:      no schema change needed; the risk is three separate normalization functions
@@ -842,31 +842,31 @@ Future:      no schema change needed; the risk is three separate normalization f
 
 **Business Purpose:** Represent the corporate/vessel clients who order escort/security services, distinct from employees.
 
-**Updated 2026-07-09 (Client Domain Canonicalization pass) — full detail in `docs/CANONICAL_CLIENT_DOMAIN.md`, not duplicated here.** Summary: `wbom_contacts` is the de facto canonical contact/client table (`modules/contact_sync` explicitly merges all 3 WhatsApp sources into it as "the central table," 2,086 real rows). The earlier "genuinely open" framing is narrowed, not resolved: **three separate, uncoordinated client-classification mechanisms coexist** — `wbom_contacts.relation` (free text, stale, 2084/2086 = `'unknown'`), `wbom_contacts.relation_type_id → wbom_relation_types` (structured, real, but only ~5% populated — 91 rows tagged `'Client'`), and `fazle_contact_roles.role` (free text, no CHECK constraint, no FK to `wbom_contacts` at all, its own richer vocabulary: `repeat_client`, `vip_client`, `client_escort_buyer`, `vendor` — `blocked` was also a value here until it was permanently removed, Owner decision 2026-07-11, see migration 042; there is no "blocked number" concept in this system). `wbom_relation_types` and `wbom_business_types` are both real, populated (5 rows each), well-designed lookup tables — `wbom_business_types` cleanly captures a Maritime vs. Land Security service-line split — but `business_type_id` is 0% populated on `wbom_contacts`.
+**Updated 2026-07-09 (Client Domain Canonicalization pass) — full detail in `docs/CANONICAL_CLIENT_DOMAIN.md`, not duplicated here.** Summary: `fazle_contacts` is the de facto canonical contact/client table (`modules/contact_sync` explicitly merges all 3 WhatsApp sources into it as "the central table," 2,086 real rows). The earlier "genuinely open" framing is narrowed, not resolved: **three separate, uncoordinated client-classification mechanisms coexist** — `fazle_contacts.relation` (free text, stale, 2084/2086 = `'unknown'`), `fazle_contacts.relation_type_id → wbom_relation_types` (structured, real, but only ~5% populated — 91 rows tagged `'Client'`), and `fazle_contact_roles.role` (free text, no CHECK constraint, no FK to `fazle_contacts` at all, its own richer vocabulary: `repeat_client`, `vip_client`, `client_escort_buyer`, `vendor` — `blocked` was also a value here until it was permanently removed, Owner decision 2026-07-11, see migration 042; there is no "blocked number" concept in this system). `wbom_relation_types` and `wbom_business_types` are both real, populated (5 rows each), well-designed lookup tables — `wbom_business_types` cleanly captures a Maritime vs. Land Security service-line split — but `business_type_id` is 0% populated on `fazle_contacts`.
 
-**Canonical Database Tables:** `wbom_contacts` (**Canonical**), `wbom_relation_types` (**Canonical lookup**), `wbom_business_types` (**Canonical lookup, unused**). `fazle_contact_roles` (**Legacy — needs merge into `wbom_contacts.relation_type_id`**, no FK linking it to `wbom_contacts` at all, so the two can silently disagree about the same person). `fazle_clients` (**Legacy/dead** — 4 columns, id/name/phone/created_at, **0 rows**, no code reads or writes it — confirmed dead this pass, not just "not found in migrations").
+**Canonical Database Tables:** `fazle_contacts` (**Canonical**), `wbom_relation_types` (**Canonical lookup**), `wbom_business_types` (**Canonical lookup, unused**). `fazle_contact_roles` (**Legacy — needs merge into `fazle_contacts.relation_type_id`**, no FK linking it to `fazle_contacts` at all, so the two can silently disagree about the same person). `fazle_clients` (**Legacy/dead** — 4 columns, id/name/phone/created_at, **0 rows**, no code reads or writes it — confirmed dead this pass, not just "not found in migrations").
 
-**Owner Decision (2026-07-09), Phase 2A:** `supervisor` and `accountant` are **NOT canonical client relation types** — no `wbom_relation_types` row is ever created for either. They map onto the existing `Employee` relation type *only* where the phone number independently, verifiably matches a real `wbom_employees.employee_mobile` row (never a blanket free-text-label mapping) — every one of the 6 real `supervisor`/`accountant`-tagged contacts in production satisfied this check.
+**Owner Decision (2026-07-09), Phase 2A:** `supervisor` and `accountant` are **NOT canonical client relation types** — no `wbom_relation_types` row is ever created for either. They map onto the existing `Employee` relation type *only* where the phone number independently, verifiably matches a real `fazle_employees_legacy.employee_mobile` row (never a blanket free-text-label mapping) — every one of the 6 real `supervisor`/`accountant`-tagged contacts in production satisfied this check.
 
-**Superseded (Owner decision, 2026-07-11):** This passage previously also described `blocked` as a moderation/status flag applied via `wbom_contacts.is_active = false`. That framing is removed — there is no "blocked number"/moderation-block concept in this system at all, in any form. `is_active` itself is untouched and remains a legitimate, ordinary contact-record active/inactive flag with no "blocked" semantic attached to it.
+**Superseded (Owner decision, 2026-07-11):** This passage previously also described `blocked` as a moderation/status flag applied via `fazle_contacts.is_active = false`. That framing is removed — there is no "blocked number"/moderation-block concept in this system at all, in any form. `is_active` itself is untouched and remains a legitimate, ordinary contact-record active/inactive flag with no "blocked" semantic attached to it.
 
-**Structural Rule — `.env` authority (Owner decision, 2026-07-09):** Phone numbers declared in `.env` (`ADMIN_NUMBERS`, `ACCOUNTANT_PHONE`, `FPE_CASH_AUTHORIZED_PHONES`, `FPE_INCOME_AUTHORIZED_PHONES`) are the **mandatory, authoritative source of truth** for who holds a functional role/authorization in this system. `wbom_contacts` (contact_book), `wbom_employees`, and cash-transaction-derived signals are **supporting/enrichment sources only** — never authoritative on their own, and must never silently override an `.env`-declared identity. Any future reconciliation/classification work must check this before writing a relation type, exactly as Phase 2A's migration (`db/migrations/031_client_domain_reconciliation.sql`) did — see that file's header for the full verification performed against all 22 distinct `.env`-listed numbers before it was applied.
+**Structural Rule — `.env` authority (Owner decision, 2026-07-09):** Phone numbers declared in `.env` (`ADMIN_NUMBERS`, `ACCOUNTANT_PHONE`, `FPE_CASH_AUTHORIZED_PHONES`, `FPE_INCOME_AUTHORIZED_PHONES`) are the **mandatory, authoritative source of truth** for who holds a functional role/authorization in this system. `fazle_contacts` (contact_book), `fazle_employees_legacy`, and cash-transaction-derived signals are **supporting/enrichment sources only** — never authoritative on their own, and must never silently override an `.env`-declared identity. Any future reconciliation/classification work must check this before writing a relation type, exactly as Phase 2A's migration (`db/migrations/031_client_domain_reconciliation.sql`) did — see that file's header for the full verification performed against all 22 distinct `.env`-listed numbers before it was applied.
 
-**Structural Rules:** `wbom_contacts.relation_type_id` is the target single source of truth for "is this a client" going forward (see `docs/CLIENT_DOMAIN_IMPLEMENTATION_PLAN.md` Phase 2A) — new code should not add a fourth classification mechanism.
+**Structural Rules:** `fazle_contacts.relation_type_id` is the target single source of truth for "is this a client" going forward (see `docs/CLIENT_DOMAIN_IMPLEMENTATION_PLAN.md` Phase 2A) — new code should not add a fourth classification mechanism.
 
 **Owner Decision (2026-07-09), Phase 2B, final:** Four separated dimensions, not one combined field. `relation_type` = identity (Client/Vendor/Employee/Family/Escort Client — Phase 2A's existing `relation_type_id`, unchanged). `client_tier` = business value (Standard/Repeat/VIP/Strategic — new field, not yet implemented). `client_status` = business lifecycle (Active/Inactive/Suspended/Closed — new, *separate* field from `client_tier`, not yet implemented). `is_active` = system interaction permission (Phase 2A's existing boolean, unchanged).
 
 **Superseded (Owner decision, 2026-07-11):** This passage previously described `'Blocked'` as a value exclusively represented by `is_active=false`. That framing is removed along with the rest of the "blocked number" concept — `is_active=false` simply means an inactive contact record, nothing more; it carries no "blocked"/moderation semantic. Full detail: `docs/CANONICAL_CLIENT_DOMAIN.md` §Client Tier, Client Status, and `is_active`.
 
 **Updated 2026-07-22 — `fazle_contact_roles` phone-format duplicates found and cleaned.**
-The "no FK linking it to `wbom_contacts`, so the two can silently disagree" gap above is
+The "no FK linking it to `fazle_contacts`, so the two can silently disagree" gap above is
 still open (not resolved by this pass), but a concrete symptom of it was: 8 phone numbers
 had duplicate rows in `fazle_contact_roles` itself, purely from inconsistent phone-string
 format (`01XXXXXXXXX` vs `8801XXXXXXXXX`) bypassing its own `(phone, platform)` unique
 constraint (a string-equality constraint, blind to two different strings representing the
 same number). Cleaned (8 rows removed, audit-backed) and the write path
 (`modules/contact_roles/routes.py`) now normalizes phone before every read/write, making
-the existing constraint actually effective. `wbom_contacts` itself was independently
+the existing constraint actually effective. `fazle_contacts` itself was independently
 checked and found to already have zero such duplicates (protected by consistent
 normalization in `modules/contact_sync`). Full record: `management_decisions.md`
 2026-07-22 "Daily Phone-Contact-Book Sync + Contact-Identity Deduplication."
@@ -881,7 +881,7 @@ normalization in `modules/contact_sync`). Full record: `management_decisions.md`
 
 **Business Purpose:** Invoice clients for completed escort/security services, track accounts receivable, and record client payments — the revenue side of the business, which today has zero coverage.
 
-**Updated 2026-07-09 — full detail in `docs/CANONICAL_CLIENT_DOMAIN.md` Task 1/Task 3, not duplicated here.** Correction to the prior pass: `wbom_billing_records` **does exist in production with a complete, correctly-designed schema** — `bill_id` PK, `program_id → wbom_escort_programs`, `contact_id → wbom_contacts`, `bill_date`, `bill_number`, `service_charge`, `other_charges`, `total_amount`, `payment_status` (default `'Pending'`), `payment_date`, `remarks` — confirmed via direct production schema query. **It has zero rows** — the schema is ready but no application code has ever written to it. Phase 2b is substantially an *activation* task, not a from-scratch design task.
+**Updated 2026-07-09 — full detail in `docs/CANONICAL_CLIENT_DOMAIN.md` Task 1/Task 3, not duplicated here.** Correction to the prior pass: `wbom_billing_records` **does exist in production with a complete, correctly-designed schema** — `bill_id` PK, `program_id → wbom_escort_programs`, `contact_id → fazle_contacts`, `bill_date`, `bill_number`, `service_charge`, `other_charges`, `total_amount`, `payment_status` (default `'Pending'`), `payment_date`, `remarks` — confirmed via direct production schema query. **It has zero rows** — the schema is ready but no application code has ever written to it. Phase 2b is substantially an *activation* task, not a from-scratch design task.
 
 **Canonical Database Tables:** `wbom_billing_records` (**Canonical target, currently dormant**).
 
@@ -889,7 +889,7 @@ normalization in `modules/contact_sync`). Full record: `management_decisions.md`
 
 **Structural Rules:** Before writing any Client Billing code, Phase 2A (Client entity reconciliation, above) must ship first — billing needs a stable, single-source-of-truth client identity to attach invoices to. (Phase 2A shipped 2026-07-09.)
 
-**Blocking finding (re-audit, 2026-07-09), FULLY RESOLVED same day by Owner decision:** no client-facing rate/price field existed anywhere in this schema — confirmed via three independent checks (see `docs/PHASE2B_READINESS_REPORT.md` Re-Audit section for full evidence). **Owner resolution, fully specified:** a new `wbom_client_billing_profiles` table, managed via a frontend Client Settings UI (Payroll Page → Admin Tab), separate from `wbom_contacts` but carrying a required nullable-valued `contact_id` FK to it (no disconnected client system), and explicitly disconnected from the actual payroll formula (its wage fields are profit-estimation inputs only). Billing type is admin-selected at bill time (not inferred); VAT/Tax/Other Charges are flat-amount, internal profit-estimation deductions this phase (not added to the client's invoice); percentage support is a documented future enhancement. Contact Person Mobile must be a member of the existing `.env` `ESCORT_CLIENT_PHONES` list — `.env` remains the sole authority; this feature reads that list, never writes to it. **Status, updated 2026-07-09: fully implemented, applied, and live in production.** `db/migrations/034_client_billing_profiles.sql` (schema) + `db/migrations/035_client_billing_wage_general.sql` (adds `employee_wage_general`, closing the gap where the original field list had no wage figure paired with `general_rate`) both applied. `modules/client_billing/` implemented, mounted, service restarted, and verified live end-to-end (routes registered, full Add/Edit/soft-Delete cycle tested, table structurally confirmed, test rows cleaned up). `payroll.html` Client Settings UI built and confirmed rendering. Full plans: `docs/CLIENT_BILLING_PROFILE_IMPLEMENTATION_PLAN.md` and `docs/CLIENT_BILLING_PROFILE_CODE_PLAN.md`. Separately, `modules/billing/invoice_numbering.py` (`db/migrations/033_invoice_number_counters.sql`) remains written and tested but **not yet applied to production** — a distinct, still-pending piece, not part of this Client Billing Profile work.
+**Blocking finding (re-audit, 2026-07-09), FULLY RESOLVED same day by Owner decision:** no client-facing rate/price field existed anywhere in this schema — confirmed via three independent checks (see `docs/PHASE2B_READINESS_REPORT.md` Re-Audit section for full evidence). **Owner resolution, fully specified:** a new `wbom_client_billing_profiles` table, managed via a frontend Client Settings UI (Payroll Page → Admin Tab), separate from `fazle_contacts` but carrying a required nullable-valued `contact_id` FK to it (no disconnected client system), and explicitly disconnected from the actual payroll formula (its wage fields are profit-estimation inputs only). Billing type is admin-selected at bill time (not inferred); VAT/Tax/Other Charges are flat-amount, internal profit-estimation deductions this phase (not added to the client's invoice); percentage support is a documented future enhancement. Contact Person Mobile must be a member of the existing `.env` `ESCORT_CLIENT_PHONES` list — `.env` remains the sole authority; this feature reads that list, never writes to it. **Status, updated 2026-07-09: fully implemented, applied, and live in production.** `db/migrations/034_client_billing_profiles.sql` (schema) + `db/migrations/035_client_billing_wage_general.sql` (adds `employee_wage_general`, closing the gap where the original field list had no wage figure paired with `general_rate`) both applied. `modules/client_billing/` implemented, mounted, service restarted, and verified live end-to-end (routes registered, full Add/Edit/soft-Delete cycle tested, table structurally confirmed, test rows cleaned up). `payroll.html` Client Settings UI built and confirmed rendering. Full plans: `docs/CLIENT_BILLING_PROFILE_IMPLEMENTATION_PLAN.md` and `docs/CLIENT_BILLING_PROFILE_CODE_PLAN.md`. Separately, `modules/billing/invoice_numbering.py` (`db/migrations/033_invoice_number_counters.sql`) remains written and tested but **not yet applied to production** — a distinct, still-pending piece, not part of this Client Billing Profile work.
 
 **Related Documents:** `docs/CANONICAL_CLIENT_DOMAIN.md`, `docs/CLIENT_DOMAIN_IMPLEMENTATION_PLAN.md` Phase 2B, `docs/PHASE2_ENTRY_GATE.md`, `docs/PHASE2B_READINESS_REPORT.md`, `docs/CLIENT_BILLING_PROFILE_IMPLEMENTATION_PLAN.md`, `docs/CLIENT_BILLING_PROFILE_CODE_PLAN.md`.
 
@@ -899,15 +899,15 @@ normalization in `modules/contact_sync`). Full record: `management_decisions.md`
 
 **Business Purpose:** Resolve "who is this WhatsApp sender" into a role (family/admin/accountant/employee/escort/security_guard/internal_coordinator/candidate/unknown) and, where applicable, a specific employee/client record — before any workflow acts on the message.
 
-**Canonical Workflow:** Inbound message → `modules/identity_brain` resolves sender phone → role + confidence → `modules/message_router` Tier 1 (family) / Tier 2 (escort-client) / Tier 3 (admin) consume that resolution before any domain-specific tier runs. `shared/identity_map.py::resolve_employee()` is the canonical resolver specifically for "this phone number → which `wbom_employees` row," used by payment/validation code that must not conflate an employee's contact number with their payout number (see Employee section's Naming Rule for the full phone-naming picture this resolver exists to guard against).
+**Canonical Workflow:** Inbound message → `modules/fazle_identity_brain` resolves sender phone → role + confidence → `modules/message_router` Tier 1 (family) / Tier 2 (escort-client) / Tier 3 (admin) consume that resolution before any domain-specific tier runs. `shared/identity_map.py::resolve_employee()` is the canonical resolver specifically for "this phone number → which `fazle_employees_legacy` row," used by payment/validation code that must not conflate an employee's contact number with their payout number (see Employee section's Naming Rule for the full phone-naming picture this resolver exists to guard against).
 
-**Updated 2026-07-21 — escort/guard split + internal_coordinator:** a `wbom_employees` row no longer resolves unconditionally to role `employee` — `identity_brain._designation_to_role()` maps `designation` to `escort` or `security_guard` when it matches, `employee` otherwise (covers office/"Staff" designations). `wbom_escort_programs` roster matches resolve directly to `escort` (previously `employee`). New role `internal_coordinator` is seed-row-only (`fazle_contact_roles`, checked before `wbom_employees` in resolution order) — used for people who coordinate dispatch/payroll/paperwork but aren't front-line escort/guard staff (e.g. `+8801817201596`). A read-only former/on-leave lifecycle heuristic (`status='Inactive'` → former; `Active` + no recent `wbom_attendance` row → on-leave; no new columns) is attached as `identity_lifecycle` — context for Route B's Ollama prompt, not a routing input (active/former/on-leave escort/guard all route identically). See `../05_workflows/whatsapp_reply_workflow.md` §7.
+**Updated 2026-07-21 — escort/guard split + internal_coordinator:** a `fazle_employees_legacy` row no longer resolves unconditionally to role `employee` — `identity_brain._designation_to_role()` maps `designation` to `escort` or `security_guard` when it matches, `employee` otherwise (covers office/"Staff" designations). `wbom_escort_programs` roster matches resolve directly to `escort` (previously `employee`). New role `internal_coordinator` is seed-row-only (`fazle_contact_roles`, checked before `fazle_employees_legacy` in resolution order) — used for people who coordinate dispatch/payroll/paperwork but aren't front-line escort/guard staff (e.g. `+8801817201596`). A read-only former/on-leave lifecycle heuristic (`status='Inactive'` → former; `Active` + no recent `wbom_attendance` row → on-leave; no new columns) is attached as `identity_lifecycle` — context for Route B's Ollama prompt, not a routing input (active/former/on-leave escort/guard all route identically). See `../05_workflows/whatsapp_reply_workflow.md` §7.
 
 **Canonical Entity Names:** "Role" (message_router's sender classification: `family`, `admin`, `accountant`, `employee`, `candidate`/`new_lead`/`unknown`) is resolved once per message and consumed by every downstream tier — not to be confused with RBAC's "Role" concept (Roles section above), which governs admin *command* permissions, not sender *identity*. These are two different, same-named concepts in two different subsystems — another instance of the same-name-different-meaning pattern this document exists to surface.
 
-**Canonical Database Tables:** Identity resolution reads `wbom_employees`, `fazle_contact_roles`, `wbom_contacts` (see Client section — the ambiguity there directly affects identity resolution's completeness for non-employee senders).
+**Canonical Database Tables:** Identity resolution reads `fazle_employees_legacy`, `fazle_contact_roles`, `fazle_contacts` (see Client section — the ambiguity there directly affects identity resolution's completeness for non-employee senders).
 
-**Canonical APIs:** `modules/identity_brain` (sender → role resolution), `shared/identity_map.py::resolve_employee()`, `validate_payment_identity()`, `sender_to_employee()`.
+**Canonical APIs:** `modules/fazle_identity_brain` (sender → role resolution), `shared/identity_map.py::resolve_employee()`, `validate_payment_identity()`, `sender_to_employee()`.
 
 **Known Legacy Variants:** The "Role" naming collision with RBAC (above) is the main structural finding here.
 
@@ -917,7 +917,7 @@ normalization in `modules/contact_sync`). Full record: `management_decisions.md`
 
 **Validation Rules:** Not verified beyond the resolver functions named above.
 
-**Related Modules:** `modules/identity_brain`, `modules/message_router`, `modules/route_b`, `shared/identity_map.py`, `modules/rbac`.
+**Related Modules:** `modules/fazle_identity_brain`, `modules/message_router`, `modules/route_b`, `shared/identity_map.py`, `modules/rbac`.
 
 **Related Documents:** `docs/DEVELOPER_GUIDE.md` §H, `../05_workflows/whatsapp_reply_workflow.md`.
 
@@ -926,7 +926,7 @@ identity or role mentioned in message content (e.g. "Karim is supervisor") is ne
 sufficient on its own for Hermes to treat as true — the sender's own resolved identity
 (`identity_brain.detect_identity()`) answers a different question and must not be reused
 for this. Before repeating, acting on, or including such a claim in any answer/report/
-decision, call `verify_employee_claim()` (`modules/identity_brain/claim_verification.py`,
+decision, call `verify_employee_claim()` (`modules/fazle_identity_brain/claim_verification.py`,
 exposed to Hermes via fazle-mcp). Reasoning shape required: "User claims Karim is
 supervisor → resolve Karim against Fazle Core → verify employee and role → then
 answer/act" — never "user said Karim is supervisor, therefore Karim is supervisor." If
@@ -936,7 +936,7 @@ the claimed and actual role rather than silently accepting or silently correctin
 claim. Verification order: verified sender phone / explicit supplied phone → employee ID
 → normalized alias → exact unique name match (candidate only, never sufficient by itself
 for a sensitive action) → ambiguous/missing → say so. Role source is
-`fpe_employees.designation` (live-synced from `wbom_employees`), not message content, not
+`fazle_employees.designation` (live-synced from `fazle_employees_legacy`), not message content, not
 conversation memory, not LLM reasoning alone.
 
 ---
@@ -965,28 +965,28 @@ Future **policy** changes are expected and welcome — the Owner may change any 
 ### 2026-07-09 — Document created
 **Type:** New conflict discovered (multiple) + governance structure established.
 **Section(s) affected:** All. Created following `docs/PRODUCTION_CERTIFICATION_v1.0.md`'s finding that the biggest remaining risk to Fazle Core is "Business Knowledge Drift," not code defects.
-**What changed:** First version of this document. Surveyed 21+ business functions across the full codebase; found and documented (not resolved) two open Owner decisions (escort-duty pay formula, Client entity unification), several real naming collisions (`review_status` meaning different things on `fpe_cash_transactions` vs `fpe_unmatched_messages`; `status_map` used as a generic variable name for two unrelated domains; RBAC "Role" vs message_router "Role"), one large casing inconsistency (`wbom_escort_programs.status`), and three concretely-named instances of the previously-known-but-now-better-scoped undocumented-migration gap (`wbom_candidates`, `wbom_clients`/`fazle_clients`, `wbom_billing_records`).
+**What changed:** First version of this document. Surveyed 21+ business functions across the full codebase; found and documented (not resolved) two open Owner decisions (escort-duty pay formula, Client entity unification), several real naming collisions (`review_status` meaning different things on `fazle_cash_transactions` vs `fpe_unmatched_messages`; `status_map` used as a generic variable name for two unrelated domains; RBAC "Role" vs message_router "Role"), one large casing inconsistency (`wbom_escort_programs.status`), and three concretely-named instances of the previously-known-but-now-better-scoped undocumented-migration gap (`wbom_candidates`, `wbom_clients`/`fazle_clients`, `wbom_billing_records`).
 **Why:** These conflicts already existed in the code; they were simply undocumented. This document's job was to surface them, not invent new policy to resolve them — several remain open Owner decisions by design (see Payroll, Client sections).
 **Owner approval:** N/A — this pass documents existing reality; it does not itself change any policy or structure. Any resolution of the open items above requires a future dated entry with explicit Owner approval.
 
 ### 2026-07-09 — Client Domain Canonicalization (discovery + architecture)
 **Type:** Conflict narrowed (not yet resolved) + new architecture designed.
 **Section(s) affected:** Client, Client Billing.
-**What changed:** Targeted production-schema investigation (`docs/CANONICAL_CLIENT_DOMAIN.md`) confirmed `wbom_contacts` as the de facto canonical client/contact table and found `wbom_billing_records` already exists in production with a complete, correct schema (0 rows — dormant, not missing). Narrowed the Client section's "genuinely open" framing to a specific, three-way classification-mechanism conflict (`wbom_contacts.relation` vs `relation_type_id` vs `fazle_contact_roles.role`) with a proposed resolution (Phase 2A in `docs/CLIENT_DOMAIN_IMPLEMENTATION_PLAN.md`) not yet implemented. `fazle_clients` reclassified from "undocumented drift, unknown status" to confirmed dead (0 rows, no code references).
+**What changed:** Targeted production-schema investigation (`docs/CANONICAL_CLIENT_DOMAIN.md`) confirmed `fazle_contacts` as the de facto canonical client/contact table and found `wbom_billing_records` already exists in production with a complete, correct schema (0 rows — dormant, not missing). Narrowed the Client section's "genuinely open" framing to a specific, three-way classification-mechanism conflict (`fazle_contacts.relation` vs `relation_type_id` vs `fazle_contact_roles.role`) with a proposed resolution (Phase 2A in `docs/CLIENT_DOMAIN_IMPLEMENTATION_PLAN.md`) not yet implemented. `fazle_clients` reclassified from "undocumented drift, unknown status" to confirmed dead (0 rows, no code references).
 **Why:** Phase 2B (Client Billing) cannot proceed without a stable client identity to bill against; this was identified as the largest concrete blocker after Payroll's formula question.
 **Owner approval:** N/A — discovery and architecture only, no policy or structure changed yet. Phase 2A's actual migration (renaming `wbom_relation_types`'s `'escort_client'` row and reconciling `fazle_contact_roles`) requires Owner sign-off before production application, per `docs/CLIENT_DOMAIN_IMPLEMENTATION_PLAN.md`.
 
 ### 2026-07-17 — Finance-First Link/Sync Integrity: unknown-sender auto-create disabled, trusted-path search gap fixed
 **Type:** Structural fix (2) + conflict corrected (this document was stale in 2 places).
 **Section(s) affected:** Message Parser (Message Router), Employee.
-**What changed:** A dedicated audit (Session 20 Step 3, full report in `management_decisions.md` S20-08 through S20-11) traced every writer to `wbom_employees`/`fpe_employees`/`fpe_cash_transactions`/`fpe_employee_ledger` and found: (1) `message_router::_seed_unknown_employee_identity()` auto-created a `wbom_employees` row (and indirectly an `fpe_employees` row) for **any** sender identity_brain classified as `"unknown"` whose message merely looked like an attendance/escort/advance-request — by construction, every such sender had already failed every trust check the system has. Disabled (Owner directive), not deleted. This document's Message Parser section previously described `_OPERATIONAL_AUTO_CREATE_INTENTS` as a live policy lever without qualification — corrected in place, not left silently stale. (2) The trusted admin→accountant finance path (`payment_ingest::_match_or_create_instruction_employee()`) collapsed two distinct phone values into one search key before ever querying, so an explicit ID-mobile miss never fell back to a payout-number retry — fixed with a 2-line addition. (3) This document's Employee section named only one of two real `wbom_employees`↔`fpe_employees` bridges (`wbom_fpe_sync.py`, a historical/backfill adapter) — added the second, live, real-time bridge (`fpe_bridge.py`) that the fix in (2) actually touched, so a future reader isn't misled into thinking only the backfill path exists. (4) Added a new read-only report, `modules/reports::_b_unresolved_fpe_employees()`, distinguishing genuinely-unlinked employee rows from rows that are already correctly linked but carry a stale `resolution_status` label — confirmed live against production (172 + 81 = 253 unlinked, 153 mislabeled-but-linked).
-**Why:** Owner-initiated audit into unlinked/out-of-sync employee row creation breaking finance workflows. Both code fixes were narrowly scoped (Owner explicitly excluded: `wbom_*`→`fpe_*` renames, the `wbom_employees`/`fpe_employees` merge, `employee_id_phone` uniqueness changes, escort dual-write concurrency, `accounting.py` semantics, `admin_transactions` bypass cleanup — all remain open, undecided).
+**What changed:** A dedicated audit (Session 20 Step 3, full report in `management_decisions.md` S20-08 through S20-11) traced every writer to `fazle_employees_legacy`/`fazle_employees`/`fazle_cash_transactions`/`fazle_employee_ledger` and found: (1) `message_router::_seed_unknown_employee_identity()` auto-created a `fazle_employees_legacy` row (and indirectly an `fazle_employees` row) for **any** sender identity_brain classified as `"unknown"` whose message merely looked like an attendance/escort/advance-request — by construction, every such sender had already failed every trust check the system has. Disabled (Owner directive), not deleted. This document's Message Parser section previously described `_OPERATIONAL_AUTO_CREATE_INTENTS` as a live policy lever without qualification — corrected in place, not left silently stale. (2) The trusted admin→accountant finance path (`payment_ingest::_match_or_create_instruction_employee()`) collapsed two distinct phone values into one search key before ever querying, so an explicit ID-mobile miss never fell back to a payout-number retry — fixed with a 2-line addition. (3) This document's Employee section named only one of two real `fazle_employees_legacy`↔`fazle_employees` bridges (`wbom_fpe_sync.py`, a historical/backfill adapter) — added the second, live, real-time bridge (`fpe_bridge.py`) that the fix in (2) actually touched, so a future reader isn't misled into thinking only the backfill path exists. (4) Added a new read-only report, `modules/reports::_b_unresolved_fazle_employees()`, distinguishing genuinely-unlinked employee rows from rows that are already correctly linked but carry a stale `resolution_status` label — confirmed live against production (172 + 81 = 253 unlinked, 153 mislabeled-but-linked).
+**Why:** Owner-initiated audit into unlinked/out-of-sync employee row creation breaking finance workflows. Both code fixes were narrowly scoped (Owner explicitly excluded: `wbom_*`→`fpe_*` renames, the `fazle_employees_legacy`/`fazle_employees` merge, `employee_id_phone` uniqueness changes, escort dual-write concurrency, `accounting.py` semantics, `admin_transactions` bypass cleanup — all remain open, undecided).
 **Owner approval:** Yes, each of the 3 implementation phases (disable auto-create; add search fallback; add report) was shown to the Owner as exact current code + exact proposed diff and explicitly approved before any change, per this session's standing process. Full authorization trail: `management_decisions.md` Session 20 Step 3, S20-08 through S20-11; commits `47018f7`, `38dbedd`, `b0c0057`.
 
 ### 2026-07-21 — WhatsApp Reply Workflow: Route A / Route B (identity-first routing)
 **Type:** Structural fix + new architecture implemented + one open gap discovered (not yet resolved).
 **Section(s) affected:** Message Parser (Message Router), Identity, Recruitment.
-**What changed:** Replaced the content-based WhatsApp reply-routing gate (`_requires_legacy_workflow()` keyword/regex sniffing on message text) with identity-first routing. New roles `escort`, `security_guard`, `internal_coordinator` added to `modules/identity_brain` (designation-driven, no longer collapsed into generic `employee`). New `modules/route_b` (Ollama-only, no Groq/GitHub fallback) handles escort/security_guard/candidate/unknown senders, wired into `modules/message_router` as a branch positioned after every existing operational safety tier so none is preempted. `modules/social_auto_reply`'s content/code is unmodified — only its WhatsApp entry points (`bridge_poller`, `/webhook/meta`, `/webhook/mcp1`/`mcp2`) were disconnected; it remains live for Facebook Messenger/Page comments. Phone normalization: 2 unauthorized reimplementations (`identity_brain`, `payment_ingest`) fixed to delegate to the documented canonical roots instead of re-implementing digit parsing. Office/deposit canonical text unified across `fazle_knowledge_base` and every code-level fallback. `modules/rag` gap closed: `knowledge_base/**/*.md` DB-mirror rows were reachable by candidate/employee-facing RAG search (no role restriction), now admin/developer-only, matching the raw-file loader's existing intent. Company rebrand applied to customer-facing output; recognition keywords parsing *incoming* content (`escort._AL_AQSA_RE`, OCR/matching lists) augmented, not replaced. Full detail: `management_decisions.md` 2026-07-21 entry, `../05_workflows/whatsapp_reply_workflow.md`.
+**What changed:** Replaced the content-based WhatsApp reply-routing gate (`_requires_legacy_workflow()` keyword/regex sniffing on message text) with identity-first routing. New roles `escort`, `security_guard`, `internal_coordinator` added to `modules/fazle_identity_brain` (designation-driven, no longer collapsed into generic `employee`). New `modules/route_b` (Ollama-only, no Groq/GitHub fallback) handles escort/security_guard/candidate/unknown senders, wired into `modules/message_router` as a branch positioned after every existing operational safety tier so none is preempted. `modules/social_auto_reply`'s content/code is unmodified — only its WhatsApp entry points (`bridge_poller`, `/webhook/meta`, `/webhook/mcp1`/`mcp2`) were disconnected; it remains live for Facebook Messenger/Page comments. Phone normalization: 2 unauthorized reimplementations (`identity_brain`, `payment_ingest`) fixed to delegate to the documented canonical roots instead of re-implementing digit parsing. Office/deposit canonical text unified across `fazle_knowledge_base` and every code-level fallback. `modules/rag` gap closed: `knowledge_base/**/*.md` DB-mirror rows were reachable by candidate/employee-facing RAG search (no role restriction), now admin/developer-only, matching the raw-file loader's existing intent. Company rebrand applied to customer-facing output; recognition keywords parsing *incoming* content (`escort._AL_AQSA_RE`, OCR/matching lists) augmented, not replaced. Full detail: `management_decisions.md` 2026-07-21 entry, `../05_workflows/whatsapp_reply_workflow.md`.
 **Why:** The prior content-based gate caused two confirmed incidents: a WhatsApp number auto-classified as generic "employee" from one misread OCR string then silently answered by the wrong engine; and casual messages from escorts/guards/unknown senders answered with unrelated `social_auto_reply` keyword-template replies. Root cause was routing on message content instead of sender identity.
 **Owner approval:** Yes — implementation proceeded through an explicit multi-step approval sequence (3 drafts for text/DB-boundary approval, then implementation authorization, then commit authorization, then rebrand + remaining-KB-rows authorization, then push authorization), each step confirmed before proceeding, per `management_decisions.md`. Deployed live via `scripts/restart_gate.sh --restart` (0 warnings) on Owner instruction, verified healthy post-restart.
 **Known open gap (discovered during post-implementation verification, not yet fixed):** `modules/recruitment_flow::recruitment_eligibility()`'s `OPERATIONAL_INTENTS` gate has the same architectural flaw class (blunt intent-keyword rejection ahead of role-aware nuance) — see Recruitment section above for detail. Flagged for Owner review; no code changed for this gap under this entry.
@@ -994,7 +994,7 @@ Future **policy** changes are expected and welcome — the Owner may change any 
 ### 2026-07-22 — Daily contact sync + `fazle_contact_roles` phone-format duplicate cleanup
 **Type:** Structural fix (2) + new mechanism implemented.
 **Section(s) affected:** Client.
-**What changed:** Implemented the Owner's daily phone-contact-book ↔ `wbom_contacts` sync
+**What changed:** Implemented the Owner's daily phone-contact-book ↔ `fazle_contacts` sync
 policy (soft-delete on first miss, hard-delete after N consecutive misses, phone-book
 name canonical over WhatsApp profile name) — found and fixed a bridge2 SQLite-path bug
 along the way (silently reading zero contacts), and found the same wrong
@@ -1047,7 +1047,7 @@ continuation and a deterministic-first (Ollama-hint-corroborated) recruitment ha
 reusing `recruitment_eligibility()`/`route_recruitment_message()`/`intake_message()`
 unmodified. Stage 2 (built, tested, same flag): employee/former-employee claims always
 resolve to an admin-review draft, never live Tier 10 access, because a phone reaching
-Route B by construction already failed identity_brain's `wbom_employees` match. Stage 3
+Route B by construction already failed identity_brain's `fazle_employees_legacy` match. Stage 3
 (built, tested, separate flag `ROUTE_B_ESCORT_HANDOFF_ENABLED`, explicitly not activated
 even after Stage 1/2 review): multi-message escort-order completeness check, reusing the
 newly-extracted `modules.escort.is_order_complete()`. New audit table
@@ -1074,7 +1074,7 @@ previously-ungated hardcoded-salam paths the same-day fix hadn't reached:
 keyword-fallback table (previously fired the salam text even on non-salam triggers like
 "menu"/"hi"/"start"). All factual content (vacancy/salary/location/hours) preserved
 byte-for-byte — only greeting wording changed. (2) Added
-`modules/identity_brain/claim_verification.py::verify_employee_claim()` (new,
+`modules/fazle_identity_brain/claim_verification.py::verify_employee_claim()` (new,
 read-only, never guesses on ambiguity — same refusal shape as
 `fazle_payroll_engine/routes.py::_resolve_review_employee_candidate()`) plus a
 fazle-mcp tool wrapper and `GET /api/identity/verify-claim` route, closing a gap where

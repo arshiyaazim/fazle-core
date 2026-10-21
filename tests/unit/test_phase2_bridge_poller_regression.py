@@ -21,13 +21,13 @@ import secrets
 import pytest
 import pytest_asyncio
 
-from modules.bridge_poller import _save_raw_core_copy, _save_message as bp_save_message
+from modules.fazle_bridge_poller import _save_raw_core_copy, _save_message as bp_save_message
 
 
 @pytest_asyncio.fixture(autouse=True)
 async def _inject_test_db_pool(test_db_pool):
     import app.database as db_module
-    from modules.identity_resolver import reset_column_cache
+    from modules.fazle_identity_resolver import reset_column_cache
     prev = db_module._pool
     db_module._pool = test_db_pool
     reset_column_cache()
@@ -57,7 +57,7 @@ def _hash(source: str, ref: str) -> str:
 async def _row(pool, msg_id, cols):
     async with pool.acquire() as conn:
         return await conn.fetchrow(
-            f"SELECT {cols} FROM wbom_whatsapp_messages WHERE message_id = $1", msg_id
+            f"SELECT {cols} FROM fazle_whatsapp_messages WHERE message_id = $1", msg_id
         )
 
 
@@ -135,7 +135,7 @@ async def test_two_bridges_same_msgid_share_canonical_key(test_db_pool, phase2_o
     assert id1 != id2
     async with test_db_pool.acquire() as conn:
         rows = await conn.fetch(
-            "SELECT canonical_message_key, message_hash FROM wbom_whatsapp_messages "
+            "SELECT canonical_message_key, message_hash FROM fazle_whatsapp_messages "
             "WHERE source_message_ref = $1 ORDER BY platform", ref)
     assert len(rows) == 2
     assert rows[0]["canonical_message_key"] == rows[1]["canonical_message_key"]
@@ -158,7 +158,7 @@ async def test_idempotent_per_msg_id(test_db_pool, seed_employee):
     assert id1 == id2
     async with test_db_pool.acquire() as conn:
         body = await conn.fetchval(
-            "SELECT message_body FROM wbom_whatsapp_messages WHERE message_id = $1", id1)
+            "SELECT message_body FROM fazle_whatsapp_messages WHERE message_id = $1", id1)
     assert body == "first"
 
 
@@ -190,12 +190,12 @@ async def test_autofill_trigger_still_backfills(test_db_pool):
         ref = "TRIG_" + secrets.token_hex(4)
         h = hashlib.sha256(ref.encode()).hexdigest()
         await conn.execute(
-            "INSERT INTO wbom_whatsapp_messages "
+            "INSERT INTO fazle_whatsapp_messages "
             "(sender_number, message_body, direction, platform, is_processed, "
             " contact_identifier, message_hash, source_message_ref) "
             "VALUES (NULL, 'trigger test', 'inbound', 'bridge1', true, "
             "        '8801866666666', $1, $2)", h, ref)
         row = await conn.fetchrow(
-            "SELECT sender_number, contact_identifier FROM wbom_whatsapp_messages "
+            "SELECT sender_number, contact_identifier FROM fazle_whatsapp_messages "
             "WHERE message_hash = $1", h)
     assert row["sender_number"] == "8801866666666"

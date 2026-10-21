@@ -13,8 +13,8 @@ ALTER TABLE fazle_contact_roles
     ADD COLUMN IF NOT EXISTS priority   INTEGER NOT NULL DEFAULT 50,
     ADD COLUMN IF NOT EXISTS notes      TEXT    NOT NULL DEFAULT '';
 
--- ── 2. Extend wbom_whatsapp_messages with identity logging columns ───────────
-ALTER TABLE wbom_whatsapp_messages
+-- ── 2. Extend fazle_whatsapp_messages with identity logging columns ───────────
+ALTER TABLE fazle_whatsapp_messages
     ADD COLUMN IF NOT EXISTS identity_role       TEXT,
     ADD COLUMN IF NOT EXISTS identity_confidence INTEGER,
     ADD COLUMN IF NOT EXISTS workflow_triggered  TEXT;
@@ -125,8 +125,8 @@ ON CONFLICT (phone, platform) DO UPDATE SET
 CREATE INDEX IF NOT EXISTS idx_fazle_contact_roles_phone
     ON fazle_contact_roles (phone);
 
-CREATE INDEX IF NOT EXISTS idx_wbom_messages_identity
-    ON wbom_whatsapp_messages (identity_role, received_at DESC)
+CREATE INDEX IF NOT EXISTS idx_fazle_messages_identity
+    ON fazle_whatsapp_messages (identity_role, received_at DESC)
     WHERE identity_role IS NOT NULL;
 
 COMMIT;

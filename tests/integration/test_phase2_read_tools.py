@@ -18,7 +18,7 @@ import pytest
 async def test_search_by_name_single_match_resolves(client, test_db_pool):
     async with test_db_pool.acquire() as conn:
         await conn.execute(
-            "INSERT INTO wbom_contacts (whatsapp_number, display_name, platform, is_active) "
+            "INSERT INTO fazle_contacts (whatsapp_number, display_name, platform, is_active) "
             "VALUES ('8801733330001', 'Solo Uniqueperson', 'whatsapp', true)")
     r = await client.get("/api/identity/search-by-name", params={"name": "Solo Uniqueperson"})
     assert r.status_code == 200
@@ -32,7 +32,7 @@ async def test_search_by_name_single_match_resolves(client, test_db_pool):
 async def test_search_by_name_multiple_is_ambiguous(client, test_db_pool):
     async with test_db_pool.acquire() as conn:
         await conn.execute(
-            "INSERT INTO wbom_contacts (whatsapp_number, display_name, platform, is_active) VALUES "
+            "INSERT INTO fazle_contacts (whatsapp_number, display_name, platform, is_active) VALUES "
             "('8801733330002', 'Kamal Hossain', 'whatsapp', true),"
             "('8801733330003', 'Kamal Uddin', 'whatsapp', true)")
     r = await client.get("/api/identity/search-by-name", params={"name": "Kamal"})
@@ -60,7 +60,7 @@ async def test_messages_query_phone_filter(client, test_db_pool):
             ("8801799990009", "unrelated message"),
         ]):
             await conn.execute(
-                "INSERT INTO wbom_whatsapp_messages "
+                "INSERT INTO fazle_whatsapp_messages "
                 "(sender_number, canonical_phone, message_body, direction, platform, message_hash) "
                 "VALUES ($1, $1, $2, 'inbound', 'bridge1', $3)",
                 canon, body, f"qtest-{i}")
@@ -76,7 +76,7 @@ async def test_messages_query_body_contains_filter(client, test_db_pool):
     async with test_db_pool.acquire() as conn:
         for i, txt in enumerate(["salary advance please", "attendance marked", "salary query again"]):
             await conn.execute(
-                "INSERT INTO wbom_whatsapp_messages "
+                "INSERT INTO fazle_whatsapp_messages "
                 "(sender_number, canonical_phone, message_body, direction, platform, message_hash) "
                 "VALUES ($1, $1, $2, 'inbound', 'bridge2', $3)",
                 "8801700001234", txt, f"bctest-{i}")
@@ -97,7 +97,7 @@ async def test_contact_summary_aggregates_platforms(client, test_db_pool):
         ]
         for i, (plat, direction, txt) in enumerate(rows):
             await conn.execute(
-                "INSERT INTO wbom_whatsapp_messages "
+                "INSERT INTO fazle_whatsapp_messages "
                 "(sender_number, canonical_phone, message_body, direction, platform, message_hash) "
                 "VALUES ($1, $1, $2, $3, $4, $5)",
                 "8801766660001", txt, direction, plat, f"cs-{i}")

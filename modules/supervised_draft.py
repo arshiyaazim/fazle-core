@@ -3,9 +3,9 @@ draft lane: actively notify the Super Admin about a pending draft.
 
 Discovery, not invention: draft creation, storage, and the entire
 APPROVE/EDIT/REJECT command handling already exist and already satisfy
-Stage G8-G10 as-is (modules.admin_commands._cmd_approve/_cmd_edit/
+Stage G8-G10 as-is (modules.fazle_admin_commands._cmd_approve/_cmd_edit/
 _cmd_reject, traced this stage -- idempotent, delivery-recording,
-audit-preserving). modules.bridge_poller._build_admin_review_draft()
+audit-preserving). modules.fazle_bridge_poller._build_admin_review_draft()
 already produces the 5-part card format G7 asks for (extended this
 stage with an optional category line). shared.draft_reply.
 create_draft_reply() / the existing POST /api/drafts route / fazle-mcp's
@@ -34,11 +34,11 @@ async def notify_admin_of_pending_draft(draft_id: int, category: str = "") -> di
     draft. Does NOT create the draft (call create_draft_reply()/
     draft_whatsapp_reply() first) and does NOT approve/send anything --
     this only notifies; the existing APPROVE/EDIT/REJECT command path
-    (modules.admin_commands) remains the sole way the draft actually gets
+    (modules.fazle_admin_commands) remains the sole way the draft actually gets
     sent. Idempotent per draft (idempotency_key derived from draft_id, so
     a retry/duplicate call for the same draft never double-notifies)."""
     from app.database import fetch_one
-    from modules.bridge_poller import _build_admin_review_draft
+    from modules.fazle_bridge_poller import _build_admin_review_draft
     from modules.message_router import get_primary_admin
     from modules import outbound
 

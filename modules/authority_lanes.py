@@ -2,7 +2,7 @@
 policy resolver: resolve_authority_lane().
 
 Discovery, not invention: this codebase already has a rich, carefully
-designed identity/role vocabulary (modules.identity_brain._ROLE_PRIORITY)
+designed identity/role vocabulary (modules.fazle_identity_brain._ROLE_PRIORITY)
 and an existing routing split (Route A vs Route B, modules.route_b's own
 ROUTE_B_ROLES) that implicitly encode most of Owner Directive Stage G's
 5-lane policy -- e.g. "Client X in CSV ... Hermes skips" (identity_brain's

@@ -38,8 +38,8 @@ Rules:
 - `ID:` mobile is the employee lookup key.
 - Without `ID:`, payout mobile becomes the employee lookup key.
 - `(B)` = bKash, `(N)` = Nagad, `(C)` = Cash, `(R)` = Rocket, `(BANK)` = Bank Transfer.
-- **Updated 2026-07-13**: the parser (`modules.payment_ingest._SHORTHAND_RE`) accepts full-word variants too, case-insensitive — `(Cash)`/`(cash)`, `(Nagad)`, `(Bkash)`/`(bKash)`/`(Bikash)`, `(Rocket)`, `(Bank)` all parse identically to their single-letter codes. This is input flexibility only — every *outbound* message the system generates (`modules.draft_approval.build_accountant_message()`) always emits the canonical single-letter/`BANK` codes shown above, never a full word, so a system-authored message never depends on this leniency; it exists for admin-typed messages.
-- If employee is not found, create a minimal active employee in `fpe_employees` via `match_or_create_employee()`.
+- **Updated 2026-07-13**: the parser (`modules.fazle_payment_ingest._SHORTHAND_RE`) accepts full-word variants too, case-insensitive — `(Cash)`/`(cash)`, `(Nagad)`, `(Bkash)`/`(bKash)`/`(Bikash)`, `(Rocket)`, `(Bank)` all parse identically to their single-letter codes. This is input flexibility only — every *outbound* message the system generates (`modules.fazle_draft_approval.build_accountant_message()`) always emits the canonical single-letter/`BANK` codes shown above, never a full word, so a system-authored message never depends on this leniency; it exists for admin-typed messages.
+- If employee is not found, create a minimal active employee in `fazle_employees` via `match_or_create_employee()`.
 - Write exactly one final transaction row for a distinct WhatsApp instruction.
 - Same employee/same amount can appear multiple times in one day if the WhatsApp message time/identity is different.
 
@@ -93,7 +93,7 @@ When an inbound message contains any of the following 18 phrases, the system det
 
 **Business Rule:** All 18 phrases force the response to admin draft regardless of the auto-send intent gate. Advance requests always require admin approval.
 
-**Source Module:** `modules/payment_workflow`
+**Source Module:** `modules/fazle_payment_workflow`
 **Source Function:** `ADVANCE_KEYWORDS`
 **PKCA Report:** 10_hidden_rule_coverage_report.md (HK-43)
 **Management Authority:** Production evidence; documented 2026-06-22
@@ -149,7 +149,7 @@ Document the lifecycle of a payment/advance draft and when it expires.
 | `rejected` | Admin ran REJECT command |
 | `expired` | 24-hour TTL passed without admin action |
 
-**Source Module:** `modules/payment_workflow`
+**Source Module:** `modules/fazle_payment_workflow`
 **PKCA Report:** 09_state_machine_coverage_report.md (SM-03)
 
 ---
@@ -165,7 +165,7 @@ Document the lifecycle of a payment/advance draft and when it expires.
 
 | Constant | Module | Value |
 |---|---|---|
-| `DEFAULT_DAILY_RATE` | `modules/payment_workflow/__init__.py` | `400` |
+| `DEFAULT_DAILY_RATE` | `modules/fazle_payment_workflow/__init__.py` | `400` |
 | `DEFAULT_PER_PROGRAM_RATE` | `modules/payroll/__init__.py` | `400.0` |
 
 Both constants were updated as part of CR-05 conflict resolution (2026-06-23). The formula applies to all escort duty payment calculations.
@@ -219,7 +219,7 @@ The ৳150/day food estimate appears in payment draft generation as a pre-confir
 - `payroll.DEFAULT_PER_PROGRAM_RATE = 400.0`
 - `payment_workflow.DEFAULT_DAILY_RATE = 400`
 
-**Source files updated:** `modules/payroll/__init__.py`, `modules/payment_workflow/__init__.py`
+**Source files updated:** `modules/payroll/__init__.py`, `modules/fazle_payment_workflow/__init__.py`
 
 ---
 

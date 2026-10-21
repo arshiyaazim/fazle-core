@@ -8,6 +8,9 @@ runtime_index: true
 
 # Duplicate Report
 
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 | Duplicate Topic | Similarity | Confidence | Merge Risk | Authoritative File | Keep | Archive/Delete |
 |---|---:|---:|---:|---|---|---|
 | Company identity repeated in HR and Fazle System | High | 0.98 | Low | company_identity.md | Official identity | Archive duplicates as source notes |

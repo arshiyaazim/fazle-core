@@ -72,9 +72,9 @@ Current state: Abstract principles only. No table names.
 |---|---|---|
 | Core table inventory (43 tables across 10 categories) | All modules | P2 |
 | Phone multi-variant lookup: 01X, 880X, +880X always tried | `modules/phone_normalizer` | P2 |
-| Soft-delete: wbom_employees uses status='Inactive', never DELETE | `modules/admin_employees` | P2 |
+| Soft-delete: fazle_employees_legacy uses status='Inactive', never DELETE | `modules/admin_employees` | P2 |
 | Idempotency patterns: payment draft keys, outbound keys, message hash | Multiple | P2 |
-| Advisory locks: concurrent payment writes use Postgres advisory locks | `modules/payment_workflow` | P2 |
+| Advisory locks: concurrent payment writes use Postgres advisory locks | `modules/fazle_payment_workflow` | P2 |
 | Attendance dedup: UNIQUE(employee_id, attendance_date) ON CONFLICT UPDATE | `modules/attendance` | P2 |
 | Contact sync: canonical 8801XXXXXXXXXX, best-name=longest, ON CONFLICT DO UPDATE | `modules/contact_sync` | P2 |
 
@@ -87,9 +87,9 @@ Current state: Describes identity resolution generally. Missing algorithm steps 
 **Add:**
 | Section to Add | Source | Priority |
 |---|---|---|
-| 11-step resolution algorithm with step-by-step order | `modules/identity_brain` | P1 |
-| 8 evidence sources with table names | `modules/identity_brain` | P2 |
-| Confidence scoring: 1.0 (direct seed), 0.95 (primary phone), 0.7 (secondary), 0.5 (contacts only) | `modules/identity_brain` | P2 |
+| 11-step resolution algorithm with step-by-step order | `modules/fazle_identity_brain` | P1 |
+| 8 evidence sources with table names | `modules/fazle_identity_brain` | P2 |
+| Confidence scoring: 1.0 (direct seed), 0.95 (primary phone), 0.7 (secondary), 0.5 (contacts only) | `modules/fazle_identity_brain` | P2 |
 | Bangla system prompt injection per role | `modules/role_classifier` | P2 |
 | blocked role behavior: hard silent-skip, no log, no draft | `message_router` | P1 |
 
@@ -135,7 +135,7 @@ Current state: Lists roles but not the ordered hierarchy or gate behaviors.
 |---|---|---|
 | RBAC hierarchy: viewer < operator < accountant < admin < superadmin | `modules/rbac.COMMAND_ROLE` | P1 |
 | Bootstrap creation: ADMIN_NUMBERS from .env auto-created as superadmin on first message | `modules/rbac.ensure_bootstrap_admins` | P1 |
-| Role gate table: draft-always, silent-skip, auto-reply, recruiting-blocked per role | `modules/bridge_poller` | P1 |
+| Role gate table: draft-always, silent-skip, auto-reply, recruiting-blocked per role | `modules/fazle_bridge_poller` | P1 |
 
 ---
 

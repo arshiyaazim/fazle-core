@@ -1,6 +1,6 @@
 Source: knowledge_base/06_developer_system/escort_roster_system.md
-SHA256: 200aadd97eeac324c82f374696839abcb3ec553755cac54eb554437e4c1b48bc
-Version: 200aadd97eea
+SHA256: 9f7007f41f83a4efc635411904b302df0982221173a129967219ac754eb7941b
+Version: 9f7007f41f83
 
 # Escort Roster System
 
@@ -16,6 +16,26 @@ Projection table:
 
 The roster page, payroll view, and reports read the projection, but the authoritative assignment truth comes from the source program after bridge confirmation reconciliation.
 
+## Salary Calculation — Roster vs Payment Draft (C-01 Resolution)
+
+Roster `total` and payment draft `gross_amount` serve different purposes and may
+differ. Both are correct for their respective context:
+
+- **Roster `total`** = `shift_rate × total_shifts + conveyance`
+  - `shift_rate` comes from `escort_calculation_config` (default 200 BDT/shift)
+  - This is the **operational display** — what was worked
+
+- **Payment draft `gross_amount`** = `basic_salary / 30 × duty_days`
+  - `basic_salary` comes from the employee's HR profile (`fazle_employees_legacy.basic_salary`)
+  - This is the **settlement amount** — based on HR pay grade
+
+When `basic_salary = shift_rate × 2 × 30` (e.g. 200 × 2 × 30 = 12,000), both
+calculations produce the same daily rate (400 BDT/day). They diverge when an
+escort's contract salary differs from the standard rate.
+
+**Net payable** = `total - food_bill - advance_deduction` (stored in
+`escort_roster_entries.net_payable`, populated on sync when status is completed).
+
 ## Source Of Truth And Projection Rules
 
 Source of truth:
@@ -25,6 +45,11 @@ Not source of truth:
 - client message draft
 - parser guess alone
 - stale roster row
+- (added 2026-07-19) any `modules/conversation_memory` shadow candidate
+  or shadow comparison record — that layer is strictly observational and
+  never writes to `wbom_escort_programs` or `escort_roster_entries`; see
+  `../04_business_rules/escort_business_rules.md` → "Multi-Message
+  Intake (Phase B, Shadow Mode)"
 
 Projection rule:
 - roster rows must mirror the final source program state
@@ -40,6 +65,7 @@ Current mapping:
 | `running` | `active` |
 | `completed` | `completed` |
 | `cancelled` | `cancelled` |
+| `expired` | `expired` — draft that missed the 24h confirmation TTL. Should be transient: `expire_stale_drafts()` hard-deletes `status='draft'` rows past TTL directly (added 2026-07-05), so a row is not expected to sit in this state for long. A defensive second sweep (added 2026-07-16, Session 16) also deletes any financially-inert legacy `expired` row past TTL, in case a future edge case produces one instead of a clean delete. |
 
 ## Sync And Recalculate Behavior
 

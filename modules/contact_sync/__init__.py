@@ -2,7 +2,7 @@
 Fazle Core — Unified Contact Sync
 
 Merges contacts from all three WhatsApp sources into the central
-wbom_contacts PostgreSQL table:
+fazle_contacts PostgreSQL table:
 
   Source 1: bridge1 — /home/azim/whatsapp1/store/whatsapp.db
   Source 2: bridge2 — /home/azim/bridges/bridge2/store/whatsapp.db
@@ -10,7 +10,7 @@ wbom_contacts PostgreSQL table:
 
 Design:
   - Canonical phone key: normalized 880XXXXXXXXXX (13-digit BD mobile)
-  - One row per phone in wbom_contacts (unique on whatsapp_number + platform)
+  - One row per phone in fazle_contacts (unique on whatsapp_number + platform)
   - display_name = first non-empty: full_name → push_name → saved_name from contacts_all.db
   - Merging: if name from a newer source differs, update display_name only when
     the new name is more complete (longer, non-empty).
@@ -179,10 +179,10 @@ CREATE TABLE IF NOT EXISTS fazle_unified_contacts (
 
 -- 2026-07-22: per-(phone, bridge) absence tracking for the daily
 -- soft-delete-then-hard-delete-after-N-consecutive-misses policy. Deliberately
--- a separate small table, not a wbom_contacts column: absence is scoped per
+-- a separate small table, not a fazle_contacts column: absence is scoped per
 -- bridge (a contact present in bridge1's phone book but not bridge2's is
 -- normal -- two different phones -- not evidence of deletion), and a single
--- phone-keyed column on wbom_contacts couldn't represent that without
+-- phone-keyed column on fazle_contacts couldn't represent that without
 -- conflating the two bridges' independent contact-book state.
 CREATE TABLE IF NOT EXISTS fazle_contact_presence (
     phone               TEXT        NOT NULL,
@@ -230,7 +230,7 @@ async def init_tables():
 # ── Upsert helpers ────────────────────────────────────────────────────────────
 
 async def _upsert_contacts(contacts: list[dict]) -> int:
-    """Upsert contacts into both wbom_contacts and fazle_unified_contacts. Returns count."""
+    """Upsert contacts into both fazle_contacts and fazle_unified_contacts. Returns count."""
     if not contacts:
         return 0
 
@@ -240,18 +240,18 @@ async def _upsert_contacts(contacts: list[dict]) -> int:
         name = c["display_name"]
         bridge = c["source_bridge"]
 
-        # Upsert into wbom_contacts (master contact table)
+        # Upsert into fazle_contacts (master contact table)
         try:
             await execute(
                 """
-                INSERT INTO wbom_contacts
+                INSERT INTO fazle_contacts
                     (whatsapp_number, display_name, platform, last_seen, updated_at)
                 VALUES ($1, $2, 'whatsapp', NOW(), NOW())
                 ON CONFLICT (whatsapp_number, platform) DO UPDATE
                     SET display_name = CASE
-                            WHEN length(EXCLUDED.display_name) > length(wbom_contacts.display_name)
+                            WHEN length(EXCLUDED.display_name) > length(fazle_contacts.display_name)
                             THEN EXCLUDED.display_name
-                            ELSE wbom_contacts.display_name
+                            ELSE fazle_contacts.display_name
                         END,
                         last_seen  = NOW(),
                         updated_at = NOW()
@@ -259,7 +259,7 @@ async def _upsert_contacts(contacts: list[dict]) -> int:
                 phone, name,
             )
         except Exception as e:
-            log.debug(f"[contact_sync] wbom_contacts upsert error {phone}: {e}")
+            log.debug(f"[contact_sync] fazle_contacts upsert error {phone}: {e}")
 
         # Upsert into unified contacts (dedup/normalize layer)
         try:
@@ -326,7 +326,7 @@ async def _record_sync(bridge: str, count: int):
 # Owner policy (2026-07-22): a phone missing from one sync could mean the
 # phone was offline, the bridge export was incomplete, or the contact was
 # genuinely deleted -- indistinguishable from a single sync alone. So:
-#   1st consecutive miss  -> soft-delete only (wbom_contacts.is_active=false,
+#   1st consecutive miss  -> soft-delete only (fazle_contacts.is_active=false,
 #                            marked_for_delete_at=NOW()) -- fully reversible,
 #                            the contact reappears automatically if seen again.
 #   Nth consecutive miss  -> hard-delete (row removed), N = HARD_DELETE_AFTER_ABSENCES.
@@ -346,7 +346,7 @@ async def _mark_present(phone: str, bridge: str) -> None:
     )
     await execute(
         """
-        UPDATE wbom_contacts
+        UPDATE fazle_contacts
            SET is_active = true, marked_for_delete_at = NULL, updated_at = NOW()
          WHERE whatsapp_number = $1 AND platform = 'whatsapp'
            AND (is_active = false OR marked_for_delete_at IS NOT NULL)
@@ -376,7 +376,7 @@ async def _handle_missing_contacts(bridge: str, current_phones: set[str]) -> dic
 
         try:
             protected = await fetch_val(
-                "SELECT is_protected FROM wbom_contacts WHERE whatsapp_number = $1 AND platform = 'whatsapp'",
+                "SELECT is_protected FROM fazle_contacts WHERE whatsapp_number = $1 AND platform = 'whatsapp'",
                 phone,
             )
         except Exception:
@@ -409,7 +409,7 @@ async def _handle_missing_contacts(bridge: str, current_phones: set[str]) -> dic
             # First miss this bridge has seen -> soft-delete only.
             await execute(
                 """
-                UPDATE wbom_contacts
+                UPDATE fazle_contacts
                    SET is_active = false,
                        marked_for_delete_at = COALESCE(marked_for_delete_at, NOW()),
                        updated_at = NOW()
@@ -427,7 +427,7 @@ async def _is_contact_active_on_other_bridge(phone: str, exclude_bridge: str) ->
     """2026-07-22 fix: True if this phone is currently tracked as present
     (consecutive_absences=0) on any bridge OTHER than exclude_bridge, OR if
     the check itself fails (fail safe toward NOT deleting, never toward
-    deleting). wbom_contacts has one shared row per phone across both
+    deleting). fazle_contacts has one shared row per phone across both
     bridges, but fazle_contact_presence -- and therefore absence detection
     -- is scoped per bridge; without this check, one bridge's independent
     failures (a different physical phone/device) could hard-delete a
@@ -492,7 +492,7 @@ async def _hard_delete_contact(phone: str, bridge: str, consecutive_absences: in
     """Irreversible -- audit-logged first, always."""
     try:
         row = await fetch_one(
-            "SELECT display_name, relation FROM wbom_contacts WHERE whatsapp_number = $1 AND platform = 'whatsapp'",
+            "SELECT display_name, relation FROM fazle_contacts WHERE whatsapp_number = $1 AND platform = 'whatsapp'",
             phone,
         )
         await execute(
@@ -506,7 +506,7 @@ async def _hard_delete_contact(phone: str, bridge: str, consecutive_absences: in
             row["relation"] if row else None,
             consecutive_absences,
         )
-        await execute("DELETE FROM wbom_contacts WHERE whatsapp_number = $1 AND platform = 'whatsapp'", phone)
+        await execute("DELETE FROM fazle_contacts WHERE whatsapp_number = $1 AND platform = 'whatsapp'", phone)
         await execute("DELETE FROM fazle_contact_presence WHERE phone = $1 AND bridge = $2", phone, bridge)
         log.warning(
             f"[contact_sync] HARD-DELETE phone={phone} bridge={bridge} "
@@ -616,13 +616,13 @@ async def upsert_contact_from_message(phone: str, push_name: str, bridge_number:
             await _upsert_alias(norm, name, bridge_number)
         await execute(
             """
-            INSERT INTO wbom_contacts (whatsapp_number, display_name, platform, last_seen, updated_at)
+            INSERT INTO fazle_contacts (whatsapp_number, display_name, platform, last_seen, updated_at)
             VALUES ($1, $2, 'whatsapp', NOW(), NOW())
             ON CONFLICT (whatsapp_number, platform) DO UPDATE
                 SET display_name = CASE
-                        WHEN length(EXCLUDED.display_name) > length(wbom_contacts.display_name)
+                        WHEN length(EXCLUDED.display_name) > length(fazle_contacts.display_name)
                         THEN EXCLUDED.display_name
-                        ELSE wbom_contacts.display_name
+                        ELSE fazle_contacts.display_name
                     END,
                     last_seen  = NOW(),
                     updated_at = NOW()
@@ -657,7 +657,7 @@ async def import_from_csv_contacts(rows: list[dict]) -> dict:
         try:
             result = await fetch_val(
                 """
-                INSERT INTO wbom_contacts
+                INSERT INTO fazle_contacts
                     (whatsapp_number, display_name, platform, last_seen, updated_at)
                 VALUES ($1, $2, 'whatsapp', NOW(), NOW())
                 ON CONFLICT (whatsapp_number, platform) DO NOTHING
@@ -666,7 +666,7 @@ async def import_from_csv_contacts(rows: list[dict]) -> dict:
                 phone, name,
             )
         except Exception as e:
-            log.debug(f"[contact_sync] csv import wbom_contacts error {phone}: {e}")
+            log.debug(f"[contact_sync] csv import fazle_contacts error {phone}: {e}")
             continue
 
         if result is not None:
@@ -721,7 +721,7 @@ async def get_display_name(phone: str) -> str:
 # scripts/import_csv_contacts.py.
 
 async def job_daily_contact_sync() -> dict:
-    """Daily phone-contact-book <-> wbom_contacts sync. DEPRECATED 2026-08-04 —
+    """Daily phone-contact-book <-> fazle_contacts sync. DEPRECATED 2026-08-04 —
     no longer auto-scheduled (see modules/scheduler/__init__.py), CSV import is
     now authoritative. Still directly callable, e.g. via an admin RUN JOB command."""
     results = await sync_all_contacts()

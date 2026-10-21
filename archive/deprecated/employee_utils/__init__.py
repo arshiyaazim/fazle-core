@@ -42,13 +42,13 @@ async def get_or_create_employee(
 
     try:
         emp_id = await fetch_val(
-            """INSERT INTO wbom_employees
+            """INSERT INTO fazle_employees_legacy
                    (employee_name, employee_mobile, designation, status, joining_date)
                VALUES ($1, $2, $3, 'Active', CURRENT_DATE)
                ON CONFLICT (employee_mobile)
                DO UPDATE SET
                    employee_name = COALESCE(
-                       wbom_employees.employee_name,
+                       fazle_employees_legacy.employee_name,
                        EXCLUDED.employee_name
                    )
                RETURNING employee_id""",
@@ -74,7 +74,7 @@ async def resolve_employee_id(
         norm = normalize_phone(phone)
         if norm:
             row = await fetch_one(
-                "SELECT employee_id FROM wbom_employees WHERE employee_mobile = $1",
+                "SELECT employee_id FROM fazle_employees_legacy WHERE employee_mobile = $1",
                 norm,
             )
             if row:
@@ -82,7 +82,7 @@ async def resolve_employee_id(
             # Try 880-prefixed variant
             alt = "880" + norm[1:] if norm.startswith("0") else "0" + norm[3:]
             row = await fetch_one(
-                "SELECT employee_id FROM wbom_employees WHERE employee_mobile = $1",
+                "SELECT employee_id FROM fazle_employees_legacy WHERE employee_mobile = $1",
                 alt,
             )
             if row:
@@ -90,7 +90,7 @@ async def resolve_employee_id(
 
     if name:
         row = await fetch_one(
-            """SELECT employee_id FROM wbom_employees
+            """SELECT employee_id FROM fazle_employees_legacy
                WHERE LOWER(employee_name) LIKE LOWER($1)
                  AND status = 'Active'
                LIMIT 1""",

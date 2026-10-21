@@ -13,7 +13,7 @@
 --   • _upsert_ledger()
 --   • accounting_worker()
 --   • parse_message()
---   • wbom_cash_transactions (no new columns, no writes)
+--   • fazle_cash_transactions_archive (no new columns, no writes)
 --   • Existing Payroll Transaction Pipeline
 -- ============================================================================
 

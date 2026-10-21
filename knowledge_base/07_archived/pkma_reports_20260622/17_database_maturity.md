@@ -53,13 +53,13 @@ Assess the maturity of database knowledge in the Fazle AI Platform Knowledge Bas
 **Tables known from production evidence (PKCA reads) but not in KB:**
 
 **wbom_* (Business Objects):**
-- `wbom_employees` — employee master record
+- `fazle_employees_legacy` — employee master record
 - `wbom_attendance` — daily attendance log
-- `wbom_cash_transactions` — cash/payment transactions
+- `fazle_cash_transactions_archive` — cash/payment transactions
 - `wbom_payroll_runs` — payroll computation results
 - `wbom_payroll_approval_log` — payroll state transitions
 - `wbom_escort_programs` — escort program records
-- `wbom_contacts` — contact directory
+- `fazle_contacts` — contact directory
 - `wbom_messages` — inbound message log
 - `wbom_outbound_messages` — outbound queue
 - `wbom_reminders` — scheduled reminders
@@ -95,7 +95,7 @@ Assess the maturity of database knowledge in the Fazle AI Platform Knowledge Bas
 | Dimension | Status |
 |---|---|
 | Pattern | SQL queries use LIKE '880%' and LIKE '01%' and exact match to cover all 3 phone variants |
-| Source | `modules/identity_brain` — phone lookup |
+| Source | `modules/fazle_identity_brain` — phone lookup |
 | Documented in KB | Partially — phone normalization documented; SQL pattern not in KB |
 | Production Verified | No (SQL pattern not verified by KB) |
 
@@ -129,7 +129,7 @@ Assess the maturity of database knowledge in the Fazle AI Platform Knowledge Bas
 | Dimension | Status |
 |---|---|
 | Tables Using Soft-Delete | fazle_admins (USER REMOVE → disabled flag, not DELETE) |
-| Other Tables | Unknown — whether wbom_employees, wbom_escort_programs use soft-delete is not documented |
+| Other Tables | Unknown — whether fazle_employees_legacy, wbom_escort_programs use soft-delete is not documented |
 | KB Documentation | 0% |
 | Production Verified | No |
 
@@ -163,7 +163,7 @@ Assess the maturity of database knowledge in the Fazle AI Platform Knowledge Bas
 
 | Dimension | Status |
 |---|---|
-| Source | `modules/message_hash` or `modules/bridge_poller` |
+| Source | `modules/message_hash` or `modules/fazle_bridge_poller` |
 | Behavior | SHA-256 hash of incoming message content; duplicate hash = skip processing |
 | Storage | NOT documented — which table/column |
 | Window | NOT documented — how long hashes are retained |

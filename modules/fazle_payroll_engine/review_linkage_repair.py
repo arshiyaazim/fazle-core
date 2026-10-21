@@ -1,12 +1,12 @@
 """Stage H.5 (2026-08-29) -- deterministic repair of the review-row link
 that Stage H found broken for every one of the 27 pending
-fpe_cash_transactions (0/27 joined to a live fpe_unmatched_messages row).
+fazle_cash_transactions (0/27 joined to a live fpe_unmatched_messages row).
 
 Root cause (H5.1/H5.3, exhaustive read-only search -- confirmed, not
 guessed): the operator-submission INSERT path (modules.fazle_payroll_
 engine.routes, the "operator/submit" handler) creates a
 fpe_unmatched_messages row FIRST, then a linked pending
-fpe_cash_transactions row via payment_event_from_operator(pending_id=
+fazle_cash_transactions row via payment_event_from_operator(pending_id=
 new_id), then UPDATEs the fpe_unmatched_messages row's promoted_txn_id
 back to the new transaction -- fully bidirectional, atomic-in-effect
 linkage at creation time. No DELETE/TRUNCATE against
@@ -19,10 +19,10 @@ correct, and this module is the narrow repair for the linkage that
 design already establishes, not a new competing mechanism.
 
 Recovery is deterministic, never invented (H5.5's explicit rule):
-fpe_cash_transactions.source_message_id IS the original
+fazle_cash_transactions.source_message_id IS the original
 fpe_unmatched_messages.id (verified: it is set to str(pending_id) at
 creation, see payment_event.payment_event_from_operator). The original
-fpe_wa_messages row (fpe_cash_transactions.fpe_wa_message_id) is
+fpe_wa_messages row (fazle_cash_transactions.fpe_wa_message_id) is
 UNCHANGED and still holds the real raw_content that was actually
 submitted -- reconstruction uses ONLY: (a) that unmodified raw_content,
 and (b) the transaction's own already-recorded detected_amount/
@@ -57,7 +57,7 @@ _TEST_ARTIFACT_RE = re.compile(r"REGTEST_|operator write-path test|REGTEST_probe
 
 
 async def find_orphaned_operator_transactions() -> list[dict]:
-    """READ-only. Every pending, source='operator' fpe_cash_transactions
+    """READ-only. Every pending, source='operator' fazle_cash_transactions
     row whose source_message_id no longer resolves to a live
     fpe_unmatched_messages row, joined with its still-existing
     fpe_wa_messages evidence (if any)."""
@@ -68,7 +68,7 @@ async def find_orphaned_operator_transactions() -> list[dict]:
                t.txn_category, t.txn_date, t.accounting_period,
                t.fpe_wa_message_id, w.raw_content, w.timestamp_wa,
                u.id AS existing_review_id
-        FROM fpe_cash_transactions t
+        FROM fazle_cash_transactions t
         LEFT JOIN fpe_wa_messages w ON w.id = t.fpe_wa_message_id
         LEFT JOIN fpe_unmatched_messages u ON u.id = t.source_message_id::bigint
         WHERE t.transaction_status = 'pending'
@@ -99,7 +99,7 @@ async def backfill_orphaned_review_links(dry_run: bool = True, performed_by: str
     RECOVERABLE orphan, using ONLY data already durably recorded
     elsewhere (see module docstring) -- never invents a value. Uses the
     ORIGINAL id (source_message_id) as the new row's primary key, so
-    every existing reference to it (fpe_cash_transactions.
+    every existing reference to it (fazle_cash_transactions.
     source_message_id, any historical log mentioning that id) stays
     correct. review_note transparently marks the row as reconstructed,
     including which txn/wa-message it was derived from -- never presented
@@ -130,7 +130,7 @@ async def backfill_orphaned_review_links(dry_run: bool = True, performed_by: str
         note = (
             f"RECONSTRUCTED (Stage H.5, {performed_by}): original row lost "
             f"(root cause unknown, no deletion code found in this repo); "
-            f"rebuilt deterministically from fpe_cash_transactions.id={row['txn_id']} "
+            f"rebuilt deterministically from fazle_cash_transactions.id={row['txn_id']} "
             f"(txn_ref={row['txn_ref']}) + fpe_wa_messages.id={row['fpe_wa_message_id']} "
             f"(raw_content unchanged, unmodified since original submission). "
             f"No new data invented."
@@ -178,7 +178,7 @@ TEST_ARTIFACT_SUSPECT = "TEST_ARTIFACT_SUSPECT"
 
 
 async def classify_all_pending_cash_transactions() -> list[dict]:
-    """READ-only. One row per currently-pending fpe_cash_transactions
+    """READ-only. One row per currently-pending fazle_cash_transactions
     entry, each tagged with exactly one classification -- the report
     H5.6 asks for, before any mass action. Duplicate-suspect detection
     reuses the same (employee_id, amount, txn_date) grouping the H20
@@ -191,7 +191,7 @@ async def classify_all_pending_cash_transactions() -> list[dict]:
                t.txn_date, t.created_at, t.fpe_wa_message_id,
                w.raw_content,
                u.id AS existing_review_id, u.review_status AS existing_review_status
-        FROM fpe_cash_transactions t
+        FROM fazle_cash_transactions t
         LEFT JOIN fpe_wa_messages w ON w.id = t.fpe_wa_message_id
         LEFT JOIN fpe_unmatched_messages u ON u.id = t.source_message_id::bigint
         WHERE t.transaction_status = 'pending' AND t.deleted_at IS NULL
@@ -201,7 +201,7 @@ async def classify_all_pending_cash_transactions() -> list[dict]:
     dupes = await fetch_all(
         """
         SELECT employee_id, amount, txn_date, COUNT(*) AS n
-        FROM fpe_cash_transactions WHERE transaction_status='pending' AND deleted_at IS NULL
+        FROM fazle_cash_transactions WHERE transaction_status='pending' AND deleted_at IS NULL
         GROUP BY employee_id, amount, txn_date HAVING COUNT(*) > 1
         """
     )

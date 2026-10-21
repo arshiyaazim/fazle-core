@@ -150,6 +150,6 @@ Every admin WhatsApp command is deduplicated using SHA1(command_text + sender_ph
 
 **Purpose:** Prevents accidental double-execution from network retries or admin re-sends.
 
-**Source Module:** `modules/admin_commands`
+**Source Module:** `modules/fazle_admin_commands`
 **Source Function:** `_dedup_seen`
 **PKCA Report:** 10_hidden_rule_coverage_report.md (HK-37)

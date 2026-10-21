@@ -24,7 +24,7 @@ Release slip flow (duty completion):
   5. Employee confirms → create escort payment draft → admin
 
 Identity mismatch:
-  If sender phone not in wbom_employees but matches a master_mobile
+  If sender phone not in fazle_employees_legacy but matches a master_mobile
   in wbom_escort_programs → inform to use registered number.
 """
 
@@ -360,7 +360,7 @@ async def _build_and_send_draft(
     ctx: dict, phone: str, source: str
 ) -> tuple[str, Optional[dict]]:
     """Create the payment draft after all verification steps pass."""
-    from modules.payment_workflow import create_advance_request_draft, create_escort_payment_draft
+    from modules.fazle_payment_workflow import create_advance_request_draft, create_escort_payment_draft
     from modules.message_router import get_primary_admin
 
     employee_id  = ctx.get("employee_id")
@@ -412,12 +412,12 @@ async def _persist_payment_number(employee_id: int, method: str, number: str):
     try:
         if method == "bkash":
             await execute(
-                "UPDATE wbom_employees SET bkash_number=$1 WHERE employee_id=$2",
+                "UPDATE fazle_employees_legacy SET bkash_number=$1 WHERE employee_id=$2",
                 number, employee_id,
             )
         elif method == "nagad":
             await execute(
-                "UPDATE wbom_employees SET nagad_number=$1 WHERE employee_id=$2",
+                "UPDATE fazle_employees_legacy SET nagad_number=$1 WHERE employee_id=$2",
                 number, employee_id,
             )
     except Exception as e:

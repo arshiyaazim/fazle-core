@@ -1,7 +1,7 @@
 -- Migration 061: Hermes C2 — Divergence Snapshot Table (2026-08-07)
 --
 -- Records per-turn comparison results between the Hermes shadow decisions
--- and the ground-truth routing outcome observed in wbom_whatsapp_messages.
+-- and the ground-truth routing outcome observed in fazle_whatsapp_messages.
 -- Append-only per Architectural Principles §12. No FK to any business table.
 -- Rollback: DROP TABLE hermes_divergence_snapshots; — zero business impact.
 
@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS hermes_divergence_snapshots (
     shadow_explanation  TEXT,          -- routing branch label
     shadow_intent_method VARCHAR(20),  -- rule | llm | null
     shadow_provider     VARCHAR(50),   -- provider_used if populated
-    wbom_role           VARCHAR(30),   -- identity_role from wbom_whatsapp_messages
+    wbom_role           VARCHAR(30),   -- identity_role from fazle_whatsapp_messages
     wbom_direction      VARCHAR(20),   -- inbound | outbound
     wbom_received_at    TIMESTAMPTZ,
     is_role_match       BOOLEAN,       -- shadow_role == wbom_role

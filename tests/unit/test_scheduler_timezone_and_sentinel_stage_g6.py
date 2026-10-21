@@ -119,19 +119,19 @@ class TestSchedulerStartupHeartbeat:
 
 class TestAdminHelpCommand:
     async def test_help_returns_command_list_without_rbac_or_mutation(self):
-        from modules.admin_commands import process_admin_command
+        from modules.fazle_admin_commands import process_admin_command
         result = await process_admin_command("HELP", "8801880446111")
         assert "APPROVE" in result
         assert "REJECT" in result
         assert "EDIT" in result
 
     async def test_help_is_case_insensitive(self):
-        from modules.admin_commands import process_admin_command
+        from modules.fazle_admin_commands import process_admin_command
         result = await process_admin_command("help", "8801880446111")
         assert "APPROVE" in result
 
     async def test_help_never_exposes_rbac_role_names_or_config(self):
-        from modules.admin_commands import process_admin_command
+        from modules.fazle_admin_commands import process_admin_command
         result = await process_admin_command("HELP", "8801880446111")
         for secret_shaped in ("superadmin", "api_key", "role_id", "password"):
             assert secret_shaped not in result.lower()
@@ -140,13 +140,13 @@ class TestAdminHelpCommand:
         """Every token in the help text corresponds to a command this
         file actually implements (APPROVE/REJECT/EDIT/PAID/STATUS/
         DRAFTS) -- never advertises an unimplemented command."""
-        from modules.admin_commands import _HELP_TEXT
+        from modules.fazle_admin_commands import _HELP_TEXT
         for cmd in ("APPROVE", "REJECT", "EDIT", "PAID", "STATUS", "DRAFTS"):
             assert cmd in _HELP_TEXT
 
     async def test_unrecognized_command_still_shows_the_same_help_text(self):
         """Single source of truth: the fallback path and the explicit
         HELP command render the identical text."""
-        from modules.admin_commands import process_admin_command, _HELP_TEXT
+        from modules.fazle_admin_commands import process_admin_command, _HELP_TEXT
         result = await process_admin_command("gibberish nonsense xyz", "8801880446111")
         assert _HELP_TEXT in result

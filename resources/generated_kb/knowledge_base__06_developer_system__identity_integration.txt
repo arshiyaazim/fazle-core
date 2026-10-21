@@ -1,10 +1,10 @@
 Source: knowledge_base/06_developer_system/identity_integration.md
-SHA256: 08a3b0e426dba54a98a54f6b888463a82d644b768163285473a7cb8ee31bbdc4
-Version: 08a3b0e426db
+SHA256: 9c59815f86e3396a26b29b4f3cd52a27a1070042bb786b35621326bb74a603f1
+Version: 9c59815f86e3
 
 # Identity Integration Reference
 **KB Article ID:** DEV-06-IDENTITY-INTEGRATION
-**Sources:** `modules/identity_brain/__init__.py` (393 lines), `modules/message_router/__init__.py` (598 lines), `shared/reply_policy.py` (291 lines), `knowledge_base/ai_access_matrix.md` — all read 2026-06-23
+**Sources:** `modules/fazle_identity_brain/__init__.py` (393 lines), `modules/message_router/__init__.py` (598 lines), `shared/reply_policy.py` (291 lines), `knowledge_base/ai_access_matrix.md` — all read 2026-06-23
 **Visibility:** Developer / Admin only — do NOT set `safe_for_customer=True`
 **Certified:** 2026-06-23 (Wave-3, W3P2-AUTH)
 
@@ -30,8 +30,8 @@ Each row is a sender type. Each column is one of the six identity dimensions.
 |---|---|---|---|
 | **Admin** | `_check_admin_settings()` — phone in env admin list | `app.config.settings` (ADMIN_NUMBERS, bridge admin phones) | 100 (1.00) |
 | **Admin (alt)** | Seed rule with `role='admin'` in `fazle_contact_roles` | `_lookup_seed()` | from DB column |
-| **Employee** | Primary phone match in `wbom_employees` | `_lookup_employee()` | 88 (0.88) |
-| **Employee (secondary)** | Cash payment records → `fpe_cash_transactions` | `_lookup_cash_identity()` | 86 (0.86) |
+| **Employee** | Primary phone match in `fazle_employees_legacy` | `_lookup_employee()` | 88 (0.88) |
+| **Employee (secondary)** | Cash payment records → `fazle_cash_transactions` | `_lookup_cash_identity()` | 86 (0.86) |
 | **Employee (secondary)** | Attendance record → `wbom_attendance` | `_lookup_attendance_identity()` | 86 (0.86) |
 | **Employee (secondary)** | Escort duty → `wbom_escort_programs` (escort_mobile match) | `_lookup_escort_roster()` | 85 (0.85) |
 | **Supervisor** | Seed rule with `role='supervisor'` in `fazle_contact_roles` | `_lookup_seed()` | from DB column |
@@ -39,7 +39,7 @@ Each row is a sender type. Each column is one of the six identity dimensions.
 | **repeat_client (escort unknown)** | Vessel/escort keywords in text from unregistered sender | `_ESCORT_CONTENT_RE` pattern match | 40 (0.40) |
 | **Unknown** | None of the above matched | `_unknown()` fallback | 0 (0.00) |
 
-Source: `modules/identity_brain/__init__.py` `detect_identity()` function.
+Source: `modules/fazle_identity_brain/__init__.py` `detect_identity()` function.
 
 **Resolution order (highest priority first):** admin → seed rule → employee (primary, cash, attendance, escort) → contact DB → text-hint candidate → text-hint escort → unknown.
 
@@ -128,7 +128,7 @@ Source: `shared/reply_policy.py`. Full section documentation in `system_prompt.m
 | **Numbers in `DRAFT_ALWAYS_PHONES`** | Any intent | ALWAYS draft |
 | **Escort client roles** | Escort order content | Draft (admin reviews vessel data before confirmation) |
 
-**`AUTO_REPLY_ENABLED=false` (current production state):** ALL replies regardless of role, intent, or disposition rules go to `fazle_draft_replies` for admin review. The rules above apply when `AUTO_REPLY_ENABLED=true`.
+**`AUTO_REPLY_ENABLED=true` (current production state, corrected 2026-07-09 — was wrongly documented as `false` here since before this file's own 2026-06-24 verification date, per Management decision S11-02, 2026-06-23):** the disposition rules in the table above apply as written. If the flag were ever reverted to `false`, ALL replies regardless of role/intent/disposition would go to `fazle_draft_replies` for admin review instead.
 
 **`AI_SAFE_MODE=true` (currently false):** Forces draft for any reply > 200 chars, identity_confidence < 50, or intent = unknown/unclear — regardless of role.
 

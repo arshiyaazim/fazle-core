@@ -1,3 +1,4 @@
+
 """Stage G18/G21/G27 (2026-08-28) -- new report builders in modules.reports:
 business_communication_summary, system_observation."""
 from __future__ import annotations

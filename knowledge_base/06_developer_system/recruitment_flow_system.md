@@ -232,7 +232,7 @@ Stored in `fazle_recruitment_sessions.score_bucket`.
 | `source_message` | TEXT | — | NULL | Original trigger message |
 | `notes` | TEXT | — | NULL | Admin notes; also holds the marker-delimited `[EXPERIENCE_CLAIM]` block for responsible roles |
 | `post_intake_status` | TEXT | — | NULL | Migration 072, Owner-locked set: `awaiting_agreement / agreed / joining_ready / salary_objection / not_ready_now / declined / future_contact`. NULL = not yet reached. **Frozen vocabulary** — never extended. |
-| `linked_employee_id` | BIGINT | — | NULL | Migration 077 (2026-08-29). FK → `wbom_employees(employee_id)` ON DELETE SET NULL. Set exactly once by `link_candidate_to_employee()` when this person becomes an employee. Durable candidate→employee link that survives a later phone change. Partial UNIQUE index enforces 1:1. |
+| `linked_employee_id` | BIGINT | — | NULL | Migration 077 (2026-08-29). FK → `fazle_employees_legacy(employee_id)` ON DELETE SET NULL. Set exactly once by `link_candidate_to_employee()` when this person becomes an employee. Durable candidate→employee link that survives a later phone change. Partial UNIQUE index enforces 1:1. |
 | `created_at` | TIMESTAMPTZ | NOT NULL | NOW() | Immutable |
 | `updated_at` | TIMESTAMPTZ | NOT NULL | NOW() | Updated on each stage change |
 
@@ -360,7 +360,7 @@ When `hermes_customer_recruitment` is active (see `runtime_gateway_flags.md`), b
 
 Two modules once considered candidates for feature loss on deletion were checked feature-by-feature against the live app; **neither has any missing coverage** — safe to delete when convenient:
 
-- **`modules/user_role/__init__.py`** (`detect_role()`): zero live callers. Every capability it had (admin/accountant/employee/contact role resolution) is covered, and in most cases more comprehensively, by `identity_brain.detect_identity()` (see `identity_brain.md`) plus `message_router`'s own direct `settings.accountant_phone` check (Tier 6). Its `relation_name == "partner"` mapping has no live equivalent in `identity_brain`, but a live-DB check (2026-08-12) confirmed `wbom_contacts.relation` has never contained `"partner"` in production — purely theoretical, not a real gap.
+- **`modules/user_role/__init__.py`** (`detect_role()`): zero live callers. Every capability it had (admin/accountant/employee/contact role resolution) is covered, and in most cases more comprehensively, by `identity_brain.detect_identity()` (see `identity_brain.md`) plus `message_router`'s own direct `settings.accountant_phone` check (Tier 6). Its `relation_name == "partner"` mapping has no live equivalent in `identity_brain`, but a live-DB check (2026-08-12) confirmed `fazle_contacts.relation` has never contained `"partner"` in production — purely theoretical, not a real gap.
 - **`modules/reply_templates/__init__.py`**: only reachable via `conversation_layer/recruitment.py`'s `simulate_current_core_reply()`, itself a shadow/simulation function, not the live `generate_recruitment_reply()`. Its topics (recruitment/greeting/salary_query/complaint/leave/join) are all covered live elsewhere with more detail: recruitment → `recruitment_source_of_truth.txt`; salary_query → `salary_policy.md` + Tier 10 RAG enrichment (2026-08-12 fix, see `hybrid_search.md`); leave → `knowledge_base/01_employee_knowledge/leave_policy.md`, RAG-reachable via Tier 15's existing generic enrichment; join → `recruitment_source_of_truth.txt`'s "আবেদন ও যোগদান" section; complaint always routes to human/admin review (never auto-sent) so no auto-reply content is needed.
 
 ---

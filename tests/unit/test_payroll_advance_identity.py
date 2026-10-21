@@ -2,12 +2,12 @@
 Payroll advance-deduction cross-system employee-ID resolution tests.
 
 Owner-authorized fix (2026-07-18): compute_run()'s advance-deduction query
-filtered fpe_cash_transactions.employee_id directly against the WBOM
+filtered fazle_cash_transactions.employee_id directly against the WBOM
 employee_id passed into compute_run() -- but that column FKs to
-fpe_employees(id), a different ID space (confirmed via schema inspection:
-fpe_cash_transactions_employee_id_fkey -> fpe_employees(id)). Real advances
+fazle_employees(id), a different ID space (confirmed via schema inspection:
+fazle_cash_transactions_employee_id_fkey -> fazle_employees(id)). Real advances
 were silently never deducted from payroll unless the two IDs coincidentally
-matched. Fixed by resolving the linked, active fpe_employees row via
+matched. Fixed by resolving the linked, active fazle_employees row via
 wbom_employee_id first -- the same pattern mark_paid()/_transition() already
 uses elsewhere in modules/payroll/__init__.py.
 
@@ -27,17 +27,17 @@ pytestmark = pytest.mark.workflow
 @pytest_asyncio.fixture
 async def wbom_emp(test_db_pool):
     """A WBOM employee whose employee_id will NOT coincidentally match its
-    linked fpe_employees.id -- a decoy row is inserted first to guarantee
+    linked fazle_employees.id -- a decoy row is inserted first to guarantee
     the sequences diverge, exactly like the real production data (confirmed
     empirically 2026-07-18: 15/15 sampled real advance-bearing employees had
     id != wbom_employee_id)."""
     async with test_db_pool.acquire() as conn:
-        # No decoy needed on the wbom_employees side -- _link_fpe_employee()
-        # inserts 2 fpe_employees decoys per call, which is enough on its
+        # No decoy needed on the fazle_employees_legacy side -- _link_fpe_employee()
+        # inserts 2 fazle_employees decoys per call, which is enough on its
         # own to permanently desynchronize the two independent SERIAL
         # sequences from this point forward.
         row = await conn.fetchrow("""
-            INSERT INTO wbom_employees (employee_mobile, employee_name, designation, status, basic_salary)
+            INSERT INTO fazle_employees_legacy (employee_mobile, employee_name, designation, status, basic_salary)
             VALUES ('8801811111111', 'Karim Guard', 'Security Guard', 'Active', 9000.00)
             RETURNING *
         """)
@@ -45,20 +45,20 @@ async def wbom_emp(test_db_pool):
 
 
 async def _link_fpe_employee(test_db_pool, wbom_employee, code: str, status: str = "active") -> int:
-    """Create a real, wbom_employee_id-linked fpe_employees row (with 2
-    decoys inserted first, permanently desynchronizing the fpe_employees
-    SERIAL sequence from wbom_employees') and return its id."""
+    """Create a real, wbom_employee_id-linked fazle_employees row (with 2
+    decoys inserted first, permanently desynchronizing the fazle_employees
+    SERIAL sequence from fazle_employees_legacy') and return its id."""
     async with test_db_pool.acquire() as conn:
         await conn.execute("""
-            INSERT INTO fpe_employees (employee_code, full_name, name_normalized, status)
+            INSERT INTO fazle_employees (employee_code, full_name, name_normalized, status)
             VALUES ($1, 'Decoy Fpe 1', 'decoy fpe 1', 'inactive')
         """, f"{code}-DECOY1")
         await conn.execute("""
-            INSERT INTO fpe_employees (employee_code, full_name, name_normalized, status)
+            INSERT INTO fazle_employees (employee_code, full_name, name_normalized, status)
             VALUES ($1, 'Decoy Fpe 2', 'decoy fpe 2', 'inactive')
         """, f"{code}-DECOY2")
         row = await conn.fetchrow("""
-            INSERT INTO fpe_employees
+            INSERT INTO fazle_employees
                 (employee_code, full_name, name_normalized, primary_phone, status, wbom_employee_id)
             VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING id
@@ -71,7 +71,7 @@ async def _insert_advance(test_db_pool, fpe_employee_id: int, amount: float, txn
                            txn_ref: str, status: str = "final", is_reversal: bool = False):
     async with test_db_pool.acquire() as conn:
         await conn.execute("""
-            INSERT INTO fpe_cash_transactions
+            INSERT INTO fazle_cash_transactions
                 (txn_ref, employee_id, amount, txn_date, txn_category, transaction_status, is_reversal)
             VALUES ($1, $2, $3, $4, 'advance', $5, $6)
         """, txn_ref, fpe_employee_id, amount, txn_date_, status, is_reversal)
@@ -107,12 +107,12 @@ class TestAdvanceIdentityResolution:
 
         async with test_db_pool.acquire() as conn:
             wbom_row = await conn.fetchrow("""
-                INSERT INTO wbom_employees (employee_mobile, employee_name, designation, status, basic_salary)
+                INSERT INTO fazle_employees_legacy (employee_mobile, employee_name, designation, status, basic_salary)
                 VALUES ('8801822222222', 'Coincidence Guard', 'Security Guard', 'Active', 9000.00)
                 RETURNING *
             """)
             fpe_row = await conn.fetchrow("""
-                INSERT INTO fpe_employees
+                INSERT INTO fazle_employees
                     (employee_code, full_name, name_normalized, primary_phone, status, wbom_employee_id)
                 VALUES ('EMP-COINCIDE', $1, $2, $3, 'active', $4)
                 RETURNING id
@@ -141,7 +141,7 @@ class TestAdvanceIdentityResolution:
         # A second, unrelated employee with their own advance
         async with test_db_pool.acquire() as conn:
             other_wbom = await conn.fetchrow("""
-                INSERT INTO wbom_employees (employee_mobile, employee_name, designation, status, basic_salary)
+                INSERT INTO fazle_employees_legacy (employee_mobile, employee_name, designation, status, basic_salary)
                 VALUES ('8801833333333', 'Other Guard', 'Security Guard', 'Active', 9000.00)
                 RETURNING *
             """)
@@ -155,7 +155,7 @@ class TestAdvanceIdentityResolution:
         assert result["total_advances"] == pytest.approx(0.0)
 
     async def test_no_fpe_link_deduction_is_zero(self, test_db_pool, wbom_emp):
-        """No linked fpe_employees row at all -- deduction must be exactly
+        """No linked fazle_employees row at all -- deduction must be exactly
         zero, and the run must still compute successfully (not fail closed)."""
         import app.database as db
         db._pool = test_db_pool
@@ -169,7 +169,7 @@ class TestAdvanceIdentityResolution:
         assert result["total_advances"] == pytest.approx(0.0)
 
     async def test_inactive_fpe_link_treated_as_no_link(self, test_db_pool, wbom_emp):
-        """An fpe_employees row linked via wbom_employee_id but with
+        """An fazle_employees row linked via wbom_employee_id but with
         status != 'active' must not be resolved (matches mark_paid()'s own
         `AND status='active'` gate elsewhere in this file)."""
         import app.database as db
@@ -248,7 +248,7 @@ class TestAdvanceIdentityResolution:
     async def test_idempotent_no_duplicate_transactions(self, test_db_pool, wbom_emp):
         """Repeated compute_run() for the same employee/period must return
         the same deduction and must not create a duplicate run or duplicate
-        fpe_cash_transactions rows (compute_run() only reads the ledger, it
+        fazle_cash_transactions rows (compute_run() only reads the ledger, it
         never writes to it -- this proves the read-path fix didn't change
         that)."""
         import app.database as db
@@ -280,7 +280,7 @@ class TestAdvanceIdentityResolution:
                 wbom_emp["employee_id"],
             )
             txn_count = await conn.fetchval(
-                "SELECT COUNT(*) FROM fpe_cash_transactions WHERE employee_id=$1", fpe_id
+                "SELECT COUNT(*) FROM fazle_cash_transactions WHERE employee_id=$1", fpe_id
             )
         assert run_count == 1
         assert txn_count == 1

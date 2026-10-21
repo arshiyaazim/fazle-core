@@ -1,4 +1,4 @@
-"""Unit tests — modules.bridge_poller._is_draft_always's new phone_block.{phone}
+"""Unit tests — modules.fazle_bridge_poller._is_draft_always's new phone_block.{phone}
 DB-flag check (Unified Admin AI Engine, Phase 3 Step 3).
 
 Regression coverage for the previously-dead per-number auto-reply gate:
@@ -34,7 +34,7 @@ def _empty_settings() -> SimpleNamespace:
 
 class TestPhoneBlockGate:
     async def test_phone_block_true_returns_true_before_env_checks(self, monkeypatch):
-        import modules.bridge_poller as bp
+        import modules.fazle_bridge_poller as bp
 
         monkeypatch.setattr(bp, "_settings", _empty_settings())
 
@@ -50,7 +50,7 @@ class TestPhoneBlockGate:
         assert result is True
 
     async def test_phone_block_false_falls_through_to_env_logic(self, monkeypatch):
-        import modules.bridge_poller as bp
+        import modules.fazle_bridge_poller as bp
 
         monkeypatch.setattr(bp, "_settings", _empty_settings())
 
@@ -67,7 +67,7 @@ class TestPhoneBlockGate:
         assert result is False
 
     async def test_phone_block_absent_falls_through_to_env_logic(self, monkeypatch):
-        import modules.bridge_poller as bp
+        import modules.fazle_bridge_poller as bp
 
         monkeypatch.setattr(bp, "_settings", _empty_settings())
 
@@ -91,7 +91,7 @@ class TestPhoneBlockGate:
         assert result2 is True
 
     async def test_get_runtime_setting_exception_falls_through_silently(self, monkeypatch):
-        import modules.bridge_poller as bp
+        import modules.fazle_bridge_poller as bp
 
         monkeypatch.setattr(bp, "_settings", _empty_settings())
 

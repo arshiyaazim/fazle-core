@@ -228,7 +228,7 @@ Rules:
 - Do not treat client drafts as final truth.
 - Do not let roster search/export use ambiguous joined columns.
 - UI requests should omit empty params and surface real API errors.
-- `modules/bridge_poller._requires_legacy_workflow()` gates whether a
+- `modules/fazle_bridge_poller._requires_legacy_workflow()` gates whether a
   bridge1/bridge2 message reaches this parser at all before
   `SOCIAL_AUTO_REPLY_SINGLE_ENGINE` diverts it to the social-reply pipeline.
   This gate must treat a Bangladesh mobile-number match

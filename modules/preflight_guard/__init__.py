@@ -11,7 +11,7 @@ PROTECTED_PATH_PATTERNS: tuple[str, ...] = (
     "modules/escort_roster",
     "modules/escort_lifecycle",
     "modules/escort",
-    "modules/bridge_poller",
+    "modules/fazle_bridge_poller",
     "whatsapp",
     "mcp_bridge",
     "meta_webhook",
@@ -19,10 +19,10 @@ PROTECTED_PATH_PATTERNS: tuple[str, ...] = (
 )
 
 PROTECTED_TABLES: tuple[str, ...] = (
-    "fpe_cash_transactions",
-    "fpe_employee_ledger",
-    "wbom_employees",
-    "wbom_whatsapp_messages",
+    "fazle_cash_transactions",
+    "fazle_employee_ledger",
+    "fazle_employees_legacy",
+    "fazle_whatsapp_messages",
 )
 
 _PREFIX_PROTECTED_TABLES: tuple[str, ...] = (

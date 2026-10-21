@@ -8,7 +8,7 @@ process_message() -> modules.admin_directives.router.process_admin_ai_command()
 anywhere in that chain -- it was built when @g.us was unconditionally
 excluded at the SQL level (Owner directive 2026-04-27) and never needed
 group-awareness. The ONLY reason a group message can never reach this
-chain today is Stage E3's short-circuit in modules.bridge_poller._poll_bridge():
+chain today is Stage E3's short-circuit in modules.fazle_bridge_poller._poll_bridge():
 EVERY group message (approved or not) gets `continue`d immediately after
 persistence, strictly before process_bridge_inbound()/process_message()
 are ever called -- proven structurally in test_group_ingestion_stage_e3.py
@@ -27,7 +27,7 @@ import inspect
 
 import pytest
 
-import modules.bridge_poller as bp
+import modules.fazle_bridge_poller as bp
 import modules.message_router as router
 from modules.admin_directives.router import process_admin_ai_command, _handle_hermes_relay
 

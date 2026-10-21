@@ -233,7 +233,7 @@ class TestStageEAttendanceAndCashDomains:
                     conversation_key="8801786178090:bridge1", canonical_phone="8801786178090",
                     intent_detected="payment_due", workflow_triggered=None,
                 )]
-            if "fpe_cash_transactions" in sql:
+            if "fazle_cash_transactions" in sql:
                 return [{"phone": "8801786178090", "transaction_status": "pending"}]
             return []
 
@@ -249,16 +249,16 @@ class TestStageEAttendanceAndCashDomains:
         assert conv["requires_action"] is True
 
     async def test_unfiltered_domain_skips_the_expensive_cash_scan_only_when_narrowed(self, auth_headers):
-        """domain=recruitment must not trigger a fpe_cash_transactions scan
+        """domain=recruitment must not trigger a fazle_cash_transactions scan
         -- that table is large (~4.4k rows across 3 unioned phone columns);
         no reason to pay for it on a narrowed, unrelated query."""
         queried_tables = []
 
         async def _fake_fetch_all(sql, *args):
-            for t in ("wbom_candidates", "wbom_escort_programs", "wbom_attendance", "fpe_cash_transactions"):
+            for t in ("wbom_candidates", "wbom_escort_programs", "wbom_attendance", "fazle_cash_transactions"):
                 if t in sql:
                     queried_tables.append(t)
-            if "conversation_key" in sql and "DISTINCT ON" in sql and "wbom_whatsapp_messages" in sql:
+            if "conversation_key" in sql and "DISTINCT ON" in sql and "fazle_whatsapp_messages" in sql:
                 return [_conv_row(intent_detected="recruitment")]
             return []
 
@@ -268,7 +268,7 @@ class TestStageEAttendanceAndCashDomains:
                     "/api/whatsapp/conversations/attention",
                     params={"domain": "recruitment"}, headers=auth_headers,
                 )
-        assert "fpe_cash_transactions" not in queried_tables
+        assert "fazle_cash_transactions" not in queried_tables
         assert "wbom_attendance" not in queried_tables
         assert "wbom_escort_programs" not in queried_tables
         assert "wbom_candidates" in queried_tables

@@ -4,40 +4,40 @@
 --
 -- Adds the "Alias-Based Identity Resolution Model" tables.
 -- This migration is purely ADDITIVE. It does NOT touch:
---   - fpe_cash_transactions   (immutable accounting)
---   - fpe_employee_ledger     (append-safe totals)
+--   - fazle_cash_transactions   (immutable accounting)
+--   - fazle_employee_ledger     (append-safe totals)
 --   - fpe_accounting_audit_logs
 -- It only adds soft-link, review-queue, and normalization-audit tables.
 -- All statements are idempotent (IF NOT EXISTS / DO NOTHING).
 -- ─────────────────────────────────────────────────────────────────────────────
 
--- ── A. Extend fpe_employees with soft-link columns ────────────────────────────
+-- ── A. Extend fazle_employees with soft-link columns ────────────────────────────
 -- Never mutate transactions; instead mark a duplicate employee row as resolved
 -- to a canonical employee. Both rows remain forever.
-ALTER TABLE fpe_employees
+ALTER TABLE fazle_employees
     ADD COLUMN IF NOT EXISTS canonical_employee_id BIGINT
-        REFERENCES fpe_employees(id);
+        REFERENCES fazle_employees(id);
 
-ALTER TABLE fpe_employees
+ALTER TABLE fazle_employees
     ADD COLUMN IF NOT EXISTS resolution_status TEXT
         NOT NULL DEFAULT 'unresolved';
         -- 'unresolved' | 'canonical' | 'duplicate' | 'inactive'
 
-ALTER TABLE fpe_employees
+ALTER TABLE fazle_employees
     ADD COLUMN IF NOT EXISTS confidence_score NUMERIC(4,3)
         NOT NULL DEFAULT 0.000;
 
-CREATE INDEX IF NOT EXISTS idx_fpe_emp_canonical
-    ON fpe_employees(canonical_employee_id);
-CREATE INDEX IF NOT EXISTS idx_fpe_emp_resolution_status
-    ON fpe_employees(resolution_status);
+CREATE INDEX IF NOT EXISTS idx_fazle_emp_canonical
+    ON fazle_employees(canonical_employee_id);
+CREATE INDEX IF NOT EXISTS idx_fazle_emp_resolution_status
+    ON fazle_employees(resolution_status);
 
 
 -- ── B. Resolution links (audit trail of every duplicate→canonical decision) ──
 CREATE TABLE IF NOT EXISTS fpe_employee_resolution_links (
     id                     BIGSERIAL    PRIMARY KEY,
-    employee_id            BIGINT       NOT NULL REFERENCES fpe_employees(id),
-    canonical_employee_id  BIGINT       NOT NULL REFERENCES fpe_employees(id),
+    employee_id            BIGINT       NOT NULL REFERENCES fazle_employees(id),
+    canonical_employee_id  BIGINT       NOT NULL REFERENCES fazle_employees(id),
     resolution_type        TEXT         NOT NULL,
         -- 'manual_merge' | 'manual_alias' | 'phone_match' | 'admin_decision'
     confidence_score       NUMERIC(4,3) NOT NULL DEFAULT 1.000,
@@ -50,17 +50,17 @@ CREATE TABLE IF NOT EXISTS fpe_employee_resolution_links (
     CONSTRAINT fpe_resolution_unique UNIQUE (employee_id, canonical_employee_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_fpe_reslinks_employee
+CREATE INDEX IF NOT EXISTS idx_fazle_reslinks_employee
     ON fpe_employee_resolution_links(employee_id);
-CREATE INDEX IF NOT EXISTS idx_fpe_reslinks_canonical
+CREATE INDEX IF NOT EXISTS idx_fazle_reslinks_canonical
     ON fpe_employee_resolution_links(canonical_employee_id);
 
 
 -- ── C. Manual review queue (ambiguous matches) ───────────────────────────────
 CREATE TABLE IF NOT EXISTS fpe_employee_review_queue (
     id                    BIGSERIAL    PRIMARY KEY,
-    candidate_employee_id BIGINT       REFERENCES fpe_employees(id),
-    suspected_match_id    BIGINT       REFERENCES fpe_employees(id),
+    candidate_employee_id BIGINT       REFERENCES fazle_employees(id),
+    suspected_match_id    BIGINT       REFERENCES fazle_employees(id),
     match_reason          TEXT         NOT NULL,
         -- 'fuzzy_name_below_threshold' | 'name_collision' |
         -- 'phone_conflict' | 'duplicate_suspected' | 'manual_flag'
@@ -81,9 +81,9 @@ CREATE TABLE IF NOT EXISTS fpe_employee_review_queue (
     )
 );
 
-CREATE INDEX IF NOT EXISTS idx_fpe_review_status
+CREATE INDEX IF NOT EXISTS idx_fazle_review_status
     ON fpe_employee_review_queue(review_status);
-CREATE INDEX IF NOT EXISTS idx_fpe_review_candidate
+CREATE INDEX IF NOT EXISTS idx_fazle_review_candidate
     ON fpe_employee_review_queue(candidate_employee_id);
 
 
@@ -103,7 +103,7 @@ CREATE TABLE IF NOT EXISTS fpe_normalization_audit_logs (
     created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_fpe_norm_audit_entity
+CREATE INDEX IF NOT EXISTS idx_fazle_norm_audit_entity
     ON fpe_normalization_audit_logs(entity_type, entity_id);
-CREATE INDEX IF NOT EXISTS idx_fpe_norm_audit_action
+CREATE INDEX IF NOT EXISTS idx_fazle_norm_audit_action
     ON fpe_normalization_audit_logs(action_type);

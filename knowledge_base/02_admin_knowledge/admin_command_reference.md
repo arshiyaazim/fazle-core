@@ -138,7 +138,7 @@ DREJECT 42 ওয়েবসাইট সমস্যা
 - Required role: `operator`
 
 ### REVERSE `<transaction_id>` `<reason>`
-Reverse a finalized transaction. Creates a reversal entry in `fpe_cash_transactions`.
+Reverse a finalized transaction. Creates a reversal entry in `fazle_cash_transactions`.
 
 ```
 REVERSE 2505 ভুল এন্ট্রি
@@ -452,7 +452,7 @@ If the query is not recognized, the inline help text is returned.
 - All RBAC denials are logged with the required role and reason.
 - The 30-second duplicate suppression prevents double-execution from WhatsApp delivery retries.
 - Bangla digit normalization applies to all numeric fields in all commands.
-- No admin command is allowed to write to `wbom_cash_transactions` directly (Financial Architecture Freeze v2 — C1B).
+- No admin command is allowed to write to `fazle_cash_transactions_archive` directly (Financial Architecture Freeze v2 — C1B).
 
 ## অটো-সেন্ড নিরাপত্তা নিয়ম
 

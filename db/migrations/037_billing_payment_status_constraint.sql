@@ -22,10 +22,10 @@
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_billing_records_payment_status_check'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_billing_records_payment_status_check'
     ) THEN
         ALTER TABLE wbom_billing_records
-            ADD CONSTRAINT wbom_billing_records_payment_status_check
+            ADD CONSTRAINT fazle_billing_records_payment_status_check
             CHECK (payment_status IN ('Pending', 'Paid'));
     END IF;
 END $$;

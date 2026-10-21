@@ -164,7 +164,7 @@ class EmployeeMatchResult(BaseModel):
 class PaymentEvent(BaseModel):
     """
     Internal normalized representation of any cash/payment transaction before
-    it is persisted to fpe_cash_transactions.
+    it is persisted to fazle_cash_transactions.
 
     All sources (WhatsApp, manual, operator, employee draft, NL advance,
     escort, correction, migration, admin API, frontend) convert to this model

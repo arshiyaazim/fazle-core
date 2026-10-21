@@ -35,7 +35,7 @@ class TestBus017Registry:
     def test_bus017_authority_reflects_fpe_source(self, loader):
         entry = loader.get("BUS-017")
         assert entry.authority == "fpe_readonly_view"
-        assert "fpe_cash_transactions" in entry.purpose
+        assert "fazle_cash_transactions" in entry.purpose
 
     def test_no_existing_entry_disturbed(self, loader):
         # Spot-check a couple of pre-existing entries are still exactly
@@ -106,7 +106,7 @@ class TestPayrollPageSummaryHandler:
             envelope = await adapter._payroll_page_summary(entry, {"month": 7, "year": 2026, "question": "payroll summary"})
 
         assert envelope.status == "ok"
-        assert envelope.data["source"] == "fpe_cash_transactions"
+        assert envelope.data["source"] == "fazle_cash_transactions"
         assert envelope.data["total_transactions"] == 42
         assert envelope.data["period"] == "2026-07"
         assert len(envelope.data["rows"]) == 2

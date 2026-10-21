@@ -35,11 +35,11 @@ def _patch_common(**overrides):
         "identity", {"identity_role": "candidate", "display_name": ""},
     )
     patches = {
-        "modules.identity_brain.detect_identity": AsyncMock(return_value=identity),
+        "modules.fazle_identity_brain.detect_identity": AsyncMock(return_value=identity),
         "modules.owner_contact_registry.is_owner_managed_contact": lambda phone: overrides.get("owner_managed", False),
-        "modules.bridge_poller._is_draft_always": AsyncMock(return_value=overrides.get("draft_always", False)),
+        "modules.fazle_bridge_poller._is_draft_always": AsyncMock(return_value=overrides.get("draft_always", False)),
         "shared.draft.should_generate_draft": AsyncMock(return_value=overrides.get("ok_to_consider", True)),
-        "modules.intent.classify": lambda text: overrides.get("intent", "unknown"),
+        "modules.fazle_intent.classify": lambda text: overrides.get("intent", "unknown"),
         "modules.message_router.get_recent_history": AsyncMock(return_value=["Them: hi", "You: hello"]),
         "modules.recruitment_flow.recruitment_eligibility": AsyncMock(
             return_value=overrides.get("eligibility", {"eligible": True, "autosend": True, "reason": "explicit_recruitment"}),
@@ -49,7 +49,7 @@ def _patch_common(**overrides):
         "modules.hermes_dispatch.build_employee_context_with_directives": AsyncMock(return_value="employee ctx"),
         "modules.hermes_dispatch.generate_reply": AsyncMock(return_value=overrides.get("reply", "একটি উত্তর")),
         "modules.outbound.enqueue": AsyncMock(return_value=123),
-        "modules.bridge_poller._save_draft": AsyncMock(),
+        "modules.fazle_bridge_poller._save_draft": AsyncMock(),
         # Owner directive (2026-08-27) safety-gate wiring -- sensible
         # "nothing to see here" defaults; individual gate-behavior tests
         # override these.
@@ -57,7 +57,7 @@ def _patch_common(**overrides):
         "modules.recruitment_recovery_sweep._recovery_safety_gate": AsyncMock(
             return_value=overrides.get("gate_block_reason"),
         ),
-        "modules.bridge_poller._save_message": AsyncMock(),
+        "modules.fazle_bridge_poller._save_message": AsyncMock(),
         "modules.recruitment_recovery_sweep._upsert_recovery_state": AsyncMock(),
     }
     return patches
@@ -156,7 +156,7 @@ class TestDecideAndReplyDryRunVsLiveSend:
             result = await _decide_and_reply(CANDIDATE_ROW, live_send=True)
         assert result["action"] == "sent"
         patches["modules.outbound.enqueue"].assert_awaited_once()
-        patches["modules.bridge_poller._save_draft"].assert_not_awaited()
+        patches["modules.fazle_bridge_poller._save_draft"].assert_not_awaited()
 
     async def test_live_send_with_draft_always_true_saves_draft_not_send(self):
         """Even with live_send on and the eligibility layer saying
@@ -171,7 +171,7 @@ class TestDecideAndReplyDryRunVsLiveSend:
             result = await _decide_and_reply(CANDIDATE_ROW, live_send=True)
         assert result["action"] == "drafted"
         patches["modules.outbound.enqueue"].assert_not_awaited()
-        patches["modules.bridge_poller._save_draft"].assert_awaited_once()
+        patches["modules.fazle_bridge_poller._save_draft"].assert_awaited_once()
 
     async def test_live_send_with_eligibility_autosend_false_saves_draft(self):
         patches = _patch_common(
@@ -201,7 +201,7 @@ class TestDecideAndReplyEmployeePath:
 class TestDecideAndReplyErrorHandling:
     async def test_exception_in_identity_lookup_returns_error_action_not_raise(self):
         patches = _patch_common()
-        patches["modules.identity_brain.detect_identity"] = AsyncMock(side_effect=RuntimeError("db down"))
+        patches["modules.fazle_identity_brain.detect_identity"] = AsyncMock(side_effect=RuntimeError("db down"))
         with _apply_all(patches):
             from modules.recruitment_recovery_sweep import _decide_and_reply
             result = await _decide_and_reply(CANDIDATE_ROW, live_send=False)
@@ -216,7 +216,7 @@ class TestDecideAndReplyErrorHandling:
             result = await _decide_and_reply(row, live_send=False)
         assert result["action"] == "skip"
         assert result["reason"] == "empty_phone_or_text"
-        patches["modules.identity_brain.detect_identity"].assert_not_awaited()
+        patches["modules.fazle_identity_brain.detect_identity"].assert_not_awaited()
 
 
 class TestFindStaleUnanswered:
@@ -321,8 +321,8 @@ class TestRunRecoverySweep:
 # ── Owner directive, 2026-08-27: recovery send safety gate ─────────────────
 # Root cause of the observed defect (candidate 8801744835680, 7 sends, one
 # asking for their already-known name): _decide_and_reply()'s live-send
-# branch never called modules.bridge_poller._save_message() after
-# outbound.enqueue(), so wbom_whatsapp_messages -- the table _find_stale_
+# branch never called modules.fazle_bridge_poller._save_message() after
+# outbound.enqueue(), so fazle_whatsapp_messages -- the table _find_stale_
 # unanswered()'s own NOT EXISTS check reads -- never reflected the sweep's
 # own prior sends. Fixed below; plus a second, independent semantic/
 # resolved-field safety layer checked against the ACTUAL generated reply.
@@ -342,14 +342,14 @@ class TestSaveMessageWriteBackNotAtEnqueueTime:
             from modules.recruitment_recovery_sweep import _decide_and_reply
             result = await _decide_and_reply(CANDIDATE_ROW, live_send=True)
         assert result["action"] == "sent"
-        patches["modules.bridge_poller._save_message"].assert_not_awaited()
+        patches["modules.fazle_bridge_poller._save_message"].assert_not_awaited()
 
     async def test_dry_run_never_calls_save_message(self):
         patches = _patch_common()
         with _apply_all(patches):
             from modules.recruitment_recovery_sweep import _decide_and_reply
             await _decide_and_reply(CANDIDATE_ROW, live_send=False)
-        patches["modules.bridge_poller._save_message"].assert_not_awaited()
+        patches["modules.fazle_bridge_poller._save_message"].assert_not_awaited()
 
 
 class TestRecoveryStateWriteBack:
@@ -383,7 +383,7 @@ class TestSafetyGateWiring:
         assert result["action"] == "blocked_redundant"
         assert result["reason"] == "resolved_field_conflict:collect_name"
         patches["modules.outbound.enqueue"].assert_not_awaited()
-        patches["modules.bridge_poller._save_message"].assert_not_awaited()
+        patches["modules.fazle_bridge_poller._save_message"].assert_not_awaited()
 
     async def test_gate_block_also_applies_in_dry_run_mode(self):
         """A dry-run digest should show what WOULD be blocked, not a
@@ -759,7 +759,7 @@ class TestReconcileConfirmedSends:
              "purpose": "hermes_admin_send", "created_at": datetime(2026, 8, 27, tzinfo=timezone.utc)},
         ]
         with patch("modules.recruitment_recovery_sweep.fetch_all", new=AsyncMock(return_value=rows)), \
-             patch("modules.bridge_poller._save_message", new=AsyncMock()) as mock_save:
+             patch("modules.fazle_bridge_poller._save_message", new=AsyncMock()) as mock_save:
             count = await _reconcile_confirmed_sends()
         assert count == 2
         assert mock_save.await_count == 2
@@ -787,7 +787,7 @@ class TestReconcileConfirmedSends:
     async def test_no_rows_no_writes(self):
         from modules.recruitment_recovery_sweep import _reconcile_confirmed_sends
         with patch("modules.recruitment_recovery_sweep.fetch_all", new=AsyncMock(return_value=[])), \
-             patch("modules.bridge_poller._save_message", new=AsyncMock()) as mock_save:
+             patch("modules.fazle_bridge_poller._save_message", new=AsyncMock()) as mock_save:
             count = await _reconcile_confirmed_sends()
         assert count == 0
         mock_save.assert_not_awaited()
@@ -808,7 +808,7 @@ class TestReconcileConfirmedSends:
         ]
         mock_save = AsyncMock(side_effect=[RuntimeError("write failed"), None])
         with patch("modules.recruitment_recovery_sweep.fetch_all", new=AsyncMock(return_value=rows)), \
-             patch("modules.bridge_poller._save_message", new=mock_save):
+             patch("modules.fazle_bridge_poller._save_message", new=mock_save):
             count = await _reconcile_confirmed_sends()
         assert count == 1  # only the second row succeeded
         assert mock_save.await_count == 2  # both were attempted

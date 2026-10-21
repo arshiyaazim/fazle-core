@@ -4,16 +4,16 @@ owner: Fazle Core Admin
 status: active
 last_verified: 2026-07-13
 runtime_index: true
-source_modules: modules/payment_ingest, modules/payment_workflow, modules/accountant_summary, modules/fazle_payroll_engine
+source_modules: modules/fazle_payment_ingest, modules/fazle_payment_workflow, modules/accountant_summary, modules/fazle_payroll_engine
 ---
 
 # Daily Cash Transaction Source Of Truth
 
-**Owner Directive (2026-06-29):** `fpe_cash_transactions` is the ONLY canonical
-cash transaction table. `wbom_cash_transactions` is a legacy archive — no new
+**Owner Directive (2026-06-29):** `fazle_cash_transactions` is the ONLY canonical
+cash transaction table. `fazle_cash_transactions_archive` is a legacy archive — no new
 rows are written to it. All cash/payment transactions (WhatsApp, manual,
 operator, employee draft, escort, correction/reversal, frontend) MUST end up in
-`fpe_cash_transactions` via `create_transaction()`.
+`fazle_cash_transactions` via `create_transaction()`.
 
 This is the canonical rule set for Admin and Accountant conversations, daily cash payments, employee advance/loan requests, escort release payment flow, security guard/ghat tallyman daily payments, and employee mobile based traceability.
 
@@ -26,9 +26,9 @@ This is the canonical rule set for Admin and Accountant conversations, daily cas
 ## Tables And Ownership
 
 - `fazle_payment_drafts`: temporary admin-review drafts for employee-origin requests. Pending drafts expire after the configured TTL.
-- `fpe_cash_transactions`: **the ONLY canonical final employee-level transaction ledger.** All cash payments end up here via `create_transaction()`. This table has full approval lifecycle (`transaction_status`, `approval_status`), reversal support (`is_reversal`, `reversed_txn_id`), source tracking (`source`, `source_channel`, `source_message_id`), soft-delete (`deleted_at`, `deleted_by`), and ledger integration (`_upsert_ledger()`).
-- `wbom_cash_transactions`: **legacy archive only.** No new rows are written. Historical data has been migrated to `fpe_cash_transactions` via `wbom_fpe_sync.py` with `legacy_wbom_transaction_id` preserving the original WBOM id for traceability.
-- `fpe_employee_ledger`: running per-employee per-month totals, updated atomically by `_upsert_ledger()` whenever a `fpe_cash_transactions` row is created or reversed.
+- `fazle_cash_transactions`: **the ONLY canonical final employee-level transaction ledger.** All cash payments end up here via `create_transaction()`. This table has full approval lifecycle (`transaction_status`, `approval_status`), reversal support (`is_reversal`, `reversed_txn_id`), source tracking (`source`, `source_channel`, `source_message_id`), soft-delete (`deleted_at`, `deleted_by`), and ledger integration (`_upsert_ledger()`).
+- `fazle_cash_transactions_archive`: **legacy archive only.** No new rows are written. Historical data has been migrated to `fazle_cash_transactions` via `wbom_fpe_sync.py` with `legacy_wbom_transaction_id` preserving the original WBOM id for traceability.
+- `fazle_employee_ledger`: running per-employee per-month totals, updated atomically by `_upsert_ledger()` whenever a `fazle_cash_transactions` row is created or reversed.
 
 No DB schema change is required for this workflow. Existing columns must be used.
 
@@ -55,7 +55,7 @@ The system verifies:
 Result:
 - Create `fazle_payment_drafts.status='pending'`.
 - Notify admin.
-- Do not write `fpe_cash_transactions`.
+- Do not write `fazle_cash_transactions`.
 - Do not auto-send to accountant.
 
 ## Workflow B: Admin -> Accountant Final Instruction
@@ -81,9 +81,9 @@ Rules:
 - `ID:` mobile is the employee lookup key.
 - Without `ID:`, payout mobile is the employee lookup key.
 - `(B)` = bkash, `(N)` = nagad, `(C)` = cash, `(R)` = rocket, `(BANK)` = bank.
-- **Updated 2026-07-13**: `modules.payment_ingest._SHORTHAND_RE` also accepts full-word variants (`Cash`, `Nagad`, `Bkash`/`Bikash`, `Rocket`, `Bank`), case-insensitive, on the *input* side. `modules.draft_approval.build_accountant_message()` — the function that generates this exact format for the admin→accountant handoff — always emits the canonical single-letter/`BANK` codes above, never a full word.
-- If employee does not exist, create a minimal active employee in `fpe_employees` via `match_or_create_employee()`, using `employee_id_phone` or `primary_phone` as the lookup key.
-- Insert a final row in `fpe_cash_transactions` via `create_transaction()`.
+- **Updated 2026-07-13**: `modules.fazle_payment_ingest._SHORTHAND_RE` also accepts full-word variants (`Cash`, `Nagad`, `Bkash`/`Bikash`, `Rocket`, `Bank`), case-insensitive, on the *input* side. `modules.fazle_draft_approval.build_accountant_message()` — the function that generates this exact format for the admin→accountant handoff — always emits the canonical single-letter/`BANK` codes above, never a full word.
+- If employee does not exist, create a minimal active employee in `fazle_employees` via `match_or_create_employee()`, using `employee_id_phone` or `primary_phone` as the lookup key.
+- Insert a final row in `fazle_cash_transactions` via `create_transaction()`.
 - Use WhatsApp message identity/timestamp for duplicate protection when available.
 - Same employee, same method, same amount can appear multiple times in one day when the messages are distinct.
 
@@ -101,7 +101,7 @@ Examples:
 
 Rules:
 - Acknowledge the summary.
-- Do not write `fpe_cash_transactions`.
+- Do not write `fazle_cash_transactions`.
 - To record an individual employee advance/payment, use an employee-level final instruction.
 
 ## Non-Negotiable Rules
@@ -109,8 +109,8 @@ Rules:
 - Employee request is not a final transaction.
 - AI must not create a final transaction from employee request text.
 - Admin -> Accountant instruction is the final transaction trigger.
-- `fpe_cash_transactions` is the ONLY canonical cash transaction table (Owner Directive 2026-06-29).
-- `wbom_cash_transactions` is legacy archive only — never write new rows to it.
+- `fazle_cash_transactions` is the ONLY canonical cash transaction table (Owner Directive 2026-06-29).
+- `fazle_cash_transactions_archive` is legacy archive only — never write new rows to it.
 - Final ledger must be searchable by employee name, employee mobile, payout mobile, and employee id.
 - Transaction history is traceable through `employee_id`, `employee_id_phone`, `employee_phone`, `payout_phone`, `txn_ref`, `source`, `source_message_id`, `source_message_text`, and timestamps where present.
 - Existing DB columns must be used; do not change the DB schema for this workflow.
@@ -120,12 +120,12 @@ Rules:
 
 ### Working
 
-- `fpe_cash_transactions` canonical create path is active through `create_transaction()`.
-- Ledger coupling is active: `create_transaction()` updates `fpe_employee_ledger` via `_upsert_ledger()` for final transactions.
+- `fazle_cash_transactions` canonical create path is active through `create_transaction()`.
+- Ledger coupling is active: `create_transaction()` updates `fazle_employee_ledger` via `_upsert_ledger()` for final transactions.
 - Reversal/create accounting path also updates ledger via `_upsert_ledger()`.
 - Admin transaction create API writes through canonical create path.
-- `wbom_cash_transactions` has no active insert/update/delete writes in runtime modules.
-- `modules/payroll/__init__.py`'s `mark_paid()` (monthly payroll payout, the `wbom_payroll_runs.status → 'paid'` transition) now also posts through `create_transaction()` (fixed 2026-07-15 — previously it only flipped the run's status and wrote a `wbom_payroll_approval_log` row, with no `fpe_cash_transactions` entry at all). It resolves the payee via `fpe_employees.wbom_employee_id` (the standard WBOM↔FPE bridge) and **fails closed**: if no active FPE employee is linked, the run is not marked paid and no ledger row is written, rather than completing the status change with a missing ledger entry.
+- `fazle_cash_transactions_archive` has no active insert/update/delete writes in runtime modules.
+- `modules/payroll/__init__.py`'s `mark_paid()` (monthly payroll payout, the `wbom_payroll_runs.status → 'paid'` transition) now also posts through `create_transaction()` (fixed 2026-07-15 — previously it only flipped the run's status and wrote a `wbom_payroll_approval_log` row, with no `fazle_cash_transactions` entry at all). It resolves the payee via `fazle_employees.wbom_employee_id` (the standard WBOM↔FPE bridge) and **fails closed**: if no active FPE employee is linked, the run is not marked paid and no ledger row is written, rather than completing the status change with a missing ledger entry.
 
 ### Not Fully Working / Gaps
 

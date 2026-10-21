@@ -23,7 +23,7 @@ Employee/Escort request and Admin instruction are different workflows:
 | Intent | Wants advance/payment | Confirms payment instruction |
 | Verification | Required | Not required after admin handoff |
 | Intermediate state | `fazle_payment_drafts.pending` | None |
-| Final ledger write | No | Yes, direct `fpe_cash_transactions` via `create_transaction()` |
+| Final ledger write | No | Yes, direct `fazle_cash_transactions` via `create_transaction()` |
 | AI role | Conversation + draft support | No decision; code parser executes |
 | Employee create | No | Yes, if lookup mobile is missing |
 
@@ -60,7 +60,7 @@ pending → sent (admin PAID or ADVANCE command → finalize_payment() → accou
 
 **Business Rule:** A payment draft never auto-sends. It always requires explicit admin action (PAID or ADVANCE command).
 
-**Source Module:** `modules/payment_workflow`, `modules/admin_commands`, `modules/scheduler`
+**Source Module:** `modules/fazle_payment_workflow`, `modules/fazle_admin_commands`, `modules/scheduler`
 **PKCA Report:** 09_state_machine_coverage_report.md (SM-03)
 **Management Authority:** Production evidence; documented 2026-06-22
 
@@ -103,7 +103,7 @@ PAID 165 12000 bkash ref=TX12345
 ADVANCE 166 1000 nagad
 ```
 
-**Source Module:** `modules/admin_commands`
+**Source Module:** `modules/fazle_admin_commands`
 **Source Function:** `_cmd_paid()`, `_cmd_advance()`
 **PKCA Report:** 12_command_coverage_report.md
 

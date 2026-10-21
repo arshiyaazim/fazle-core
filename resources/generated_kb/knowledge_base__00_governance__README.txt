@@ -1,6 +1,6 @@
 Source: knowledge_base/00_governance/README.md
-SHA256: 24c42d26fdc056f06d7cfd54bca5be5814bcd7ee5fd159aaead3abf4ed11da8e
-Version: 24c42d26fdc0
+SHA256: 74f6a6e6e046999a24d2315743a3976ed4fee420d2933e4d21faa3a3984b8609
+Version: 74f6a6e6e046
 
 # 00 Governance — Fazle AI Platform
 **Version:** 1.0.0
@@ -68,3 +68,8 @@ Allowed changes: corrections, append-only updates, management decision additions
 Not allowed: restructuring, deletion, authority changes.
 
 All changes require a revision history entry in the affected file.
+
+## 2026-07-05 Governance Note
+
+- Escort confirmed exact-duplicate prevention is now implemented as a
+	deterministic code-and-schema control, not an operator-only manual task.

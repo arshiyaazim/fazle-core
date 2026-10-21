@@ -48,7 +48,7 @@ class BusinessActionError(ValueError):
 def business_idempotency_key(domain: str, business_reference: str, proposed_action_type: str, source_event_ref: str) -> str:
     """Stage F7: stable identifier from (business object + action type +
     source event reference) -- never message text/body. Same sha256
-    convention modules.bridge_poller._core_message_hash already
+    convention modules.fazle_bridge_poller._core_message_hash already
     established for canonical message dedup, reused here rather than
     inventing a second hashing scheme."""
     raw = f"{domain}|{business_reference}|{proposed_action_type}|{source_event_ref}"

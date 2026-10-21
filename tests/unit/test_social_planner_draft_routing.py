@@ -81,12 +81,12 @@ class TestDraftInsteadOfSend:
 
 class TestSelectiveDraftRoutingGate:
     """_is_draft_always_sender() decides the draft-vs-real-send branch --
-    must reuse modules.bridge_poller._is_draft_always(), not reimplement it."""
+    must reuse modules.fazle_bridge_poller._is_draft_always(), not reimplement it."""
 
     async def test_draft_always_role_routes_to_draft(self, monkeypatch):
         import modules.social_auto_reply.planner_worker as planner
-        import modules.identity_brain as identity_brain
-        import modules.bridge_poller as bridge_poller
+        import modules.fazle_identity_brain as identity_brain
+        import modules.fazle_bridge_poller as bridge_poller
 
         monkeypatch.setattr(
             identity_brain, "detect_identity",
@@ -101,7 +101,7 @@ class TestSelectiveDraftRoutingGate:
 
     async def test_unknown_role_routes_to_real_send(self, monkeypatch):
         import modules.social_auto_reply.planner_worker as planner
-        import modules.identity_brain as identity_brain
+        import modules.fazle_identity_brain as identity_brain
 
         monkeypatch.setattr(
             identity_brain, "detect_identity",
@@ -132,7 +132,7 @@ class TestSelectiveDraftRoutingGate:
 class TestSafePolishValidationFailureNotifiesAdmin:
     async def test_validation_reason_included_in_draft_notification(self, monkeypatch):
         import modules.social_auto_reply.planner_worker as planner
-        import modules.identity_brain as identity_brain
+        import modules.fazle_identity_brain as identity_brain
 
         fake_create_draft = AsyncMock(return_value=7)
         fake_enqueue = AsyncMock(return_value=99)
@@ -194,7 +194,7 @@ class TestSafePolishValidationFailureNotifiesAdmin:
 class TestNoSafeReplyNotifiesAdminInsteadOfSilentIgnore:
     async def test_notify_admin_flagged_sends_full_context(self, monkeypatch):
         import modules.social_auto_reply.planner_worker as planner
-        import modules.identity_brain as identity_brain
+        import modules.fazle_identity_brain as identity_brain
 
         fake_enqueue = AsyncMock(return_value=1)
         monkeypatch.setattr(planner, "enqueue_outbound", fake_enqueue)

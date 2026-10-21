@@ -1,12 +1,12 @@
 Source: knowledge_base/06_developer_system/database_rules.md
-SHA256: 537cb91b8c6d5ce4d6cf330ee45dea48c2378b76524b284370ad81c111475b01
-Version: 537cb91b8c6d
+SHA256: c1ddb138fc5865274472665eb26ed20def14ea0a539a0e002420ba3ca7ce0ffd
+Version: c1ddb138fc58
 
 # Database Rules — Fazle AI Platform
 
 **Visibility:** DEVELOPER (table structure, schemas, implementation details)
 **AI Exposure:** Table names and schema details must NOT be exposed to candidates or employees. Business behavior may be summarized at ADMIN level.
-**Last Updated:** 2026-07-02 (Employee unification — fpe_employees is now canonical)
+**Last Updated:** 2026-07-02 (Employee unification — fazle_employees is now canonical)
 **Source:** Entity Ownership Audit 2026-06-22 + production migration files + Python inline DDL
 
 ---
@@ -24,13 +24,73 @@ The Fazle AI Platform uses a single PostgreSQL database shared across all subsys
 - Idempotency keys protect all financial and notification operations
 - Never expose table names, column names, or schema details to candidates or employees
 
-**Employee Identity (2026-07-02):** `fpe_employees` is now the single canonical
+**Employee Identity (2026-07-02):** `fazle_employees` is now the single canonical
 employee table. It carries both identity fields (phone, name) and HR profile
 fields (`basic_salary`, `designation`, `joining_date`). All employee creation
 paths (WhatsApp parser, escort confirmation, frontend Add Employee) now create
-or link `fpe_employees` rows. Cross-reference with `wbom_employees` is
+or link `fazle_employees` rows. Cross-reference with `fazle_employees_legacy` is
 maintained via `wbom_employee_id` soft-link. Migration 011 backfilled all 178
 WBOM employees into FPE.
+
+---
+
+## Migration Governance (added 2026-07-08, System Consolidation Sprint — Task 4)
+
+**Status:** first safe consolidation step per `SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md` Report 4 / Report 7 Tier 2 Task 2. This section declares policy only — **no migration files have been renamed, renumbered, dropped, or altered as part of this step**, and no production schema was changed.
+
+### Canonical path going forward
+
+**`db/migrations/` + `db/migrate.py` is the single canonical, tracked migration path for all new schema changes, effective immediately.** It is the only one of the four schema-creation mechanisms with a real tracking table (`schema_migrations`), transactional per-file apply, and dry-run support. **Every new schema change — for any domain (payroll, escort, social, AI, or otherwise) — must land as a new, sequentially-numbered `db/migrations/0NN_*.sql` file, using the next never-before-used integer.** As of 2026-07-08 that next integer is `029` (see "Known duplicate/missing numbers" below for why — do not reuse an existing number even where one looks "free").
+
+### Legacy / historical paths (do not add new files here; do not delete yet)
+
+These three remain as historical, unreconciled sources until a dedicated reconciliation pass (Report 4's recommended strategy) is scheduled and executed:
+
+1. **`/home/azim/core/migrations/`** (6 files, `002`–`005` + 2 unnumbered schema files, no `001`) — has **no automated execution path**; historically applied via manual `psql -f`. Legacy/historical. Do not add new files here.
+2. **`/home/azim/core/modules/fazle_payroll_engine/migrations/`** (14 files, own independent `001`–`014` sequence) — **re-run in full, statement-by-statement, on every app startup** (`fazle_payroll_engine/__init__.py:25-38`), with per-statement exceptions swallowed as warnings. Not tracked in `schema_migrations`. Legacy/historical. Do not add new files here.
+3. **Inline Python DDL** in `modules/contact_sync/__init__.py`, `modules/social_auto_reply/__init__.py`, `modules/fazle_bridge_poller/__init__.py`, `modules/wa_chat_frontend/__init__.py` — all `CREATE TABLE IF NOT EXISTS`, re-executed at every startup, genuinely idempotent, not tracked. Treated as a deliberate idempotent-bootstrap pattern, not a restructuring target for now. Do not add new inline DDL to new modules going forward — use `db/migrations/` instead.
+
+### Known duplicate/missing numbers in `db/migrations/` (documented, not renamed)
+
+- **Duplicate `012`**: `012_ai_readonly_views.sql` and `012_queue_arbiter.sql` both exist. **Not renamed** — `schema_migrations` keys on full filename, not numeric prefix, so there is no runtime collision; renaming either file risks orphaning or re-triggering already-applied production history.
+- **Duplicate `020`**: `020_escort_roster_employee_fk.sql` and `020_preflight_guard_tables.sql` both exist. Same reasoning — **not renamed**.
+- **Missing `009`**: no `009_*.sql` file exists in `db/migrations/`. **Intentionally left as a gap, not backfilled** — inventing content for a number retroactively risks someone assuming it must exist and re-deriving the wrong content. If you are reading this and wondering "where is 009," the answer is: it never existed or was removed before this repository's current history; there is no production impact.
+- **`023` fragmented into 5 files**: `023_c0d_001` through `023_c0d_004` plus `023_model_router_tables.sql`. This follows the same "new suffixed files, not renumbering" precedent already set by this repo's own Sprint-C0D pattern — the right approach, kept as-is.
+
+**Rule going forward:** filename is the uniqueness key, not the leading number. Never assume the numeric prefix alone identifies a migration or that gaps must be filled.
+
+### Known cross-directory schema-collision risk — re-investigated 2026-07-13, downgraded from "unknown severity" to "confirmed harmless"
+
+`SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md` Report 4 found `ALTER TABLE` touches on the same 5 tables (`fazle_cash_transactions`, `fpe_income_transactions`, `escort_roster_entries`, `wbom_escort_programs`, `fazle_payment_drafts`) from more than one of the three governed directories, plus a fully duplicated schema definition for all 8 `social_auto_reply` tables (identical in both `db/migrations/013_social_auto_reply.sql` and the inline DDL in `modules/social_auto_reply/__init__.py`).
+
+A table-by-table, file:line re-audit (2026-07-13, full detail in `db/MIGRATION_INVENTORY.md`) found **zero actually-conflicting statements** — every overlap is either the *same* column/constraint added twice, both idempotent (harmless, e.g. `fazle_payment_drafts.expires_at`, added by both `fazle_payroll_engine/migrations/009` and `db/migrations/021`, the latter's own comment already acknowledging the duplication), or *different*, non-overlapping columns added by different directories to the same table (harmless, just uncoordinated). `fazle_payroll_engine/migrations/` is confirmed live (re-run every restart via `start_fpe()`), not dead code, so these touches are real but not dangerous.
+
+**One separate, unrelated finding from the same pass**: `db/migrations/003c_schema_align.sql` itself (not a cross-directory issue) has 8 non-idempotent `DROP CONSTRAINT`/`ADD CONSTRAINT` pairs and 2 unguarded `RENAME COLUMN` statements — would error if ever replayed against a database where it already ran. Already applied to production once; this is a replay/disaster-recovery-rebuild risk, not a current-state risk. Not fixed — deliberately left as an Owner decision (retrofit old migration files for idempotency, or treat them as immutable historical record and handle replay differently) rather than unilaterally edited.
+
+**Practical takeaway: the reconciliation checklist below remains worth doing for maintainability, but is no longer an urgent correctness fire** — nothing here has been found to actually corrupt data or diverge in a way that matters, only to be messier than ideal.
+
+### Checklist for future migration reconciliation (not started — tracked here for whoever picks it up)
+
+- [ ] Port `/home/azim/core/migrations/*.sql` into `db/migrations/` under new numbers (≥029), annotated as reconciliation-only
+- [ ] Port `fazle_payroll_engine/migrations/*.sql` into `db/migrations/` under new numbers, after diffing shared-table statements (`fazle_cash_transactions`, `fpe_income_transactions`, `fazle_payment_drafts`, `wbom_escort_programs`) against actual production columns
+- [ ] Retire the FPE inline-DDL startup loop once its migrations are ported and confirmed already-applied in `schema_migrations`
+- [ ] Dedupe the `social_auto_reply` schema definition — pick one of the two identical sources as canonical, have the other reference it
+- [ ] Write one new `db/migrations/0NN_bootstrap_core_tables.sql` for the 24 tables with no schema source of truth outside `tests/conftest.py` (see `SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md` Report 4 §7 and Report 9 for the full list, including two confirmed live writers: `fazle_error_log`, `llm_conversation_log`) — use real production `\d <table>` output as the column source, **not** `conftest.py`'s guess, which is already known to disagree with production
+- [ ] Commit or explicitly abandon the 4 previously-untracked `db/migrations/` files (`020_preflight_guard_tables.sql`, `023_model_router_tables.sql`, `027_assistant_feature_flags.sql`, `028_assistant_ext_location_audit.sql`)
+- [ ] Update this document's table count and domain list once the above is complete (see "Unresolved Schema Questions" below for the existing staleness note)
+
+### Migration dry-run safety rule (added 2026-07-09, incident-driven)
+
+**Incident:** During Phase 2B preparation (`db/migrations/032_client_tier_status_model.sql`), a transaction-preview dry run against production (`BEGIN; <migration>; <inspect>; ROLLBACK;`) was used to safely inspect a migration's effect before requesting Owner approval — the same method that worked cleanly for migration 031. This time, the migration contained a `SELECT setval(...)` call (fixing a sequence desync left over from migration 031's explicit-ID insert). **The `setval()` call survived the `ROLLBACK` and permanently changed production** — PostgreSQL sequence state changes (`nextval()`, `setval()`, `currval()`, and by extension `IDENTITY`/`SERIAL` counter advances) are **not transactional in Postgres by design** (this is documented upstream behavior, not a bug in this codebase) — sequences exist specifically so concurrent transactions don't block on shared counter access, and their state is deliberately excluded from MVCC/rollback semantics. Every other statement in the same migration (the two new `CREATE TABLE`s, both `ALTER TABLE ADD COLUMN`s) rolled back correctly, confirmed by direct inspection immediately after.
+
+**Impact of this specific incident:** low/accepted — the sequence fix was itself a disclosed, beneficial correction (see migration 031/032 headers), it touches no business/client data, and the Owner explicitly accepted keeping it rather than reverting (reverting would reintroduce the exact collision risk the fix closes). It is documented here as a **process exception**, not swept under a rug: the fix reached production one step earlier than intended, without having gone through the explicit-approval gate first.
+
+**Rule going forward:**
+1. **Never include `setval()`/`nextval()`/any sequence-mutating statement inside a rollback-based production dry run.** A `ROLLBACK` will not undo it — that "preview" is actually a permanent write.
+2. **Sequence-affecting statements must be validated by one of these two paths instead, never by transaction-preview against production:**
+   - A read-only pre-check query (e.g. `SELECT last_value FROM the_seq`, compared against `SELECT MAX(id) FROM the_table`) to confirm a fix is needed and to compute the exact target value, executed and reasoned about *before* deciding whether to apply — no preview-and-rollback needed for a `setval`, since there's nothing to "try and see" that a read-only comparison doesn't already tell you.
+   - Scratch-DB-only validation (per the standard 5-step method) for confirming the *statement's syntax and effect* — the scratch DB is disposable, so a `setval()` running there is inconsequential.
+3. When a migration file mixes sequence-mutating statements with regular transactional DDL/DML, split the transaction-preview step to **only include the transactional parts** — run the sequence-mutating statement separately, after everything else has been previewed and approved, or apply it via the read-only-pre-check-then-direct-apply path above with its own explicit approval callout.
 
 ---
 
@@ -44,7 +104,7 @@ WBOM employees into FPE.
 
 ### Business Behavior
 
-An escort program begins when an admin registers a vessel assignment (`wbom_escort_programs`). The escort employee is linked via FK to `wbom_employees`. As the program progresses, the roster module creates a calculated payment record (`escort_roster_entries`) that mirrors key program fields and computes pay using the management-approved formula.
+An escort program begins when an admin registers a vessel assignment (`wbom_escort_programs`). The escort employee is linked via FK to `fazle_employees_legacy`. As the program progresses, the roster module creates a calculated payment record (`escort_roster_entries`) that mirrors key program fields and computes pay using the management-approved formula.
 
 **Management-Approved Formula (Decision 2026-06-22):**
 ```
@@ -64,21 +124,21 @@ When the escort duty ends, the escort sends a release slip image. The OCR pipeli
 |---|---|---|---|
 | `wbom_escort_programs` | Physical Entity | Master record: vessel, escort employee FK, dates, shift, status, payment totals, food_bill | Created on assignment; updated through program lifecycle; status: Assigned→Active→Completed |
 | `escort_calculation_config` | Lookup/Config | Conveyance rates per destination (9 default rows); rarely changes | Seeded on migration; admin-editable; drives payment calculation |
-| `escort_roster_entries` | Physical Entity | Calculated pay per program: total_shifts, total_days, salary, conveyance, food_bill, advance_deduction, net_payable; lifecycle: draft→active→completed→cancelled→paid | One row per program; FK `program_id → wbom_escort_programs`; FK `escort_employee_id → wbom_employees` (added migration 020) |
+| `escort_roster_entries` | Physical Entity | Calculated pay per program: total_shifts, total_days, salary, conveyance, food_bill, advance_deduction, net_payable; lifecycle: draft→active→completed→cancelled→paid | One row per program; FK `program_id → wbom_escort_programs`; FK `escort_employee_id → fazle_employees_legacy` (added migration 020) |
 | `escort_roster_audit_logs` | Audit Log | Immutable JSONB old_data/new_data per roster change | Append-only; never updated |
 | `escort_shift_logs` | Audit Log | Per-shift activity events: start, ongoing, release, note | Append-only; granular timeline view |
 | `escort_release_matches` | Physical Entity | OCR slip → program match candidates; confidence-scored; admin_action drives lifecycle | Created by matcher; updated by admin decision; persists indefinitely |
-| `escort_slip_extractions` | Physical Entity | OCR-extracted vessel slip data: mother_vessel, lighter_vessel, master_mobile, escort_name, start_date, completion_date, signatures_json, confidence, raw_text | Created on OCR pipeline completion; never modified; linked to wbom_whatsapp_messages |
+| `escort_slip_extractions` | Physical Entity | OCR-extracted vessel slip data: mother_vessel, lighter_vessel, master_mobile, escort_name, start_date, completion_date, signatures_json, confidence, raw_text | Created on OCR pipeline completion; never modified; linked to fazle_whatsapp_messages |
 | `escort_order_groups` | Physical Entity | Parent order groups parsed from WhatsApp messages; direction: outbound(admin→client) or inbound(client→admin) | Created by order parser; persistent |
 | `escort_order_lighters` | Physical Entity | Per-lighter escort assignments within an order group; match_confidence, match_method, status: unmatched→matched→linked | Created by order parser; status updated on match |
 
 ### Cross-Domain Dependencies
 
-- `wbom_escort_programs` → `wbom_employees` (EMPLOYEE domain): escort employee is an HR employee
-- `escort_roster_entries` → `wbom_employees` (EMPLOYEE domain): FK added in migration 020 to resolve 29 MB error log incident
+- `wbom_escort_programs` → `fazle_employees_legacy` (EMPLOYEE domain): escort employee is an HR employee
+- `escort_roster_entries` → `fazle_employees_legacy` (EMPLOYEE domain): FK added in migration 020 to resolve 29 MB error log incident
 - On program completion: ESCORT → CASH/FPE: `fazle_payment_drafts.escort_program_id → wbom_escort_programs.program_id`
 - Escort pay contributes to PAYROLL: `wbom_payroll_run_items.source_table=escort_roster_entries`
-- OCR slip images arrive via MESSAGING domain (`wbom_whatsapp_messages`)
+- OCR slip images arrive via MESSAGING domain (`fazle_whatsapp_messages`)
 
 ### Current Uncertainties
 
@@ -101,7 +161,7 @@ When the escort duty ends, the escort sends a release slip image. The OCR pipeli
 
 ### Business Behavior
 
-`wbom_employees` is the HR master record. Every financial, attendance, and escort domain uses it as the person anchor via `employee_id` FK. Employee mobile numbers are stored in multiple formats; the identity brain tries all three normalized variants before resolving to "not an employee."
+`fazle_employees_legacy` is the HR master record. Every financial, attendance, and escort domain uses it as the person anchor via `employee_id` FK. Employee mobile numbers are stored in multiple formats; the identity brain tries all three normalized variants before resolving to "not an employee."
 
 Attendance is recorded daily per employee with UNIQUE constraint on (employee_id, attendance_date) — one row per day, preventing duplicate recording. Requests (leave, advance, grievance) and cases (incidents) are attached per employee and managed by supervisors.
 
@@ -109,17 +169,17 @@ Attendance is recorded daily per employee with UNIQUE constraint on (employee_id
 
 | Table | Type | Key Behavior | Lifecycle |
 |---|---|---|---|
-| `wbom_employees` | Physical Entity | HR master: employee_mobile UNIQUE, designation (default: Security Guard), status (Active/Inactive), basic_salary, bkash_number, nagad_number, nid_number, bank_account, joining_date | Created on hiring; status toggled on exit; never hard-deleted |
-| `wbom_contacts` | Physical Entity | WhatsApp contact directory: whatsapp_number, contact_name, contact_type; also used by `wbom_escort_programs.contact_id` for client contacts | Created/updated by contact sync; referenced by escort programs |
+| `fazle_employees_legacy` | Physical Entity | HR master: employee_mobile UNIQUE, designation (default: Security Guard), status (Active/Inactive), basic_salary, bkash_number, nagad_number, nid_number, bank_account, joining_date | Created on hiring; status toggled on exit; never hard-deleted |
+| `fazle_contacts` | Physical Entity | WhatsApp contact directory: whatsapp_number, contact_name, contact_type; also used by `wbom_escort_programs.contact_id` for client contacts | Created/updated by contact sync; referenced by escort programs |
 | `wbom_attendance` | Physical Entity | Daily attendance: UNIQUE(employee_id, attendance_date); status Present/Absent; check_in/out times | One row per employee per day; created by admin command or daily auto-record |
 | `wbom_employee_requests` | Physical Entity | Leave, advance, grievance requests: request_type, amount, status (pending/approved/rejected) | Created by employee request; resolved by admin; never hard-deleted |
 | `wbom_cases` | Physical Entity | Incident/case records per employee: case_type, description, status (open/closed) | Created by admin on incident; closed when resolved |
 
 ### Cross-Domain Dependencies
 
-- ALL financial domains (PAYROLL, CASH/FPE, ESCORT) use `wbom_employees.employee_id` as person anchor
-- IDENTITY domain resolves phone → employee by querying `wbom_employees` (Step 8 of identity algorithm)
-- FPE has its own `fpe_employees` table; soft-linked to `wbom_employees.employee_id` via phone normalization
+- ALL financial domains (PAYROLL, CASH/FPE, ESCORT) use `fazle_employees_legacy.employee_id` as person anchor
+- IDENTITY domain resolves phone → employee by querying `fazle_employees_legacy` (Step 8 of identity algorithm)
+- FPE has its own `fazle_employees` table; soft-linked to `fazle_employees_legacy.employee_id` via phone normalization
 
 **Source Modules:** Python inline DDL (conftest.py confirmed)
 **Related Articles:** `06_developer_system/identity_brain.md`, `06_developer_system/fpe_overview.md`
@@ -150,13 +210,13 @@ Payroll runs are computed monthly per employee. The `daily_payroll_compute` sche
 | `wbom_payroll_run_items` | Physical Entity | Per-employee line items: component_type, amount, sign (+/-), source_table, source_id | Created with payroll run; immutable after locked |
 | `wbom_payroll_approval_log` | Audit Log | Immutable approval transitions: action, from_status, to_status, actor, reason, payload_json | Append-only; never modified |
 | `wbom_salary_records` | Physical Entity | Historical salary records per month: salary_month, amount, status, payment_date | Created on payroll completion; persistent salary history |
-| `wbom_staging_payments` | Staging | Pre-confirmation staging for WhatsApp-parsed payments: extracted_name, extracted_mobile, amount, matched_employee_id (FK), status (pending/approved/rejected), idempotency_key | Temporary; consumed when approved → becomes `fpe_cash_transactions` via `create_transaction()`. `fpe_staging_payments` does NOT exist — this is the only staging table (U-03 resolved 2026-06-23). |
+| `wbom_staging_payments` | Staging | Pre-confirmation staging for WhatsApp-parsed payments: extracted_name, extracted_mobile, amount, matched_employee_id (FK), status (pending/approved/rejected), idempotency_key | Temporary; consumed when approved → becomes `fazle_cash_transactions` via `create_transaction()`. `fpe_staging_payments` does NOT exist — this is the only staging table (U-03 resolved 2026-06-23). |
 
 ### Cross-Domain Dependencies
 
-- `wbom_payroll_runs.employee_id → wbom_employees` (EMPLOYEE domain)
+- `wbom_payroll_runs.employee_id → fazle_employees_legacy` (EMPLOYEE domain)
 - `wbom_payroll_run_items.source_table=escort_roster_entries` (ESCORT domain soft-reference)
-- `wbom_payroll_run_items.source_table=fpe_cash_transactions` (CASH/FPE domain soft-reference)
+- `wbom_payroll_run_items.source_table=fazle_cash_transactions` (CASH/FPE domain soft-reference)
 
 **Source Modules:** Python inline DDL (conftest.py confirmed), `modules/payroll_logic/__init__.py`
 **Related Articles:** `04_business_rules/payroll_rules.md`, `06_developer_system/fpe_overview.md`
@@ -177,12 +237,14 @@ The FPE subsystem has 5 asyncio workers (all ACTIVE — see `fpe_overview.md`). 
 
 **Zero-Loss Invariant:** Any message that cannot be matched to an employee goes into `fpe_unmatched_messages` — a zero-loss review queue that an admin must clear. Messages are NEVER silently dropped. Every accounting action is recorded in `fpe_accounting_audit_logs` (immutable).
 
-The FPE maintains its own employee directory (`fpe_employees`) separate from the HR master (`wbom_employees`). After migration 008, these are soft-linked: `fpe_employees.wbom_employee_id → wbom_employees.employee_id` (nullable FK matched via phone last-10 normalization).
+The FPE maintains its own employee directory (`fazle_employees`) separate from the HR master (`fazle_employees_legacy`). After migration 008, these are soft-linked: `fazle_employees.wbom_employee_id → fazle_employees_legacy.employee_id` (nullable FK matched via phone last-10 normalization).
+
+**Status casing differs by table — do not assume one convention across both:** `fazle_employees_legacy.status` is Title-case (`Active`/`Inactive`); `fazle_employees.status` is lowercase (`active`/`inactive`). Any query comparing across both (e.g. `modules/fazle_payroll_engine/employee.py`'s WBOM cross-lookup) must compare case-insensitively (`LOWER(status)`) when checking `fazle_employees_legacy`, and can compare lowercase directly against `fazle_employees`. A 2026-07-15 fix corrected exactly this: a case-sensitive `!= 'inactive'` literal against `fazle_employees_legacy.status` was a permanent no-op (Postgres text comparison is case-sensitive, so `'Inactive' != 'inactive'` was always true), meaning Inactive WBOM employees were never actually excluded from that lookup.
 
 **Payment Draft Lifecycle (cross-domain):**
-Escort program completion → `fazle_payment_drafts` created (ST) → admin approves → `fpe_cash_transactions` written via `create_transaction()` + `escort_roster_entries` status updated.
+Escort program completion → `fazle_payment_drafts` created (ST) → admin approves → `fazle_cash_transactions` written via `create_transaction()` + `escort_roster_entries` status updated.
 
-**Immutable Ledger Rule:** `fpe_cash_transactions` and `fpe_income_transactions` are NEVER modified after INSERT (financial columns). Corrections use counter-rows: a new reversal row references the original via `reversed_txn_id` self-FK. `wbom_cash_transactions` is legacy archive only (Owner Directive 2026-06-29).
+**Immutable Ledger Rule:** `fazle_cash_transactions` and `fpe_income_transactions` are NEVER modified after INSERT (financial columns). Corrections use counter-rows: a new reversal row references the original via `reversed_txn_id` self-FK. `fazle_cash_transactions_archive` is legacy archive only (Owner Directive 2026-06-29).
 
 ### Tables
 
@@ -191,13 +253,13 @@ Escort program completion → `fazle_payment_drafts` created (ST) → admin appr
 | `fpe_wa_messages` | Physical Entity | Immutable raw WhatsApp messages; source of truth for all FPE processing | Created on ingest; never modified |
 | `fpe_message_processing_state` | Physical Entity | Per-message FSM: processing_status, worker assignment, error_count | Created on first FPE contact; mutated during processing; terminal on done/skipped/failed |
 | `fpe_parser_results` | Physical Entity | Parser output per message: parsed amounts, employee name, confidence | Created when parser succeeds; persistent |
-| `fpe_employees` | Physical Entity | FPE-specific employee directory: primary_phone, display_name, `wbom_employee_id` (nullable soft-link) | Created on first message from new sender; never hard-deleted |
+| `fazle_employees` | Physical Entity | FPE-specific employee directory: primary_phone, display_name, `wbom_employee_id` (nullable soft-link) | Created on first message from new sender; never hard-deleted |
 | `fpe_employee_aliases` | Physical Entity | Multi-phone and name aliases per FPE employee; supports name variations and secondary numbers | Created on alias detection; persistent |
 | `fpe_employee_resolution_links` | Audit Log | Canonical merge tracking: records when two FPE employees are merged; immutable once created | Append-only |
 | `fpe_employee_review_queue` | Runtime Queue | Merge candidates awaiting admin decision; populated when normalization produces ambiguous match | Consumed when admin resolves; row updated to resolved |
-| `fpe_cash_transactions` | Audit Log | Immutable verified transaction ledger: amount, employee, date, payment_method, idempotency | INSERT-only; corrections via counter-row with `reversal_of` FK |
+| `fazle_cash_transactions` | Audit Log | Immutable verified transaction ledger: amount, employee, date, payment_method, idempotency | INSERT-only; corrections via counter-row with `reversal_of` FK |
 | `fpe_income_transactions` | Audit Log | Immutable income (client payment received) ledger | INSERT-only |
-| `fpe_employee_ledger` | Physical Entity | Running totals per employee per month: total_received, total_advances, net | Recalculated but persisted; updated on each new transaction |
+| `fazle_employee_ledger` | Physical Entity | Running totals per employee per month: total_received, total_advances, net | Recalculated but persisted; updated on each new transaction |
 | `fpe_unmatched_messages` | Runtime Queue | Zero-loss review queue: messages that could not be matched to any FPE employee | Created when match fails; consumed when admin resolves |
 | `fpe_accounting_audit_logs` | Audit Log | Immutable accounting audit trail: every accounting action recorded with actor and result | Append-only |
 | `fpe_sync_checkpoints` | Infrastructure | Bridge sync progress: last synced timestamp per bridge JID | Updated by sync workers; drives incremental sync |
@@ -206,18 +268,18 @@ Escort program completion → `fazle_payment_drafts` created (ST) → admin appr
 | `fpe_processing_diagnostics` | Audit Log | Processing latency and outcome per message: duration_ms, success/fail | Append-only; operational monitoring |
 | `fpe_review_audit_logs` | Audit Log | Admin promote/dismiss action log on `fpe_employee_review_queue` | Append-only |
 | `fpe_transaction_repairs` | Audit Log | Repair records for manually corrected FPE transactions | **U-02: Unresolved — table created by standalone repair script; production existence unconfirmed** |
-| `fpe_cash_transactions` | Physical Entity | **Canonical** cash transaction record (Owner Directive 2026-06-29): employee_id FK, program_id, amount, payout_phone, txn_category, source, transaction_status, approval_status; `reversed_txn_id` self-FK for counter-row corrections; `deleted_at`/`deleted_by` for soft-delete | Created on payment via `create_transaction()`; corrections via new reversal row |
-| `wbom_cash_transactions` | Legacy Archive | Historical cash transaction record (pre-2026-06-29). No new rows written. Data migrated to `fpe_cash_transactions` via `wbom_fpe_sync.py` with `legacy_wbom_transaction_id` preserving traceability. | Read-only archive |
-| `fazle_payment_drafts` | Staging | Payment drafts pending admin approval: draft_type (escort_payment\|advance\|salary), all financial fields, correction chain via `correction_of` self-FK | Created by payment workflow; consumed when approved → produces `fpe_cash_transactions` via `create_transaction()` |
+| `fazle_cash_transactions` | Physical Entity | **Canonical** cash transaction record (Owner Directive 2026-06-29): employee_id FK, program_id, amount, payout_phone, txn_category, source, transaction_status, approval_status; `reversed_txn_id` self-FK for counter-row corrections; `deleted_at`/`deleted_by` for soft-delete | Created on payment via `create_transaction()`; corrections via new reversal row |
+| `fazle_cash_transactions_archive` | Legacy Archive | Historical cash transaction record (pre-2026-06-29). No new rows written. Data migrated to `fazle_cash_transactions` via `wbom_fpe_sync.py` with `legacy_wbom_transaction_id` preserving traceability. | Read-only archive |
+| `fazle_payment_drafts` | Staging | Payment drafts pending admin approval: draft_type (escort_payment\|advance\|salary), all financial fields, correction chain via `correction_of` self-FK | Created by payment workflow; consumed when approved → produces `fazle_cash_transactions` via `create_transaction()` |
 | `fazle_payment_correction_log` | Audit Log | Payment corrections: immutable; links payment_draft_id, original transaction, counter-transaction | Append-only |
 
 ### Cross-Domain Dependencies
 
-- `fpe_employees.wbom_employee_id → wbom_employees` (EMPLOYEE domain soft-link via phone normalization)
+- `fazle_employees.wbom_employee_id → fazle_employees_legacy` (EMPLOYEE domain soft-link via phone normalization)
 - `fazle_payment_drafts.escort_program_id → wbom_escort_programs` (ESCORT domain)
 - `fazle_payment_drafts.escort_roster_entry_id → escort_roster_entries` (ESCORT domain soft-link)
 - `fpe_wa_messages` ← `fazle_message_queue` (MESSAGING domain — FPE pulls from central queue)
-- `fpe_cash_transactions` referenced by PAYROLL `wbom_payroll_run_items` (soft-reference via source_table/source_id)
+- `fazle_cash_transactions` referenced by PAYROLL `wbom_payroll_run_items` (soft-reference via source_table/source_id)
 
 **Source Modules:** `modules/fazle_payroll_engine/`, `tools/repair_fpe_transactions.py`
 **Migration Files:** `fazle_payroll_engine/migrations/001–009`
@@ -270,7 +332,7 @@ The recruitment session is the temporary state machine for data collection. The 
 
 ### Business Behavior
 
-The identity brain runs an 11-step priority algorithm on every inbound message (see `identity_brain.md`). Steps 1–9 read from `fazle_contact_roles`. Step 8 (employee) also queries `wbom_employees` with three phone variants. The resolved role is stamped onto `wbom_whatsapp_messages.identity_role` and carried through the routing pipeline.
+The identity brain runs an 11-step priority algorithm on every inbound message (see `identity_brain.md`). Steps 1–9 read from `fazle_contact_roles`. Step 8 (employee) also queries `fazle_employees_legacy` with three phone variants. The resolved role is stamped onto `fazle_whatsapp_messages.identity_role` and carried through the routing pipeline.
 
 `fazle_contact_roles` contains 23 seeded production phone→role rows (5 Supervisors, 3 Escort Buyers, 1 Accountant, 2 Family, 1 Vendor, 2 VIP Clients, 8 Repeat Clients). These are seeded in migration 004 and are Restricted (never expose specific phone numbers or role assignments to AI).
 
@@ -291,11 +353,11 @@ Admin accounts in `fazle_admins` have `api_key_hash` (SHA-256) stored — never 
 
 ### Cross-Domain Dependencies
 
-- `fazle_contact_roles` → MESSAGING: every `wbom_whatsapp_messages` row gets `identity_role` stamped from this table
+- `fazle_contact_roles` → MESSAGING: every `fazle_whatsapp_messages` row gets `identity_role` stamped from this table
 - `fazle_admins` → MESSAGING: admin command processing reads this table to validate admin identity
 - `fazle_unified_contacts` ← contact_sync (pulls from bridge1, bridge2, meta contacts via `fazle_contact_aliases`)
 
-**Source Modules:** `modules/identity_brain/`, `modules/contact_sync/__init__.py`, `db/migrations/004_identity_brain.sql`, `db/migrations/006_critical_contact_zero_loss.sql`
+**Source Modules:** `modules/fazle_identity_brain/`, `modules/contact_sync/__init__.py`, `db/migrations/004_identity_brain.sql`, `db/migrations/006_critical_contact_zero_loss.sql`
 **Related Articles:** `06_developer_system/identity_brain.md`, `06_developer_system/role_permissions.md`
 
 ---
@@ -310,7 +372,7 @@ Admin accounts in `fazle_admins` have `api_key_hash` (SHA-256) stored — never 
 
 ### Business Behavior
 
-All inbound WhatsApp messages are deduplicated via `message_hash` UNIQUE on `wbom_whatsapp_messages` before any routing occurs. The central message queue (`fazle_message_queue`) receives all messages with an `idempotency_key` guard — preventing double-enqueue across bridge restarts.
+All inbound WhatsApp messages are deduplicated via `message_hash` UNIQUE on `fazle_whatsapp_messages` before any routing occurs. The central message queue (`fazle_message_queue`) receives all messages with an `idempotency_key` guard — preventing double-enqueue across bridge restarts.
 
 Outbound messages go through `fazle_outbound_queue` (RQ) with status pending → sending → sent | failed → dlq. Exponential backoff governs retry timing. The DLQ alert job fires every 15 minutes if actionable DLQ > 0.
 
@@ -324,7 +386,7 @@ The `outbound_safety_incidents` table records every safety block (prompt injecti
 
 | Table | Type | Key Behavior | Lifecycle |
 |---|---|---|---|
-| `wbom_whatsapp_messages` | Physical Entity | Inbound WhatsApp message log: sender_number, message_body, direction, platform, `message_hash` UNIQUE (dedup), `identity_role` (stamped by identity brain), `critical_contact` flag | Created on ingest; never hard-deleted; altered 4 times in migrations |
+| `fazle_whatsapp_messages` | Physical Entity | Inbound WhatsApp message log: sender_number, message_body, direction, platform, `message_hash` UNIQUE (dedup), `identity_role` (stamped by identity brain), `critical_contact` flag | Created on ingest; never hard-deleted; altered 4 times in migrations |
 | `fazle_outbound_queue` | Runtime Queue | Outbound message queue: recipient, body, status (pending→sent→failed→dlq), `idempotency_key` UNIQUE, attempts, max_attempts, next_retry_at | Created on enqueue; consumed when sent; dlq rows retained for investigation |
 | `fazle_draft_replies` | Runtime Queue | Admin-pending outbound messages: draft_type, meta JSONB, status (pending→approved→rejected); `reviewed_reply_id` FK for pre-approved reply re-use | Created by AI when message meets draft criteria; consumed by admin review |
 | `fazle_reviewed_replies` | Physical Entity | Admin-reviewed reply store: intent, role, match_scope, reply_text, usage_count, last_used_at; drives conservative reply re-use across similar intents | Created from approved draft; persistent; usage_count incremented on re-use |
@@ -344,7 +406,7 @@ The `outbound_safety_incidents` table records every safety block (prompt injecti
 - `llm_learning_memory.draft_id → fazle_draft_replies` (AI domain learns from reviewed drafts)
 - `fazle_reviewed_replies` → AI: `fazle_reviewed_reply_memory` distills reviewed replies for learning
 
-**Source Modules:** `modules/bridge_poller/__init__.py`, `modules/outbound/`, `modules/wa_chat_frontend/__init__.py`, `fazle_payroll_engine/migrations/009_stabilization.sql`
+**Source Modules:** `modules/fazle_bridge_poller/__init__.py`, `modules/outbound/`, `modules/wa_chat_frontend/__init__.py`, `fazle_payroll_engine/migrations/009_stabilization.sql`
 **Migration Files:** `db/migrations/001`, `007`, `012`, `018`, `019`, FPE migrations `008`, `009`
 **Related Articles:** `06_developer_system/automation_pipeline.md`, `06_developer_system/security_rules.md`
 
@@ -360,7 +422,7 @@ The `outbound_safety_incidents` table records every safety block (prompt injecti
 
 ### Business Behavior
 
-The social auto-reply system is a standalone asyncio daemon with its own 8-table database schema (all created in migration 013). It does NOT use `fazle_message_queue` or `wbom_whatsapp_messages`. All social events have their own ingestion (`social_inbox_events`), queue (`social_reply_queue`), retry (`social_retry_queue`), and audit (`social_sent_log`) tables.
+The social auto-reply system is a standalone asyncio daemon with its own 8-table database schema (all created in migration 013). It does NOT use `fazle_message_queue` or `fazle_whatsapp_messages`. All social events have their own ingestion (`social_inbox_events`), queue (`social_reply_queue`), retry (`social_retry_queue`), and audit (`social_sent_log`) tables.
 
 Rate limiting is per-channel: 30–45 second random delay between replies. Failed replies use exponential backoff (`2^attempts` minutes). Intent risk classification determines routing: 15 safe intents → auto-reply, 16 risky intents → flagged, 3 escalation intents → flagged + admin alert.
 
@@ -423,7 +485,7 @@ The learning loop: LLM generates reply → `llm_learning_memory` row created →
 - `fazle_knowledge_base` → MESSAGING + SOCIAL: both channels query this table for RAG retrieval
 - `llm_learning_memory.draft_id → fazle_draft_replies` (MESSAGING domain traceability)
 - `user_profiles.phone_canonical` is referenced by `user_memory.phone_canonical` (internal FK)
-- Memory extractor job reads `wbom_whatsapp_messages` (MESSAGING domain) to extract facts for `user_memory`
+- Memory extractor job reads `fazle_whatsapp_messages` (MESSAGING domain) to extract facts for `user_memory`
 
 **Source Modules:** `modules/rag/__init__.py`, `app/llm.py`, `modules/memory_extractor/`, `modules/kb_upload/`
 **Migration Files:** `db/migrations/002`, `014`, `015`, `016`, `017`
@@ -473,11 +535,11 @@ The learning loop: LLM generates reply → `llm_learning_memory` row created →
 
 | Relationship | Direction | Mechanism |
 |---|---|---|
-| Identity stamps every inbound message | IDENTITY → MESSAGING | `fazle_contact_roles.phone → wbom_whatsapp_messages.identity_role` |
-| HR master is person anchor for all financial domains | EMPLOYEE → PAYROLL/CASH/ESCORT | `wbom_employees.employee_id` FK |
-| FPE soft-links its employee to HR master | CASH/FPE ↔ EMPLOYEE | `fpe_employees.wbom_employee_id` (nullable, phone-matched) |
+| Identity stamps every inbound message | IDENTITY → MESSAGING | `fazle_contact_roles.phone → fazle_whatsapp_messages.identity_role` |
+| HR master is person anchor for all financial domains | EMPLOYEE → PAYROLL/CASH/ESCORT | `fazle_employees_legacy.employee_id` FK |
+| FPE soft-links its employee to HR master | CASH/FPE ↔ EMPLOYEE | `fazle_employees.wbom_employee_id` (nullable, phone-matched) |
 | Escort completion triggers payment draft | ESCORT → CASH/FPE | `fazle_payment_drafts.escort_program_id → wbom_escort_programs` |
-| Payment draft approval creates transaction | CASH/FPE → CASH/FPE | `fazle_payment_drafts` → `fpe_cash_transactions` on approve via `create_transaction()` |
+| Payment draft approval creates transaction | CASH/FPE → CASH/FPE | `fazle_payment_drafts` → `fazle_cash_transactions` on approve via `create_transaction()` |
 | FPE consumes from central message queue | MESSAGING → CASH/FPE | FPE workers poll `fazle_message_queue` |
 | Both channels use same KB for RAG | AI → MESSAGING + SOCIAL | `fazle_knowledge_base` queried by both |
 | AI learns from messaging draft reviews | MESSAGING → AI | `llm_learning_memory.draft_id → fazle_draft_replies` |

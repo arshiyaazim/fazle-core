@@ -122,7 +122,7 @@ class ReasoningEvidence:
 
 @dataclass
 class HistoryEntry:
-    """Read-only interpretation view of a single wbom_whatsapp_messages
+    """Read-only interpretation view of a single fazle_whatsapp_messages
     row. Built by modules.conversation_canonical.canonical_history.
 
     Phase C directive correction 5: this is an *interpretation* layer.

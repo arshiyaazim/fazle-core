@@ -2,7 +2,7 @@
 
 2026-08-18 (HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md):
 new thin, read-only routes exposing the existing identity_brain.detect_identity()
-and modules.intent.classify() to Hermes via fazle-mcp. Follows the same
+and modules.fazle_intent.classify() to Hermes via fazle-mcp. Follows the same
 httpx.AsyncClient + ASGITransport pattern as tests/unit/test_admin_directives_routes.py.
 No new classification logic -- these tests only prove the routes wire through
 correctly and that bkash_number/basic_salary are stripped from the identity
@@ -56,7 +56,7 @@ class TestResolveIdentity:
             "identity_lifecycle": "active",
         }
         mock_detect = AsyncMock(return_value=fake_identity)
-        with patch("modules.identity_brain.detect_identity", new=mock_detect):
+        with patch("modules.fazle_identity_brain.detect_identity", new=mock_detect):
             async with await _client() as ac:
                 response = await ac.get(
                     "/api/identity/resolve",
@@ -76,7 +76,7 @@ class TestResolveIdentity:
 
     async def test_text_param_optional(self, auth_headers):
         mock_detect = AsyncMock(return_value={"role": "unknown", "identity_role": "unknown"})
-        with patch("modules.identity_brain.detect_identity", new=mock_detect):
+        with patch("modules.fazle_identity_brain.detect_identity", new=mock_detect):
             async with await _client() as ac:
                 response = await ac.get(
                     "/api/identity/resolve",

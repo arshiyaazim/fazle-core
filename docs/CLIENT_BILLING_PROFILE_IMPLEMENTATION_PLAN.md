@@ -16,7 +16,7 @@ Profit = Client Bill − Employee Wage − VAT/Tax/Other Charges
 
 1. **`ESCORT_CLIENT_PHONES` is the exact `.env` variable the Owner means by "escort/client-related authorized numbers."** Confirmed via its own in-file comment: `# Phones allowed to submit escort client orders`. It already has a live, working management API — `modules/escort_roster/routes.py`'s `GET/POST/DELETE /escort-clients` — backed by `app.config.update_repo_env_value()` (rewrites `.env` in place, clears cached settings) and a `_normalize_client_phone()`/`_escort_client_phone_list()` helper pair. **This plan reuses these existing functions rather than re-implementing phone validation** — the new Client Settings feature does not add numbers to this list itself; it only validates that a submitted Contact Person Mobile is already a member of it, exactly as instructed ("if the number is not present... reject it").
 2. `payroll.html` already has a hidden, role-gated **Admin tab** (`data-tab="admin"`, `admin-only-nav` class) with an existing "Admin Console" section (user add/list) — the natural, already-established place to add a "Client Settings" submenu, matching the Owner's instruction to nest it there.
-3. `wbom_contacts` + `relation_type_id` (Phase 2A) remains the identity layer for "a WhatsApp-known client contact." The new client billing entity is a different, richer concept (a client *company*, with commercial terms) — per the Owner's explicit preference for a separate table, this plan does **not** extend `wbom_contacts`.
+3. `fazle_contacts` + `relation_type_id` (Phase 2A) remains the identity layer for "a WhatsApp-known client contact." The new client billing entity is a different, richer concept (a client *company*, with commercial terms) — per the Owner's explicit preference for a separate table, this plan does **not** extend `fazle_contacts`.
 
 ---
 
@@ -29,7 +29,7 @@ Profit = Client Bill − Employee Wage − VAT/Tax/Other Charges
    Profit      = Client Bill − Deployed Employee Wage − VAT − Tax − Other Charges
    ```
 3. **Charge type:** flat amount only for VAT, Tax, and Other Charges in this phase. Percentage support is a documented **later enhancement**, not built now (no unused percentage columns added speculatively).
-4. **Link to `wbom_contacts`:** **required** — `wbom_client_billing_profiles.contact_id` is a nullable FK to `wbom_contacts.contact_id`. Populated when resolvable; old/legacy records may remain nullable (no forced backfill). This is a hard requirement, not a recommendation — the Owner was explicit: "Do not create a disconnected client system." `.env` `ESCORT_CLIENT_PHONES` remains the mandatory authority for Contact Person Mobile; this feature reads it, never writes to it.
+4. **Link to `fazle_contacts`:** **required** — `wbom_client_billing_profiles.contact_id` is a nullable FK to `fazle_contacts.contact_id`. Populated when resolvable; old/legacy records may remain nullable (no forced backfill). This is a hard requirement, not a recommendation — the Owner was explicit: "Do not create a disconnected client system." `.env` `ESCORT_CLIENT_PHONES` remains the mandatory authority for Contact Person Mobile; this feature reads it, never writes to it.
 
 **Resolved by implementation (2026-07-09):** Hard delete vs. soft delete — implemented and verified as soft-delete (`is_active=false`), reversible.
 
@@ -65,7 +65,7 @@ CREATE TABLE wbom_client_billing_profiles (
     other_charges                NUMERIC(12,2) DEFAULT 0, -- flat amount
     notes                       TEXT,
     is_active                   BOOLEAN NOT NULL DEFAULT true,
-    contact_id                  INTEGER REFERENCES wbom_contacts(contact_id), -- nullable FK, Owner decision 2026-07-09 #4 (required field, nullable value)
+    contact_id                  INTEGER REFERENCES fazle_contacts(contact_id), -- nullable FK, Owner decision 2026-07-09 #4 (required field, nullable value)
     created_at                  TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at                  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -77,7 +77,7 @@ CREATE UNIQUE INDEX idx_client_billing_profiles_contact_mobile ON wbom_client_bi
 
 **Future enhancement, documented not built:** percentage-based VAT/Tax (Owner decision #3 explicitly deferred this). When needed, the natural extension is adding `vat_is_percentage BOOLEAN DEFAULT false` / `tax_is_percentage BOOLEAN DEFAULT false` flags next to the existing flat-amount columns, so the application layer can interpret the stored number as either a flat charge or a percentage of `general_rate` depending on the flag — additive, no breaking change to this migration.
 
-**Important, disclosed interpretation:** `employee_wage_24h/12h/monthly` are for the **profit-estimation calculation on this table only** — per the Owner's own "Do not touch payroll formula" rule, these fields must never feed into, override, or be read by `modules/payroll`, `modules/payment_workflow`, or any actual guard-payment calculation. They exist so the Client Settings screen can show an estimated profit margin per client; the real payroll formula question (`docs/PRODUCTION_CERTIFICATION_v1.0.md` Finance Status) remains completely separate and unresolved, as instructed.
+**Important, disclosed interpretation:** `employee_wage_24h/12h/monthly` are for the **profit-estimation calculation on this table only** — per the Owner's own "Do not touch payroll formula" rule, these fields must never feed into, override, or be read by `modules/payroll`, `modules/fazle_payment_workflow`, or any actual guard-payment calculation. They exist so the Client Settings screen can show an estimated profit margin per client; the real payroll formula question (`docs/PRODUCTION_CERTIFICATION_v1.0.md` Finance Status) remains completely separate and unresolved, as instructed.
 
 **Profit formula (Owner decision #2), computed at read/display time, not stored as a column** (storing a derived value risks it silently going stale if a rate changes — compute it live from the source columns instead):
 ```
@@ -93,7 +93,7 @@ profit_estimate(duty_type) =
 
 **Unique constraint on `contact_person_mobile`:** one client company per authorized phone number — prevents the same authorized number being silently assigned to two different client profiles, which would make inbound-message-to-client-program linking ambiguous.
 
-**No backfill.** Per "do not auto-backfill old clients" — this table starts empty; existing escort programs and `wbom_contacts` rows are not retroactively linked.
+**No backfill.** Per "do not auto-backfill old clients" — this table starts empty; existing escort programs and `fazle_contacts` rows are not retroactively linked.
 
 ---
 

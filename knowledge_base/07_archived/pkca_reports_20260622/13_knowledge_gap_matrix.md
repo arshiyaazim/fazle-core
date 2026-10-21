@@ -93,7 +93,7 @@ Each row = one gap unit of undocumented production knowledge.
 |---|---|---|---|---|---|
 | GAP-PAY-01 | Payroll state machine: 6 states, 5 transitions, ALLOWED_TRANSITIONS table | `modules/payroll.ALLOWED_TRANSITIONS` | `05_workflows/salary_workflow.md` | `salary_workflow.md` § State Machine | P1 |
 | GAP-PAY-02 | Payroll idempotency: UNIQUE(employee_id, period_year, period_month) WHERE status != 'cancelled' | `modules/payroll.compute_run` | `06_developer_system/database_rules.md` | `database_rules.md` § Idempotency | P2 |
-| GAP-PAY-03 | PAYROLL COMPUTE/SUBMIT/APPROVE/LOCK/PAID/CANCEL commands + required roles | `modules/admin_commands` | `02_admin_knowledge/admin_operations_overview.md` | `admin_operations_overview.md` § Payroll Cmds | P1 |
+| GAP-PAY-03 | PAYROLL COMPUTE/SUBMIT/APPROVE/LOCK/PAID/CANCEL commands + required roles | `modules/fazle_admin_commands` | `02_admin_knowledge/admin_operations_overview.md` | `admin_operations_overview.md` § Payroll Cmds | P1 |
 | GAP-PAY-04 | FPE workers: 5 background workers, their names, responsibilities | `modules/fazle_payroll_engine/workers.py` | None | NEW: `06_developer_system/fpe_overview.md` | P2 |
 | GAP-PAY-05 | FPE processing state machine: pending→parsing→parsed→accounting→done/failed/skipped | `modules/fazle_payroll_engine/models.py` | None | NEW: `06_developer_system/fpe_overview.md` | P2 |
 
@@ -132,7 +132,7 @@ Each row = one gap unit of undocumented production knowledge.
 |---|---|---|---|---|---|
 | GAP-SCHED-01 | Complete 15-job schedule (all job names, cron times, purposes) | `modules/scheduler` | `06_developer_system/automation_pipeline.md` | `automation_pipeline.md` § Scheduler | P1 |
 | GAP-SCHED-02 | Scheduler timezone: Asia/Dhaka; env override: SCHEDULER_TIMEZONE | `modules/scheduler` | `06_developer_system/automation_pipeline.md` | `automation_pipeline.md` § Scheduler | P2 |
-| GAP-SCHED-03 | SCHEDULE STATUS and RUN JOB commands | `modules/admin_commands` | `02_admin_knowledge/admin_operations_overview.md` | `admin_operations_overview.md` § Scheduler Cmds | P2 |
+| GAP-SCHED-03 | SCHEDULE STATUS and RUN JOB commands | `modules/fazle_admin_commands` | `02_admin_knowledge/admin_operations_overview.md` | `admin_operations_overview.md` § Scheduler Cmds | P2 |
 
 ---
 

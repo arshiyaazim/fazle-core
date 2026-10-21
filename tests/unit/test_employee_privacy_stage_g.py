@@ -53,7 +53,7 @@ class TestOwnPayrollSummary:
 
     async def test_unresolved_identity_returns_error_not_data(self):
         from modules.employee_privacy import get_own_payroll_summary
-        with patch("modules.identity_brain._lookup_employee", new=AsyncMock(return_value=None)):
+        with patch("modules.fazle_identity_brain._lookup_employee", new=AsyncMock(return_value=None)):
             result = await get_own_payroll_summary("8801799999999")
         assert result["ok"] is False
         assert "basic_salary" not in result
@@ -64,7 +64,7 @@ class TestOwnPayrollSummary:
             "employee_id": 42, "employee_name": "Karim", "designation": "Guard",
             "basic_salary": 15000, "status": "Active",
         }
-        with patch("modules.identity_brain._lookup_employee", new=AsyncMock(return_value=emp_row)):
+        with patch("modules.fazle_identity_brain._lookup_employee", new=AsyncMock(return_value=emp_row)):
             result = await get_own_payroll_summary("8801700000042")
         assert result["ok"] is True
         assert result["employee_id"] == 42
@@ -85,11 +85,11 @@ class TestResolveRequesterEmployeeId:
         """Structural proof this delegates to the existing, already-proven
         identity_brain._lookup_employee(phone) -- never re-derives
         identity resolution independently."""
-        with patch("modules.identity_brain._lookup_employee", new=AsyncMock(return_value={"employee_id": 7})):
+        with patch("modules.fazle_identity_brain._lookup_employee", new=AsyncMock(return_value={"employee_id": 7})):
             result = await resolve_requester_employee_id("8801700000000")
         assert result == 7
 
     async def test_no_match_returns_none(self):
-        with patch("modules.identity_brain._lookup_employee", new=AsyncMock(return_value=None)):
+        with patch("modules.fazle_identity_brain._lookup_employee", new=AsyncMock(return_value=None)):
             result = await resolve_requester_employee_id("8801700000000")
         assert result is None

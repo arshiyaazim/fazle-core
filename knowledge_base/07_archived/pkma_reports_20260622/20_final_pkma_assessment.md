@@ -8,6 +8,9 @@ runtime_index: false
 
 # PKMA Report 20 — Final Assessment
 
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **Program:** Production Knowledge Maturity Assessment (PKMA) v1.0
 **Date:** 2026-06-22
 **Auditor Role:** Enterprise Knowledge Governance Auditor

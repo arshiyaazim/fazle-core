@@ -5,7 +5,7 @@ Owner's stated concern: "the Super Admin's bridge, current Hermes relay
 bridge, or a default bridge" must never override a candidate's own
 source_bridge for an automated reply. Live investigation (2026-08-21)
 found the actual automated customer-reply/admin-Hermes-reply pipeline in
-modules.bridge_poller already does this correctly -- every inbound-to-
+modules.fazle_bridge_poller already does this correctly -- every inbound-to-
 outbound enqueue call uses source_bridge=bridge_name (the bridge THIS
 message arrived on), never a fixed/admin/default bridge. These tests lock
 that in with source-inspection (matching the existing convention in
@@ -29,7 +29,7 @@ pytestmark = pytest.mark.unit
 
 class TestCustomerReplyBridgeAffinity:
     def test_customer_reply_enqueue_uses_the_inbound_bridge_name(self):
-        import modules.bridge_poller as bp
+        import modules.fazle_bridge_poller as bp
         source = inspect.getsource(bp)
         # The customer-reply enqueue_outbound() call must pass
         # source_bridge=bridge_name (the variable holding whichever bridge
@@ -40,7 +40,7 @@ class TestCustomerReplyBridgeAffinity:
         assert "source_bridge=bridge_name" in block
 
     def test_admin_hermes_reply_enqueue_also_uses_the_inbound_bridge_name(self):
-        import modules.bridge_poller as bp
+        import modules.fazle_bridge_poller as bp
         source = inspect.getsource(bp)
         i = source.index('purpose=f"admin-hermes-reply:{msg_intent')
         block = source[max(0, i - 400):i]
@@ -51,14 +51,14 @@ class TestCustomerReplyBridgeAffinity:
         bridge2 fallback swap -- a failed bridge3 send must stay a bridge3
         failure (queued/failed/dlq), never silently retry via a different
         WhatsApp number the candidate never messaged."""
-        import modules.bridge_poller as bp
+        import modules.fazle_bridge_poller as bp
         source = inspect.getsource(bp)
         i = source.index('fallback = {"bridge1": "bridge2", "bridge2": "bridge1"}')
         line = source[i:source.index("\n", i)]
         assert '"bridge3"' not in line
 
     def test_recruitment_intent_never_gets_a_fallback_bridge(self):
-        import modules.bridge_poller as bp
+        import modules.fazle_bridge_poller as bp
         source = inspect.getsource(bp)
         i = source.index('fallback = {"bridge1": "bridge2", "bridge2": "bridge1"}')
         block = source[max(0, i - 600):i]
@@ -72,7 +72,7 @@ class TestCrossBridgeLoopGuardStillIntact:
     inbound bridge must never be achieved by weakening this guard."""
 
     def test_loop_guard_diverts_to_draft_not_auto_send(self):
-        import modules.bridge_poller as bp
+        import modules.fazle_bridge_poller as bp
         source = inspect.getsource(bp)
         i = source.index("LOOP_GUARD: admin reply recipient")
         block = source[i:i + 400]

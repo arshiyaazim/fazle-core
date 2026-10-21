@@ -126,7 +126,7 @@ flag was changed.
 | `bridge3.quarantine_until` | unset (only set immediately before an approved pairing) |
 | `bridge_poller_cursor[bridge3]` | `2026-09-01 21:12:23Z` — unchanged |
 | `fazle_outbound_queue` bridge3 non-terminal rows | **0** — no queue flushed |
-| `wbom_whatsapp_messages` platform=bridge3 since the restart | **0** new rows |
+| `fazle_whatsapp_messages` platform=bridge3 since the restart | **0** new rows |
 | `/home/azim/whatsapp3/store/*.db` mtime | frozen at the 2026-09-02 00:01 incident time — nothing writing |
 | `whatsmeow_device` rows | **0** — still logged out |
 | QR generated / message sent | **none** |

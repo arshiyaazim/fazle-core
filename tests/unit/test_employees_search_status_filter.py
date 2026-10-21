@@ -20,7 +20,7 @@ class TestEmployeesSearchActiveStatusConsistency:
     async def test_inactive_employee_not_returned_via_exact_name(self, clean_tables, test_db_pool, client):
         async with test_db_pool.acquire() as conn:
             await conn.execute("""
-                INSERT INTO fpe_employees (full_name, name_normalized, primary_phone, status)
+                INSERT INTO fazle_employees (full_name, name_normalized, primary_phone, status)
                 VALUES ('Former Employee', 'former employee', '01899999999', 'inactive')
             """)
         resp = await client.get(
@@ -32,7 +32,7 @@ class TestEmployeesSearchActiveStatusConsistency:
     async def test_inactive_employee_not_returned_via_alias_name(self, clean_tables, test_db_pool, client):
         async with test_db_pool.acquire() as conn:
             row = await conn.fetchrow("""
-                INSERT INTO fpe_employees (full_name, name_normalized, primary_phone, status)
+                INSERT INTO fazle_employees (full_name, name_normalized, primary_phone, status)
                 VALUES ('Former Employee', 'former employee', '01899999998', 'inactive')
                 RETURNING id
             """)
@@ -51,7 +51,7 @@ class TestEmployeesSearchActiveStatusConsistency:
         """Regression: the happy path must be unaffected by the fix."""
         async with test_db_pool.acquire() as conn:
             await conn.execute("""
-                INSERT INTO fpe_employees (full_name, name_normalized, primary_phone, status)
+                INSERT INTO fazle_employees (full_name, name_normalized, primary_phone, status)
                 VALUES ('Current Employee', 'current employee', '01899999997', 'active')
             """)
         resp = await client.get(

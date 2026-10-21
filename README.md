@@ -25,8 +25,8 @@ model weights, or other separately operated services.
   sender identity, and routes work to recruitment, escort, payment, attendance,
   and admin workflows.
 - Supports the Fazle Payroll Engine (FPE), employee lookup, payment and income
-  tracking, reconciliation, and review queues. `fpe_cash_transactions` is the
-  canonical cash ledger; `wbom_cash_transactions` is legacy and must not receive
+  tracking, reconciliation, and review queues. `fazle_cash_transactions` is the
+  canonical cash ledger; `fazle_cash_transactions_archive` is legacy and must not receive
   new writes.
 - Provides escort intake, roster and dispatch-related views, slip review,
   payment drafts, and client-billing profile/payment-tracking workflows.
@@ -141,7 +141,7 @@ they require explicit admin `APPROVE` before any send occurs.
 | Date / commit range | Summary |
 |---|---|
 | 2026-06-13 | Atomic release and outbound queue (`018_atomic_release_and_outbound.sql`). |
-| 2026-06-29 | FPE canonical cash ledger established; `wbom_cash_transactions` deprecated. |
+| 2026-06-29 | FPE canonical cash ledger established; `fazle_cash_transactions_archive` deprecated. |
 | 2026-07-09 | Client billing profiles (`034_client_billing_profiles.sql`) applied. |
 | 2026-08-05 | Reply chain reordered to OmniRoute → Groq → Ollama/Hermes → Kimi. GitHub Models removed. |
 | 2026-08-12 | Hermes customer-dispatch Phase 1 (identity-scoped context, no MCP tools). |
@@ -152,12 +152,12 @@ they require explicit admin `APPROVE` before any send occurs.
 
 ### Identity brain, resolver, and provenance
 
-- `modules/identity_brain/` — `detect_identity()` is the canonical role/trust
+- `modules/fazle_identity_brain/` — `detect_identity()` is the canonical role/trust
   resolution engine.
-- `modules/identity_resolver.py` — single shared inbound-identity helper; all
+- `modules/fazle_identity_resolver.py` — single shared inbound-identity helper; all
   entry points (bridge poller, webhooks, MCP/Hermes read tools) flow through it
   and receive one authoritative `identity_phone`.
-- `modules/group_identity.py` — reads group metadata from the bridge SQLite
+- `modules/fazle_group_identity.py` — reads group metadata from the bridge SQLite
   `chats` table; mirrors into `wbom_group_identities`. **Not wired into the
   poll loop.** Messages remain read/index-only until a separate analysis
   workflow explicitly consumes them.
@@ -196,14 +196,14 @@ they require explicit admin `APPROVE` before any send occurs.
 
 ### Admin relay, message replay, and payment/attendance context
 
-- `modules/admin_commands/` — parses and executes admin WhatsApp commands
+- `modules/fazle_admin_commands/` — parses and executes admin WhatsApp commands
   (`APPROVE`, `REJECT`, `EDIT`, `PAID`, `ADVANCE`, `STATUS`, `DRAFTS`, etc.).
   `APPROVE`/`PAID`/`ESCORTCONFIRM` deliver real WhatsApp messages via the
   bridge.
 - `modules/payment_relay/` — deterministic, LLM-free owner→accountant
   payment-message relay. **FROZEN.** Only activates for bridge2, sender
   `8801XXXXXXX`, destination `8801XXXXXXX`.
-- `modules/payment_relay_accounting/` — books `fpe_cash_transactions` on
+- `modules/payment_relay_accounting/` — books `fazle_cash_transactions` on
   outbound send success. **FROZEN.**
 - `modules/admin_directives/router.py` — admin directive CRUD and revocation.
 - `modules/outbound/__init__.py` — persistent outbound queue with idempotency
@@ -212,7 +212,7 @@ they require explicit admin `APPROVE` before any send occurs.
 
 ### Group discovery and safe persistence
 
-- `modules/group_identity.py` — discovers groups from the bridge SQLite `chats`
+- `modules/fazle_group_identity.py` — discovers groups from the bridge SQLite `chats`
   table and mirrors JIDs into `wbom_group_identities`. Names are used only to
   recognize already-known groups. **Not wired into the poll loop.**
 
@@ -519,7 +519,7 @@ commands. Always use an isolated test database.**
 
 | Item | Detail |
 |---|---|
-| Purpose | Maintains WhatsApp Web sessions; writes messages into local SQLite stores. Core polls these stores via `modules/bridge_poller`. |
+| Purpose | Maintains WhatsApp Web sessions; writes messages into local SQLite stores. Core polls these stores via `modules/fazle_bridge_poller`. |
 | Install | Separate repository/binaries. Not vendored here. Install and run independently. |
 | Expected ports | Bridge1 default `http://127.0.0.1:8082`, Bridge2 default `http://127.0.0.1:8081`, Bridge3 default `http://127.0.0.1:8083` (configured in `.env` as `BRIDGE1_URL`..`BRIDGE3_URL`). |
 | Env vars | `BRIDGE1_URL`, `BRIDGE1_NUMBER`, `BRIDGE1_DB_PATH`, `BRIDGE1_WHATSAPP_DB_PATH` (and equivalents for bridge2/bridge3). |
@@ -939,18 +939,18 @@ message_router.process_message()
 ### Key invariants
 
 - **Native message ID preservation:** The original WhatsApp message ID is
-  stored in `wbom_whatsapp_messages` (or bridge SQLite) and referenced by
+  stored in `fazle_whatsapp_messages` (or bridge SQLite) and referenced by
   replies and audit rows.
 - **Bridge/account instance:** Each bridge has its own URL, number, label,
   and SQLite store. Messages are attributed to their source bridge.
 - **Chat ID vs sender/participant ID:** Group messages carry a group JID;
-  the sender's phone is resolved separately. `modules/group_identity.py`
+  the sender's phone is resolved separately. `modules/fazle_group_identity.py`
   mirrors group metadata but does not alter routing.
 - **Phone normalization:** `modules/phone_normalizer.py` normalizes to E.164;
   `identity_resolver.py` uses normalized `identity_phone` for all lookups.
 - **Employee/client/candidate/unknown identity lookup:**
-  - `modules/identity_brain/` is the canonical role/trust engine.
-  - `modules/identity_resolver.py` resolves `employee_id`, `contact_id`,
+  - `modules/fazle_identity_brain/` is the canonical role/trust engine.
+  - `modules/fazle_identity_resolver.py` resolves `employee_id`, `contact_id`,
     `role`, and `trust_level` from the normalized phone.
   - Unknown numbers are routed to `unknown` intent; they are **not** treated
     as applicants, clients, or employees by default.
@@ -983,15 +983,15 @@ treated as `unknown` until explicitly classified.
 
 ### Which module/table/config to use
 
-- **Employee identity:** `fpe_employees` (canonical) and `wbom_employees`
+- **Employee identity:** `fazle_employees` (canonical) and `fazle_employees_legacy`
   (legacy, still used by some paths). Edit via `modules/admin_employees` API
   (`PUT /api/admin/employees/{emp_id}`) or directly via admin transaction API.
   `modules/fazle_payroll_engine/employee.py` provides `match_or_create_employee`.
-- **Role/trust:** `modules/identity_brain/` — `detect_identity()` computes
+- **Role/trust:** `modules/fazle_identity_brain/` — `detect_identity()` computes
   role, trust level, and notes. Not directly exposed as an HTTP endpoint.
 - **Payout phone:** `fpe_employee_payout_destinations` (separate from
   employee ID). Edit via FPE employee endpoints or admin transaction API.
-- **Group participant vs group chat:** `modules/group_identity.py` mirrors
+- **Group participant vs group chat:** `modules/fazle_group_identity.py` mirrors
   group JIDs from the bridge SQLite `chats` table into `wbom_group_identities`.
   Group names are used only to recognize already-known groups; JIDs are never
   hand-invented.
@@ -1004,7 +1004,7 @@ treated as `unknown` until explicitly classified.
 - All employee edits are logged via `modules/admin_employees` and
   `modules/admin_transactions`.
 - Identity changes that affect payroll or payment paths must be reviewed
-  against the FPE transaction ledger (`fpe_cash_transactions`).
+  against the FPE transaction ledger (`fazle_cash_transactions`).
 - `modules/identity_role_admin/` exposes role-persistence administration.
 
 ### Important rule
@@ -1012,10 +1012,10 @@ treated as `unknown` until explicitly classified.
 **A name or payout phone change alone is not sufficient for identity
 assignment.** Phone normalization (`identity_phone`) is used for **lookup and
 authorization**; it does not by itself establish identity. Identity assignment
-requires full resolution through `modules/identity_brain/` and
-`modules/identity_resolver.py`, which combine phone, role, trust level, and
+requires full resolution through `modules/fazle_identity_brain/` and
+`modules/fazle_identity_resolver.py`, which combine phone, role, trust level, and
 context. Names are supporting/display evidence only. The owner-authoritative
-principle (from `modules/identity_resolver.py`) is: "For WhatsApp identity,
+principle (from `modules/fazle_identity_resolver.py`) is: "For WhatsApp identity,
 the normalized WhatsApp mobile number is the primary identity key."
 
 ---
@@ -1026,7 +1026,7 @@ the normalized WhatsApp mobile number is the primary identity key."
 
 - Admins can trigger operations via WhatsApp commands (`APPROVE`, `REJECT`,
   `EDIT`, `PAID`, `ADVANCE`, `STATUS`, `DRAFTS`, etc.) parsed by
-  `modules/admin_commands/`.
+  `modules/fazle_admin_commands/`.
 - Admin can send arbitrary WhatsApp messages via `/admin/send-whatsapp`
   (requires `send_whatsapp_message` command permission).
 - Admin directives (persistent instructions) are managed via `/admin/directives`
@@ -1061,9 +1061,9 @@ the normalized WhatsApp mobile number is the primary identity key."
   `max_attempts`.
 - **Authorization snapshot:** `modules/outbound_authorization/` captures
   authorization evidence at enqueue and revalidates on sweep.
-- **Ledger write:** `fpe_cash_transactions` is the canonical cash ledger.
+- **Ledger write:** `fazle_cash_transactions` is the canonical cash ledger.
   Only `modules/fazle_payroll_engine/accounting.py` should create rows there.
-  `modules/payment_ingest.py` and `modules/payment_workflow.py` write through
+  `modules/fazle_payment_ingest.py` and `modules/fazle_payment_workflow.py` write through
   FPE's canonical creator.
 
 ### Read-only vs explicit approval required
@@ -1320,12 +1320,12 @@ The production instance runs directly off the working tree (`WorkingDirectory=/h
 
 | Limitation | Source |
 |---|---|
-| Group AI analysis/summary deferred | `modules/group_identity.py`: "Messages remain read/index-only until a separate analysis workflow explicitly consumes them." Not wired into the poll loop. |
+| Group AI analysis/summary deferred | `modules/fazle_group_identity.py`: "Messages remain read/index-only until a separate analysis workflow explicitly consumes them." Not wired into the poll loop. |
 | 9Router single-upstream guarantee unverified | `app/nine_router_provider.py` and `config/phase3_ai_routes.yaml`: `NINE_ROUTER_SINGLE_UPSTREAM_GUARANTEED=false`. Dev-only. |
 | Provider fallback chain does not queue AI requests | `app/llm.py`: total failure returns fallback text immediately. |
 | Test environment requires isolated PostgreSQL | `tests/pytest.ini`, `docker-compose.test.yml`. Production DB must never be used for tests. |
 | External Site proxy not verified running | `docs/DEVELOPER_GUIDE.md`: LocationWhere integration configured but no listener verified on port 3000 during last audit. |
-| Schema ambiguity — dual employee tables | `wbom_employees` and `fpe_employees` coexist. Some paths write to `wbom_employees` as primary. See `docs/MODULE_MAP.md` and `docs/DEVELOPER_GUIDE.md` §F. |
+| Schema ambiguity — dual employee tables | `fazle_employees_legacy` and `fazle_employees` coexist. Some paths write to `fazle_employees_legacy` as primary. See `docs/MODULE_MAP.md` and `docs/DEVELOPER_GUIDE.md` §F. |
 | Manual restart required for `.env` changes | Core process keeps pre-change environment until restarted. |
 | Outbound disabled by default | `OUTBOUND_ENABLED=false` in `.env.example`. Live enable requires owner approval and verification. |
 | Webhook signature enforcement off (bridge1) | `WEBHOOK_SIGNATURE_ENFORCEMENT=false`. Unsigned bridge1 webhooks accepted with audit log. |

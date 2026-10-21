@@ -27,7 +27,7 @@
 CREATE TABLE IF NOT EXISTS wbom_billing_records (
     bill_id         SERIAL PRIMARY KEY,
     program_id      INTEGER NOT NULL,
-    contact_id      INTEGER NOT NULL REFERENCES wbom_contacts(contact_id),
+    contact_id      INTEGER NOT NULL REFERENCES fazle_contacts(contact_id),
     bill_date       DATE NOT NULL,
     bill_number     VARCHAR(50) UNIQUE,
     service_charge  NUMERIC(10,2),
@@ -41,15 +41,15 @@ CREATE TABLE IF NOT EXISTS wbom_billing_records (
         FOREIGN KEY (program_id) REFERENCES wbom_escort_programs(program_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_wbom_billing_contact ON wbom_billing_records (contact_id);
-CREATE INDEX IF NOT EXISTS idx_wbom_billing_number ON wbom_billing_records (bill_number);
+CREATE INDEX IF NOT EXISTS idx_fazle_billing_contact ON wbom_billing_records (contact_id);
+CREATE INDEX IF NOT EXISTS idx_fazle_billing_number ON wbom_billing_records (bill_number);
 
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_billing_records_program_id_key'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_billing_records_program_id_key'
     ) THEN
         ALTER TABLE wbom_billing_records
-            ADD CONSTRAINT wbom_billing_records_program_id_key UNIQUE (program_id);
+            ADD CONSTRAINT fazle_billing_records_program_id_key UNIQUE (program_id);
     END IF;
 END $$;

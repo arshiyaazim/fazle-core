@@ -55,7 +55,7 @@ async def main():
     await init_db()
 
     rows = await fetch_all(
-        "SELECT employee_id FROM wbom_employees ORDER BY employee_id LIMIT 2"
+        "SELECT employee_id FROM fazle_employees_legacy ORDER BY employee_id LIMIT 2"
     )
     assert len(rows) >= 2, "need at least 2 employees"
     eid1 = int(rows[0]["employee_id"])

@@ -1,5 +1,8 @@
 # PHASE A — ACTUAL vs EXPECTED BASELINE REPORT
 
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 Each row is a single real Recruitment failure case preserved as evidence.
 ACTUAL column = what production did today (per real captured conversation).
 EXPECTED column = the ground truth every replay acceptance gate will compare against.

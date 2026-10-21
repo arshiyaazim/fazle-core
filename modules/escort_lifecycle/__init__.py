@@ -21,7 +21,7 @@ from typing import Optional
 
 from app.database import fetch_one, fetch_all, execute, fetch_val, get_pool
 from shared.draft_reply import create_draft_reply
-from modules.payment_workflow import create_escort_payment_draft
+from modules.fazle_payment_workflow import create_escort_payment_draft
 from modules.escort_roster.calculations import count_shifts, shifts_to_days
 
 log = logging.getLogger("fazle.escort_lifecycle")
@@ -370,7 +370,7 @@ async def _handle_release_event_tx(employee_id: int, extracted: dict, source: st
                $2, $3, d.gross_amount, d.conveyance, d.food_bill, d.advance_deduction,
                d.expected_amount, d.expected_amount, p.release_point, 'completed', 1, NOW()
         FROM wbom_escort_programs p
-        JOIN wbom_employees e ON e.employee_id=p.escort_employee_id
+        JOIN fazle_employees_legacy e ON e.employee_id=p.escort_employee_id
         JOIN fazle_payment_drafts d ON d.escort_program_id=p.program_id
         WHERE p.program_id=$1 AND d.id=$4
         ON CONFLICT (program_id) DO UPDATE SET
@@ -508,7 +508,7 @@ async def _fuzzy_employee_lookup(name: str) -> Optional[str]:
         # Use ILIKE for substring match — no fuzzy extension needed
         rows = await fetch_all(
             """SELECT e.employee_id, e.full_name
-               FROM wbom_employees e
+               FROM fazle_employees_legacy e
                WHERE e.full_name ILIKE $1
                LIMIT 3""",
             f"%{name}%",
@@ -674,11 +674,11 @@ async def handle_admin_release_confirmation(
         log.warning(f"[release-confirm] No fields parsed from text, skipping")
         return {"ok": False, "status": "no_fields"}
 
-    # Identify employee by canonical employee_mobile. wbom_employees has no contact_id.
+    # Identify employee by canonical employee_mobile. fazle_employees_legacy has no contact_id.
     phone = chat_jid.replace("@s.whatsapp.net", "").strip()
     emp = await fetch_one(
         """SELECT employee_id
-           FROM wbom_employees
+           FROM fazle_employees_legacy
            WHERE regexp_replace(employee_mobile, '\\D', '', 'g')
                  LIKE '%' || RIGHT(regexp_replace($1, '\\D', '', 'g'), 11)
            LIMIT 1""",
@@ -724,7 +724,7 @@ async def _lookup_active_program_by_phone(phone: str) -> Optional[dict]:
                       COALESCE(emp.employee_name, ep.escort_name) AS escort_name,
                       ep.master_mobile AS lighter_master_mobile
                FROM wbom_escort_programs ep
-               LEFT JOIN wbom_employees emp ON emp.employee_id = ep.escort_employee_id
+               LEFT JOIN fazle_employees_legacy emp ON emp.employee_id = ep.escort_employee_id
                WHERE regexp_replace(ep.escort_mobile, '\\D', '', 'g')
                      LIKE '%' || RIGHT(regexp_replace($1, '\\D', '', 'g'), 11)
                AND ep.status NOT IN ('completed', 'cancelled', 'escort_changed')
@@ -752,7 +752,7 @@ async def _lookup_active_program_by_slip(ocr_result: dict) -> Optional[dict]:
                       COALESCE(emp.employee_name, ep.escort_name) AS escort_name,
                       ep.master_mobile AS lighter_master_mobile
                FROM wbom_escort_programs ep
-               LEFT JOIN wbom_employees emp ON emp.employee_id = ep.escort_employee_id
+               LEFT JOIN fazle_employees_legacy emp ON emp.employee_id = ep.escort_employee_id
                WHERE ep.status NOT IN ('completed', 'cancelled', 'escort_changed')
                  AND (
                       ($1 <> '' AND (

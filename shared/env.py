@@ -90,7 +90,7 @@ class Env:
         second, divergent implementation of the same allowlist check exists
         at modules.escort._is_allowed_escort_client() / _escort_client_phone_list(),
         which is the one actually used by the parser gate, and
-        modules.identity_brain._matches_env_escort_phone(), which is the one
+        modules.fazle_identity_brain._matches_env_escort_phone(), which is the one
         used by identity resolution (that one deliberately does NOT treat an
         empty list as "match" — see its own docstring). Kept, not deleted,
         per this repo's standing "document dead code, don't clean it up

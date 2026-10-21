@@ -1,5 +1,9 @@
 # VPS Full Audit Report
 
+
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **Report rewritten:** 2026-06-17  
 **Original audit baseline:** 2026-06-10  
 **System:** `iamazim.com` production VPS  

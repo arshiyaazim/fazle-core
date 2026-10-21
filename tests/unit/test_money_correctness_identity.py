@@ -2,12 +2,12 @@
 Phase 2A -- cross-system employee-ID resolution tests for the sibling
 functions found to share compute_run()'s advance-deduction ID-space bug
 (fixed 2026-07-18): create_escort_payment_draft() and
-create_advance_request_draft() (modules/payment_workflow/__init__.py),
+create_advance_request_draft() (modules/fazle_payment_workflow/__init__.py),
 get_payroll_summary() (modules/payroll_logic/__init__.py), and
 get_employee() (modules/admin_employees/__init__.py).
 
-All four resolve fpe_cash_transactions.employee_id (FK -> fpe_employees(id))
-via the linked, active fpe_employees row (WHERE wbom_employee_id=$1 AND
+All four resolve fazle_cash_transactions.employee_id (FK -> fazle_employees(id))
+via the linked, active fazle_employees row (WHERE wbom_employee_id=$1 AND
 status='active'), matching the pattern already certified in
 modules/payroll/__init__.py::compute_run(). See management_decisions.md
 "Phase 2A -- Complete Remaining Money Correctness" for the full audit.
@@ -26,7 +26,7 @@ pytestmark = pytest.mark.workflow
 async def wbom_emp(test_db_pool):
     async with test_db_pool.acquire() as conn:
         row = await conn.fetchrow("""
-            INSERT INTO wbom_employees (employee_mobile, employee_name, designation, status, basic_salary)
+            INSERT INTO fazle_employees_legacy (employee_mobile, employee_name, designation, status, basic_salary)
             VALUES ('8801811111111', 'Karim Guard', 'Security Guard', 'Active', 9000.00)
             RETURNING *
         """)
@@ -34,19 +34,19 @@ async def wbom_emp(test_db_pool):
 
 
 async def _link_fpe_employee(test_db_pool, wbom_employee, code: str, status: str = "active") -> int:
-    """Real, wbom_employee_id-linked fpe_employees row, with 2 decoys first
+    """Real, wbom_employee_id-linked fazle_employees row, with 2 decoys first
     to permanently desynchronize the two independent SERIAL sequences."""
     async with test_db_pool.acquire() as conn:
         await conn.execute("""
-            INSERT INTO fpe_employees (employee_code, full_name, name_normalized, status)
+            INSERT INTO fazle_employees (employee_code, full_name, name_normalized, status)
             VALUES ($1, 'Decoy 1', 'decoy 1', 'inactive')
         """, f"{code}-D1")
         await conn.execute("""
-            INSERT INTO fpe_employees (employee_code, full_name, name_normalized, status)
+            INSERT INTO fazle_employees (employee_code, full_name, name_normalized, status)
             VALUES ($1, 'Decoy 2', 'decoy 2', 'inactive')
         """, f"{code}-D2")
         row = await conn.fetchrow("""
-            INSERT INTO fpe_employees
+            INSERT INTO fazle_employees
                 (employee_code, full_name, name_normalized, primary_phone, status, wbom_employee_id)
             VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING id
@@ -82,7 +82,7 @@ class TestCreateEscortPaymentDraftIdentity:
     async def test_cross_system_advance_deducted(self, test_db_pool, wbom_emp):
         import app.database as db
         db._pool = test_db_pool
-        from modules.payment_workflow import create_escort_payment_draft
+        from modules.fazle_payment_workflow import create_escort_payment_draft
 
         program = await _insert_program(test_db_pool, wbom_emp)
         fpe_id = await _link_fpe_employee(test_db_pool, wbom_emp, "EMP-D1")
@@ -90,7 +90,7 @@ class TestCreateEscortPaymentDraftIdentity:
 
         async with test_db_pool.acquire() as conn:
             await conn.execute("""
-                INSERT INTO fpe_cash_transactions
+                INSERT INTO fazle_cash_transactions
                     (txn_ref, employee_id, program_id, txn_category, amount,
                      txn_date, transaction_status, source, source_channel)
                 VALUES ('adv-d1', $1, $2, 'advance', 500, CURRENT_DATE, 'final', 'test', 'test')
@@ -106,7 +106,7 @@ class TestCreateEscortPaymentDraftIdentity:
     async def test_no_fpe_link_no_deduction_draft_still_created(self, test_db_pool, wbom_emp):
         import app.database as db
         db._pool = test_db_pool
-        from modules.payment_workflow import create_escort_payment_draft
+        from modules.fazle_payment_workflow import create_escort_payment_draft
 
         program = await _insert_program(test_db_pool, wbom_emp)
         result = await create_escort_payment_draft(
@@ -122,12 +122,12 @@ class TestCreateAdvanceRequestDraftIdentity:
     async def test_paid_this_month_resolves_cross_system(self, test_db_pool, wbom_emp):
         import app.database as db
         db._pool = test_db_pool
-        from modules.payment_workflow import create_advance_request_draft
+        from modules.fazle_payment_workflow import create_advance_request_draft
 
         fpe_id = await _link_fpe_employee(test_db_pool, wbom_emp, "EMP-D2")
         async with test_db_pool.acquire() as conn:
             await conn.execute("""
-                INSERT INTO fpe_cash_transactions
+                INSERT INTO fazle_cash_transactions
                     (txn_ref, employee_id, txn_category, amount,
                      txn_date, transaction_status, source, source_channel)
                 VALUES ('paid-d2', $1, 'salary', 4000, CURRENT_DATE, 'final', 'test', 'test')
@@ -150,7 +150,7 @@ class TestGetPayrollSummaryIdentity:
         month_start = date.today().replace(day=1)
         async with test_db_pool.acquire() as conn:
             await conn.execute("""
-                INSERT INTO fpe_cash_transactions
+                INSERT INTO fazle_cash_transactions
                     (txn_ref, employee_id, txn_category, amount,
                      txn_date, transaction_status, source, source_channel)
                 VALUES ('sal-d3', $1, 'salary', 3000, $2, 'final', 'test', 'test')
@@ -182,7 +182,7 @@ class TestAdminGetEmployeeIdentity:
         fpe_id = await _link_fpe_employee(test_db_pool, wbom_emp, "EMP-D4")
         async with test_db_pool.acquire() as conn:
             await conn.execute("""
-                INSERT INTO fpe_cash_transactions
+                INSERT INTO fazle_cash_transactions
                     (txn_ref, employee_id, txn_category, amount,
                      txn_date, transaction_status, source, source_channel)
                 VALUES ('c1', $1, 'salary', 100, CURRENT_DATE, 'final', 'test', 'test'),

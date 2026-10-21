@@ -540,14 +540,14 @@ async def _alert_circuit_open(source_bridge: str) -> None:
 
 
 async def _pairing_held(bridge: str) -> tuple[bool, str]:
-    """Thin wrapper over modules.bridge_poller._bridge_outbound_held (lazy import
+    """Thin wrapper over modules.fazle_bridge_poller._bridge_outbound_held (lazy import
     — bridge_poller imports this module, never the reverse). Fail-closed:
     ANYTHING that goes wrong resolving the state holds a fail-closed bridge.
     BRIDGE3_FIRST_REPAIR_INCIDENT_2026-09-02: the queue dispatcher must block
     ALREADY-queued Bridge3 rows while the bridge is in a non-sending pairing
     state, not just prevent new enqueues."""
     try:
-        from modules.bridge_poller import _bridge_outbound_held
+        from modules.fazle_bridge_poller import _bridge_outbound_held
         return await _bridge_outbound_held(bridge)
     except Exception as exc:  # noqa: BLE001
         if bridge == "bridge3":

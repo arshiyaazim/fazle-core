@@ -1,5 +1,8 @@
 # Phase B — 14-Case Diagnostic Report
 
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 Diagnostic-mode. Phase B did NOT modify any production classifier's disposition for semantic cases. Phase A EXPECTED preserved verbatim.
 
 | CASE | STEP | TEXT (excerpt) | phase | expected_turn_type | phase B deterministic notes |

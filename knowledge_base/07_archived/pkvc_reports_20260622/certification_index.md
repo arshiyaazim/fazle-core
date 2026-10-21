@@ -7,6 +7,10 @@ runtime_index: false
 ---
 
 # PKVC Certification Index — Wave-2A + Wave-2B
+
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **Program:** KSP Wave-2B Final Certification Run
 **Date:** 2026-06-22
 **Scope:** Wave-2A articles (2) + Wave-2B articles (6) = 8 articles total

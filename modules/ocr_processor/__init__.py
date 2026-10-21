@@ -30,7 +30,7 @@ import httpx
 from typing import TypedDict, Optional
 
 from app.config import get_settings
-from modules.image_hash import check_and_register
+from modules.fazle_image_hash import check_and_register
 
 log = logging.getLogger("fazle.ocr")
 

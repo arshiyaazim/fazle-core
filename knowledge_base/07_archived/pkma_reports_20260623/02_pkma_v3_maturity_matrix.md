@@ -35,7 +35,7 @@ runtime_index: false
 ## Session 10 New Articles — Maturity Scores
 
 ### 19. `intent_classifier.md` (NEW Session 10)
-**Source read:** `modules/intent/__init__.py` (172 lines — read 2026-06-23)
+**Source read:** `modules/fazle_intent/__init__.py` (172 lines — read 2026-06-23)
 
 | Dimension | Score | Notes |
 |---|---|---|
@@ -67,7 +67,7 @@ runtime_index: false
 
 | Dimension | Score | Notes |
 |---|---|---|
-| Accuracy (AC) | 5 | Detection gate (both keyword+date required), 2-pass name extraction algorithm, DB tables (wbom_employees, fazle_draft_replies, wbom_attendance), ON CONFLICT UPDATE, deprecated alias `save_supervisor_attendance` — all verified |
+| Accuracy (AC) | 5 | Detection gate (both keyword+date required), 2-pass name extraction algorithm, DB tables (fazle_employees_legacy, fazle_draft_replies, wbom_attendance), ON CONFLICT UPDATE, deprecated alias `save_supervisor_attendance` — all verified |
 | Completeness (CO) | 4 | Detection, parsing, draft flow, approval path, and API all documented. Gaps: complete attendance keyword list not enumerated (only ~10 shown); ON CONFLICT UPDATE target column not specified |
 | Clarity (CL) | 5 | Draft creation flow diagram with DB tables and APPROVE/REJECT path is clear; draft body format examples are immediately useful |
 | Currency (CU) | 5 | Read from source 2026-06-23; no stale entries |

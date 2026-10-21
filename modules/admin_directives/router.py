@@ -2,14 +2,14 @@
 modules.admin_directives.router -- WhatsApp admin command dispatch for the
 Unified Admin AI Engine (Phase 3 Step 5).
 
-Public entry points (mirrors modules.admin_commands.nl_router's own
+Public entry points (mirrors modules.fazle_admin_commands.nl_router's own
 is_X/process_X convention):
   - is_admin_ai_command(text) -> bool
   - process_admin_ai_command(text, sender_phone, source_bridge="") -> str | None
 
 Wired into modules.message_router's admin branch AFTER is_admin_command
 and is_nl_admin_query, BEFORE the hardcoded-help fallback (Step 6, not
-this step). Kept out of modules.admin_commands.nl_router deliberately --
+this step). Kept out of modules.fazle_admin_commands.nl_router deliberately --
 that module's own docstring is a hard "NO LLM" contract; the AI <question>
 command here is the one command in this file that does call an LLM.
 
@@ -767,7 +767,7 @@ async def _deliver_hermes_reply(
     # 2026-08-28 (Stage B2 -- canonical-history persistence): a separate,
     # best-effort step from the delivery above, never able to affect it --
     # this only records what was already (successfully) queued into the
-    # canonical wbom_whatsapp_messages table; fazle_outbound_queue remains
+    # canonical fazle_whatsapp_messages table; fazle_outbound_queue remains
     # the sole delivery authority, this is history, not a second queue.
     # Skipped when _qid is None (enqueue failed, or outbound.enqueue()'s
     # own idempotency_key dedup already absorbed a genuine retry) --
@@ -778,7 +778,7 @@ async def _deliver_hermes_reply(
     # _save_raw_core_copy() already uses for inbound.
     if _qid:
         try:
-            from modules.bridge_poller import _save_message
+            from modules.fazle_bridge_poller import _save_message
             await _save_message(
                 source_bridge, sender_phone, _delivered_body, "outbound",
                 workflow="hermes_relay_reply",

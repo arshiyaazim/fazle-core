@@ -1,4 +1,8 @@
 # C1B Backfill Readiness Report
+
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 Date: 2026-07-02
 Author: Kilo Agent (automated review)
 
@@ -9,7 +13,7 @@ Gate-2 was CONDITIONAL PASS pending execution of this backfill.
 
 ## Backfill Function
 
-- **Module:** `modules/payment_ingest/wbom_fpe_sync.py`
+- **Module:** `modules/fazle_data_sync/__init__.py`
 - **Function:** `backfill_wbom_to_fpe(since_days: int = 30)`
 - **Returns:** `(synced_count, skipped_count)` tuple. Never raises.
 
@@ -56,7 +60,7 @@ financial ledger. Incorrect execution could create duplicate transactions.
 ```python
 # From core/ directory, with database available:
 import asyncio
-from modules.payment_ingest.wbom_fpe_sync import backfill_wbom_to_fpe
+from modules.fazle_data_sync import backfill_wbom_to_fpe
 
 async def run():
     synced, skipped = await backfill_wbom_to_fpe(since_days=365)
@@ -70,7 +74,7 @@ Or via test runner if available:
 cd /home/azim/core
 python -c "
 import asyncio
-from modules.payment_ingest.wbom_fpe_sync import backfill_wbom_to_fpe
+from modules.fazle_data_sync import backfill_wbom_to_fpe
 synced, skipped = asyncio.run(backfill_wbom_to_fpe(since_days=365))
 print(f'Synced: {synced}, Skipped: {skipped}')
 "

@@ -16,7 +16,7 @@ def _use_pool(test_db_pool):
 async def _make_office_employee(pool, name="Office Person", salary=9000, status="Active"):
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
-            """INSERT INTO wbom_employees (employee_name, employee_mobile, designation, status, joining_date, basic_salary)
+            """INSERT INTO fazle_employees_legacy (employee_name, employee_mobile, designation, status, joining_date, basic_salary)
                VALUES ($1, $2, 'Staff', $3, CURRENT_DATE, $4)
                RETURNING *""",
             name, f"01{hash(name) % 900000000 + 100000000}", status, salary,
@@ -129,14 +129,14 @@ class TestPayrollDryRun:
 
         async with test_db_pool.acquire() as conn:
             runs_before = await conn.fetchval("SELECT COUNT(*) FROM wbom_payroll_runs")
-            txn_before = await conn.fetchval("SELECT COUNT(*) FROM fpe_cash_transactions")
+            txn_before = await conn.fetchval("SELECT COUNT(*) FROM fazle_cash_transactions")
             att_before = await conn.fetchval("SELECT COUNT(*) FROM wbom_attendance WHERE employee_id=$1", emp["employee_id"])
 
         await payroll_dry_run(2026, 5)
 
         async with test_db_pool.acquire() as conn:
             runs_after = await conn.fetchval("SELECT COUNT(*) FROM wbom_payroll_runs")
-            txn_after = await conn.fetchval("SELECT COUNT(*) FROM fpe_cash_transactions")
+            txn_after = await conn.fetchval("SELECT COUNT(*) FROM fazle_cash_transactions")
             att_after = await conn.fetchval("SELECT COUNT(*) FROM wbom_attendance WHERE employee_id=$1", emp["employee_id"])
 
         assert runs_before == runs_after

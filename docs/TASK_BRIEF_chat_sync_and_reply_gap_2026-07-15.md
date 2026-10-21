@@ -41,24 +41,24 @@ tables.
 
 ### Verified facts to build from (checked directly against the live DB on 2026-07-15 — re-verify if time has passed)
 
-- `wbom_whatsapp_messages`: PK is `message_id` (not `id`). Relevant columns:
+- `fazle_whatsapp_messages`: PK is `message_id` (not `id`). Relevant columns:
   `sender_number`, `receiver_number`, `message_body`, `message_type`, `platform`,
   `direction` (`'inbound'`/`'outbound'`), `received_at` (not `created_at`).
 - `fazle_outbound_queue`: PK is `id`. Relevant columns: `recipient`, `body`,
   `source_bridge`, `purpose`, `status` (`pending`/`sending`/`sent`/`failed`/`dlq`),
   `sent_at` (nullable), `created_at`.
 - **Do not pull outbound messages from both tables.** Verified: the customer-reply
-  auto-send path writes the same message to *both* `wbom_whatsapp_messages`
+  auto-send path writes the same message to *both* `fazle_whatsapp_messages`
   (`direction='outbound'`) *and* `fazle_outbound_queue` at send time. Admin
   notifications/forwards (`_notify_admin_bridge`) write *only* to
   `fazle_outbound_queue`. There is no shared key across the two tables to de-dupe
   against. **Use `fazle_outbound_queue` as the sole outbound source; use
-  `wbom_whatsapp_messages` for inbound only.**
+  `fazle_whatsapp_messages` for inbound only.**
 - `fpe_wa_messages` is a separate, independent full copy of the same bridge traffic
   (kept by the payroll-engine subsystem for its own accounting audit trail) — it is
   not a distinct set of messages. Do not use it as a chat_history source; it would
-  duplicate inbound rows already covered by `wbom_whatsapp_messages`.
-- Neither `wbom_whatsapp_messages` nor `fazle_outbound_queue` is subject to any
+  duplicate inbound rows already covered by `fazle_whatsapp_messages`.
+- Neither `fazle_whatsapp_messages` nor `fazle_outbound_queue` is subject to any
   retention/purge job (checked production crontab) — both grow forever, so a polling
   cursor sync will not miss historical data as long as cursors are tracked correctly.
 
@@ -104,7 +104,7 @@ Requirements:
 - Two independent, cursor-tracked read loops, each keyed on `MAX(source_id) WHERE
   source_table = '<table>'` in `chat_history`:
   - **Inbound:** `SELECT message_id, sender_number, receiver_number, message_body,
-    message_type, platform, received_at FROM wbom_whatsapp_messages WHERE direction =
+    message_type, platform, received_at FROM fazle_whatsapp_messages WHERE direction =
     'inbound' AND message_id > :last_id ORDER BY message_id ASC LIMIT 1000`
   - **Outbound:** `SELECT id, recipient, body, source_bridge, purpose, status,
     COALESCE(sent_at, created_at) AS sent_at FROM fazle_outbound_queue WHERE status IN
@@ -129,7 +129,7 @@ No dependency on `fazle-core.service`. `Restart=always`.
 - [ ] Migration applied cleanly and recorded in `schema_migrations`.
 - [ ] Script run manually once; rows land in `chat_history` with correct thread
       grouping for a real recent conversation — spot-check against
-      `wbom_whatsapp_messages` / `fazle_outbound_queue` directly.
+      `fazle_whatsapp_messages` / `fazle_outbound_queue` directly.
 - [ ] Zero changes to any existing table or file in this repo other than the one new
       migration file — confirm via `git status`/`git diff`.
 - [ ] `fazle-core.service` was **not** restarted for this phase — `chat-sync.service`
@@ -148,7 +148,7 @@ No dependency on `fazle-core.service`. `Restart=always`.
 Since roughly 2026-06-15/06-23, most inbound customer messages to bridge1/bridge2/meta
 have received no automated reply:
 
-- `wbom_whatsapp_messages` outbound rows stop dead at 2026-06-15/06-23 while inbound
+- `fazle_whatsapp_messages` outbound rows stop dead at 2026-06-15/06-23 while inbound
   continues to today.
 - `fazle_outbound_queue`'s `purpose='customer-reply:*'` rows: only 9 since 2026-06-15,
   last one 2026-06-23, all "recruitment" purpose — everything else sent since then is
@@ -156,7 +156,7 @@ have received no automated reply:
 - The social-engine's own sent log (`social_sent_log`): 2 rows total, ever, both from
   May — despite `social_inbox_events` receiving 1,077+ rows continuing to today.
 - `SOCIAL_AUTO_REPLY_SINGLE_ENGINE=true` diverts most bridge1/bridge2 traffic into
-  `ingest_social_event()` (`modules/bridge_poller._requires_legacy_workflow()` gates
+  `ingest_social_event()` (`modules/fazle_bridge_poller._requires_legacy_workflow()` gates
   the escape hatch back to the legacy router) — but the social daemon's send worker
   has been running with `enabled=False` this whole period, so diverted messages are
   ingested and then nothing sends.
@@ -183,7 +183,7 @@ Whatever the root-cause fix turns out to be, once replies are working again:
 
 - **No message may be auto-sent directly to a customer.** Every generated reply must
   be created as a draft via the existing mechanism (`create_draft_reply()` /
-  `fazle_draft_replies`, already used by `modules/bridge_poller._save_draft()`) and
+  `fazle_draft_replies`, already used by `modules/fazle_bridge_poller._save_draft()`) and
   routed to the admin number(s) (`ADMIN_NUMBERS` / `ADMIN_META_NUMBER` /
   `ADMIN_BRIDGE1_NUMBER` / `ADMIN_BRIDGE2_NUMBER` from `.env`) for manual approval
   before anything is sent. Reuse the existing draft mechanism — do not invent a new
@@ -193,7 +193,7 @@ Whatever the root-cause fix turns out to be, once replies are working again:
   `DRAFT_ALWAYS_ROLES` (currently `accountant,client_escort_buyer,vip_client,
   repeat_client`), `DRAFT_ALWAYS_NAMES`, `ACCOUNTANT_PHONE`. Verify each still gets
   exactly the treatment already defined for it in
-  `modules/bridge_poller._is_draft_always()` and `modules/message_router` — confirm
+  `modules/fazle_bridge_poller._is_draft_always()` and `modules/message_router` — confirm
   none of them get accidentally bypassed by whatever change re-enables replies.
 - **Open question — get this confirmed explicitly by the Owner before implementing,
   do not assume either way:** should *every* re-enabled reply become a draft (i.e.

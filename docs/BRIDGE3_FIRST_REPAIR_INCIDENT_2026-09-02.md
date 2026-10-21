@@ -1,5 +1,8 @@
 # BRIDGE3 FIRST RE-PAIR — INCIDENT FORENSICS
 
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **Status:** `CONTAINED · PRIMARY ACCOUNT TEMPORARILY RESTRICTED (~6 h countdown) · F1–F4 IMPLEMENTED, NOT DEPLOYED · NO PAIRING / NO DEPLOY WITHOUT SEPARATE OWNER APPROVAL`
 
 > ### 2026-09-02 — MOBILE ACCOUNT STATUS (CORRECTION — this supersedes the earlier "normal" reading)
@@ -73,11 +76,11 @@ planned cursor-advance was scheduled for **after** pairing, i.e. too late.
 
 | UTC | Event | Evidence |
 |---|---|---|
-| pre-incident | `bridge_poller_cursor[bridge3]` = `2026-08-31 12:31:04Z` (frozen at the original ban). `messages.db` = 4,196 rows. `wbom_whatsapp_messages platform='bridge3'` = 5,820. | earlier read-only checkpoint |
+| pre-incident | `bridge_poller_cursor[bridge3]` = `2026-08-31 12:31:04Z` (frozen at the original ban). `messages.db` = 4,196 rows. `fazle_whatsapp_messages platform='bridge3'` = 5,820. | earlier read-only checkpoint |
 | 2026-09-01 19:57Z | Agent kill-switched `recruitment_recovery_sweep_live_send` (still in effect). | `assistant_feature_flags` |
 | ~21:55–22:00Z | Owner `systemctl stop whatsapp-bridge3`, runs bridge binary in foreground, scans QR, **pairs**. whatsmeow `handleHistorySync` writes ~2,444 rows into `messages.db` (→ 6,640 total). Device row written to `whatsapp.db`. | `messages.db` count delta; owner's terminal (not in the service log — foreground stdout) |
 | 22:01:12Z | `bridge3` poller: **`3 new message(s) to process`**. | `logs/fazle-core.log` |
-| 22:01:12Z | msg `AC98916B…` — sender `88015…8973` ("Munna Master", **real escort employee, on_leave**), text `"Hi"`, true ts **2026-08-31 21:58:37Z**. Identity → `escort (db_employee)`. Reply generated (`role=escort intent=greeting`), then **`MANUAL_REPLY_GUARD: admin already replied … skipping`** → **not sent.** wbom msg 22794. | log + `wbom_whatsapp_messages` |
+| 22:01:12Z | msg `AC98916B…` — sender `88015…8973` ("Munna Master", **real escort employee, on_leave**), text `"Hi"`, true ts **2026-08-31 21:58:37Z**. Identity → `escort (db_employee)`. Reply generated (`role=escort intent=greeting`), then **`MANUAL_REPLY_GUARD: admin already replied … skipping`** → **not sent.** wbom msg 22794. | log + `fazle_whatsapp_messages` |
 | 22:02:00Z | msg `173F8A…` — sender `447710…`, text `"Your WhatsApp account is successfully connected to your Instagram profile…"`, true ts **2026-09-01 20:57:56Z**. Identity → `unknown (conf 0)`. INTENT misclassified `salary_query`. semantic_gate → `no_match` conf 0.92 ("automated notification … candidate in technical-only bridge3 routing") — **advisory only, did not block.** `reply_policy … path=recruitment`. wbom msg 22795. | log |
 | 22:02:30Z | `generate_recruitment_reply` → **`OUTBOUND_ENQUEUE id=7808 recipient=447710… bridge=bridge3 purpose=customer-reply:recruitment`**. Recruitment session **571** + candidate **548** created. | log + DB |
 | 22:02:30Z | msg `66D0B0…` — sender `447710…`, text `"99015 is your Facebook confirmation code"`, true ts **2026-09-01 21:12:23Z**. `cooldown would have blocked … but an active recruitment session is a direct answer → proceeding`. Identity `unknown`. `recruitment_detector L3: active_session:name`. | log |
@@ -158,7 +161,7 @@ evidence.
 | Object | Change | Location |
 |---|---|---|
 | `whatsapp3/store/messages.db` | 4,196 → **6,640** rows (+2,444 history-sync). **These rows are in `messages.db` only.** | SQLite |
-| `wbom_whatsapp_messages` | +5 rows (`message_id` **22794, 22795, 22796, 22797, 22798**) — the 3 processed inbound + 2 outbound. `platform='bridge3'` 5,820 → 5,825. | Postgres |
+| `fazle_whatsapp_messages` | +5 rows (`message_id` **22794, 22795, 22796, 22797, 22798**) — the 3 processed inbound + 2 outbound. `platform='bridge3'` 5,820 → 5,825. | Postgres |
 | `fazle_recruitment_sessions` | +1 row **id 571** — `phone=447710173736`, `full_name='99015 is your Facebook confirmation code'`, `collection_step=age/name`, `source_bridge=bridge3`, `candidate_id=548`, created 22:02:30Z. | Postgres |
 | `wbom_candidates` | +1 row **candidate_id 548** — `phone=447710173736`, `source_message='Your WhatsApp account is successfully connected…'`, `funnel_stage=collecting`, `score_bucket=cold`, created 22:02:30Z. | Postgres |
 | `fazle_outbound_queue` | +2 rows — **7808** (`sent`), **7809** (`dlq`). | Postgres |
@@ -168,7 +171,7 @@ evidence.
 | `whatsapp3/store/whatsapp.db` | device row written at pairing, then **deleted** on LoggedOut. `whatsmeow_device` = 0. `whatsmeow_lid_map` still 751. Session remnants present. | SQLite |
 
 Note: `447710173736` is **not** a new contact — it has 8 prior inbound rows in
-`wbom_whatsapp_messages` dating to **2026-05-04** (all Instagram/Facebook confirmation
+`fazle_whatsapp_messages` dating to **2026-05-04** (all Instagram/Facebook confirmation
 codes), plus one prior outbound (2026-07-26). It is an automated third-party
 code-relay/spam number, not a job applicant. Recruitment session 571 / candidate 548 are
 **spurious** and should be voided in the remediation step (owner-approved).
@@ -214,7 +217,7 @@ services `active`; `bridge_poller_b1/b2` cursors current.
    `identity_role=unknown` sender defaults to `path=recruitment`, which auto-sends when
    `auto_reply.all` and `auto_reply.recruitment` are both true (they were).
 4. **Were the 2,144 (actually ~2,444) synced messages inserted into messages.db, Postgres,
-   or both** — **`messages.db` only.** `wbom_whatsapp_messages` gained just the 3 the
+   or both** — **`messages.db` only.** `fazle_whatsapp_messages` gained just the 3 the
    poller processed (+2 outbound). Postgres was not bulk-polluted.
 5. **How many were treated as new inbound** — **3** (`AC98916B…` Munna "Hi",
    `173F8A…` "WA connected", `66D0B0…` "FB code"). Of those, 1 blocked by
@@ -225,7 +228,7 @@ services `active`; `bridge_poller_b1/b2` cursors current.
    **also** in our own prior Bridge3 history since 2026-05-04 (8 inbound OTP messages +
    1 outbound). It is an automated code-relay/spam number, not a candidate.
 8. **Which system produced the response** — the **live interactive recruitment path**
-   (`modules.bridge_poller.process_bridge_inbound` → `reply_policy path=recruitment` →
+   (`modules.fazle_bridge_poller.process_bridge_inbound` → `reply_policy path=recruitment` →
    `hermes_dispatch.generate_recruitment_reply`). **Not** Hermes/Harvest admin, **not**
    the recovery sweep (kill-switched, `live_send=False` throughout), **not** Meta.
 9. **Exact queue row + delivery result for both sends** — 7808: `fazle_outbound_queue`
@@ -349,7 +352,7 @@ carries `quarantine_persist_only=N` and logs for any bridge while quarantined.
 Fail-open: an unreadable setting → not quarantined (logged), never freezes a
 healthy bridge. The recovery sweep (`_decide_and_reply`) also checks
 `_bridge_quarantine_until(source_bridge)` and skips quarantined populations —
-defense-in-depth, since the sweep reads `wbom_whatsapp_messages` directly.
+defense-in-depth, since the sweep reads `fazle_whatsapp_messages` directly.
 
 **F4 — boundary from metadata, not a blind jump.** With F1+F2 the poller cursor
 only ever advances over *non-history* rows (`max_ts` of returned rows), and F3
@@ -391,7 +394,7 @@ the column is absent, `COALESCE` keeps current behaviour.)
 **F3 — Receive/persist quarantine mode for a freshly paired bridge.**
 New sanctioned runtime setting `bridge3.quarantine_until` (timestamptz) — while
 `now() < quarantine_until`, `process_bridge_inbound` for that bridge **persists** the
-message (raw copy + `wbom_whatsapp_messages`) but **returns before any reply generation or
+message (raw copy + `fazle_whatsapp_messages`) but **returns before any reply generation or
 `outbound.enqueue`**. Interactive replies, recovery sweep, backlog processing and queue
 flushing for that bridge are all blocked. Set it automatically at pair time (e.g.
 pair + 30 min) and require an explicit clear.
@@ -415,7 +418,7 @@ bridge3 cold inbound. (Blocks the "OTP became a candidate name" failure.)
 
 **Data cleanup (owner-approved, separate):** void recruitment session **571** and candidate
 **548**; leave `messages.db` history rows in place (they are the preserved history);
-optionally tag the 5 `wbom_whatsapp_messages` rows (22794–22798) as incident artifacts.
+optionally tag the 5 `fazle_whatsapp_messages` rows (22794–22798) as incident artifacts.
 
 ---
 
@@ -439,7 +442,7 @@ Do none of steps 1–3's production actions during the restriction countdown.
    kill-switched, `phone_block.447710173736` still set.
 5. Owner pairs (foreground binary; QR in the owner's own terminal — never copied anywhere).
 6. History sync runs → rows land in `messages.db` **flagged** `from_history_sync=1` → poller
-   **persists but does not route** them. Verify: `wbom_whatsapp_messages platform='bridge3'`
+   **persists but does not route** them. Verify: `fazle_whatsapp_messages platform='bridge3'`
    grows only by genuine *new* traffic; 0 outbound enqueued during quarantine; poller log
    shows `quarantine: persisted N, routed 0`.
 7. After the quarantine window and a manual review of what synced, set the cursor via F4
@@ -666,7 +669,7 @@ true` (unaffected).
 1. authoritative gate (`_bridge_outbound_held`, the same function the poller / `outbound.enqueue` / `sweep_once` / recovery sweep call) → `outbound_allowed = False`.
 2. behavioural: `tests/unit/test_outbound_pairing_hold.py` (5) — real `enqueue()` returns `None` (refused) for a held bridge3; `sweep_once()` leaves an already-queued bridge3 row `pending`.
 3. `fazle_outbound_queue` — **0** non-terminal bridge3 rows, 0 rows created since deploy.
-4. `wbom_whatsapp_messages` platform=bridge3 — 0 rows since deploy.
+4. `fazle_whatsapp_messages` platform=bridge3 — 0 rows since deploy.
 5. `logs/fazle-core.log` since deploy — no `BRIDGE_SEND`/`OUTBOUND_SEND` for bridge3.
 6. Bridge3 service `inactive`, `whatsmeow_device` 0.
 
@@ -711,7 +714,7 @@ shared candidate (`25e2d7b0…`), `NRestarts` 0 · core `/health` ok, Phase-2 OF
 (`messages.pre-pairing2.db` 6,640 rows, `whatsapp.pre-pairing2.db` device 0 / lid_map 827,
 `SHA256SUMS`, mode 700). `messages.db` byte-identical to the post-incident backup (nothing
 touched Bridge3 since). **Postgres baseline to re-check unchanged after pairing:**
-`wbom_whatsapp_messages` platform=bridge3 = **5,825** · `processed_bridge_messages` bridge3
+`fazle_whatsapp_messages` platform=bridge3 = **5,825** · `processed_bridge_messages` bridge3
 = **3,377** · `wbom_candidates` = **546** · `fazle_recruitment_sessions` = **564**.
 
 Why pairing #2 is safe this time (defence in depth): (1) `pairing_state =

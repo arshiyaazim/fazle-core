@@ -1,5 +1,9 @@
 # C1B Phase 1 — FPE Cash Transactions Additive Column Rationale
 
+
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 > **Owner Directive:** `fpe_cash_transactions` is the only canonical cash transaction table. Additive migration only. No deletes/drops.
 > **Migration file:** [`core/modules/fazle_payroll_engine/migrations/010_fpe_cash_transactions_canonical.sql`](core/modules/fazle_payroll_engine/migrations/010_fpe_cash_transactions_canonical.sql:1)
 

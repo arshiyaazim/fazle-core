@@ -1,7 +1,7 @@
 """Conversation canonical interpretation layer (Phase C).
 
 Per Owner directive correction 5: this module is a READ/INTERPRETATION
-layer over the existing wbom_whatsapp_messages rows. It does NOT
+layer over the existing fazle_whatsapp_messages rows. It does NOT
 create a second conversation database or duplicate message history.
 
 Public surface:

@@ -55,16 +55,16 @@ Run at +24 h and again at +48 h. Compare each to the pre-deploy baseline above.
 ### C. Outbound / queue
 - [ ] `/health` `outbound` — `pending` near 0; `dlq` not materially above 102 (a jump of tens = investigate); `actionable_dlq` ~6
 - [ ] `SELECT source, count(*) FROM fazle_message_queue WHERE created_at >= '2026-09-01 21:20' GROUP BY 1` — no unexpected duplication (e.g. two rows for one `bridge_poller:<src>:<msg_id>` idempotency key)
-- [ ] `SELECT count(*) FROM wbom_whatsapp_messages w WHERE received_at >= '2026-09-01 21:20' GROUP BY message_hash HAVING count(*) > 1` — 0 (per-bridge `message_hash` UNIQUE still holds)
+- [ ] `SELECT count(*) FROM fazle_whatsapp_messages w WHERE received_at >= '2026-09-01 21:20' GROUP BY message_hash HAVING count(*) > 1` — 0 (per-bridge `message_hash` UNIQUE still holds)
 
 ### D. Canonical-phone / storage (the always-on change)
-- [ ] `SELECT platform, count(*), count(*) FILTER (WHERE canonical_phone ~ '^8801[0-9]{9}$'), count(*) FILTER (WHERE canonical_phone ~ '^01[3-9]'), count(*) FILTER (WHERE canonical_phone LIKE 'unresolved:%' OR canonical_phone LIKE '%@%' OR canonical_phone LIKE '+%') FROM wbom_whatsapp_messages WHERE received_at >= '2026-09-01 21:20' GROUP BY 1` — **0** `01…`-local, **0** junk on new rows
-- [ ] `SELECT count(canonical_phone) FROM wbom_whatsapp_messages WHERE platform='meta' AND direction='inbound' AND received_at >= '2026-09-01 21:20'` — should equal the meta-inbound count (the Meta `canonical_phone=NULL` fix)
-- [ ] `SELECT count(*) FROM wbom_whatsapp_messages WHERE sender_number LIKE 'unresolved:%' AND received_at >= '2026-09-01 21:20' AND (canonical_phone IS NOT NULL OR phone_last10 IS NOT NULL)` — **0** (LID sentinel never a phone; no junk last-10)
-- [ ] `SELECT count(*) FROM wbom_whatsapp_messages WHERE (source_context = 'raw_received' OR is_processed = false) AND received_at >= '2026-09-01 21:20'` vs the count that later reach `is_processed=true` — no rise in un-finalized raw rows (would indicate the enrich follow-up is somehow interfering — should be impossible with the flag OFF)
+- [ ] `SELECT platform, count(*), count(*) FILTER (WHERE canonical_phone ~ '^8801[0-9]{9}$'), count(*) FILTER (WHERE canonical_phone ~ '^01[3-9]'), count(*) FILTER (WHERE canonical_phone LIKE 'unresolved:%' OR canonical_phone LIKE '%@%' OR canonical_phone LIKE '+%') FROM fazle_whatsapp_messages WHERE received_at >= '2026-09-01 21:20' GROUP BY 1` — **0** `01…`-local, **0** junk on new rows
+- [ ] `SELECT count(canonical_phone) FROM fazle_whatsapp_messages WHERE platform='meta' AND direction='inbound' AND received_at >= '2026-09-01 21:20'` — should equal the meta-inbound count (the Meta `canonical_phone=NULL` fix)
+- [ ] `SELECT count(*) FROM fazle_whatsapp_messages WHERE sender_number LIKE 'unresolved:%' AND received_at >= '2026-09-01 21:20' AND (canonical_phone IS NOT NULL OR phone_last10 IS NOT NULL)` — **0** (LID sentinel never a phone; no junk last-10)
+- [ ] `SELECT count(*) FROM fazle_whatsapp_messages WHERE (source_context = 'raw_received' OR is_processed = false) AND received_at >= '2026-09-01 21:20'` vs the count that later reach `is_processed=true` — no rise in un-finalized raw rows (would indicate the enrich follow-up is somehow interfering — should be impossible with the flag OFF)
 
 ### E. Phase-2 enrichment stays DARK
-- [ ] `SELECT count(*) FILTER (WHERE sender_name_snapshot IS NOT NULL), count(*) FILTER (WHERE canonical_message_key IS NOT NULL), count(*) FILTER (WHERE resolved_phone IS NOT NULL) FROM wbom_whatsapp_messages` — **still 0 / 0 / 0**
+- [ ] `SELECT count(*) FILTER (WHERE sender_name_snapshot IS NOT NULL), count(*) FILTER (WHERE canonical_message_key IS NOT NULL), count(*) FILTER (WHERE resolved_phone IS NOT NULL) FROM fazle_whatsapp_messages` — **still 0 / 0 / 0**
 - [ ] `cat /proc/$(systemctl show fazle-core -p MainPID --value)/environ | tr '\0' '\n' | grep PHASE2` — absent
 - [ ] no `[core_copy] Phase-2 enrich` / `[META] Phase-2` / `identity_resolver` lines in `logs/fazle-core.log` (the code paths are flag-gated off)
 
@@ -72,7 +72,7 @@ Run at +24 h and again at +48 h. Compare each to the pre-deploy baseline above.
 - [ ] `curl -s -H "X-Internal-Key: <key>" "localhost:8200/api/identity/resolve?phone=<ACCOUNTANT_PHONE>"` → `identity_role=accountant`, `identity_source=settings`
 - [ ] a known **active** employee number → correct role, `source=db_employee` (not clobbered / downgraded)
 - [ ] a known **escort_worker** / **escort_client** number → still the fine-grained role (identity_brain, not "escort")
-- [ ] `SELECT count(*) FROM wbom_whatsapp_messages WHERE identity_role='unknown' AND received_at >= '2026-09-01 21:20'` vs a pre-deploy window of the same length — no rise in `unknown` (would indicate a resolution regression)
+- [ ] `SELECT count(*) FROM fazle_whatsapp_messages WHERE identity_role='unknown' AND received_at >= '2026-09-01 21:20'` vs a pre-deploy window of the same length — no rise in `unknown` (would indicate a resolution regression)
 - [ ] spot-check `logs/fazle-core.log` for any `[identity]` line resolving a known person to `unknown` post-deploy
 
 ### G. Business routing (via logs / DB, NOT by sending)
@@ -83,9 +83,9 @@ Run at +24 h and again at +48 h. Compare each to the pre-deploy baseline above.
 - [ ] admin / accountant: admin commands + accountant reports still routing correctly (`grep` for `process_admin_command` / `is_report_command`)
 
 ### H. Payment / FPE (FROZEN — read-only evidence only, NEVER create a transaction)
-- [ ] `SELECT id, txn_ref, source_channel, source_message_id, created_by, created_at FROM fpe_cash_transactions WHERE created_at >= '2026-09-01 21:20' ORDER BY id DESC` — any new `owner-accountant-payment-relay` row has a `payment-relay-send:<qid>:<idx>` `source_message_id` and `created_by='payment_relay_accounting'`
+- [ ] `SELECT id, txn_ref, source_channel, source_message_id, created_by, created_at FROM fazle_cash_transactions WHERE created_at >= '2026-09-01 21:20' ORDER BY id DESC` — any new `owner-accountant-payment-relay` row has a `payment-relay-send:<qid>:<idx>` `source_message_id` and `created_by='payment_relay_accounting'`
 - [ ] no duplicate relay txn for one queue id; no reversal storm
-- [ ] `fpe_employee_ledger` period totals move only by the amount of any genuine new relay payment
+- [ ] `fazle_employee_ledger` period totals move only by the amount of any genuine new relay payment
 - [ ] employee (re)activation on a successful relay payment still fires; inactive-employee match still works
 - [ ] the exact-stanza-ID echo-suppression + Rule-B reconciliation link still behave (no double-book, no missed link)
 

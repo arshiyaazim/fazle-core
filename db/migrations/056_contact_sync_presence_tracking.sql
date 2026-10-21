@@ -1,14 +1,14 @@
 -- Migration 056: Contact sync presence tracking + hard-delete audit trail.
 --
--- Owner decision (2026-07-22): daily phone-contact-book <-> wbom_contacts
+-- Owner decision (2026-07-22): daily phone-contact-book <-> fazle_contacts
 -- sync must not hard-delete a contact the instant it's missing from one
 -- sync (phone offline / bridge failure / incomplete export could cause a
--- wrongful deletion). Soft-delete (wbom_contacts.is_active=false,
+-- wrongful deletion). Soft-delete (fazle_contacts.is_active=false,
 -- marked_for_delete_at set -- both columns already exist, no change here)
 -- on first miss; hard-delete only after N consecutive misses.
 --
 -- fazle_contact_presence tracks the miss-streak per (phone, bridge) --
--- deliberately not a single wbom_contacts column, since absence is scoped
+-- deliberately not a single fazle_contacts column, since absence is scoped
 -- per bridge: a contact present in bridge1's phone book but not bridge2's
 -- is normal (two different phones), not evidence of deletion.
 --

@@ -21,16 +21,16 @@ CREATE TABLE IF NOT EXISTS fpe_processing_diagnostics (
 );
 
 -- Fast lookups for the dashboard and health stats queries
-CREATE INDEX IF NOT EXISTS idx_fpe_diag_created
+CREATE INDEX IF NOT EXISTS idx_fazle_diag_created
     ON fpe_processing_diagnostics (created_at DESC);
 
-CREATE INDEX IF NOT EXISTS idx_fpe_diag_type_status
+CREATE INDEX IF NOT EXISTS idx_fazle_diag_type_status
     ON fpe_processing_diagnostics (message_type, processing_status, created_at DESC);
 
-CREATE INDEX IF NOT EXISTS idx_fpe_diag_worker
+CREATE INDEX IF NOT EXISTS idx_fazle_diag_worker
     ON fpe_processing_diagnostics (worker_name, created_at DESC);
 
-CREATE INDEX IF NOT EXISTS idx_fpe_diag_failure
+CREATE INDEX IF NOT EXISTS idx_fazle_diag_failure
     ON fpe_processing_diagnostics (failure_reason, created_at DESC)
     WHERE failure_reason IS NOT NULL;
 

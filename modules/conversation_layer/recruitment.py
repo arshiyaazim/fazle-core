@@ -7,7 +7,7 @@ from typing import Any
 
 import httpx
 
-from modules.intent import classify
+from modules.fazle_intent import classify
 from modules.knowledge_base import get_reply as kb_get_reply, get_recruitment_reply
 from modules.recruitment_authority import FactAuthority, facts_for_recruitment_question
 from modules.recruitment_flow import STEP_QUESTIONS, get_active_session, is_recruitment_trigger

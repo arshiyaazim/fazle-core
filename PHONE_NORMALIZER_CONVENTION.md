@@ -19,7 +19,7 @@
 ```python
 variants = normalize_phone(raw_mobile)
 row = await fetch_one(
-    "SELECT ... FROM wbom_employees WHERE employee_mobile = ANY($1) ...",
+    "SELECT ... FROM fazle_employees_legacy WHERE employee_mobile = ANY($1) ...",
     variants,
 )
 ```
@@ -34,7 +34,7 @@ Use a regex to locate the phone-like string in free text, then feed the match in
 
 ## FPE exception
 
-`modules.fazle_payroll_engine.normalizer.normalize_bd_phone()` remains the sole normalizer for FPE employee lookups until `fpe_employees.mobile` column format is verified and migrated to `8801XXXXXXXXX`. Output: `01XXXXXXXXX` (11-digit).
+`modules.fazle_payroll_engine.normalizer.normalize_bd_phone()` remains the sole normalizer for FPE employee lookups until `fazle_employees.mobile` column format is verified and migrated to `8801XXXXXXXXX`. Output: `01XXXXXXXXX` (11-digit).
 
 ## What NOT to do
 

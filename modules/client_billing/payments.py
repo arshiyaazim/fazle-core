@@ -117,7 +117,7 @@ async def get_outstanding_balance_summary() -> list[dict]:
                MIN(b.bill_date) AS oldest_pending_bill_date
         FROM wbom_billing_records b
         LEFT JOIN wbom_client_billing_profiles cbp ON cbp.contact_id = b.contact_id
-        LEFT JOIN wbom_contacts c ON c.contact_id = b.contact_id
+        LEFT JOIN fazle_contacts c ON c.contact_id = b.contact_id
         WHERE b.payment_status = 'Pending'
         GROUP BY b.contact_id, cbp.client_name, c.display_name
         ORDER BY outstanding_amount DESC

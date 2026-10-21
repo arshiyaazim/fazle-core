@@ -41,7 +41,7 @@ jobs:
       - name: Offline import smoke
         run: |
           python -c "from modules import observability as o; o.inc('x'); assert o.snapshot()['counters']['x']"
-          python -c "import modules.intent, modules.scheduler, modules.outbound"
+          python -c "import modules.fazle_intent, modules.scheduler, modules.outbound"
 
       - name: Batch 22 observability test (offline)
         run: python scripts/test_batch22_observability.py
@@ -49,7 +49,7 @@ jobs:
       - name: Unit tests (offline, no DB)
         run: |
           INTERNAL_API_KEY=test AUTO_REPLY_ENABLED=false \
-            python -m pytest tests/unit/ -m unit \
+            python -m pytest tests/unit/ tests/test_prefix_unification.py -m unit \
             --ignore=tests/unit/test_payroll.py \
             --ignore=tests/unit/test_attendance.py \
             --ignore=tests/unit/test_escort_lifecycle.py \

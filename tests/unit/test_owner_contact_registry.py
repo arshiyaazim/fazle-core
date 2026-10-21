@@ -234,7 +234,7 @@ def test_I_csv_accountant_is_owner_managed_accounting_intact(registry):
         assert registry.is_owner_managed_contact(ph) is True, \
             f"accountant contact {ph!r} should be in registry"
     # accounting parser still loads.
-    for mod_name in ("modules.payment", "modules.payment_ingest", "modules.payment_workflow"):
+    for mod_name in ("modules.payment", "modules.fazle_payment_ingest", "modules.fazle_payment_workflow"):
         try:
             importlib.import_module(mod_name)
         except Exception as e:

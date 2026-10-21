@@ -6,7 +6,7 @@ modules:
     dependencies:
       []
     database_usage:
-      - "wbom_cash_transactions"
+      - "fazle_cash_transactions_archive"
     routes:
       []
     services:
@@ -45,10 +45,10 @@ modules:
       - "fazle_draft_replies"
       - "fazle_payment_drafts"
       - "wbom_attendance"
-      - "wbom_cash_transactions"
-      - "wbom_employees"
+      - "fazle_cash_transactions_archive"
+      - "fazle_employees_legacy"
       - "wbom_escort_programs"
-      - "wbom_whatsapp_messages"
+      - "fazle_whatsapp_messages"
     routes:
       []
     services:
@@ -73,14 +73,14 @@ modules:
     last_verified: "2026-07-02"
   -
     name: "admin_employees"
-    purpose: "Employee management API for admin web UI. CRUD operations on wbom_employees: add, edit, status change."
+    purpose: "Employee management API for admin web UI. CRUD operations on fazle_employees_legacy: add, edit, status change."
     dependencies:
       - "fazle_payroll_engine"
     database_usage:
       - "fazle_payroll_engine"
       - "wbom_attendance"
-      - "wbom_cash_transactions"
-      - "wbom_employees"
+      - "fazle_cash_transactions_archive"
+      - "fazle_employees_legacy"
       - "wbom_escort_programs"
       - "wbom_salary_records"
     routes:
@@ -98,7 +98,7 @@ modules:
     last_verified: "2026-07-02"
   -
     name: "admin_transactions"
-    purpose: "Transaction management API for admin web UI. View, filter, and export wbom_cash_transactions and fpe_cash_transactions."
+    purpose: "Transaction management API for admin web UI. View, filter, and export fazle_cash_transactions_archive and fazle_cash_transactions."
     dependencies:
       - "fazle_payroll_engine"
     database_usage:
@@ -149,7 +149,7 @@ modules:
     database_usage:
       - "fazle_draft_replies"
       - "wbom_attendance"
-      - "wbom_employees"
+      - "fazle_employees_legacy"
     routes:
       []
     services:
@@ -217,7 +217,7 @@ modules:
     database_usage:
       - "fazle_draft_replies"
       - "wbom_attendance"
-      - "wbom_employees"
+      - "fazle_employees_legacy"
     routes:
       []
     services:
@@ -279,7 +279,7 @@ modules:
       - "fazle_bridge_heartbeats"
       - "fazle_draft_replies"
       - "fazle_service_heartbeats"
-      - "wbom_whatsapp_messages"
+      - "fazle_whatsapp_messages"
     routes:
       []
     services:
@@ -335,14 +335,14 @@ modules:
     last_verified: "2026-07-02"
   -
     name: "contact_sync"
-    purpose: "Contact synchronization between WhatsApp bridges and wbom_contacts table. Keeps contact display names and phone variants up to date."
+    purpose: "Contact synchronization between WhatsApp bridges and fazle_contacts table. Keeps contact display names and phone variants up to date."
     dependencies:
       - "phone_normalizer"
     database_usage:
       - "fazle_contact_aliases"
       - "fazle_contact_sync_log"
       - "fazle_unified_contacts"
-      - "wbom_contacts"
+      - "fazle_contacts"
     routes:
       []
     services:
@@ -406,7 +406,7 @@ modules:
     database_usage:
       - "fazle_contact_roles"
       - "fazle_draft_replies"
-      - "wbom_contacts"
+      - "fazle_contacts"
     routes:
       - "/api/drafts"
       - "/api/drafts/stats"
@@ -455,7 +455,7 @@ modules:
       - "payment_workflow"
     database_usage:
       - "fazle_draft_replies"
-      - "wbom_employees"
+      - "fazle_employees_legacy"
       - "wbom_escort_programs"
     routes:
       []
@@ -475,8 +475,8 @@ modules:
       - "message_router"
       - "number_identity"
     database_usage:
-      - "wbom_contacts"
-      - "wbom_employees"
+      - "fazle_contacts"
+      - "fazle_employees_legacy"
       - "wbom_escort_programs"
     routes:
       []
@@ -560,7 +560,7 @@ modules:
       - "fazle_draft_replies"
       - "fazle_payment_drafts"
       - "wbom_attendance"
-      - "wbom_employees"
+      - "fazle_employees_legacy"
       - "wbom_escort_programs"
     routes:
       []
@@ -586,7 +586,7 @@ modules:
     dependencies:
       []
     database_usage:
-      - "wbom_employees"
+      - "fazle_employees_legacy"
       - "wbom_escort_programs"
     routes:
       - ""
@@ -650,19 +650,19 @@ modules:
     last_verified: "2026-07-02"
   -
     name: "fazle_payroll_engine"
-    purpose: "FPE Canonical payroll and accounting engine. Manages fpe_cash_transactions ledger, payroll runs, and background workers. Financial Architecture Freeze v2."
+    purpose: "FPE Canonical payroll and accounting engine. Manages fazle_cash_transactions ledger, payroll runs, and background workers. Financial Architecture Freeze v2."
     dependencies:
       []
     database_usage:
       - "fazle_bridge_heartbeats"
       - "fazle_payment_drafts"
       - "fazle_payroll_engine"
-      - "wbom_employees"
+      - "fazle_employees_legacy"
       - "wbom_escort_programs"
       - "wbom_phone_match"
       - "wbom_row"
       - "wbom_staging_payments"
-      - "wbom_whatsapp_messages"
+      - "fazle_whatsapp_messages"
     routes:
       - "/admin/audit"
       - "/admin/dlq"
@@ -721,16 +721,16 @@ modules:
     last_verified: "2026-07-02"
   -
     name: "identity_brain"
-    purpose: "Contact identity detection. Resolves incoming phone numbers to known roles (employee, candidate, admin, escort_client) using wbom_contacts and fazle_contact_roles."
+    purpose: "Contact identity detection. Resolves incoming phone numbers to known roles (employee, candidate, admin, escort_client) using fazle_contacts and fazle_contact_roles."
     dependencies:
       - "number_identity"
       - "phone_normalizer"
     database_usage:
       - "fazle_contact_roles"
       - "wbom_attendance"
-      - "wbom_cash_transactions"
-      - "wbom_contacts"
-      - "wbom_employees"
+      - "fazle_cash_transactions_archive"
+      - "fazle_contacts"
+      - "fazle_employees_legacy"
       - "wbom_escort_programs"
       - "wbom_relation_types"
     routes:
@@ -764,7 +764,7 @@ modules:
     dependencies:
       []
     database_usage:
-      - "wbom_whatsapp_messages"
+      - "fazle_whatsapp_messages"
     routes:
       []
     services:
@@ -930,12 +930,12 @@ modules:
     last_verified: "2026-07-02"
   -
     name: "message_archive"
-    purpose: "Persistent message archiving to wbom_whatsapp_messages. Ensures all inbound and outbound messages are stored for audit and replay."
+    purpose: "Persistent message archiving to fazle_whatsapp_messages. Ensures all inbound and outbound messages are stored for audit and replay."
     dependencies:
       - "number_identity"
     database_usage:
-      - "wbom_contacts"
-      - "wbom_whatsapp_messages"
+      - "fazle_contacts"
+      - "fazle_whatsapp_messages"
     routes:
       []
     services:
@@ -969,10 +969,10 @@ modules:
     database_usage:
       - "fazle_contact_roles"
       - "fazle_draft_replies"
-      - "wbom_contacts"
-      - "wbom_employees"
+      - "fazle_contacts"
+      - "fazle_employees_legacy"
       - "wbom_relation_types"
-      - "wbom_whatsapp_messages"
+      - "fazle_whatsapp_messages"
     routes:
       []
     services:
@@ -1222,13 +1222,13 @@ modules:
     last_verified: "2026-07-02"
   -
     name: "payment_correction"
-    purpose: "Payment correction and reversal handling. Processes REVERSE and ADJUST commands to correct erroneous transactions in fpe_cash_transactions."
+    purpose: "Payment correction and reversal handling. Processes REVERSE and ADJUST commands to correct erroneous transactions in fazle_cash_transactions."
     dependencies:
       []
     database_usage:
       - "fazle_payment_correction_log"
       - "fazle_payment_drafts"
-      - "wbom_cash_transactions"
+      - "fazle_cash_transactions_archive"
     routes:
       []
     services:
@@ -1249,9 +1249,9 @@ modules:
     database_usage:
       - "fazle_payment_drafts"
       - "fazle_payroll_engine"
-      - "wbom_cash_transactions"
+      - "fazle_cash_transactions_archive"
       - "wbom_emp"
-      - "wbom_employees"
+      - "fazle_employees_legacy"
       - "wbom_fpe_sync"
       - "wbom_staging_payments"
       - "wbom_txn"
@@ -1274,8 +1274,8 @@ modules:
       []
     database_usage:
       - "fazle_payment_drafts"
-      - "wbom_cash_transactions"
-      - "wbom_employees"
+      - "fazle_cash_transactions_archive"
+      - "fazle_employees_legacy"
       - "wbom_escort_programs"
     routes:
       []
@@ -1306,8 +1306,8 @@ modules:
     dependencies:
       []
     database_usage:
-      - "wbom_cash_transactions"
-      - "wbom_employees"
+      - "fazle_cash_transactions_archive"
+      - "fazle_employees_legacy"
       - "wbom_escort_programs"
       - "wbom_payroll_approval_log"
       - "wbom_payroll_run_items"
@@ -1367,8 +1367,8 @@ modules:
     dependencies:
       []
     database_usage:
-      - "wbom_cash_transactions"
-      - "wbom_employees"
+      - "fazle_cash_transactions_archive"
+      - "fazle_employees_legacy"
       - "wbom_escort_programs"
       - "wbom_salary_records"
     routes:
@@ -1598,8 +1598,8 @@ modules:
     database_usage:
       - "fazle_report_cache"
       - "fazle_report_runs"
-      - "wbom_cash_transactions"
-      - "wbom_employees"
+      - "fazle_cash_transactions_archive"
+      - "fazle_employees_legacy"
       - "wbom_escort_programs"
       - "wbom_payroll_runs"
       - "wbom_staging_payments"
@@ -1686,10 +1686,10 @@ modules:
       - "fazle_reminders_sent"
       - "fazle_scheduled_jobs"
       - "fazle_service_heartbeats"
-      - "wbom_employees"
+      - "fazle_employees_legacy"
       - "wbom_escort_programs"
       - "wbom_staging_payments"
-      - "wbom_whatsapp_messages"
+      - "fazle_whatsapp_messages"
     routes:
       []
     services:
@@ -1729,8 +1729,8 @@ modules:
       - "number_identity"
     database_usage:
       - "fazle_service_heartbeats"
-      - "wbom_cash_transactions"
-      - "wbom_employees"
+      - "fazle_cash_transactions_archive"
+      - "fazle_employees_legacy"
       - "wbom_escort_programs"
     routes:
       - "/flagged"
@@ -1764,8 +1764,8 @@ modules:
     dependencies:
       - "number_identity"
     database_usage:
-      - "wbom_contacts"
-      - "wbom_employees"
+      - "fazle_contacts"
+      - "fazle_employees_legacy"
       - "wbom_relation_types"
     routes:
       []
@@ -1802,8 +1802,8 @@ modules:
     database_usage:
       - "fazle_draft_replies"
       - "fazle_runtime_settings"
-      - "wbom_contacts"
-      - "wbom_whatsapp_messages"
+      - "fazle_contacts"
+      - "fazle_whatsapp_messages"
     routes:
       - "/api/wa/broadcast"
       - "/api/wa/contacts"
@@ -1862,7 +1862,7 @@ modules:
       - "phone_normalizer"
     database_usage:
       - "fazle_payment_drafts"
-      - "fpe_cash_transactions"
+      - "fazle_cash_transactions"
     routes:
       []
     services:

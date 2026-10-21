@@ -263,7 +263,7 @@ class TestTransactionsEndpoint:
     async def test_transaction_appears_after_insert(self, client, test_db_pool, seed_employee):
         async with test_db_pool.acquire() as conn:
             await conn.execute("""
-                INSERT INTO wbom_cash_transactions
+                INSERT INTO fazle_cash_transactions_archive
                     (employee_id, transaction_type, amount, payment_method, status)
                 VALUES ($1, 'advance', 2000, 'bkash', 'Completed')
             """, seed_employee["employee_id"])

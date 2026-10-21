@@ -356,7 +356,7 @@ From `module_alignment_report.md` Module 2 (`identity_brain`, 65% — best-cover
 - `permission_matrix.md` (89 lines): 37 admin commands + RBAC documented
 - `identity_overview.md`: high-level overview
 
-**Missing from KB** (from reading `modules/identity_brain/__init__.py`, 393 lines):
+**Missing from KB** (from reading `modules/fazle_identity_brain/__init__.py`, 393 lines):
 - `_CANDIDATE_KEYWORDS` list: 10 Bengali/English terms that trigger candidate classification (not in KB)
 - `_ESCORT_CONTENT_RE` pattern: regex that triggers `client_escort_buyer` for vessel keywords — description not in KB
 - Confidence score mapping: numeric confidence thresholds not documented
@@ -371,7 +371,7 @@ From `module_alignment_report.md` Module 2 (`identity_brain`, 65% — best-cover
 
 #### TASK 2-A: Complete `identity_brain.md` Missing 35%
 
-**Source to read:** `modules/identity_brain/__init__.py` (393 lines) — read completely
+**Source to read:** `modules/fazle_identity_brain/__init__.py` (393 lines) — read completely
 **Required additions:**
 - `_CANDIDATE_KEYWORDS`: exact list (10 terms) — copy from code (Bengali + English)
 - `_ESCORT_CONTENT_RE`: describe what vessel keywords trigger `client_escort_buyer` (describe — do not expose raw regex)
@@ -409,7 +409,7 @@ Decision table for each sender type (Candidate, Employee, Supervisor, Admin, Dev
 
 | Dimension | Candidate | Employee | Supervisor | Admin |
 |---|---|---|---|---|
-| Identified by | `_CANDIDATE_KEYWORDS` or recruitment session | `wbom_employees` phone match | supervisor flag in `wbom_employees` | `ADMIN_NUMBERS` env or RBAC role |
+| Identified by | `_CANDIDATE_KEYWORDS` or recruitment session | `fazle_employees_legacy` phone match | supervisor flag in `fazle_employees_legacy` | `ADMIN_NUMBERS` env or RBAC role |
 | KB folders accessible | 01 (limited), 04 (limited), 05 (recruitment only) | 01, 04, 05 | 01, 02 (limited), 04, 05 | all except 06 |
 | Workflows can enter | `recruitment_flow` (6-step funnel) | attendance, payment_verification | attendance (supervisor path) | all admin commands |
 | Business rules that apply | BR-25 (age 18–55), fee policy | payroll formula, attendance deduction | supervisor attendance rules | all |
@@ -537,7 +537,7 @@ All tasks reference `kb_enrichment_plan_v2.md` for detailed content templates. R
 | Area | Current | Action |
 |---|---|---|
 | 43+ tables | `database_rules.md` (503 lines) — domain assignments complete | Verify all 43 tables present; add DDL-level field descriptions for top 10 tables by access frequency |
-| FPE tables (4 tables, FSM) | `fpe_overview.md` (483 lines) — architecture at 35% | Add: `fpe_transactions` FSM state diagram, `fpe_employee_ledger` schema, 5-worker roles |
+| FPE tables (4 tables, FSM) | `fpe_overview.md` (483 lines) — architecture at 35% | Add: `fpe_transactions` FSM state diagram, `fazle_employee_ledger` schema, 5-worker roles |
 | Payroll tables | 5% | Add: `wbom_payroll_runs` schema, 5-state machine, ALLOWED_TRANSITIONS dict |
 | Recruitment tables | Partial | Add: `fazle_recruitment_sessions` schema, SESSION_TTL=24h |
 
@@ -641,7 +641,7 @@ These are potential mismatches identified in prior audits. Each must be re-verif
 
 | Module | Potential Mismatch | Re-verify Command |
 |---|---|---|
-| `identity_brain` | KB Step 10 = DB lookup; production may run keyword check first in some conditions | `grep -n "_CANDIDATE_KEYWORDS\|step.*10" modules/identity_brain/__init__.py` |
+| `identity_brain` | KB Step 10 = DB lookup; production may run keyword check first in some conditions | `grep -n "_CANDIDATE_KEYWORDS\|step.*10" modules/fazle_identity_brain/__init__.py` |
 | `recruitment_flow` | KB describes session funnel as sole recruitment path; production has dual path (funnel + LLM FAQ) | `grep -n "recruitment_ai\|recruitment_flow" modules/message_router/__init__.py` |
 | `knowledge_base` module | Hardcoded fallback templates (৳3,500 joining fee, etc.) may diverge from KB v2 authoritative values | `grep -n "FALLBACK\|৳" modules/knowledge_base/__init__.py` |
 | `payroll_logic` | Core computation formula undocumented — if formula is wrong vs KB v2, refactor needed | `cat modules/payroll_logic/__init__.py` |

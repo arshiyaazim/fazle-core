@@ -2,7 +2,7 @@
 Fazle Core — Unified Message Router
 
 Single source of truth for all inbound message routing.
-Imported by both app/main.py (webhook path) and modules/bridge_poller (SQLite path).
+Imported by both app/main.py (webhook path) and modules/fazle_bridge_poller (SQLite path).
 
 Returns: (reply_text, admin_notification | None)
   admin_notification = {"admin_phone": str, "text": str, "bridge": str}
@@ -31,9 +31,9 @@ from typing import Optional
 from app.config import get_settings
 from app.database import fetch_one, fetch_all, fetch_val, execute
 from shared.draft_reply import create_draft_reply
-from modules.intent import classify
+from modules.fazle_intent import classify
 from modules.phone_normalizer import normalize_phone
-from modules.identity_brain import detect_identity, ROUTE_B_ROLES, is_registered_employee_phone
+from modules.fazle_identity_brain import detect_identity, ROUTE_B_ROLES, is_registered_employee_phone
 from modules.number_identity import normalize_phone as get_phone_variants
 from app import llm as ai
 from modules.payroll_logic import get_payroll_summary, format_payroll_context
@@ -48,10 +48,10 @@ from modules.recruitment_flow import (
     recruitment_eligibility,
     route_recruitment_message,
 )
-from modules.admin_commands import is_admin_command, process_admin_command, list_payment_drafts
-from modules.admin_commands.nl_router import is_nl_admin_query, process_nl_admin_query
+from modules.fazle_admin_commands import is_admin_command, process_admin_command, list_payment_drafts
+from modules.fazle_admin_commands.nl_router import is_nl_admin_query, process_nl_admin_query
 from modules.admin_directives.router import is_admin_ai_command, process_admin_ai_command, process_admin_natural_query
-from modules.payment_workflow import is_advance_request
+from modules.fazle_payment_workflow import is_advance_request
 from modules.attendance import handle_attendance_message, is_attendance_message, get_attendance_summary
 from modules.attendance_parser import (
     parse_attendance, create_attendance_draft, save_supervisor_attendance,
@@ -107,7 +107,7 @@ _ESCORT_ORDER_PREFIXES: tuple[str, ...] = ("escort", "client", "tcis", "gms")
 def _is_verified_escort_identity(identity: dict, role_str: str) -> bool:
     """Phase 1B.2 — distinguishes a verified escort-client/vip/repeat-client
     identity (seed row, .env phone, contact-name marker, or a genuine
-    wbom_contacts/escort_roster history match) from identity_brain's Step 6
+    fazle_contacts/escort_roster history match) from identity_brain's Step 6
     keyword-only fallback (identity_source == "text_hint"), which must never
     carry the same trust level per Owner Decision 5 — it's a real, previously
     -unseen sender whose message merely looked escort-shaped, not a known or
@@ -200,8 +200,8 @@ async def _seed_unknown_employee_identity(
     only ever runs when identity_brain.detect_identity() already returned
     role="unknown" -- meaning the sender failed every trust check the system
     has (not an admin, not the accountant, not an escort-client, not an
-    existing wbom_employees/wbom_contacts/escort-roster match). Auto-creating
-    a wbom_employees row (and indirectly seeding fpe_employees via
+    existing fazle_employees_legacy/fazle_contacts/escort-roster match). Auto-creating
+    a fazle_employees_legacy row (and indirectly seeding fazle_employees via
     match_or_create_employee()) for such a sender is exactly the
     "random/unapproved number" auto-create Owner Rule D prohibits. There is
     no narrower guard to add -- the entire remaining population is untrusted
@@ -245,7 +245,7 @@ def _looks_like_escort_buying_intent(text: str) -> bool:
 # system-generated admin notification can start with. These messages are
 # sent to the admin over the same WhatsApp bridge account that
 # bridge_poller's outgoing-message scan later reads back looking for real
-# admin-typed confirmations (modules/bridge_poller/__init__.py) -- a
+# admin-typed confirmations (modules/fazle_bridge_poller/__init__.py) -- a
 # notification that happens to quote/instruct escort- or release-shaped
 # text (e.g. "send an exact [RELEASE CONFIRMED] message...") can
 # false-positive match is_completed_escort_draft()/is_release_confirmation()
@@ -256,7 +256,7 @@ def _looks_like_escort_buying_intent(text: str) -> bool:
 # _is_system_generated_notification() uses -- the invisible zero-width-space
 # origin marker it used to fall back on (app.bridge._AUTOMATED_SUFFIX) has
 # been removed outright. MUST be kept in sync with every title string used
-# below, in modules/bridge_poller/__init__.py's own notification templates
+# below, in modules/fazle_bridge_poller/__init__.py's own notification templates
 # (_build_admin_review_draft, release-slip review, OCR-unclear alert,
 # safety-filter-blocked alert, pending-drafts list, Route B Ollama-failure
 # alert), and app/main.py's send_to_admin path -- any new outbound
@@ -336,7 +336,7 @@ async def _should_silent_skip(sender: str) -> tuple[bool, str]:
         contact = None
         for v in _phone_variants(sender):
             contact = await fetch_one(
-                "SELECT display_name FROM wbom_contacts"
+                "SELECT display_name FROM fazle_contacts"
                 " WHERE whatsapp_number = $1 AND is_active = true"
                 "   AND COALESCE(platform, 'whatsapp') = 'whatsapp' LIMIT 1",
                 v,
@@ -664,7 +664,7 @@ async def inbound_execution(core_message_id, source, source_message_ref, **ident
         yield current
         return
     claimed = await read(
-        """UPDATE wbom_whatsapp_messages
+        """UPDATE fazle_whatsapp_messages
            SET metadata_json=COALESCE(metadata_json, '{}'::jsonb) ||
                jsonb_build_object('provenance', $2::jsonb)
            WHERE message_id=$1 AND is_processed=false AND NOT (COALESCE(metadata_json, '{}'::jsonb) ? 'provenance')
@@ -702,7 +702,7 @@ async def inbound_execution(core_message_id, source, source_message_ref, **ident
         # Keep active=False on the shared object: child tasks inherit its
         # reference, and must not append events after this turn has ended.
         await write(
-            """UPDATE wbom_whatsapp_messages SET
+            """UPDATE fazle_whatsapp_messages SET
                    metadata_json=COALESCE(metadata_json, '{}'::jsonb) ||
                        jsonb_build_object('provenance', $2::jsonb, 'stage', 'processed',
                          'status', $2::jsonb->>'processing_outcome'),
@@ -728,7 +728,7 @@ async def reconcile_stranded_inbound(core_message_id: int) -> dict:
     row = await read(
         """SELECT message_id, direction, source_message_ref, is_processed,
                          metadata_json
-                  FROM wbom_whatsapp_messages
+                  FROM fazle_whatsapp_messages
                  WHERE message_id=$1""",
         core_message_id,
     )
@@ -768,7 +768,7 @@ async def reconcile_stranded_inbound(core_message_id: int) -> dict:
     updated_metadata = dict(metadata)
     updated_metadata.update({"stage": "processed", "status": "done", "provenance": recovered})
     updated = await read(
-        """UPDATE wbom_whatsapp_messages
+        """UPDATE fazle_whatsapp_messages
               SET metadata_json=$2::jsonb, is_processed=true
             WHERE message_id=$1
               AND COALESCE(metadata_json->'provenance'->>'processing_outcome', '')=$3
@@ -803,7 +803,7 @@ async def process_message(
     Does NOT send anything — callers handle delivery.
 
     message_id: the bridge's own id for this message, when the caller has one
-    (see modules.bridge_poller.process_bridge_inbound). Threaded through to
+    (see modules.fazle_bridge_poller.process_bridge_inbound). Threaded through to
     handle_admin_escort_completion() for the draft-confirmation review queue's
     dedup identity (migration 052) — optional, only that one path uses it.
 
@@ -1293,7 +1293,7 @@ async def process_message(
         # process_admin_command(...)` call above with UnboundLocalError --
         # confirmed via bytecode disassembly (LOAD_FAST before any STORE_FAST
         # on that path). Only is_report_command is genuinely new here.
-        from modules.admin_commands import is_report_command
+        from modules.fazle_admin_commands import is_report_command
         if is_report_command(text):
             return await process_admin_command(text, admin_phone=sender), None
 
@@ -1301,18 +1301,18 @@ async def process_message(
         if is_accountant_summary(text):
             return ack_accountant_summary(text), None
 
-        from modules.admin_commands.nl_advance_record import (
+        from modules.fazle_admin_commands.nl_advance_record import (
             is_advance_record_query, intent_advance_record,
         )
         if is_advance_record_query(text):
             return await intent_advance_record(text, admin_phone=sender), None
 
-        from modules.payment_ingest import looks_like_payment_sms, ingest_payment_sms
+        from modules.fazle_payment_ingest import looks_like_payment_sms, ingest_payment_sms
         if looks_like_payment_sms(text):
             result = await ingest_payment_sms(text, sender_number=sender)
             return _fmt_ingest_reply(result), None
 
-        from modules.payment_ingest import is_admin_cash_shorthand, ingest_admin_cash_entry
+        from modules.fazle_payment_ingest import is_admin_cash_shorthand, ingest_admin_cash_entry
         if is_admin_cash_shorthand(text):
             result = await ingest_admin_cash_entry(text, sender_number=sender)
             return _fmt_ingest_reply(result), None
@@ -1832,7 +1832,7 @@ async def process_message(
     # Placed AFTER every mature, role-agnostic path above it (attendance,
     # escort-order safety net, Sprint-3A advance/payment catchall, legacy
     # advance verification) so none of that existing, tested behavior is
-    # ever preempted — escort/security_guard have real wbom_employees rows
+    # ever preempted — escort/security_guard have real fazle_employees_legacy rows
     # and must keep using the Sprint-3A conversation flow for genuine
     # advance requests exactly like before the escort/guard role split.
     # Route B only takes over what would otherwise fall through to the
@@ -1842,11 +1842,11 @@ async def process_message(
     # catch. Ollama-only per Owner spec — see modules.route_b docstring.
     if role_str in ROUTE_B_ROLES:
         # Backstop (2026-07-22 Owner decision): _should_silent_skip() above
-        # already catches name-matched contacts from their wbom_contacts row
+        # already catches name-matched contacts from their fazle_contacts row
         # at the very top of this function, before Route B ever runs — this
         # is a second, cheap check against identity_brain's own resolved
         # display_name for the rare case a brand-new contact hasn't reached
-        # wbom_contacts yet (daily sync) but identity_brain already saw a
+        # fazle_contacts yet (daily sync) but identity_brain already saw a
         # name via the bridge. Guarantees Route B/Ollama never auto-replies
         # to a Client/Escort/Office/Operation/Accountant/Security-Guard/
         # Al-Aqsa-Al-Manaratayn-named contact, matching the "Route A — no
@@ -2089,7 +2089,7 @@ async def get_recent_history(phone: str, limit: int = 5) -> list:
     try:
         rows = await fetch_all(
             """SELECT message_body, direction
-               FROM wbom_whatsapp_messages
+               FROM fazle_whatsapp_messages
                WHERE sender_number = $1 AND direction IN ('inbound', 'outbound')
                ORDER BY received_at DESC LIMIT $2""",
             phone, limit,
@@ -2116,7 +2116,7 @@ async def get_contact_context(phone: str) -> str:
         for v in phone_variants:
             contact = await fetch_one(
                 """SELECT c.display_name, c.company_name, rt.relation_name
-                   FROM wbom_contacts c
+                   FROM fazle_contacts c
                    LEFT JOIN wbom_relation_types rt ON rt.relation_type_id = c.relation_type_id
                    WHERE c.whatsapp_number = $1 AND c.is_active = true
                    LIMIT 1""",
@@ -2133,7 +2133,7 @@ async def get_contact_context(phone: str) -> str:
         emp = None
         for v in phone_variants:
             emp = await fetch_one(
-                "SELECT employee_name, designation, basic_salary, status FROM wbom_employees WHERE employee_mobile=$1",
+                "SELECT employee_name, designation, basic_salary, status FROM fazle_employees_legacy WHERE employee_mobile=$1",
                 v,
             )
             if emp:

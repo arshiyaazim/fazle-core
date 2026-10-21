@@ -181,5 +181,5 @@ Audit persistence is fail-open: an unavailable audit store does not block an oth
 প্রতিষ্ঠানের নির্দিষ্ট মানি-রিসিট বা টাকা জমা দেয়ার রশিদ ছাড়া কেউ টাকা চাইলে তা প্রতারণা — সরাসরি অফিসে যাচাই করুন বা কল দিন 01958 122300 নাম্বারে।
 ```
 
-**Related Modules:** `modules/route_b`, `modules/identity_brain`, `modules/recruitment_flow`.
+**Related Modules:** `modules/route_b`, `modules/fazle_identity_brain`, `modules/recruitment_flow`.
 **Related Documents:** `../05_workflows/whatsapp_reply_workflow.md`, `../00_governance/CANONICAL_BUSINESS_RULES.md`, `../00_governance/management_decisions.md`.

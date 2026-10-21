@@ -11,9 +11,9 @@ prefix-only), Route B (Ollama) must never auto-reply to them:
     no draft.
 
 Covers both enforcement points:
-  1. _should_silent_skip() — the early gate keyed off wbom_contacts.display_name.
+  1. _should_silent_skip() — the early gate keyed off fazle_contacts.display_name.
   2. The Route B branch backstop — keyed off identity_brain's own resolved
-     display_name, for a contact not yet present in wbom_contacts.
+     display_name, for a contact not yet present in fazle_contacts.
 """
 from __future__ import annotations
 
@@ -42,7 +42,7 @@ def _base_identity(role: str, display_name: str) -> dict:
 
 
 class TestShouldSilentSkipNameMatch:
-    """_should_silent_skip() reads wbom_contacts.display_name directly."""
+    """_should_silent_skip() reads fazle_contacts.display_name directly."""
 
     @pytest.mark.asyncio
     async def test_new_keywords_matched_even_when_env_names_configured(self, monkeypatch):
@@ -165,7 +165,7 @@ class TestShouldSilentSkipNameMatch:
 class TestRouteBBackstop:
     """The Route B branch itself must never auto-reply to a name-matched
     contact even if _should_silent_skip() didn't already catch them (e.g. a
-    brand-new contact identity_brain has seen but wbom_contacts hasn't)."""
+    brand-new contact identity_brain has seen but fazle_contacts hasn't)."""
 
     @pytest.mark.asyncio
     async def test_escort_named_casual_message_gets_full_silence(self, monkeypatch):

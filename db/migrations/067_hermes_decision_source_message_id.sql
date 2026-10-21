@@ -2,7 +2,7 @@
 --
 -- HERMES_BUSINESS_EXECUTION_CAPABILITY_PROVENANCE_AUDIT_2026-08-19.md
 -- (Task 1) found that process_message() has always received the bridge's
--- real message_id (modules/bridge_poller passes it through since it was
+-- real message_id (modules/fazle_bridge_poller passes it through since it was
 -- added for migration 052's dedup identity), but the Hermes Kernel's
 -- shadow DecisionRecord/KernelEvent (migration 060) never captured it --
 -- making "which message caused this decision" a phone+timestamp guess

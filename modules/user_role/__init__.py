@@ -2,12 +2,12 @@
 Fazle Core — User Role Detection (Phase 4A)
 
 DEPRECATED (2026-08-18, `HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md`):
-superseded by `modules.identity_brain.detect_identity()`, which is what
+superseded by `modules.fazle_identity_brain.detect_identity()`, which is what
 message_router/bridge_poller/app.main actually call in production. A
 repo-wide grep confirmed `detect_role()` has zero callers anywhere in this
 codebase. Kept only because `archive/deprecated/employee_utils` still
 imports it. Do not use this module for new code — use
-`modules.identity_brain.detect_identity()` instead.
+`modules.fazle_identity_brain.detect_identity()` instead.
 
 Detects who is sending a message by looking up their phone number
 against the company database. Returns a role context dict used by
@@ -215,7 +215,7 @@ async def _lookup_employee(phone: str):
         row = await fetch_one(
             """SELECT employee_id, employee_name, designation, basic_salary,
                       bkash_number, nagad_number, status
-               FROM wbom_employees
+               FROM fazle_employees_legacy
                WHERE employee_mobile = $1""",
             v,
         )
@@ -235,7 +235,7 @@ async def _lookup_contact(phone: str):
         row = await fetch_one(
             """SELECT c.contact_id, c.display_name, c.company_name,
                       c.whatsapp_number, rt.relation_name
-               FROM wbom_contacts c
+               FROM fazle_contacts c
                LEFT JOIN wbom_relation_types rt
                       ON rt.relation_type_id = c.relation_type_id
                WHERE c.whatsapp_number = $1 AND c.is_active = true

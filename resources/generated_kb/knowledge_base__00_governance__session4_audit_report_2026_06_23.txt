@@ -1,8 +1,12 @@
 Source: knowledge_base/00_governance/session4_audit_report_2026_06_23.md
-SHA256: e13a1808258d7cd8e71e03bf07c4178b411c62c7353f1210ee2228d58bf9e20b
-Version: e13a1808258d
+SHA256: c43ccf7a8ad975877f4f629c75dee7763a46a5277c202e28068cc1ad2c6a13c0
+Version: c43ccf7a8ad9
 
 # Session 4 — Audit Report (Final / Post-Execution)
+
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **Report ID:** AUDIT-SESSION4-2026-06-23
 **Audit Date:** 2026-06-23
 **Auditor:** Claude AI (Session 4 — conflict resolution, production fixes, git push)

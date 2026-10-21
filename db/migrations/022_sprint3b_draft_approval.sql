@@ -4,7 +4,7 @@
 --
 -- Additive-only migration.  No existing column is dropped or renamed.
 -- Adds the columns needed to track the post-approval financial lifecycle:
---   • transaction_id   — FK to fpe_cash_transactions.id (set on APPROVED)
+--   • transaction_id   — FK to fazle_cash_transactions.id (set on APPROVED)
 --   • txn_ref          — canonical transaction reference (denormalised for fast lookup)
 --   • rejected_reason  — free-text reason (set on REJECT)
 --   • reviewed_by      — admin phone who made the decision

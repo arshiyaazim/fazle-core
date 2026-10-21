@@ -8,6 +8,9 @@ runtime_index: false
 
 # PKMA Report 03 — Domain Maturity Report
 
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **Program:** PKMA v1.0
 **Date:** 2026-06-22
 **Mode:** READ-ONLY
@@ -127,7 +130,7 @@ Per-domain maturity assessment with detailed evidence, rationale, and advancemen
 | FPE Workers | 5 workers verified ACTIVE in production (`modules/fazle_payroll_engine/workers.py`) |
 | Worker Names | message_processor_worker, accounting_worker, historical_sync_loop, gap_scan_loop, bridge_health_loop |
 | Worker Config | POLL_INTERVAL=3s, BATCH_SIZE=20, MAX_ATTEMPTS=5 (verified but NOT in KB) |
-| Cash Transactions | `wbom_cash_transactions` — payment history; used by identity engine |
+| Cash Transactions | `fazle_cash_transactions_archive` — payment history; used by identity engine |
 | KB Coverage | FPE worker behavior: 0% documented in KB |
 | Management Decision | None for FPE specifically |
 
@@ -318,7 +321,7 @@ Per-domain maturity assessment with detailed evidence, rationale, and advancemen
 |---|---|
 | KB Article | `02_admin_knowledge/admin_operations_overview.md` |
 | Coverage | All 37 commands documented across 8 groups |
-| Verification | `modules/admin_commands dispatch_command()` verified |
+| Verification | `modules/fazle_admin_commands dispatch_command()` verified |
 | RBAC Enforcement | COMMAND_ROLE mapping verified |
 | Global Features | Bangla digits, multi-ID APPROVE, dedup, audit log |
 | Management Decision | No formal management approval for command set as domain |
@@ -512,7 +515,7 @@ Voice functionality is not present in the Fazle AI Platform. No assessment appli
 |---|---|---|---|
 | Payroll | salary_workflow.md | modules/payroll | Yes |
 | Escort | escort_workflow.md | modules/escort_lifecycle | Yes |
-| Payment Draft | payment_workflow.md | modules/payment_workflow | Yes |
+| Payment Draft | payment_workflow.md | modules/fazle_payment_workflow | Yes |
 | Attendance Draft | attendance_workflow.md | modules/attendance | Yes |
 | Recruitment Session | recruitment_workflow.md | modules/recruitment_flow | Yes |
 | Employee Verification | payment_workflow.md | modules/employee_verification | Yes |

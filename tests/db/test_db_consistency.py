@@ -7,17 +7,17 @@ pytestmark = pytest.mark.db
 
 
 class TestEmployeeTableConstraints:
-    """wbom_employees constraints."""
+    """fazle_employees_legacy constraints."""
 
     async def test_employee_mobile_unique(self, test_db_pool):
         async with test_db_pool.acquire() as conn:
             await conn.execute("""
-                INSERT INTO wbom_employees (employee_mobile, employee_name)
+                INSERT INTO fazle_employees_legacy (employee_mobile, employee_name)
                 VALUES ('8801800000001', 'Guard A')
             """)
             with pytest.raises(Exception, match="unique|duplicate"):
                 await conn.execute("""
-                    INSERT INTO wbom_employees (employee_mobile, employee_name)
+                    INSERT INTO fazle_employees_legacy (employee_mobile, employee_name)
                     VALUES ('8801800000001', 'Guard B')
                 """)
 
@@ -25,14 +25,14 @@ class TestEmployeeTableConstraints:
         async with test_db_pool.acquire() as conn:
             with pytest.raises(Exception):
                 await conn.execute("""
-                    INSERT INTO wbom_employees (employee_name)
+                    INSERT INTO fazle_employees_legacy (employee_name)
                     VALUES ('Guard No Phone')
                 """)
 
     async def test_basic_salary_default_zero(self, test_db_pool):
         async with test_db_pool.acquire() as conn:
             row = await conn.fetchrow("""
-                INSERT INTO wbom_employees (employee_mobile, employee_name)
+                INSERT INTO fazle_employees_legacy (employee_mobile, employee_name)
                 VALUES ('8801800000002', 'Default Salary Guard')
                 RETURNING basic_salary
             """)
@@ -64,7 +64,7 @@ class TestAttendanceConstraints:
             """, seed_employee["employee_id"])
 
             await conn.execute(
-                "DELETE FROM wbom_employees WHERE employee_id=$1",
+                "DELETE FROM fazle_employees_legacy WHERE employee_id=$1",
                 seed_employee["employee_id"],
             )
 
@@ -84,13 +84,13 @@ class TestAttendanceConstraints:
 
 
 class TestCashTransactionConstraints:
-    """wbom_cash_transactions FK and reversal integrity."""
+    """fazle_cash_transactions_archive FK and reversal integrity."""
 
     async def test_transaction_requires_valid_employee(self, test_db_pool):
         async with test_db_pool.acquire() as conn:
             with pytest.raises(Exception, match="foreign key|violates"):
                 await conn.execute("""
-                    INSERT INTO wbom_cash_transactions
+                    INSERT INTO fazle_cash_transactions_archive
                         (employee_id, transaction_type, amount)
                     VALUES (999999, 'advance', 1000)
                 """)
@@ -100,7 +100,7 @@ class TestCashTransactionConstraints:
     ):
         async with test_db_pool.acquire() as conn:
             original = await conn.fetchrow("""
-                INSERT INTO wbom_cash_transactions
+                INSERT INTO fazle_cash_transactions_archive
                     (employee_id, transaction_type, amount)
                 VALUES ($1, 'advance', 1000)
                 RETURNING transaction_id
@@ -108,7 +108,7 @@ class TestCashTransactionConstraints:
 
             # Reversal should reference original
             rev = await conn.fetchrow("""
-                INSERT INTO wbom_cash_transactions
+                INSERT INTO fazle_cash_transactions_archive
                     (employee_id, transaction_type, amount,
                      reversal_of)
                 VALUES ($1, 'advance', -1000, $2)
@@ -120,18 +120,18 @@ class TestCashTransactionConstraints:
     async def test_transaction_cascade_delete(self, test_db_pool, seed_employee):
         async with test_db_pool.acquire() as conn:
             await conn.execute("""
-                INSERT INTO wbom_cash_transactions
+                INSERT INTO fazle_cash_transactions_archive
                     (employee_id, transaction_type, amount)
                 VALUES ($1, 'advance', 500)
             """, seed_employee["employee_id"])
 
             await conn.execute(
-                "DELETE FROM wbom_employees WHERE employee_id=$1",
+                "DELETE FROM fazle_employees_legacy WHERE employee_id=$1",
                 seed_employee["employee_id"],
             )
 
             count = await conn.fetchval(
-                "SELECT COUNT(*) FROM wbom_cash_transactions WHERE employee_id=$1",
+                "SELECT COUNT(*) FROM fazle_cash_transactions_archive WHERE employee_id=$1",
                 seed_employee["employee_id"],
             )
         assert count == 0
@@ -193,24 +193,24 @@ class TestDbInvariants:
         """Every reversal transaction must reference a valid original transaction."""
         async with test_db_pool.acquire() as conn:
             original = await conn.fetchrow("""
-                INSERT INTO wbom_cash_transactions
+                INSERT INTO fazle_cash_transactions_archive
                     (employee_id, transaction_type, amount)
                 VALUES ($1, 'advance', 1000)
                 RETURNING transaction_id
             """, seed_employee["employee_id"])
 
             await conn.execute("""
-                INSERT INTO wbom_cash_transactions
+                INSERT INTO fazle_cash_transactions_archive
                     (employee_id, transaction_type, amount, reversal_of)
                 VALUES ($1, 'advance', -1000, $2)
             """, seed_employee["employee_id"], original["transaction_id"])
 
             # Query: all reversal rows should have a valid reversal_of
             orphans = await conn.fetchval("""
-                SELECT COUNT(*) FROM wbom_cash_transactions r
+                SELECT COUNT(*) FROM fazle_cash_transactions_archive r
                 WHERE r.reversal_of IS NOT NULL
                 AND NOT EXISTS (
-                    SELECT 1 FROM wbom_cash_transactions o
+                    SELECT 1 FROM fazle_cash_transactions_archive o
                     WHERE o.transaction_id = r.reversal_of
                 )
             """)
@@ -225,7 +225,7 @@ class TestDbInvariants:
                 SELECT COUNT(*) FROM wbom_escort_programs p
                 WHERE p.escort_employee_id IS NOT NULL
                 AND NOT EXISTS (
-                    SELECT 1 FROM wbom_employees e
+                    SELECT 1 FROM fazle_employees_legacy e
                     WHERE e.employee_id = p.escort_employee_id
                 )
             """)

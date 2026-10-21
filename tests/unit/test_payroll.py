@@ -60,7 +60,7 @@ class TestPayrollCompute:
             # relying on the two fixtures' ids coincidentally matching in a
             # fresh truncated test DB.
             await conn.execute(
-                "UPDATE fpe_employees SET wbom_employee_id=$1 WHERE id=$2",
+                "UPDATE fazle_employees SET wbom_employee_id=$1 WHERE id=$2",
                 employee_id, fpe_employee_id,
             )
             await conn.execute("""
@@ -71,7 +71,7 @@ class TestPayrollCompute:
             """, program_id)
             # Insert 2 advances into canonical FPE table
             await conn.execute("""
-                INSERT INTO fpe_cash_transactions
+                INSERT INTO fazle_cash_transactions
                     (txn_ref, employee_id, txn_category, amount, payout_method,
                      txn_date, transaction_status, source, source_channel)
                 VALUES
@@ -103,7 +103,7 @@ class TestPayrollCompute:
         async with test_db_pool.acquire() as conn:
             # Large advance exceeding salary
             await conn.execute("""
-                INSERT INTO fpe_cash_transactions
+                INSERT INTO fazle_cash_transactions
                     (txn_ref, employee_id, txn_category, amount, payout_method,
                      txn_date, transaction_status, source, source_channel)
                 VALUES ($1, $2, 'advance', 50000.00, 'cash', '2026-05-01', 'final', 'test', 'test')
@@ -153,7 +153,7 @@ class TestProratedBasicSalary:
     async def _make_office_employee(self, pool, name="Office ProrateTest", salary=9300):
         async with pool.acquire() as conn:
             row = await conn.fetchrow(
-                """INSERT INTO wbom_employees
+                """INSERT INTO fazle_employees_legacy
                        (employee_name, employee_mobile, designation, status, joining_date, basic_salary)
                    VALUES ($1, $2, 'Staff', 'Active', CURRENT_DATE, $3)
                    RETURNING *""",
@@ -299,7 +299,7 @@ class TestMarkPaidLedger:
     """
     2026-07-15 fix: mark_paid() previously only flipped wbom_payroll_runs.status
     to 'paid' and wrote an audit-log row -- it never posted to the canonical
-    fpe_cash_transactions ledger (the ONLY canonical cash ledger per
+    fazle_cash_transactions ledger (the ONLY canonical cash ledger per
     knowledge_base/06_developer_system/daily_cash_transaction_source_of_truth.md).
     """
 
@@ -317,7 +317,7 @@ class TestMarkPaidLedger:
     async def _link_fpe_employee(self, test_db_pool, seed_employee, code: str) -> int:
         async with test_db_pool.acquire() as conn:
             row = await conn.fetchrow("""
-                INSERT INTO fpe_employees
+                INSERT INTO fazle_employees
                     (employee_code, full_name, name_normalized, primary_phone,
                      status, wbom_employee_id)
                 VALUES ($1, $2, $3, $4, 'active', $5)
@@ -344,7 +344,7 @@ class TestMarkPaidLedger:
 
         async with test_db_pool.acquire() as conn:
             txn = await conn.fetchrow(
-                "SELECT * FROM fpe_cash_transactions "
+                "SELECT * FROM fazle_cash_transactions "
                 "WHERE employee_id=$1 AND txn_category='salary'",
                 fpe_id,
             )
@@ -359,7 +359,7 @@ class TestMarkPaidLedger:
 
         from modules.payroll import mark_paid
 
-        # Deliberately no fpe_employees row links to this WBOM employee.
+        # Deliberately no fazle_employees row links to this WBOM employee.
         run_id = await self._create_locked_run(test_db_pool, seed_employee)
 
         result = await mark_paid(run_id=run_id, actor="admin", amount=9000.0, method="bkash")
@@ -388,7 +388,7 @@ class TestMarkPaidLedger:
 
         async with test_db_pool.acquire() as conn:
             count = await conn.fetchval(
-                "SELECT count(*) FROM fpe_cash_transactions "
+                "SELECT count(*) FROM fazle_cash_transactions "
                 "WHERE employee_id=$1 AND txn_category='salary'",
                 fpe_id,
             )

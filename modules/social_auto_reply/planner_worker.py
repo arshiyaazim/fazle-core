@@ -86,7 +86,7 @@ async def process_due_threads(limit: int = 10) -> dict:
         # Selective draft policy (2026-07-15, Owner-confirmed -- see
         # docs/TASK_BRIEF_chat_sync_and_reply_gap_2026-07-15.md Phase 4): only
         # senders matching the existing DRAFT_ALWAYS_ROLES/PHONES/NAMES config
-        # (modules.bridge_poller._is_draft_always(), the same mechanism the
+        # (modules.fazle_bridge_poller._is_draft_always(), the same mechanism the
         # legacy bridge_poller path already uses) get routed to an admin-
         # approval draft. Everyone else gets a real auto-send, matching
         # pre-2026-06-23 behavior, once the underlying send-worker bug is fixed.
@@ -130,9 +130,9 @@ async def process_due_threads(limit: int = 10) -> dict:
 
 async def _is_draft_always_sender(target_id: str, latest_event: dict) -> bool:
     """
-    Reuses modules.bridge_poller._is_draft_always() (phone/role/name-prefix
+    Reuses modules.fazle_bridge_poller._is_draft_always() (phone/role/name-prefix
     match against DRAFT_ALWAYS_PHONES/ROLES/NAMES) rather than re-implementing
-    the match rules -- same identity source (modules.identity_brain.detect_identity)
+    the match rules -- same identity source (modules.fazle_identity_brain.detect_identity)
     the legacy bridge_poller path already uses for this exact check.
 
     target_id is not always a phone number (e.g. Facebook comment/PSID
@@ -141,8 +141,8 @@ async def _is_draft_always_sender(target_id: str, latest_event: dict) -> bool:
     DRAFT_ALWAYS_ROLES, so non-WhatsApp senders correctly fall through to the
     real-send path unless separately matched by name.
     """
-    from modules.bridge_poller import _is_draft_always
-    from modules.identity_brain import detect_identity
+    from modules.fazle_bridge_poller import _is_draft_always
+    from modules.fazle_identity_brain import detect_identity
 
     text = str(latest_event.get("message_text") or "")
     identity = await detect_identity(target_id, text)
@@ -162,7 +162,7 @@ async def _sender_display_name(target_id: str, latest_event: dict) -> str:
     _is_draft_always_sender already uses — never raises, "Unknown" on any
     failure (identity resolution must never block a notification)."""
     try:
-        from modules.identity_brain import detect_identity
+        from modules.fazle_identity_brain import detect_identity
         text = str(latest_event.get("message_text") or "")
         identity = await detect_identity(target_id, text)
         return (identity.get("display_name") or "").strip() or "Unknown"
@@ -178,7 +178,7 @@ async def _draft_instead_of_send(
 ) -> int | None:
     """Create a fazle_draft_replies row instead of enqueueing a real send,
     and notify the admin that a draft is waiting. Reuses the same shared
-    draft mechanism modules/bridge_poller._save_draft() uses, so this is a
+    draft mechanism modules/fazle_bridge_poller._save_draft() uses, so this is a
     routing change only -- no new draft/notification infrastructure.
 
     ai_polished=True (2026-08-03, Owner decision, Phase 4): this draft came

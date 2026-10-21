@@ -37,7 +37,7 @@ fi
 
 step "import smoke"
 "$PY" -c "from modules import observability as o; o.inc('x'); assert o.snapshot()['counters']['x']" && ok "observability import"
-"$PY" -c "import modules.intent, modules.scheduler, modules.outbound" && ok "module imports"
+"$PY" -c "import modules.fazle_intent, modules.scheduler, modules.outbound" && ok "module imports"
 
 step "Batch 22 observability test (offline, no services)"
 "$PY" scripts/test_batch22_observability.py

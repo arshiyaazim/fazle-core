@@ -2,7 +2,7 @@
 -- Key: COALESCE(start_date, program_date) + mother_vessel + lighter_vessel + escort_name
 -- Prevents duplicate confirmed rows created by backfill/replay or repeated admin confirmations.
 
-CREATE UNIQUE INDEX IF NOT EXISTS uq_wbom_escort_confirmed_exact
+CREATE UNIQUE INDEX IF NOT EXISTS uq_fazle_escort_confirmed_exact
 ON wbom_escort_programs (
     COALESCE(start_date, program_date),
     UPPER(TRIM(mother_vessel)),

@@ -8,6 +8,9 @@ runtime_index: false
 
 # PKCA Report 11: Identity Coverage Report
 
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **Date:** 2026-06-22
 **Mode:** Read-Only Analysis
 
@@ -28,9 +31,9 @@ The Fazle AI platform uses a multi-source identity resolution system to classify
 | 3 | accountant | fazle_contact_roles (role='accountant') | 30% — accountant_identity.md exists |
 | 4 | vip_client | fazle_contact_roles | 30% — vip_identity.md exists |
 | 5 | client_escort_buyer | fazle_contact_roles | 20% — partially in identity_overview.md |
-| 6 | repeat_client | wbom_cash_transactions history | 20% — partially in identity_overview.md |
+| 6 | repeat_client | fazle_cash_transactions_archive history | 20% — partially in identity_overview.md |
 | 7 | vendor | fazle_contact_roles | 10% — mentioned in identity_overview.md |
-| 8 | employee | wbom_employees + 4 secondary sources | 40% — employee_identity.md exists |
+| 8 | employee | fazle_employees_legacy + 4 secondary sources | 40% — employee_identity.md exists |
 | 9 | supervisor | fazle_contact_roles (role='supervisor') | 20% — partially in identity_overview.md |
 | 10 | candidate | fazle_recruitment_sessions | 30% — candidate_identity.md exists |
 | 11 | unknown | fallback — no evidence found | 10% — briefly in identity_overview.md |
@@ -47,11 +50,11 @@ The Fazle AI platform uses a multi-source identity resolution system to classify
 |---|---|---|
 | `fazle_contact_roles` | admin, family, accountant, vip_client, client_escort_buyer, vendor, supervisor, blocked | 0% — table never named in KB |
 | `fazle_admins` | admin role confirmation + RBAC level | 0% — never named in KB |
-| `wbom_employees` | employee role (phone match across 3 variants) | 0% — table never named in KB |
-| `wbom_cash_transactions` | repeat_client + employee secondary evidence | 0% |
+| `fazle_employees_legacy` | employee role (phone match across 3 variants) | 0% — table never named in KB |
+| `fazle_cash_transactions_archive` | repeat_client + employee secondary evidence | 0% |
 | `wbom_attendance` | employee secondary evidence | 0% |
 | `escort_roster_entries` | employee secondary evidence | 0% |
-| `wbom_contacts` | Best-name lookup; contact DB secondary evidence | 0% |
+| `fazle_contacts` | Best-name lookup; contact DB secondary evidence | 0% |
 | `fazle_recruitment_sessions` | candidate role (active recruitment session exists) | 0% |
 
 ---
@@ -66,14 +69,14 @@ Step 2: Is this family? → check fazle_contact_roles(role=family)
 Step 3: Is this accountant? → check fazle_contact_roles(role=accountant)
 Step 4: Is this a VIP? → check fazle_contact_roles(role=vip_client)
 Step 5: Is this client_escort_buyer? → check fazle_contact_roles(role=client_escort_buyer)
-Step 6: Is this repeat_client? → check wbom_cash_transactions history
+Step 6: Is this repeat_client? → check fazle_cash_transactions_archive history
 Step 7: Is this vendor? → check fazle_contact_roles(role=vendor)
 Step 8: Is this employee?
-  - Primary: wbom_employees WHERE mobile = 01XXXXXXXXX OR 880XXXXXXXXX OR +880XXXXXXXXX
-  - Secondary A: wbom_cash_transactions (any transaction with this phone)
+  - Primary: fazle_employees_legacy WHERE mobile = 01XXXXXXXXX OR 880XXXXXXXXX OR +880XXXXXXXXX
+  - Secondary A: fazle_cash_transactions_archive (any transaction with this phone)
   - Secondary B: wbom_attendance (any attendance with this phone)
   - Secondary C: escort_roster_entries (any roster entry)
-  - Secondary D: wbom_contacts (contact DB match)
+  - Secondary D: fazle_contacts (contact DB match)
 Step 9: Is this supervisor? → check fazle_contact_roles(role=supervisor)
 Step 10: Is this a candidate? → check fazle_recruitment_sessions (active session)
 Step 11: fallback → unknown
@@ -90,7 +93,7 @@ Identity resolution returns a confidence float (0.0–1.0):
 | Evidence Type | Confidence |
 |---|---|
 | fazle_contact_roles exact match | 1.0 |
-| wbom_employees primary phone match | 0.95 |
+| fazle_employees_legacy primary phone match | 0.95 |
 | Secondary evidence (cash/attendance/roster) | 0.7 |
 | Contact DB match only | 0.5 |
 | No evidence / fallback | 0.0 (unknown) |

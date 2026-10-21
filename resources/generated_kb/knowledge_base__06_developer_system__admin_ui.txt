@@ -1,6 +1,6 @@
 Source: knowledge_base/06_developer_system/admin_ui.md
-SHA256: d1618908ddfb53f90c9faaa53c0e9dbe9ceb14277c19c65d82210b6dded67407
-Version: d1618908ddfb
+SHA256: 9467ae26685993ffa8dcaeb38c55eb212729b8e9787ece90d4af6ff27ba4c1f7
+Version: 9467ae266859
 
 # Admin UI — wa_chat_frontend
 **KB Article ID:** DEV-06-ADMIN-UI
@@ -59,7 +59,7 @@ HTTP 403 on invalid/missing key.
 | `POST` | `/api/wa/contacts/sync` | Trigger full contact sync from all bridge SQLite DBs |
 | `GET` | `/api/wa/contacts/{phone}` | Single contact detail + auto_reply_blocked status |
 | `PATCH` | `/api/wa/contacts/{phone}` | Edit `display_name` |
-| `DELETE` | `/api/wa/contacts/{phone}` | Delete contact from `wbom_contacts` |
+| `DELETE` | `/api/wa/contacts/{phone}` | Delete contact from `fazle_contacts` |
 | `POST` | `/api/wa/contacts/{phone}/block` | Persist per-phone auto-reply block |
 | `POST` | `/api/wa/contacts/{phone}/unblock` | Remove per-phone auto-reply block |
 
@@ -166,8 +166,8 @@ On startup (`ensure_wa_chat_tables()`):
 |---|---|
 | `modules/admin_transactions` | `/api/admin/transactions` (create/edit/soft-delete FPE cash transactions) |
 | `modules/escort_roster/routes` | `/api/escort-roster/` (12 endpoints — separate router) |
-| `wbom_whatsapp_messages` | Source for contact list and message history |
-| `wbom_contacts` | Display name lookup; updated via contact sync |
+| `fazle_whatsapp_messages` | Source for contact list and message history |
+| `fazle_contacts` | Display name lookup; updated via contact sync |
 | `fazle_draft_replies` | Pending draft source for `/api/wa/drafts` |
 | `modules/outbound` | All message sends pass through `outbound.enqueue()` |
 

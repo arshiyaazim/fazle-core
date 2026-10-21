@@ -468,7 +468,7 @@ async def _process_parsed_batch() -> None:
                 emp_row = None
                 if emp_phone:
                     emp_row = await _fetch_one(
-                        "SELECT id FROM fpe_employees "
+                        "SELECT id FROM fazle_employees "
                         "WHERE primary_phone = $1 OR employee_id_phone = $1 "
                         "LIMIT 1",
                         emp_phone,

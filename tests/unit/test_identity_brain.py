@@ -1,4 +1,4 @@
-"""Unit tests — modules/identity_brain"""
+"""Unit tests — modules/fazle_identity_brain"""
 from __future__ import annotations
 
 import pytest
@@ -41,9 +41,9 @@ class TestDetectIdentityFromSettings:
     """Admin numbers in env are always resolved as admin (highest priority)."""
 
     async def test_admin_phone_returns_admin_role(self):
-        from modules.identity_brain import detect_identity
+        from modules.fazle_identity_brain import detect_identity
 
-        with patch("modules.identity_brain.fetch_one", new=AsyncMock(return_value=None)):
+        with patch("modules.fazle_identity_brain.fetch_one", new=AsyncMock(return_value=None)):
             with patch("app.config.get_settings") as mock_settings:
                 mock_settings.return_value.admin_numbers = "8801700000001"
                 mock_settings.return_value.admin_number_list = ["8801700000001"]
@@ -62,15 +62,15 @@ class TestDetectIdentityFromSeedRule:
         "accountant", "family", "vip_client", "client_escort_buyer", "supervisor",
     ])
     async def test_seed_role_returned(self, role):
-        from modules.identity_brain import detect_identity
+        from modules.fazle_identity_brain import detect_identity
 
         seed_row = _contact_role_row(role, "8801811111111")
 
-        with patch("modules.identity_brain.fetch_one", new=AsyncMock(side_effect=[
+        with patch("modules.fazle_identity_brain.fetch_one", new=AsyncMock(side_effect=[
             seed_row,   # fazle_contact_roles lookup
-            None,       # wbom_employees lookup variant 1
-            None,       # wbom_employees lookup variant 2
-            None,       # wbom_employees lookup variant 3
+            None,       # fazle_employees_legacy lookup variant 1
+            None,       # fazle_employees_legacy lookup variant 2
+            None,       # fazle_employees_legacy lookup variant 3
         ])):
             result = await detect_identity("8801811111111", "hello")
 
@@ -79,12 +79,12 @@ class TestDetectIdentityFromSeedRule:
         assert actual_role == role
 
     async def test_accountant_higher_priority_than_employee(self):
-        """If phone is in both fazle_contact_roles=accountant AND wbom_employees,
+        """If phone is in both fazle_contact_roles=accountant AND fazle_employees_legacy,
         accountant seed rule wins (priority 95 > employee 88)."""
-        from modules.identity_brain import detect_identity
+        from modules.fazle_identity_brain import detect_identity
 
-        # Return accountant from contact_roles, employee from wbom_employees
-        with patch("modules.identity_brain.fetch_one", new=AsyncMock(side_effect=[
+        # Return accountant from contact_roles, employee from fazle_employees_legacy
+        with patch("modules.fazle_identity_brain.fetch_one", new=AsyncMock(side_effect=[
             _contact_role_row("accountant"),
             _employee_row(),
         ])):
@@ -95,14 +95,14 @@ class TestDetectIdentityFromSeedRule:
 
 
 class TestDetectIdentityFromEmployee:
-    """wbom_employees lookup resolves as 'employee'."""
+    """fazle_employees_legacy lookup resolves as 'employee'."""
 
     async def test_employee_phone_returns_employee_role(self):
-        from modules.identity_brain import detect_identity
+        from modules.fazle_identity_brain import detect_identity
 
-        with patch("modules.identity_brain.fetch_one", new=AsyncMock(side_effect=[
+        with patch("modules.fazle_identity_brain.fetch_one", new=AsyncMock(side_effect=[
             None,             # fazle_contact_roles miss
-            _employee_row(),  # wbom_employees hit (designation="Staff")
+            _employee_row(),  # fazle_employees_legacy hit (designation="Staff")
             None,             # wbom_attendance recency check (lifecycle heuristic)
         ])):
             result = await detect_identity("8801811111111", "regular text")
@@ -112,12 +112,12 @@ class TestDetectIdentityFromEmployee:
 
     async def test_phone_normalisation_0x_format(self):
         """Phone stored as 01811111111 in DB; lookup with 8801811111111 should match."""
-        from modules.identity_brain import detect_identity
+        from modules.fazle_identity_brain import detect_identity
 
         # Return employee with 0X format stored
         row = _employee_row("01811111111")
 
-        with patch("modules.identity_brain.fetch_one", new=AsyncMock(side_effect=[
+        with patch("modules.fazle_identity_brain.fetch_one", new=AsyncMock(side_effect=[
             None, row, None,
         ])):
             result = await detect_identity("8801811111111", "")
@@ -127,11 +127,11 @@ class TestDetectIdentityFromEmployee:
 
     async def test_security_guard_designation_returns_security_guard_role(self):
         """2026-07-21 routing work: designation drives the escort/guard split,
-        not a hardcoded 'employee' for every wbom_employees row."""
-        from modules.identity_brain import detect_identity
+        not a hardcoded 'employee' for every fazle_employees_legacy row."""
+        from modules.fazle_identity_brain import detect_identity
 
         row = _employee_row(designation="Security Guard")
-        with patch("modules.identity_brain.fetch_one", new=AsyncMock(side_effect=[
+        with patch("modules.fazle_identity_brain.fetch_one", new=AsyncMock(side_effect=[
             None, row, None,
         ])):
             result = await detect_identity("8801811111111", "")
@@ -140,10 +140,10 @@ class TestDetectIdentityFromEmployee:
         assert actual_role == "security_guard"
 
     async def test_escort_designation_returns_escort_role(self):
-        from modules.identity_brain import detect_identity
+        from modules.fazle_identity_brain import detect_identity
 
         row = _employee_row(designation="Escort")
-        with patch("modules.identity_brain.fetch_one", new=AsyncMock(side_effect=[
+        with patch("modules.fazle_identity_brain.fetch_one", new=AsyncMock(side_effect=[
             None, row, None,
         ])):
             result = await detect_identity("8801811111111", "")
@@ -153,11 +153,11 @@ class TestDetectIdentityFromEmployee:
 
     async def test_inactive_employee_lifecycle_is_former_no_attendance_query(self):
         """status != 'Active' short-circuits to 'former' without a 3rd DB call."""
-        from modules.identity_brain import detect_identity
+        from modules.fazle_identity_brain import detect_identity
 
         row = _employee_row(designation="Staff")
         row["status"] = "Inactive"
-        with patch("modules.identity_brain.fetch_one", new=AsyncMock(side_effect=[
+        with patch("modules.fazle_identity_brain.fetch_one", new=AsyncMock(side_effect=[
             None, row,
         ])):
             result = await detect_identity("8801811111111", "")
@@ -175,9 +175,9 @@ class TestDetectIdentityFromTextHint:
         "নিয়োগ দেবেন",
     ])
     async def test_candidate_keyword_returns_candidate(self, text):
-        from modules.identity_brain import detect_identity
+        from modules.fazle_identity_brain import detect_identity
 
-        with patch("modules.identity_brain.fetch_one", new=AsyncMock(return_value=None)):
+        with patch("modules.fazle_identity_brain.fetch_one", new=AsyncMock(return_value=None)):
             result = await detect_identity("8801900000000", text)
 
         actual_role = result.get("identity_role") or result.get("role")
@@ -188,9 +188,9 @@ class TestDetectIdentityUnknown:
     """No match → unknown."""
 
     async def test_unknown_phone_no_keywords(self):
-        from modules.identity_brain import detect_identity
+        from modules.fazle_identity_brain import detect_identity
 
-        with patch("modules.identity_brain.fetch_one", new=AsyncMock(return_value=None)):
+        with patch("modules.fazle_identity_brain.fetch_one", new=AsyncMock(return_value=None)):
             result = await detect_identity("8801900000000", "hello there")
 
         actual_role = result.get("identity_role") or result.get("role")
@@ -206,9 +206,9 @@ class TestEscortContentDetection:
         "এমভি destination Ctg",
     ])
     async def test_escort_keywords_hint_escort_role(self, text):
-        from modules.identity_brain import detect_identity
+        from modules.fazle_identity_brain import detect_identity
 
-        with patch("modules.identity_brain.fetch_one", new=AsyncMock(return_value=None)):
+        with patch("modules.fazle_identity_brain.fetch_one", new=AsyncMock(return_value=None)):
             result = await detect_identity("8801900000000", text)
 
         actual_role = result.get("identity_role") or result.get("role")
@@ -220,7 +220,7 @@ class TestEscortContentDetection:
 #
 # Real incident: 8801670535255 is an explicitly configured ESCORT_CLIENT_PHONES
 # entry. On 2026-07-25 a one-off cash payment ("Hridoy 01670-535255(N) 2000/-")
-# to the same person auto-created an fpe_employees stub (the same auto-create
+# to the same person auto-created an fazle_employees stub (the same auto-create
 # mechanism as the 2026-08-01 FPE parser fix). From that day on, every message
 # from this number resolved to role="employee" (source=cash_payment) instead
 # of client_escort_buyer, because Step 3.5 (operational evidence) ran before
@@ -241,13 +241,13 @@ class TestEscortClientPhonePriorityFix:
         """The exact production incident: an explicit ESCORT_CLIENT_PHONES
         entry must resolve as client_escort_buyer even though the same
         phone also has an (incidental) cash-payment record on file."""
-        from modules.identity_brain import detect_identity
+        from modules.fazle_identity_brain import detect_identity
 
-        with patch("modules.identity_brain._lookup_seed", new=AsyncMock(return_value=None)), \
-             patch("modules.identity_brain._lookup_employee", new=AsyncMock(return_value=None)), \
-             patch("modules.identity_brain._lookup_escort_roster", new=AsyncMock(return_value=None)), \
-             patch("modules.identity_brain._matches_env_escort_phone", return_value=True), \
-             patch("modules.identity_brain._lookup_cash_identity", new=AsyncMock(
+        with patch("modules.fazle_identity_brain._lookup_seed", new=AsyncMock(return_value=None)), \
+             patch("modules.fazle_identity_brain._lookup_employee", new=AsyncMock(return_value=None)), \
+             patch("modules.fazle_identity_brain._lookup_escort_roster", new=AsyncMock(return_value=None)), \
+             patch("modules.fazle_identity_brain._matches_env_escort_phone", return_value=True), \
+             patch("modules.fazle_identity_brain._lookup_cash_identity", new=AsyncMock(
                  return_value={"employee_id": 252, "employee_name": "Hridoy", "designation": "Staff"}
              )) as mock_cash:
             result = await detect_identity("8801670535255", "Mv.Elim inspire /Nabil /wheat")
@@ -259,15 +259,15 @@ class TestEscortClientPhonePriorityFix:
     async def test_non_escort_client_phone_still_uses_cash_payment_evidence(self):
         """Regression guard: a phone NOT on the escort-client allowlist must
         still resolve via cash-payment evidence exactly as before."""
-        from modules.identity_brain import detect_identity
+        from modules.fazle_identity_brain import detect_identity
 
-        with patch("modules.identity_brain._lookup_seed", new=AsyncMock(return_value=None)), \
-             patch("modules.identity_brain._lookup_employee", new=AsyncMock(return_value=None)), \
-             patch("modules.identity_brain._matches_env_escort_phone", return_value=False), \
-             patch("modules.identity_brain._lookup_cash_identity", new=AsyncMock(
+        with patch("modules.fazle_identity_brain._lookup_seed", new=AsyncMock(return_value=None)), \
+             patch("modules.fazle_identity_brain._lookup_employee", new=AsyncMock(return_value=None)), \
+             patch("modules.fazle_identity_brain._matches_env_escort_phone", return_value=False), \
+             patch("modules.fazle_identity_brain._lookup_cash_identity", new=AsyncMock(
                  return_value={"employee_id": 99, "employee_name": "Someone", "designation": "Staff"}
              )), \
-             patch("modules.identity_brain._lookup_lifecycle", new=AsyncMock(return_value="active")):
+             patch("modules.fazle_identity_brain._lookup_lifecycle", new=AsyncMock(return_value="active")):
             result = await detect_identity("8801900000000", "some text")
 
         actual_role = result.get("identity_role") or result.get("role")
@@ -277,7 +277,7 @@ class TestEscortClientPhonePriorityFix:
         """_escort_client_phone_list() returns 01XXXXXXXXX; the caller's
         normalized phone is 8801XXXXXXXXX. The check must compare across
         all canonical variants, not raw equality."""
-        from modules.identity_brain import _matches_env_escort_phone
+        from modules.fazle_identity_brain import _matches_env_escort_phone
 
         with patch("modules.escort._escort_client_phone_list", return_value=["01670535255"]):
             assert _matches_env_escort_phone("8801670535255") is True

@@ -18,7 +18,7 @@
 --      support is a documented future enhancement (see column comments
 --      below), not built now.
 --   4. wbom_client_billing_profiles.contact_id is a required column
---      (nullable value) -- a real FK to wbom_contacts, never a
+--      (nullable value) -- a real FK to fazle_contacts, never a
 --      disconnected client system. Populated when resolvable; legacy
 --      records may stay NULL, no forced backfill.
 --
@@ -31,7 +31,7 @@
 --
 -- employee_wage_24h/12h/monthly are for the profit-estimation calculation
 -- on THIS table only -- they must never feed into, override, or be read by
--- modules/payroll, modules/payment_workflow, or any real guard-payment
+-- modules/payroll, modules/fazle_payment_workflow, or any real guard-payment
 -- calculation, per the Owner's "do not touch payroll formula" rule.
 --
 -- STATUS (2026-07-09): validated (test-harness schema check + scratch-DB
@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS wbom_client_billing_profiles (
     other_charges              NUMERIC(12,2) NOT NULL DEFAULT 0,
     notes                     TEXT,
     is_active                 BOOLEAN NOT NULL DEFAULT true,
-    contact_id                INTEGER REFERENCES wbom_contacts(contact_id),
+    contact_id                INTEGER REFERENCES fazle_contacts(contact_id),
     created_at                TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at                TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -93,7 +93,7 @@ CREATE INDEX IF NOT EXISTS idx_client_billing_profiles_contact_id
 CREATE UNIQUE INDEX IF NOT EXISTS idx_client_billing_profiles_contact_mobile
     ON wbom_client_billing_profiles(contact_person_mobile);
 
--- No backfill of existing wbom_contacts/wbom_escort_programs rows in this
+-- No backfill of existing fazle_contacts/wbom_escort_programs rows in this
 -- migration -- per "do not auto-backfill old clients," this table starts
 -- empty; profiles are created going forward via the (not yet built)
 -- Client Settings UI.

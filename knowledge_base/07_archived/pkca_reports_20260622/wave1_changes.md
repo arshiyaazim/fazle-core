@@ -85,7 +85,7 @@ runtime_index: false
 | Draft-always roles | `app/bridge_poller` | `_is_draft_always()` | 10 (HK-09) |
 | Complaint phrases | `app/bridge_poller` | `_COMPLAINT_PHRASES` | 10 (HK-10) |
 | Advance phrases | `app/bridge_poller` | `_ADVANCE_REQUEST_PHRASES` | 10 (HK-11) |
-| Identity algorithm | `modules/identity_brain` | `resolve_identity()` | 11 |
+| Identity algorithm | `modules/fazle_identity_brain` | `resolve_identity()` | 11 |
 | Blocked role | `app/message_router` | `_should_silent_skip()` | 10 (HK-02) |
 | RBAC hierarchy | `modules/rbac` | `COMMAND_ROLE` | 12 (HK-40) |
 | Bootstrap admin | `modules/rbac` | `ensure_bootstrap_admins()` | 10 (HK-41) |
@@ -95,20 +95,20 @@ runtime_index: false
 | Release date validation | `modules/escort_lifecycle` | `_validate_release_date()` | 09 (SM-03) |
 | Payroll state machine | `modules/payroll` | `ALLOWED_TRANSITIONS` | 09 (SM-01) |
 | Payroll idempotency | `modules/payroll` | `compute_run()` | 10 (HK-27) |
-| PAYROLL commands | `modules/admin_commands` | `_cmd_payroll_*()` | 12 |
-| All 37 admin commands | `modules/admin_commands` | `dispatch_command()` | 12 |
+| PAYROLL commands | `modules/fazle_admin_commands` | `_cmd_payroll_*()` | 12 |
+| All 37 admin commands | `modules/fazle_admin_commands` | `dispatch_command()` | 12 |
 | Recruitment age | `modules/recruitment_flow` | `_parse_age()` | 04 (BR-25) |
 | Valid positions | `modules/recruitment_flow` | `VALID_POSITIONS` | 10 (HK-36) |
 | Recruitment scoring | `modules/recruitment_flow` | `_compute_score()` | 10 (HK-34) |
 | Session TTL | `modules/recruitment_flow` | `SESSION_TTL` | 10 (HK-33) |
 | Recruitment AI | `modules/recruitment_ai` | `_looks_like_fee_question()` | 08 |
-| Advance keywords | `modules/payment_workflow` | `ADVANCE_KEYWORDS` | 10 (HK-43) |
-| Payment draft states | `modules/payment_workflow` | `create_escort_payment_draft()` | 09 (SM-03) |
+| Advance keywords | `modules/fazle_payment_workflow` | `ADVANCE_KEYWORDS` | 10 (HK-43) |
+| Payment draft states | `modules/fazle_payment_workflow` | `create_escort_payment_draft()` | 09 (SM-03) |
 | Employee verification | `modules/employee_verification` | `run_verification_step()` | 09 (SM-06) |
 | Attendance state machine | `modules/attendance` | `save_attendance()` | 09 (SM-05) |
 | Attendance parser | `modules/attendance_parser` | `_DATE_PATTERNS` | 05 |
 | Escort state machine | `modules/escort_lifecycle` | Status transitions | 09 (SM-02) |
-| ESCORTCONFIRM | `modules/admin_commands` | `_cmd_escort_confirm()` | 12 |
+| ESCORTCONFIRM | `modules/fazle_admin_commands` | `_cmd_escort_confirm()` | 12 |
 | OCR requirements | `modules/escort_slip_extractor` | `extract_slip()` | 05 |
 | Document type detection | `modules/escort_slip_extractor` | `detect_document_type()` | 05 |
 | Release parser fields | `modules/escort_lifecycle` | `parse_release_confirmation()` | 05 |

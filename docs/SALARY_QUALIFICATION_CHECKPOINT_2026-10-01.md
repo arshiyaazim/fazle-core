@@ -1,5 +1,8 @@
 # SALARY QUALIFICATION + QUEUE-RBAC + 9ROUTER — VERIFIED CHECKPOINT
 
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **Status:** `CHECKPOINT ESTABLISHED — BASELINE FOR UNCHANGED CODE`
 **Date:** 2026-10-01
 **Author:** Kilo (VS Code agent)
@@ -42,7 +45,7 @@ recorded in this document.
 | `knowledge_base/06_developer_system/identity_role_agent/README.md` | Identity-Role Agent design-contract doc |
 | `tests/unit/test_9router_adapter.py` | 9Router adapter unit tests |
 | `tests/unit/test_9router_recruitment_qualification.py` | 9Router recruitment qualification tests (4 tests, incl. salary deterministic checks) |
-| `tests/unit/test_fpe_bridge_alias.py` | Bridge-alias helper tests |
+| `tests/unit/test_fazle_bridge_alias.py` | Bridge-alias helper tests |
 
 ---
 
@@ -111,7 +114,7 @@ Per-suite counts: 19 + 11 + 34 + 67 = 131 (four regression suites) + 4
 `TEST_DB_PASSWORD=<container password> ./venv/bin/python -m pytest \
   tests/unit/test_9router_recruitment_qualification.py \
   tests/unit/test_9router_adapter.py \
-  tests/unit/test_fpe_bridge_alias.py \
+  tests/unit/test_fazle_bridge_alias.py \
   tests/unit/test_llm_provider_order.py \
   tests/unit/test_recruitment_salary_context_routing_fix.py \
   tests/unit/test_second_rebrand_and_recruitment_rag.py \

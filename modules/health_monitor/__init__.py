@@ -1,6 +1,6 @@
 """
 Health Monitor Module — C1B Gate-4 Implementation
-Monitors fpe_cash_transactions write integrity and WBOM write status.
+Monitors fazle_cash_transactions write integrity and WBOM write status.
 
 Public API:
   await check_system_health() → dict with overall status and per-check results
@@ -36,15 +36,15 @@ async def check_system_health() -> dict[str, Any]:
         "checks": {},
     }
 
-    # Check 1: fpe_cash_transactions is readable/writable
+    # Check 1: fazle_cash_transactions is readable/writable
     try:
-        await fetch_val("SELECT COUNT(*) FROM fpe_cash_transactions LIMIT 1")
+        await fetch_val("SELECT COUNT(*) FROM fazle_cash_transactions LIMIT 1")
         health["checks"]["fpe_table"] = "ok"
     except Exception as e:
         health["checks"]["fpe_table"] = f"error: {e}"
         health["status"] = "degraded"
 
-    # Check 2: WBOM write freeze — post-C1B, no new wbom_cash_transactions writes expected
+    # Check 2: WBOM write freeze — post-C1B, no new fazle_cash_transactions_archive writes expected
     try:
         delta = await check_wbom_write_delta()
         health["checks"]["wbom_freeze"] = "ok" if delta == 0 else f"VIOLATION: {delta} new writes"
@@ -72,13 +72,13 @@ async def check_system_health() -> dict[str, Any]:
 async def check_wbom_write_delta() -> int:
     """Return number of new WBOM rows created in the last 24 hours.
 
-    Post C1B architecture freeze, direct writes to wbom_cash_transactions
+    Post C1B architecture freeze, direct writes to fazle_cash_transactions_archive
     should be zero. Returns 0 if WBOM table doesn't exist.
     """
     try:
         count = await fetch_val(
             """SELECT COUNT(*)
-               FROM wbom_cash_transactions
+               FROM fazle_cash_transactions_archive
                WHERE created_at >= NOW() - INTERVAL '24 hours'"""
         )
         return int(count or 0)

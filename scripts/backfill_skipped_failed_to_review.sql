@@ -2,7 +2,7 @@
 -- appear in /payroll/review for admin verification.
 --
 -- Safe to re-run: WHERE NOT EXISTS guard prevents duplicate review rows for
--- the same fpe_wa_message_id. Ledger (fpe_cash_transactions) is NEVER touched.
+-- the same fpe_wa_message_id. Ledger (fazle_cash_transactions) is NEVER touched.
 
 INSERT INTO fpe_unmatched_messages (
     fpe_wa_message_id,

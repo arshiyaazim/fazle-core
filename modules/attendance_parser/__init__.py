@@ -187,7 +187,7 @@ async def create_attendance_draft(
         norm = normalize_phone(emp_mobile)
         for v in ([norm, "880" + norm[1:]] if norm.startswith("0") else [norm]):
             emp = await fetch_one(
-                "SELECT employee_id, employee_name, designation FROM wbom_employees WHERE employee_mobile = $1",
+                "SELECT employee_id, employee_name, designation FROM fazle_employees_legacy WHERE employee_mobile = $1",
                 v,
             )
             if emp:
@@ -196,7 +196,7 @@ async def create_attendance_draft(
     if not emp and emp_name:
         emp = await fetch_one(
             """SELECT employee_id, employee_name, designation
-               FROM wbom_employees
+               FROM fazle_employees_legacy
                WHERE LOWER(employee_name) LIKE LOWER($1) AND status = 'Active'
                LIMIT 1""",
             f"%{emp_name.split()[0]}%",

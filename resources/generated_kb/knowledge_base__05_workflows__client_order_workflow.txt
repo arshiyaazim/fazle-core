@@ -1,6 +1,6 @@
 Source: knowledge_base/05_workflows/client_order_workflow.md
-SHA256: 0123b9b9215e5da2c4bd6b7f8d35ba8174873e1d0eafcf9f092d3e6ff2cfa4f7
-Version: 0123b9b9215e
+SHA256: 7cc5a4bb4ae60c052dc6ee8b15a141ed6cc9a77404cb997c53118f23d122b4fb
+Version: 7cc5a4bb4ae6
 
 # Client Order Workflow
 

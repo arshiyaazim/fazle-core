@@ -52,7 +52,7 @@ Assess the maturity of every AI behavior component in the Fazle AI Platform. AI 
 | Dimension | Status |
 |---|---|
 | Provider Order | Groq → GitHub → Ollama (different from reply chain — documented Wave-1) |
-| Source | `modules/intent.classify()` |
+| Source | `modules/fazle_intent.classify()` |
 | Key Difference | Groq-first for intent (speed-optimized); GitHub-first for reply (quality-optimized) |
 | Intent Categories | 9 safe auto-send + multiple non-auto-send intents — partially documented |
 | Deterministic Pre-check | Yes — keyword patterns before LLM (documented ai_response_rules.md) |

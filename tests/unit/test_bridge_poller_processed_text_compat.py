@@ -4,7 +4,7 @@ RCA (2026-08-29 maintenance session): `processed_text` is a legacy in-house
 OCR/STT column that is NOT part of the stock whatsmeow/whatsapp-mcp bridge
 schema. bridge1's store, re-created by the current stock binary after its
 2026-08-24 re-pair, has no such column, while the older bridge2/bridge3
-stores still do. `modules.bridge_poller._fetch_new_messages` (and the FPE
+stores still do. `modules.fazle_bridge_poller._fetch_new_messages` (and the FPE
 historical-sync / gap-scan readers) named the column unconditionally in
 their SELECTs, so every poll against the new bridge1 store raised
 `sqlite3.OperationalError: no such column: processed_text` — freezing
@@ -23,7 +23,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from modules.bridge_poller import _fetch_new_messages
+from modules.fazle_bridge_poller import _fetch_new_messages
 from shared.sqlite_compat import has_column, processed_text_column
 
 # Stock bridge `messages` schema — exactly the 13 columns the current binary

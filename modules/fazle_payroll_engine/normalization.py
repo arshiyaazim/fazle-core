@@ -4,8 +4,8 @@ Fazle Payroll Engine — Safe Identity Normalization Service.
 Implements the alias-based identity-resolution model.
 
 DESIGN INVARIANTS (DO NOT VIOLATE):
-  * Never UPDATE fpe_cash_transactions.employee_id
-  * Never DELETE an fpe_employees row that has any history
+  * Never UPDATE fazle_cash_transactions.employee_id
+  * Never DELETE an fazle_employees row that has any history
   * Never recompute or alter txn_ref hashes
   * Never auto-merge by name alone (must have phone or human approval)
   * All identity changes are recorded in fpe_normalization_audit_logs
@@ -75,7 +75,7 @@ async def _employee_snapshot(employee_id: int) -> Optional[dict]:
         SELECT id, employee_code, full_name, name_normalized,
                primary_phone, employee_id_phone, status,
                canonical_employee_id, resolution_status, confidence_score
-        FROM fpe_employees WHERE id = $1
+        FROM fazle_employees WHERE id = $1
         """,
         employee_id,
     )
@@ -103,7 +103,7 @@ async def resolve_to_canonical(employee_id: int) -> int:
             return current
         seen.add(current)
         canon_id = await fetch_val(
-            "SELECT canonical_employee_id FROM fpe_employees WHERE id = $1",
+            "SELECT canonical_employee_id FROM fazle_employees WHERE id = $1",
             current,
         )
         if not canon_id:
@@ -165,9 +165,9 @@ async def link_duplicate(
     Mark `duplicate_id` as a duplicate of `canonical_id`.
 
     Effects (all SAFE):
-      * fpe_employees(duplicate_id).canonical_employee_id := canonical_id
-      * fpe_employees(duplicate_id).resolution_status     := 'duplicate'
-      * fpe_employees(canonical_id).resolution_status     := 'canonical'
+      * fazle_employees(duplicate_id).canonical_employee_id := canonical_id
+      * fazle_employees(duplicate_id).resolution_status     := 'duplicate'
+      * fazle_employees(canonical_id).resolution_status     := 'canonical'
       * Insert row into fpe_employee_resolution_links
       * Audit log entry
 
@@ -196,7 +196,7 @@ async def link_duplicate(
         async with conn.transaction():
             await conn.execute(
                 """
-                UPDATE fpe_employees
+                UPDATE fazle_employees
                    SET canonical_employee_id = $1,
                        resolution_status = 'duplicate',
                        confidence_score = $2,
@@ -207,7 +207,7 @@ async def link_duplicate(
             )
             await conn.execute(
                 """
-                UPDATE fpe_employees
+                UPDATE fazle_employees
                    SET resolution_status = 'canonical',
                        updated_at = NOW()
                  WHERE id = $1
@@ -258,7 +258,7 @@ async def mark_inactive(
     async with db_conn() as conn:
         await conn.execute("SELECT pg_advisory_xact_lock($1)", _LOCK_KEY)
         await conn.execute(
-            "UPDATE fpe_employees SET status = 'inactive', "
+            "UPDATE fazle_employees SET status = 'inactive', "
             "resolution_status = 'inactive', updated_at = NOW() WHERE id = $1",
             employee_id,
         )
@@ -413,8 +413,8 @@ async def list_pending_reviews(limit: int = 100) -> list[dict]:
                es.full_name AS suspected_name,
                es.primary_phone AS suspected_phone
         FROM fpe_employee_review_queue q
-        LEFT JOIN fpe_employees ec ON ec.id = q.candidate_employee_id
-        LEFT JOIN fpe_employees es ON es.id = q.suspected_match_id
+        LEFT JOIN fazle_employees ec ON ec.id = q.candidate_employee_id
+        LEFT JOIN fazle_employees es ON es.id = q.suspected_match_id
         WHERE q.review_status = 'pending'
         ORDER BY q.created_at ASC
         LIMIT $1
@@ -438,19 +438,19 @@ async def normalization_summary() -> dict:
     """Lightweight counts for monitoring/dashboard."""
     counts: dict[str, Any] = {}
     counts["employees_total"] = int(await fetch_val(
-        "SELECT COUNT(*) FROM fpe_employees"
+        "SELECT COUNT(*) FROM fazle_employees"
     ) or 0)
     counts["employees_canonical"] = int(await fetch_val(
-        "SELECT COUNT(*) FROM fpe_employees WHERE resolution_status = 'canonical'"
+        "SELECT COUNT(*) FROM fazle_employees WHERE resolution_status = 'canonical'"
     ) or 0)
     counts["employees_duplicate"] = int(await fetch_val(
-        "SELECT COUNT(*) FROM fpe_employees WHERE resolution_status = 'duplicate'"
+        "SELECT COUNT(*) FROM fazle_employees WHERE resolution_status = 'duplicate'"
     ) or 0)
     counts["employees_unresolved"] = int(await fetch_val(
-        "SELECT COUNT(*) FROM fpe_employees WHERE resolution_status = 'unresolved'"
+        "SELECT COUNT(*) FROM fazle_employees WHERE resolution_status = 'unresolved'"
     ) or 0)
     counts["employees_inactive"] = int(await fetch_val(
-        "SELECT COUNT(*) FROM fpe_employees WHERE status = 'inactive'"
+        "SELECT COUNT(*) FROM fazle_employees WHERE status = 'inactive'"
     ) or 0)
     counts["aliases_total"] = int(await fetch_val(
         "SELECT COUNT(*) FROM fpe_employee_aliases"

@@ -3,7 +3,7 @@ Owner-approved: 8 confirmed business rules on top of the "New Trusted
 Group as additional source" design).
 
 Covers: the narrow @g.us exception in
-modules.bridge_poller._fetch_outgoing_escort_completions() (bridge2-only,
+modules.fazle_bridge_poller._fetch_outgoing_escort_completions() (bridge2-only,
 one exact JID); modules.escort.handle_group_escort_order() (authority
 gate reuses _is_authoritative_bridge_confirmation()'s existing
 no-specific-recipient branch); modules.escort.save_escort_programs()'s
@@ -97,7 +97,7 @@ async def _insert_group_draft(test_db_pool, *, group_sourced: bool, hours_old: f
 
 
 # ===========================================================================
-# 1. SQL-level @g.us exception (modules.bridge_poller._fetch_outgoing_escort_completions)
+# 1. SQL-level @g.us exception (modules.fazle_bridge_poller._fetch_outgoing_escort_completions)
 # ===========================================================================
 
 class TestFetchOutgoingEscortCompletionsGroupException:
@@ -119,7 +119,7 @@ class TestFetchOutgoingEscortCompletionsGroupException:
     def test_feature_flag_off_excludes_all_groups_unchanged(self, tmp_path):
         """Default (empty trusted_group_jid) must reproduce the exact
         pre-existing 2026-04-27 'no groups' behavior."""
-        from modules.bridge_poller import _fetch_outgoing_escort_completions
+        from modules.fazle_bridge_poller import _fetch_outgoing_escort_completions
         since = datetime.now(timezone.utc) - timedelta(hours=1)
         after = since + timedelta(minutes=1)
         db_path = self._build_messages_db(tmp_path, [
@@ -132,7 +132,7 @@ class TestFetchOutgoingEscortCompletionsGroupException:
         assert "8801711000111@s.whatsapp.net" in chat_jids
 
     def test_trusted_group_jid_included_when_matching(self, tmp_path):
-        from modules.bridge_poller import _fetch_outgoing_escort_completions
+        from modules.fazle_bridge_poller import _fetch_outgoing_escort_completions
         since = datetime.now(timezone.utc) - timedelta(hours=1)
         after = since + timedelta(minutes=1)
         db_path = self._build_messages_db(tmp_path, [
@@ -144,7 +144,7 @@ class TestFetchOutgoingEscortCompletionsGroupException:
     def test_other_group_stays_excluded_even_with_trusted_jid_set(self, tmp_path):
         """A DIFFERENT, similarly-purposed group (e.g. 'Escort Release Slip')
         must never leak in just because some other JID is trusted."""
-        from modules.bridge_poller import _fetch_outgoing_escort_completions
+        from modules.fazle_bridge_poller import _fetch_outgoing_escort_completions
         since = datetime.now(timezone.utc) - timedelta(hours=1)
         after = since + timedelta(minutes=1)
         db_path = self._build_messages_db(tmp_path, [
@@ -441,13 +441,13 @@ class TestOutgoingScanLoopWiring:
 
     def test_group_jid_only_passed_for_bridge2(self):
         import inspect
-        import modules.bridge_poller as bp
+        import modules.fazle_bridge_poller as bp
         source = inspect.getsource(bp)
         assert '_settings.escort_order_group_jid if bridge_name == "bridge2" else ""' in source
 
     def test_is_trusted_group_msg_requires_bridge2_and_exact_jid_match(self):
         import inspect
-        import modules.bridge_poller as bp
+        import modules.fazle_bridge_poller as bp
         source = inspect.getsource(bp)
         idx = source.index("is_trusted_group_msg = bool(")
         block = source[idx:idx + 200]
@@ -461,7 +461,7 @@ class TestOutgoingScanLoopWiring:
         group-order branch must be structurally reachable only afterwards
         (via `continue` at the end of the completed-draft branch)."""
         import inspect
-        import modules.bridge_poller as bp
+        import modules.fazle_bridge_poller as bp
         source = inspect.getsource(bp)
         completed_branch = source.index("if is_completed_escort_draft(otext):")
         group_branch = source.index("if is_trusted_group_msg and is_order_complete(otext):")
@@ -469,13 +469,13 @@ class TestOutgoingScanLoopWiring:
 
     def test_recipient_phone_empty_string_only_for_trusted_group_branch(self):
         import inspect
-        import modules.bridge_poller as bp
+        import modules.fazle_bridge_poller as bp
         source = inspect.getsource(bp)
         assert 'recipient_phone = "" if is_trusted_group_msg else re.sub(r"\\D", "", chat_jid or "")' in source
 
     def test_handle_group_escort_order_call_gated_on_is_trusted_group_msg(self):
         import inspect
-        import modules.bridge_poller as bp
+        import modules.fazle_bridge_poller as bp
         source = inspect.getsource(bp)
         idx = source.index("if is_trusted_group_msg and is_order_complete(otext):")
         call_idx = source.index("await handle_group_escort_order(", idx)

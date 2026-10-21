@@ -70,11 +70,11 @@ The first step that produces a match wins.
 |---|---|---|---|
 | 1 | admin | Admin settings (env), then `fazle_contact_roles` where role='admin' | settings, `fazle_contact_roles` |
 | 2 | *(single seed lookup — see below)* family / accountant / vip_client / client_escort_buyer / vendor / supervisor — whichever `fazle_contact_roles` row for this phone has the highest `priority` value | `fazle_contact_roles` |
-| 3 | employee | Phone match, `wbom_employees` primary, `fpe_employees` fallback | See below |
-| 4 | employee (via operational evidence, gated) | `fpe_cash_transactions` or `wbom_attendance` — only checked when the phone is **not** in the `ESCORT_CLIENT_PHONES` env allowlist (2026-08-01 fix, see note below) | `fpe_cash_transactions`, `wbom_attendance` |
+| 3 | employee | Phone match, `fazle_employees_legacy` primary, `fazle_employees` fallback | See below |
+| 4 | employee (via operational evidence, gated) | `fazle_cash_transactions` or `wbom_attendance` — only checked when the phone is **not** in the `ESCORT_CLIENT_PHONES` env allowlist (2026-08-01 fix, see note below) | `fazle_cash_transactions`, `wbom_attendance` |
 | 5 | escort / repeat_client | `wbom_escort_programs` — `escort_mobile` match → `escort`; `master_mobile`-only match → `repeat_client` | `wbom_escort_programs` |
 | 6 | client_escort_buyer | Explicit `ESCORT_CLIENT_PHONES` env allowlist match | env |
-| 7 | client_escort_buyer / other | `wbom_contacts` — name marker match → `client_escort_buyer`; otherwise mapped from `relation` column | `wbom_contacts` |
+| 7 | client_escort_buyer / other | `fazle_contacts` — name marker match → `client_escort_buyer`; otherwise mapped from `relation` column | `fazle_contacts` |
 | 8 | candidate | Text-hint keyword match on message content (unverified) | message text only |
 | 9 | repeat_client | Escort-content keyword regex on an unknown sender's message (unverified) | message text only |
 | 10 | unknown | No match found | Fallback |
@@ -92,18 +92,18 @@ family/accountant/vip_client/client_escort_buyer/vendor/supervisor is whatever t
 changes this ordering without a code change.
 
 **Superseded step removed:** an earlier version of this doc listed a step "repeat_client ← repeat
-payment history (`fpe_cash_transactions`)." No such code path exists — the actual cash-payment
+payment history (`fazle_cash_transactions`)." No such code path exists — the actual cash-payment
 branch (step 4 above) resolves to an **employee-designation** role, never literally `repeat_client`.
 The two real sources of `repeat_client` are listed at steps 5 and 9 above.
 
 ### Employee Evidence (Step 3)
 
-Primary: `wbom_employees` — phone match on 3 variants (01X, 880X, +880X)
+Primary: `fazle_employees_legacy` — phone match on 3 variants (01X, 880X, +880X)
 
-Fallback: `fpe_employees` (payroll-engine-only employees, e.g. auto-created through the cash/payroll
-flow) joined to `wbom_employees` where linked — `identity_brain/__init__.py:386-401`.
+Fallback: `fazle_employees` (payroll-engine-only employees, e.g. auto-created through the cash/payroll
+flow) joined to `fazle_employees_legacy` where linked — `identity_brain/__init__.py:386-401`.
 
-**Source Module:** `modules/identity_brain`
+**Source Module:** `modules/fazle_identity_brain`
 **Source Function:** `detect_identity(phone, text)` — *not* `resolve_identity()` (a previous version
 of this doc named the wrong function; there is no `resolve_identity` in this module).
 **PKCA Report:** 11_identity_coverage_report.md
@@ -119,7 +119,7 @@ as the primary one; `confidence` is a legacy-compatible mirror:
 
 | Field | Scale | Example values |
 |---|---|---|
-| `identity_confidence` | integer 0–100 | 100 (admin/settings), 88 (`wbom_employees` primary), 86 (cash/attendance evidence), 85 (escort roster / contact name marker), 95 (env escort-phone allowlist), 80 (contact book relation match), 50 (text-hint candidate), 40 (escort-content regex), 0 (unknown) |
+| `identity_confidence` | integer 0–100 | 100 (admin/settings), 88 (`fazle_employees_legacy` primary), 86 (cash/attendance evidence), 85 (escort roster / contact name marker), 95 (env escort-phone allowlist), 80 (contact book relation match), 50 (text-hint candidate), 40 (escort-content regex), 0 (unknown) |
 | `confidence` (legacy) | float 0.0–1.0 | `identity_confidence / 100` — kept only for backward compatibility with pre-identity_brain callers |
 
 **Business Rule:** Low-confidence identities (`identity_confidence` < 70, i.e. legacy `confidence` <

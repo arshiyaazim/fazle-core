@@ -24,7 +24,7 @@
 --   fazle_scheduled_jobs      -- modules/scheduler's own job-run bookkeeping
 --   fazle_report_runs         -- modules/reports's own report-run audit log
 --   fazle_unified_contacts    -- modules/contact_sync's contact dedup/normalize
---                                layer (also written alongside wbom_contacts on
+--                                layer (also written alongside fazle_contacts on
 --                                every sync -- see the governance report's
 --                                "active duplication" finding; NOT resolved by
 --                                this migration, just documented into the
@@ -33,11 +33,11 @@
 
 -- ── fpe_transaction_repairs ───────────────────────────────────────────────────
 
-CREATE SEQUENCE IF NOT EXISTS fpe_transaction_repairs_id_seq
+CREATE SEQUENCE IF NOT EXISTS fazle_transaction_repairs_id_seq
     START WITH 1 INCREMENT BY 1 NO MINVALUE NO MAXVALUE CACHE 1;
 
 CREATE TABLE IF NOT EXISTS fpe_transaction_repairs (
-    id                  BIGINT NOT NULL DEFAULT nextval('fpe_transaction_repairs_id_seq') PRIMARY KEY,
+    id                  BIGINT NOT NULL DEFAULT nextval('fazle_transaction_repairs_id_seq') PRIMARY KEY,
     transaction_id      BIGINT NOT NULL,
     old_employee_id     BIGINT,
     new_employee_id     BIGINT,
@@ -54,27 +54,27 @@ CREATE TABLE IF NOT EXISTS fpe_transaction_repairs (
     repaired_by         TEXT NOT NULL DEFAULT 'repair_tool'
 );
 
-ALTER SEQUENCE fpe_transaction_repairs_id_seq OWNED BY fpe_transaction_repairs.id;
+ALTER SEQUENCE fazle_transaction_repairs_id_seq OWNED BY fpe_transaction_repairs.id;
 
 COMMENT ON TABLE fpe_transaction_repairs IS
     'Audit trail for every transaction re-assignment made by repair_fpe_transactions.py';
 
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fpe_transaction_repairs_transaction_id_fkey') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fazle_transaction_repairs_transaction_id_fkey') THEN
         ALTER TABLE fpe_transaction_repairs
-            ADD CONSTRAINT fpe_transaction_repairs_transaction_id_fkey
-            FOREIGN KEY (transaction_id) REFERENCES fpe_cash_transactions(id);
+            ADD CONSTRAINT fazle_transaction_repairs_transaction_id_fkey
+            FOREIGN KEY (transaction_id) REFERENCES fazle_cash_transactions(id);
     END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fpe_transaction_repairs_reversal_txn_id_fkey') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fazle_transaction_repairs_reversal_txn_id_fkey') THEN
         ALTER TABLE fpe_transaction_repairs
-            ADD CONSTRAINT fpe_transaction_repairs_reversal_txn_id_fkey
-            FOREIGN KEY (reversal_txn_id) REFERENCES fpe_cash_transactions(id);
+            ADD CONSTRAINT fazle_transaction_repairs_reversal_txn_id_fkey
+            FOREIGN KEY (reversal_txn_id) REFERENCES fazle_cash_transactions(id);
     END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fpe_transaction_repairs_new_txn_id_fkey') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fazle_transaction_repairs_new_txn_id_fkey') THEN
         ALTER TABLE fpe_transaction_repairs
-            ADD CONSTRAINT fpe_transaction_repairs_new_txn_id_fkey
-            FOREIGN KEY (new_txn_id) REFERENCES fpe_cash_transactions(id);
+            ADD CONSTRAINT fazle_transaction_repairs_new_txn_id_fkey
+            FOREIGN KEY (new_txn_id) REFERENCES fazle_cash_transactions(id);
     END IF;
 END $$;
 
@@ -154,7 +154,7 @@ CREATE INDEX IF NOT EXISTS idx_report_runs_name_at ON fazle_report_runs (report_
 -- ── fazle_unified_contacts ────────────────────────────────────────────────────
 -- See migration header: this is the "active duplication" table the
 -- governance report flagged (modules/contact_sync writes here AND to
--- wbom_contacts on every sync, with no DB-level consistency guarantee).
+-- fazle_contacts on every sync, with no DB-level consistency guarantee).
 -- Backfilling its schema here does not resolve that duplication -- it only
 -- brings the table, as it exists today, into the governed migration path.
 -- Resolving the duplication itself is a separate decision, not in this

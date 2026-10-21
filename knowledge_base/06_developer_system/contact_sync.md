@@ -16,7 +16,7 @@ runtime_index: true
 
 ## Purpose
 
-Merges WhatsApp contacts from all three bridge sources into the central `wbom_contacts` and `fazle_unified_contacts` tables. Ensures that inbound messages can look up a human-readable display name for any phone number.
+Merges WhatsApp contacts from all three bridge sources into the central `fazle_contacts` and `fazle_unified_contacts` tables. Ensures that inbound messages can look up a human-readable display name for any phone number.
 
 ---
 
@@ -42,7 +42,7 @@ instead of a second, independently-drifting hardcoded copy.
 
 ## Database Tables
 
-### `wbom_contacts` — Master Contact Table
+### `fazle_contacts` — Master Contact Table
 
 Primary contact lookup. One row per `(whatsapp_number, platform)`.
 
@@ -56,7 +56,7 @@ One row per normalized phone (PRIMARY KEY on `phone`). Used for fast display nam
 
 Columns: `phone`, `display_name`, `source_bridge`, `first_seen`, `last_updated`.
 
-**Same "longer name wins" upsert rule** as `wbom_contacts`.
+**Same "longer name wins" upsert rule** as `fazle_contacts`.
 
 ### `fazle_contact_aliases` — All Known Names
 
@@ -153,7 +153,7 @@ convention (flag dead code, don't silently remove it) — it is not the live mec
 
 `upsert_contact_from_message(phone, push_name, bridge_number)` — called on every inbound message. Insert-only, doesn't overwrite a better existing name.
 
-Write target: both `fazle_unified_contacts` and `wbom_contacts`, plus `_upsert_alias()` if push_name is non-empty.
+Write target: both `fazle_unified_contacts` and `fazle_contacts`, plus `_upsert_alias()` if push_name is non-empty.
 
 ---
 
@@ -186,14 +186,14 @@ was actually deleted from the phone — the phone could have been offline, the b
 could have failed, or the SQLite read could have been incomplete. So deletion is staged:
 
 1. **First consecutive miss** (this bridge's `fazle_contact_presence.consecutive_absences`
-   goes 0 → 1): **soft-delete only** — `wbom_contacts.is_active = false`,
+   goes 0 → 1): **soft-delete only** — `fazle_contacts.is_active = false`,
    `marked_for_delete_at = NOW()` (both pre-existing columns, no schema change needed for
    this part). Fully reversible: if the contact reappears in a later sync, `_mark_present()`
    resets `is_active = true` and clears `marked_for_delete_at` automatically.
 2. **Nth consecutive miss** (`consecutive_absences >= CONTACT_SYNC_HARD_DELETE_AFTER`,
-   default `3`, env-tunable): **hard-delete** — the `wbom_contacts` row is actually removed,
+   default `3`, env-tunable): **hard-delete** — the `fazle_contacts` row is actually removed,
    after writing a row to `fazle_contact_hard_delete_log` first (never skipped).
-3. **`wbom_contacts.is_protected = true` contacts are never touched by either step**, at
+3. **`fazle_contacts.is_protected = true` contacts are never touched by either step**, at
    any absence count — this pre-existing column is exactly the "don't ever auto-delete
    this one" escape hatch and is honored as such.
 
@@ -249,7 +249,7 @@ Used by identity brain and message router to attach human-readable names to send
 - `automation_pipeline.md` — corrected 2026-07-22: `start_contact_sync_loop` was never
   started on app init; `job_daily_contact_sync` (via `modules.scheduler`) is the real
   mechanism now
-- `database_rules.md` — `wbom_contacts` table ownership and schema
+- `database_rules.md` — `fazle_contacts` table ownership and schema
 - `../00_governance/management_decisions.md` — 2026-07-22 entry, full record of this
   article's corrections plus the related `fazle_contact_roles` duplicate-phone cleanup
 - `db/migrations/056_contact_sync_presence_tracking.sql`

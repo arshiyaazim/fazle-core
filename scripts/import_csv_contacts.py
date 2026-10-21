@@ -1,17 +1,17 @@
 """
-Import a Google-Contacts-style CSV export into the canonical wbom_contacts
+Import a Google-Contacts-style CSV export into the canonical fazle_contacts
 table, reusing modules.contact_sync.import_from_csv_contacts() (insert-only,
 never overwrites an existing contact). See
 knowledge_base/00_governance/management_decisions.md ("CSV Contact-Book
 Rebuild — Owner Decision, 2026-08-04") for the full decision record.
 
 Two modes:
-  1. One-time rebuild (--clear-first): clears wbom_contacts +
+  1. One-time rebuild (--clear-first): clears fazle_contacts +
      fazle_unified_contacts first, EXCLUDING is_protected=true rows and any
      row still FK-referenced by wbom_escort_programs (both preserved,
      per Owner instruction), then imports every valid BD number from the CSV.
   2. Future incremental (no flag, the default and the ongoing workflow):
-     imports only phone numbers genuinely not already in wbom_contacts —
+     imports only phone numbers genuinely not already in fazle_contacts —
      never touches, updates, or deletes an existing contact.
 
 Run:
@@ -61,7 +61,7 @@ def parse_csv(csv_path: str, normalize_phone) -> dict:
     """Returns {"rows": [{"phone", "display_name"}...], "stats": {...}}.
     De-dupes on normalized phone within the CSV itself (first occurrence's
     name wins), splits ' ::: '-separated multi-number cells into separate
-    contact rows (same name, each number is its own wbom_contacts row —
+    contact rows (same name, each number is its own fazle_contacts row —
     matches the schema's per-number unique constraint)."""
     seen_phones = {}
     stats = {
@@ -105,39 +105,39 @@ def parse_csv(csv_path: str, normalize_phone) -> dict:
 
 
 async def clear_contact_book():
-    """Clears wbom_contacts + fazle_unified_contacts, EXCLUDING is_protected=true
+    """Clears fazle_contacts + fazle_unified_contacts, EXCLUDING is_protected=true
     rows and any row still FK-referenced by wbom_escort_programs. Neither table
     itself is dropped. Returns counts."""
     from app.database import execute, fetch_val
 
     protected_or_linked_count = await fetch_val(
         """
-        SELECT COUNT(*) FROM wbom_contacts
+        SELECT COUNT(*) FROM fazle_contacts
          WHERE is_protected = true
             OR contact_id IN (SELECT DISTINCT contact_id FROM wbom_escort_programs WHERE contact_id IS NOT NULL)
         """
     )
-    total_before = await fetch_val("SELECT COUNT(*) FROM wbom_contacts")
+    total_before = await fetch_val("SELECT COUNT(*) FROM fazle_contacts")
 
     deleted = await execute(
         """
-        DELETE FROM wbom_contacts
+        DELETE FROM fazle_contacts
          WHERE is_protected = false
            AND contact_id NOT IN (SELECT DISTINCT contact_id FROM wbom_escort_programs WHERE contact_id IS NOT NULL)
         """
     )
     # fazle_unified_contacts has no is_protected/escort-link concept of its own
     # (it's phone-keyed, not contact_id-keyed) — clear entries whose phone is
-    # NOT one of the preserved wbom_contacts phones, so the two tables stay
+    # NOT one of the preserved fazle_contacts phones, so the two tables stay
     # consistent (an alias table entry for a deleted contact is meaningless).
     preserved_phones_deleted = await execute(
         """
         DELETE FROM fazle_unified_contacts
-         WHERE phone NOT IN (SELECT whatsapp_number FROM wbom_contacts)
+         WHERE phone NOT IN (SELECT whatsapp_number FROM fazle_contacts)
         """
     )
 
-    total_after = await fetch_val("SELECT COUNT(*) FROM wbom_contacts")
+    total_after = await fetch_val("SELECT COUNT(*) FROM fazle_contacts")
     return {
         "total_before": total_before,
         "preserved_protected_or_escort_linked": protected_or_linked_count,

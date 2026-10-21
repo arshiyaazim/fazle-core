@@ -8,7 +8,7 @@ runtime_index: true
 
 # Intent Classifier
 
-**Source:** `modules/intent/__init__.py` (172 lines — read 2026-06-23)
+**Source:** `modules/fazle_intent/__init__.py` (172 lines — read 2026-06-23)
 **Priority:** P3
 **Depends on:** `rapidfuzz` (fuzzy matching library)
 
@@ -69,7 +69,7 @@ Fuzzy matching only runs if zero direct matches exist across all intents.
 ## API
 
 ```python
-from modules.intent import classify, is_admin_command
+from modules.fazle_intent import classify, is_admin_command
 
 intent: str = classify(text, threshold=72)
 # Returns one of the 14 intent strings above
@@ -94,7 +94,7 @@ is_cmd: bool = is_admin_command(text)
 | Caller | Usage |
 |---|---|
 | `modules/message_router/__init__.py` Step 3 | Primary intent for routing decisions |
-| `modules/bridge_poller/__init__.py` | Copy for draft-gate decisions (financial, complaint) |
+| `modules/fazle_bridge_poller/__init__.py` | Copy for draft-gate decisions (financial, complaint) |
 | `modules/social_auto_reply/classifier.py` | Social engine intent classification |
 | `modules/recruitment_flow/__init__.py` | Guards recruitment_eligibility path |
 

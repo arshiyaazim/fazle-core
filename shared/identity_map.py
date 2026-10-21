@@ -11,13 +11,13 @@ employee identity without renaming DB columns or changing existing APIs.
 
 CANONICAL CONCEPT MAP
 ---------------------
-  employee_id       → wbom_employees.employee_id         (PK, internal integer)
-  employee_mobile   → wbom_employees.employee_mobile     (operational WhatsApp contact)
+  employee_id       → fazle_employees_legacy.employee_id         (PK, internal integer)
+  employee_mobile   → fazle_employees_legacy.employee_mobile     (operational WhatsApp contact)
   payout_phone      → fpe_transactions.payout_phone      (payment destination, MAY differ)
-  payment_mobile    → wbom_cash_transactions.payment_mobile (historical transaction record)
+  payment_mobile    → fazle_cash_transactions_archive.payment_mobile (historical transaction record)
   sender_phone      → derived from WhatsApp JID           (may or may not be an employee)
   candidate_phone   → recruitment tables                  (applicant, NOT yet employee)
-  escort_employee_id→ wbom_escort_programs.escort_employee_id (FK → wbom_employees)
+  escort_employee_id→ wbom_escort_programs.escort_employee_id (FK → fazle_employees_legacy)
 
 CRITICAL RULE
 -------------
@@ -99,9 +99,9 @@ class EmployeeIdentity:
 
     Fields
     ------
-    employee_id   : int  — wbom_employees.employee_id (authoritative PK)
-    name          : str  — wbom_employees.employee_name
-    mobile        : str  — wbom_employees.employee_mobile (contact phone, 01XXXXXXXXX)
+    employee_id   : int  — fazle_employees_legacy.employee_id (authoritative PK)
+    name          : str  — fazle_employees_legacy.employee_name
+    mobile        : str  — fazle_employees_legacy.employee_mobile (contact phone, 01XXXXXXXXX)
     payout_phone  : str  — registered payment phone (may differ from mobile)
     department    : str  — department/section name
     is_active     : bool — False if terminated/inactive
@@ -153,7 +153,7 @@ async def resolve_employee(
 
     Resolution order (highest confidence first):
       1. employee_id  — exact PK match, unambiguous
-      2. phone        — matched against wbom_employees.employee_mobile (last-10)
+      2. phone        — matched against fazle_employees_legacy.employee_mobile (last-10)
       3. name         — ILIKE match on employee_name (risky, use as last resort)
 
     Returns None when:
@@ -171,7 +171,7 @@ async def resolve_employee(
         row = await fetch_one(
             """SELECT employee_id, employee_name, employee_mobile,
                       payout_phone, department, is_active
-               FROM wbom_employees
+               FROM fazle_employees_legacy
                WHERE employee_id = $1""",
             employee_id,
         )
@@ -188,7 +188,7 @@ async def resolve_employee(
         rows = await fetch_all(
             """SELECT employee_id, employee_name, employee_mobile,
                       payout_phone, department, is_active
-               FROM wbom_employees
+               FROM fazle_employees_legacy
                WHERE employee_mobile LIKE $1
                   OR employee_mobile = $2""",
             f"%{last10}",
@@ -207,7 +207,7 @@ async def resolve_employee(
         rows = await fetch_all(
             """SELECT employee_id, employee_name, employee_mobile,
                       payout_phone, department, is_active
-               FROM wbom_employees
+               FROM fazle_employees_legacy
                WHERE employee_name ILIKE $1""",
             f"%{name.strip()}%",
         )
@@ -258,7 +258,7 @@ async def validate_payment_identity(
     Returns False → BLOCK payment (ambiguous or mismatched identity)
 
     Rules enforced:
-      1. employee_id must exist in wbom_employees
+      1. employee_id must exist in fazle_employees_legacy
       2. payout_phone must be a valid BD phone number
       3. If the employee has a registered payout_phone, it must match (last-10)
       4. If no payout_phone registered, the caller must use employee_mobile

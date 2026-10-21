@@ -1,5 +1,8 @@
 # CLAUDE PHASE-2 AUTONOMOUS SESSION — CHECKPOINT
 
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **Recovery authority.** If the session is interrupted, resume with `RESUME FROM CLAUDE PHASE2 CHECKPOINT`.
 No secrets or full sensitive phone numbers in this file.
 
@@ -41,7 +44,7 @@ No secrets or full sensitive phone numbers in this file.
 - `modules/phone_normalizer/__init__.py` — new `storage_canonical_phone()` / `storage_phone_last10()` (BD→8801, foreign kept digits-only, LID→None, JID stripped).
 
 **Commit-3 candidates (Phase-2, flag-gated by `PHASE2_IDENTITY_RESOLVER_ENABLED`, default OFF):**
-- `modules/identity_resolver.py` — `is_phase2_identity_enabled()` + `WHATSAPP_PLATFORMS`; `available_columns` now process-cached (`reset_column_cache()` test hook); tier chain fetched ONCE and reused by `_best_name` (now a pure function taking pre-fetched rows — ~13→~5 DB round-trips); `resolve_inbound_identity` computes `identity_phone` + `canonical_message_key` OUTSIDE the try so a DB error can't discard them; `_lookup_contact_role` deterministic `id` tie-break (kept `is_active` — documented: role authority vs identity existence); `compute_canonical_message_key` reduced to transport-ID-only (removed the content+60s heuristic) with a FORENSIC-ONLY docstring; `search_identity_by_name` contact/fcr queries get `platform='whatsapp'` + deterministic order; removed dead helpers (`_time_bucket`, `_content_fingerprint`, `_digits_only_last10`, `hashlib` import).
+- `modules/fazle_identity_resolver.py` — `is_phase2_identity_enabled()` + `WHATSAPP_PLATFORMS`; `available_columns` now process-cached (`reset_column_cache()` test hook); tier chain fetched ONCE and reused by `_best_name` (now a pure function taking pre-fetched rows — ~13→~5 DB round-trips); `resolve_inbound_identity` computes `identity_phone` + `canonical_message_key` OUTSIDE the try so a DB error can't discard them; `_lookup_contact_role` deterministic `id` tie-break (kept `is_active` — documented: role authority vs identity existence); `compute_canonical_message_key` reduced to transport-ID-only (removed the content+60s heuristic) with a FORENSIC-ONLY docstring; `search_identity_by_name` contact/fcr queries get `platform='whatsapp'` + deterministic order; removed dead helpers (`_time_bucket`, `_content_fingerprint`, `_digits_only_last10`, `hashlib` import).
 - `modules/bridge_poller/__init__.py` — `_save_raw_core_copy` writes `canonical_phone`/`phone_last10` via `storage_*` helpers (ALWAYS-ON P1 fix); Phase-2 columns filled by a NEW best-effort follow-up UPDATE `_phase2_enrich_raw_copy()` (flag-gated, schema-tolerant, cannot break the raw INSERT); `resolved_phone`/`resolved_at` set only when the raw sender was a LID we resolved; `_load_contact_names()` reads `whatsmeow_contacts` once per poll cycle (only when flag ON) and stashes push/full/business name hints on `msg`.
 - `app/main.py` — `_save_message` gains optional `canonical_phone`/`phone_last10` (defaulted from `sender` for WhatsApp platforms — ALWAYS-ON, fixes Meta `canonical_phone=NULL`) + Phase-2 columns (schema-tolerant); `_handle_meta_message` parses `contacts[].profile.name` and (flag-gated) runs the resolver; `_handle_bridge_event` (dormant webhook) gets a `unresolved:` routing skip + flag-gated NO-CLOBBER enrichment (only fills role when identity_brain said "unknown"); stale "Meta is not in auto_reply_sources" comment corrected.
 
@@ -81,7 +84,7 @@ No secrets or full sensitive phone numbers in this file.
 | `docs/BRIDGE_MEDIA_ACQUISITION_INTEGRATION_PLAN_2026-08-29.md` | mask 3 phone/LID values (unstaged, do not commit) | A |
 | `app/main.py` | (pre-existing staged Phase-2 work — to be revised in D) | — |
 | `modules/bridge_poller/__init__.py` | (pre-existing staged Phase-2 work — to be revised in C/D) | — |
-| `modules/identity_resolver.py` | (pre-existing staged Phase-2 work — to be revised in D) | — |
+| `modules/fazle_identity_resolver.py` | (pre-existing staged Phase-2 work — to be revised in D) | — |
 | `modules/inbound_persistence.py` | (pre-existing staged — SCHEDULED FOR REMOVAL in D) | — |
 | `db/migrations/078_*.sql` | (pre-existing staged — KEEP; already applied to live DB) | — |
 

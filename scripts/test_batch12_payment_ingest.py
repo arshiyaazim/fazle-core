@@ -5,7 +5,7 @@ Verifies:
   1. parse_payment_sms covers bKash / Nagad / generic
   2. match_employee finds employees by exact mobile
   3. ingest_payment_sms creates wbom_staging_payments row
-  4. high-confidence + small amount → auto_finalize → wbom_cash_transactions row
+  4. high-confidence + small amount → auto_finalize → fazle_cash_transactions_archive row
   5. duplicate idempotency_key returns existing staging
   6. unknown mobile → status=unmatched (no auto-finalize)
 
@@ -16,7 +16,7 @@ import sys
 sys.path.insert(0, "/home/azim/fazle-core")
 
 from app.database import fetch_one, fetch_all, execute, fetch_val, init_db, close_db
-from modules.payment_ingest import (
+from modules.fazle_payment_ingest import (
     parse_payment_sms, match_employee, ingest_payment_sms,
 )
 
@@ -26,7 +26,7 @@ async def main():
     await init_db()
     # Pick a real employee
     emp = await fetch_one(
-        "SELECT employee_id, employee_name, employee_mobile FROM wbom_employees "
+        "SELECT employee_id, employee_name, employee_mobile FROM fazle_employees_legacy "
         "WHERE employee_mobile IS NOT NULL ORDER BY employee_id LIMIT 1"
     )
     assert emp, "no employees"
@@ -53,7 +53,7 @@ async def main():
     assert res["ok"] and res["status"] == "auto_approved"
     assert res["matched_employee_id"] == eid
     fin = res["finalized"]
-    assert fin["transaction_id"], "should auto-create wbom_cash_transactions row"
+    assert fin["transaction_id"], "should auto-create fazle_cash_transactions_archive row"
     sid_1 = res["staging_id"]
     txn_id = fin["transaction_id"]
     draft_id = fin["draft_id"]
@@ -72,7 +72,7 @@ async def main():
 
     # Verify DB rows
     txn = await fetch_one(
-        "SELECT transaction_id, employee_id, amount, payment_method FROM wbom_cash_transactions WHERE transaction_id=$1",
+        "SELECT transaction_id, employee_id, amount, payment_method FROM fazle_cash_transactions_archive WHERE transaction_id=$1",
         int(txn_id),
     )
     print(f"\n[verify] txn row: {txn}")
@@ -81,7 +81,7 @@ async def main():
     # Cleanup
     print("\n[cleanup]")
     await execute("DELETE FROM wbom_staging_payments WHERE staging_id IN ($1,$2)", sid_1, sid_3)
-    await execute("DELETE FROM wbom_cash_transactions WHERE transaction_id=$1", int(txn_id))
+    await execute("DELETE FROM fazle_cash_transactions_archive WHERE transaction_id=$1", int(txn_id))
     await execute("DELETE FROM fazle_payment_drafts WHERE id=$1", int(draft_id))
 
     print("\n✅ ALL BATCH 12 TESTS PASSED")

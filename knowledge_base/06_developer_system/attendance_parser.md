@@ -75,7 +75,7 @@ parse_attendance(text)
    ▼
 create_attendance_draft(parsed, sender_phone, source)
    │
-   ├── DB: lookup employee by mobile (wbom_employees.employee_mobile)
+   ├── DB: lookup employee by mobile (fazle_employees_legacy.employee_mobile)
    │        or by name (ILIKE first-word match, status=Active)
    │
    ├── if found:  draft includes employee_id + designation
@@ -119,7 +119,7 @@ If employee not found in DB:
 
 | Table | Operation | When |
 |---|---|---|
-| `wbom_employees` | SELECT | Employee lookup (mobile or name) |
+| `fazle_employees_legacy` | SELECT | Employee lookup (mobile or name) |
 | `fazle_draft_replies` | INSERT | Draft creation via `create_draft_reply()` |
 | `wbom_attendance` | INSERT/UPDATE | After admin APPROVE (handled by admin_commands) |
 
@@ -151,4 +151,4 @@ No separate kill-switch. Routing is controlled by `message_router`:
 
 - `05_workflows/attendance_workflow.md` — business workflow and state machine
 - `04_business_rules/attendance_business_rules.md` — 12-hour shift rules, confirmation windows
-- `modules/admin_commands/__init__.py` — `APPROVE`/`REJECT` command handlers
+- `modules/fazle_admin_commands/__init__.py` — `APPROVE`/`REJECT` command handlers

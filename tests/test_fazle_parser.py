@@ -196,7 +196,7 @@ class TestNormalizer:
 # came out None, validate_for_accounting() (required_fields includes
 # employee_name_raw for message_type='payment') rejected it, and the
 # message was silently diverted to fpe_unmatched_messages instead of
-# fpe_cash_transactions. Confirmed against live production data: 4 prior
+# fazle_cash_transactions. Confirmed against live production data: 4 prior
 # real transactions for this same contact have this exact shape.
 
 class TestNameNotDeletedWhenIdTokenIsNotAPhone:

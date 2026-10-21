@@ -46,7 +46,7 @@ class _FakeConn:
         return None  # lock re-check finds nothing
 
     async def fetchval(self, query, *a, **kw):
-        if "INSERT INTO fpe_employees" in query:
+        if "INSERT INTO fazle_employees" in query:
             self.inserted_args = list(a)
         return self._new_id
 

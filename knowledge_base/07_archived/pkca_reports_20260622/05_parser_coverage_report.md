@@ -8,6 +8,9 @@ runtime_index: false
 
 # PKCA Report 05: Parser Coverage Report
 
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **Date:** 2026-06-22
 **Mode:** Read-Only Analysis
 
@@ -139,7 +142,7 @@ The production system contains **12 parsers** across multiple modules, plus 3 ad
 
 ## Parser 9: Payment SMS Parser — 10% Covered
 
-**Module:** `modules/payment_ingest.looks_like_payment_sms`
+**Module:** `modules/fazle_payment_ingest.looks_like_payment_sms`
 **Output:** Payment record
 
 **Detects:** Accountant SMS payment notifications (bKash/Nagad confirmations).
@@ -152,7 +155,7 @@ The production system contains **12 parsers** across multiple modules, plus 3 ad
 
 ## Parser 10: Admin Cash Shorthand Parser — 0% Covered
 
-**Module:** `modules/payment_ingest.is_admin_cash_shorthand`
+**Module:** `modules/fazle_payment_ingest.is_admin_cash_shorthand`
 **Output:** Cash entry
 
 **Detects:** Admin shorthand for cash entries (format not documented).
@@ -174,7 +177,7 @@ The production system contains **12 parsers** across multiple modules, plus 3 ad
 
 ## Parser 12: Intent Classifier (Deterministic) — 10% Covered
 
-**Module:** `modules/intent`
+**Module:** `modules/fazle_intent`
 **Output:** Intent string
 
 **Behavior:** Keyword-based deterministic matching. LLM fallback when deterministic = 'unknown'. AI (Groq→GitHub→Ollama) is authoritative; deterministic is availability fallback.
@@ -218,7 +221,7 @@ start_shift, end_shift, signatures{}, confidence, missing_fields[], raw_ocr_text
 **Module:** `modules/accountant_summary`
 **Output:** Boolean (is_accountant_summary) + parsed dict (date_str, label, amount)
 
-**Detects:** Bengali accounting summary messages (company-level cash flow). Intentionally does NOT write to wbom_cash_transactions (requires employee_id NOT NULL).
+**Detects:** Bengali accounting summary messages (company-level cash flow). Intentionally does NOT write to fazle_cash_transactions_archive (requires employee_id NOT NULL).
 
 **Supported Formats:**
 - "7/5/26=জমা =75,000/-" (date + deposit + total)

@@ -1,6 +1,6 @@
 Source: knowledge_base/06_developer_system/ai_readonly_data_access.md
-SHA256: 3826efc019227b41a76a4da512e3e3695f5cf59424ccbabdb237f24b731fb1db
-Version: 3826efc01922
+SHA256: 5aed6c1daba372654614f13e8ea67aebac6a8e2879593f1ce8e43c1efb878bfe
+Version: 5aed6c1daba3
 
 # AI Read-Only Data Access Layer
 
@@ -32,19 +32,28 @@ Formatted rows → context block → Ollama prompt
 | `fazle_ai_reader` | `postgres` (production) | SELECT on `ai_read_*` views only |
 | `ollama_memory_owner` | `fazle_ollama_memory` | Full DDL/DML on memory DB |
 
-## Approved Views (9 views)
+## Approved Views (11 views)
+
+Corrected 2026-08-02 — this table previously said "9 views" and was
+missing two that already existed/were being added. Found while an external
+system (assistant-platform, a separate app that reads fazle-core data via
+this same `fazle_ai_reader` role) was auditing why it had no cash-
+transaction data source — not a fazle-core code change, a documentation
+correction plus one new view.
 
 | View | Source Tables | What AI sees |
 |---|---|---|
-| `ai_read_employees` | `wbom_employees` | name, mobile, designation, status, salary |
-| `ai_read_contacts` | `wbom_contacts` | name, number, relation, company |
-| `ai_read_recent_messages` | `wbom_whatsapp_messages` | last 7 days, 300 char body |
+| `ai_read_employees` | `fazle_employees_legacy` | name, mobile, designation, status, salary |
+| `ai_read_contacts` | `fazle_contacts` | name, number, relation, company |
+| `ai_read_recent_messages` | `fazle_whatsapp_messages` | last 7 days, 300 char body |
 | `ai_read_escort_programs` | `wbom_escort_programs` | vessel, employee, status, last 30 days |
 | `ai_read_attendance_summary` | `wbom_attendance` | current + last month |
 | `ai_read_payroll_runs` | `wbom_payroll_runs` | salary summaries, last year |
 | `ai_read_recruitment_leads` | `fazle_recruitment_sessions` | last 30 days, no NID |
 | `ai_read_module_bridge_status` | `fazle_service_heartbeats` | service health |
 | `ai_read_kb_articles` | `fazle_knowledge_base` | active KB content |
+| `ai_read_billing_outstanding` | `wbom_billing_records` | bill number, client, date, amount, status, days outstanding — pending bills only |
+| `ai_read_cash_transactions` | `fazle_cash_transactions` **only** — never `fazle_cash_transactions_archive` (legacy/archive, Owner Directive 2026-06-29, see `CANONICAL_BUSINESS_RULES.md` §Cash Transaction) | ref, date, amount, category, status, method, employee name — no phone numbers, no raw payload/metadata. **DDL pending as of this entry** — see `assistant-platform/proposal_ai_read_cash_transactions_20260802.md`. |
 
 ## Python Tool Functions
 

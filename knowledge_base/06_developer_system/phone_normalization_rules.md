@@ -105,11 +105,11 @@ phones_match("01712345678", "01812345678")    → False
 
 | Table | Column | Format |
 |-------|--------|-------|
-| `fpe_employees` | `primary_phone` | `01XXXXXXXXX` |
-| `fpe_employees` | `employee_id_phone` | `01XXXXXXXXX` |
-| `fpe_cash_transactions` | `payout_phone` | `01XXXXXXXXX` |
-| `fpe_cash_transactions` | `employee_id_phone` | `01XXXXXXXXX` |
-| `fpe_cash_transactions` | `employee_phone` | `01XXXXXXXXX` |
+| `fazle_employees` | `primary_phone` | `01XXXXXXXXX` |
+| `fazle_employees` | `employee_id_phone` | `01XXXXXXXXX` |
+| `fazle_cash_transactions` | `payout_phone` | `01XXXXXXXXX` |
+| `fazle_cash_transactions` | `employee_id_phone` | `01XXXXXXXXX` |
+| `fazle_cash_transactions` | `employee_phone` | `01XXXXXXXXX` |
 | `fpe_wa_messages` | `sender_phone` | `01XXXXXXXXX` |
 | `fpe_income_transactions` | `reported_by_phone` | `01XXXXXXXXX` |
 | `fpe_employee_aliases` | `alias_value` (type='phone') | `01XXXXXXXXX` |
@@ -118,8 +118,8 @@ phones_match("01712345678", "01812345678")    → False
 
 | Table | Column | Format |
 |-------|--------|-------|
-| `wbom_employees` | `employee_mobile` | `8801XXXXXXXXX` |
-| `wbom_contacts` | `whatsapp_number` | `8801XXXXXXXXX` |
+| `fazle_employees_legacy` | `employee_mobile` | `8801XXXXXXXXX` |
+| `fazle_contacts` | `whatsapp_number` | `8801XXXXXXXXX` |
 
 ### RBAC Domain (Auth) — 13-digit `8801XXXXXXXXX`
 
@@ -134,8 +134,8 @@ When joining FPE tables with WBOM/RBAC tables, match on last 9 digits:
 ```sql
 -- FPE → WBOM join
 SELECT e.id, w.employee_id
-FROM fpe_employees e
-JOIN wbom_employees w
+FROM fazle_employees e
+JOIN fazle_employees_legacy w
   ON RIGHT(REGEXP_REPLACE(e.primary_phone, '\D', '', 'g'), 9)
    = RIGHT(REGEXP_REPLACE(w.employee_mobile, '\D', '', 'g'), 9)
 ```

@@ -1,5 +1,5 @@
 """
-Phase 1C — fpe_employees.resolution_status consistency.
+Phase 1C — fazle_employees.resolution_status consistency.
 
 Canonical invariant (validated against live production data before this
 fix — see knowledge_base/00_governance/management_decisions.md Session 23
@@ -25,7 +25,7 @@ pytestmark = pytest.mark.unit
 
 async def _seed_wbom_employee(conn, mobile: str, name: str = "Test Guard") -> int:
     row = await conn.fetchrow(
-        "INSERT INTO wbom_employees (employee_mobile, employee_name) "
+        "INSERT INTO fazle_employees_legacy (employee_mobile, employee_name) "
         "VALUES ($1, $2) RETURNING employee_id",
         mobile, name,
     )
@@ -38,7 +38,7 @@ async def _seed_fpe_employee(
     name: str = "Test FPE",
 ) -> int:
     row = await conn.fetchrow(
-        """INSERT INTO fpe_employees
+        """INSERT INTO fazle_employees
                (full_name, name_normalized, primary_phone, employee_id_phone,
                 resolution_status, wbom_employee_id, created_source)
            VALUES ($1, $2, $3, $3, $4, $5, $6)
@@ -50,22 +50,22 @@ async def _seed_fpe_employee(
 
 async def _get_fpe(conn, fpe_id: int):
     return await conn.fetchrow(
-        "SELECT resolution_status, wbom_employee_id FROM fpe_employees WHERE id = $1",
+        "SELECT resolution_status, wbom_employee_id FROM fazle_employees WHERE id = $1",
         fpe_id,
     )
 
 
 class TestResolveFpeEmployeeForWbomEmployee:
-    """modules.payment_ingest.fpe_bridge.resolve_fpe_employee_for_wbom_employee"""
+    """modules.fazle_payment_ingest.fpe_bridge.resolve_fpe_employee_for_wbom_employee"""
 
     async def test_existing_unresolved_row_linked_by_phone_becomes_resolved(self, test_db_pool):
-        from modules.payment_ingest.fpe_bridge import resolve_fpe_employee_for_wbom_employee
+        from modules.fazle_payment_ingest.fpe_bridge import resolve_fpe_employee_for_wbom_employee
         import app.database as db_module
         db_module._pool = test_db_pool
 
         # resolve_fpe_employee_for_wbom_employee's phone-match step normalizes
         # the WBOM mobile via normalize_bd_phone() to canonical 01XXXXXXXXX
-        # before searching fpe_employees.primary_phone — seed in that same
+        # before searching fazle_employees.primary_phone — seed in that same
         # canonical format so the existing row is actually found (not a new
         # one created alongside it).
         async with test_db_pool.acquire() as conn:
@@ -83,7 +83,7 @@ class TestResolveFpeEmployeeForWbomEmployee:
         assert row["resolution_status"] == "resolved"
 
     async def test_new_row_created_and_linked_is_resolved(self, test_db_pool):
-        from modules.payment_ingest.fpe_bridge import resolve_fpe_employee_for_wbom_employee
+        from modules.fazle_payment_ingest.fpe_bridge import resolve_fpe_employee_for_wbom_employee
         import app.database as db_module
         db_module._pool = test_db_pool
 
@@ -102,7 +102,7 @@ class TestResolveFpeEmployeeForWbomEmployee:
     async def test_repeat_resolution_is_idempotent(self, test_db_pool):
         """Calling resolve twice for the same WBOM employee must not change
         an already-resolved, already-linked row."""
-        from modules.payment_ingest.fpe_bridge import resolve_fpe_employee_for_wbom_employee
+        from modules.fazle_payment_ingest.fpe_bridge import resolve_fpe_employee_for_wbom_employee
         import app.database as db_module
         db_module._pool = test_db_pool
 
@@ -122,7 +122,7 @@ class TestResolveFpeEmployeeForWbomEmployee:
         """The confirmed legitimate exception: a row already classified
         'duplicate' by the dedup workflow must keep that status even if a
         payment-ingest phone match links it to a WBOM employee."""
-        from modules.payment_ingest.fpe_bridge import resolve_fpe_employee_for_wbom_employee
+        from modules.fazle_payment_ingest.fpe_bridge import resolve_fpe_employee_for_wbom_employee
         import app.database as db_module
         db_module._pool = test_db_pool
 
@@ -293,12 +293,12 @@ class TestLegitimateExceptionsPreserved:
 
 
 class TestUnresolvedReportCategories:
-    """modules.reports._b_unresolved_fpe_employees — confirms the fix
+    """modules.reports._b_unresolved_fazle_employees — confirms the fix
     shrinks linked_but_mislabeled without disturbing the other buckets."""
 
     async def test_linked_but_mislabeled_shrinks_after_fix(self, test_db_pool):
-        from modules.payment_ingest.fpe_bridge import resolve_fpe_employee_for_wbom_employee
-        from modules.reports import _b_unresolved_fpe_employees
+        from modules.fazle_payment_ingest.fpe_bridge import resolve_fpe_employee_for_wbom_employee
+        from modules.reports import _b_unresolved_fazle_employees
         import app.database as db_module
         db_module._pool = test_db_pool
 
@@ -306,9 +306,9 @@ class TestUnresolvedReportCategories:
             wbom_id = await _seed_wbom_employee(conn, "8801711111112")
             await _seed_fpe_employee(conn, phone="8801711111112")  # unresolved, unlinked initially
 
-        before = await _b_unresolved_fpe_employees()
+        before = await _b_unresolved_fazle_employees()
 
         await resolve_fpe_employee_for_wbom_employee(wbom_id, "Guard", "8801711111112")
 
-        after = await _b_unresolved_fpe_employees()
+        after = await _b_unresolved_fazle_employees()
         assert after["summary"]["linked_but_mislabeled_count"] <= before["summary"]["linked_but_mislabeled_count"]

@@ -67,7 +67,7 @@ def normalize_phone(raw: str) -> Optional[str]:
 
 
 def storage_canonical_phone(raw: Optional[str]) -> Optional[str]:
-    """Best value for the ``wbom_whatsapp_messages.canonical_phone`` column.
+    """Best value for the ``fazle_whatsapp_messages.canonical_phone`` column.
 
     Rules (2026-09-01 — was previously stored verbatim with no normalization):
       * a Bangladeshi number in ANY accepted form (8801…, 01…, 1…, +880…,

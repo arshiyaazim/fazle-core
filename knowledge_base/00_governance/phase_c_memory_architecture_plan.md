@@ -42,7 +42,7 @@ Phase C does **not** replace `fazle_recruitment_sessions` (recruitment
 keeps its own working step-by-step intake mechanism, per the Owner's
 2026-07-19 coexist decision already recorded for Phase B) and does not
 replace any authoritative business table (`wbom_escort_programs`,
-`fpe_employees`, `fazle_payment_drafts`, etc.). It is an *additional*,
+`fazle_employees`, `fazle_payment_drafts`, etc.). It is an *additional*,
 strictly advisory layer that helps compose better prompts and surfaces
 useful context — it never writes to a business table, ever, in any phase
 of its own rollout.
@@ -58,7 +58,7 @@ likely way this system produces a wrong or embarrassing answer.
 
 | Class | Definition | Example | Trust level | Default retention |
 |---|---|---|---|---|
-| `verified_fact` | Directly sourced from an authoritative DB row (`wbom_employees`, `fpe_employees`, `wbom_escort_programs`, confirmed billing records) | Employee's designation, basic salary, join date | Highest — treat as ground truth | Not stored independently; always live-read from source DB at use time, never cached as memory |
+| `verified_fact` | Directly sourced from an authoritative DB row (`fazle_employees_legacy`, `fazle_employees`, `wbom_escort_programs`, confirmed billing records) | Employee's designation, basic salary, join date | Highest — treat as ground truth | Not stored independently; always live-read from source DB at use time, never cached as memory |
 | `user_stated_fact` | The person said it about themselves, unconfirmed against any DB | "My phone number changed to X", "I work at the Chattogram site now" | Medium — usable, but must be flagged as unconfirmed if it contradicts a `verified_fact` | 180 days, renewed on restatement |
 | `inferred_preference` | The system inferred it from behavior/phrasing, nobody stated it directly | Prefers Bangla replies, usually asks about the same 2 vessels | Low — usable only for tone/relevance, never for a factual claim | 90 days, decays faster than stated facts |
 | `workflow_state` | Where this person is in an ongoing, multi-step process | "Applicant completed 3 of 5 recruitment steps as of last Tuesday" | Medium — operationally useful, time-sensitive | Until the workflow resolves or its own TTL (mirrors Phase B thread TTL, just longer) |
@@ -127,11 +127,11 @@ Phase C's Client Memory is about the *relationship*, not the *order*.
 
 ### 3.3 Employee Memory
 
-Scope: `wbom_employees` / `fpe_employees`, bridged the same way those two
-tables already are (`fpe_employees.wbom_employee_id`).
+Scope: `fazle_employees_legacy` / `fazle_employees`, bridged the same way those two
+tables already are (`fazle_employees.wbom_employee_id`).
 
 Most Employee Memory facts should be `verified_fact` (read live from
-`wbom_employees`/`fpe_employees`/`escort_roster_entries` at query time,
+`fazle_employees_legacy`/`fazle_employees`/`escort_roster_entries` at query time,
 never cached) precisely because that data already exists authoritatively
 — Phase C's Employee Memory table should mostly hold `user_stated_fact`,
 `inferred_preference`, and `workflow_state` (e.g. "employee mentioned
@@ -140,7 +140,7 @@ review") — anything that *isn't* already a column somewhere.
 
 **Privacy note specific to this domain:** employees are internal staff,
 not external counterparties — RBAC for who can read Employee Memory must
-be at least as strict as who can read `fpe_employees` payroll data today
+be at least as strict as who can read `fazle_employees` payroll data today
 (Section 9), not looser just because it's "just conversation memory."
 
 ## 4. Identity Resolution
@@ -154,7 +154,7 @@ Proposed resolution rule: identity within Phase C is always
 `(domain, normalized_phone)`, never bare phone. Cross-domain identity
 linking (e.g. "this employee was previously an applicant with this
 phone") is an explicit, admin-reviewed link (mirroring the existing
-`fpe_employees.wbom_employee_id` bridge pattern), never an automatic
+`fazle_employees.wbom_employee_id` bridge pattern), never an automatic
 inference — the cost of a wrong automatic merge (leaking one person's
 applicant history into an unrelated employee's context, or vice versa)
 is much higher than the cost of occasionally missing a legitimate link.
@@ -220,7 +220,7 @@ consulted if the level above didn't already answer the question:
    opted in) — accumulated fields from the active, unexpired
    conversation.
 3. **Authoritative DB** — live read of the real business tables
-   (`wbom_employees`, `wbom_escort_programs`, etc.) — this is where
+   (`fazle_employees_legacy`, `wbom_escort_programs`, etc.) — this is where
    `verified_fact`s actually come from, read fresh, never cached in
    Phase C's own tables.
 4. **Verified entity memory** — Phase C's own `verified_fact`-class rows,
@@ -270,7 +270,7 @@ a structural rule, not left to per-prompt judgment.
   (`viewer(10) < office_assistant(20) < operator(30) < accountant(50) <
   admin(70) <= superadmin(100)`), not a new parallel permission system.
 - Employee Memory read access should require at minimum the same role
-  level as reading the underlying `fpe_employees` data it's adjacent to
+  level as reading the underlying `fazle_employees` data it's adjacent to
   — Phase C must not become a lower-friction side door to information
   that's otherwise access-controlled.
 - Client/Applicant Memory: readable by roles that already interact with

@@ -141,7 +141,7 @@ Assess the maturity of every parser in the Fazle AI Platform. A parser is mature
 
 ## Parser 09 — Payment SMS Parser
 
-**Source:** `modules/payment_ingest.looks_like_payment_sms()`
+**Source:** `modules/fazle_payment_ingest.looks_like_payment_sms()`
 **Maturity: Level 1 (Documented)**
 
 | Dimension | Status |
@@ -157,7 +157,7 @@ Assess the maturity of every parser in the Fazle AI Platform. A parser is mature
 
 ## Parser 10 — Admin Cash Shorthand Parser
 
-**Source:** `modules/payment_ingest.is_admin_cash_shorthand()`
+**Source:** `modules/fazle_payment_ingest.is_admin_cash_shorthand()`
 **Maturity: Level 0 (Unknown)**
 
 | Dimension | Status |
@@ -189,7 +189,7 @@ Assess the maturity of every parser in the Fazle AI Platform. A parser is mature
 
 ## Parser 12 — Intent Classifier (Deterministic)
 
-**Source:** `modules/intent`
+**Source:** `modules/fazle_intent`
 **Maturity: Level 1 (Documented)**
 
 | Dimension | Status |
@@ -235,7 +235,7 @@ Assess the maturity of every parser in the Fazle AI Platform. A parser is mature
 |---|---|
 | KB Article | None |
 | Supported Labels | 13 Bangla accounting labels (জমা, টোটাল বাকি, etc.) — NOT in KB |
-| Key Behavior | Does NOT write to wbom_cash_transactions (requires employee_id NOT NULL) |
+| Key Behavior | Does NOT write to fazle_cash_transactions_archive (requires employee_id NOT NULL) |
 | Production Verified | No |
 
 **Risk:** High — admin accountant messages are silently parsed (or not); failure invisible.

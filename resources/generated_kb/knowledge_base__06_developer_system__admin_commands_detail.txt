@@ -1,13 +1,13 @@
 Source: knowledge_base/06_developer_system/admin_commands_detail.md
-SHA256: 5a03929131b956dd35a0d6c68fe44adbdc64b4915b865caeb195f783254e20ec
-Version: 5a03929131b9
+SHA256: 28a6c538b353d95ea04ec6ebc4030edc9743f2e4ff454b6d91fd198809d86468
+Version: 28a6c538b353
 
 # Admin Commands — Developer Reference
 **KB Article ID:** DEV-06-ADMIN-COMMANDS-DETAIL
 **Source:**
-- `modules/admin_commands/__init__.py` (read 2026-06-23)
-- `modules/admin_commands/nl_router.py` (read 2026-06-23)
-- `modules/admin_commands/date_parser.py` (read 2026-06-23)
+- `modules/fazle_admin_commands/__init__.py` (read 2026-06-23)
+- `modules/fazle_admin_commands/nl_router.py` (read 2026-06-23)
+- `modules/fazle_admin_commands/date_parser.py` (read 2026-06-23)
 - `modules/rbac/__init__.py` (read 2026-06-23)
 **Visibility:** Developer only
 **Certified:** 2026-06-23 (Wave-4, W4-AUTH)
@@ -25,7 +25,7 @@ text = text.translate(_BN_DIGITS)
 
 **Effect:** `APPROVE ১৬৫` → parsed identically to `APPROVE 165`. All IDs, amounts, and counts in admin commands support Bengali digit input.
 
-**Scope:** `modules/admin_commands/__init__.py` and `modules/admin_commands/nl_router.py` both apply the same translation before regex.
+**Scope:** `modules/fazle_admin_commands/__init__.py` and `modules/fazle_admin_commands/nl_router.py` both apply the same translation before regex.
 
 ---
 
@@ -42,7 +42,7 @@ text = text.translate(_BN_DIGITS)
 
 ## 3. Natural Language Query Router
 
-**Source:** `modules/admin_commands/nl_router.py`
+**Source:** `modules/fazle_admin_commands/nl_router.py`
 **Position:** Wired after `is_admin_command()` check in `message_router` admin branch
 **LLM usage:** None — pure regex + keyword matching
 **Language support:** Bangla + English + Banglish
@@ -94,13 +94,13 @@ Accepts: `01812345678`, `8801812345678`, `+8801812345678`. Returns `8801XXXXXXXX
 
 ### Data Source
 
-Both intents read `wbom_whatsapp_messages` (`sender_number` and `contact_identifier` columns). Searches using 3 phone variants: `8801XXXXXXXXX`, `01XXXXXXXXX`, `+8801XXXXXXXXX`.
+Both intents read `fazle_whatsapp_messages` (`sender_number` and `contact_identifier` columns). Searches using 3 phone variants: `8801XXXXXXXXX`, `01XXXXXXXXX`, `+8801XXXXXXXXX`.
 
 ---
 
 ## 4. Date Parser — Supported Formats
 
-**Source:** `modules/admin_commands/date_parser.py`
+**Source:** `modules/fazle_admin_commands/date_parser.py`
 **Public API:** `parse_date_range(text, *, default_days=None) → (start_dt, end_dt, label) | None`
 **Timezone:** All datetimes are TZ-aware in Asia/Dhaka (+06:00, no DST)
 **End convention:** EXCLUSIVE (e.g. "today" → start=today 00:00, end=tomorrow 00:00)
@@ -197,7 +197,7 @@ Every command attempt (allowed or denied) is logged. Key fields:
 
 ## 6. Multi-ID Command Support
 
-**Source:** `modules/admin_commands/__init__.py` regex `_APPROVE_RE`
+**Source:** `modules/fazle_admin_commands/__init__.py` regex `_APPROVE_RE`
 
 ```python
 _APPROVE_RE = re.compile(r"^approve\s+([\d,\s]+)$", re.IGNORECASE)

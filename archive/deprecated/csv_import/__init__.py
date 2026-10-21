@@ -5,8 +5,8 @@ Bulk-insert employees, cash transactions, and attendance records
 from uploaded CSV files.
 
 Supported tables:
-  - employees          → wbom_employees (upsert on employee_mobile)
-  - cash_transactions  → wbom_cash_transactions (append-only)
+  - employees          → fazle_employees_legacy (upsert on employee_mobile)
+  - cash_transactions  → fazle_cash_transactions_archive (append-only)
   - attendance         → wbom_attendance (upsert on employee_id + attendance_date)
 """
 from __future__ import annotations
@@ -113,13 +113,13 @@ async def import_employees(rows: list[dict]) -> dict[str, Any]:
     for row in rows:
         try:
             existing = await fetch_val(
-                "SELECT employee_id FROM wbom_employees WHERE employee_mobile = $1",
+                "SELECT employee_id FROM fazle_employees_legacy WHERE employee_mobile = $1",
                 row["employee_mobile"],
             )
             if existing:
                 await execute(
                     """
-                    UPDATE wbom_employees
+                    UPDATE fazle_employees_legacy
                     SET employee_name = COALESCE(NULLIF($2,''), employee_name),
                         designation   = COALESCE(NULLIF($3,''), designation),
                         joining_date  = COALESCE(NULLIF($4,'')::date, joining_date),
@@ -143,7 +143,7 @@ async def import_employees(rows: list[dict]) -> dict[str, Any]:
             else:
                 await execute(
                     """
-                    INSERT INTO wbom_employees
+                    INSERT INTO fazle_employees_legacy
                         (employee_mobile, employee_name, designation, joining_date,
                          status, bank_account, emergency_contact, address)
                     VALUES ($1, $2, $3, NULLIF($4,'')::date, $5, NULLIF($6,''), NULLIF($7,''), NULLIF($8,''))
@@ -171,7 +171,7 @@ async def import_cash_transactions(rows: list[dict]) -> dict[str, Any]:
     for row in rows:
         try:
             emp_id = await fetch_val(
-                "SELECT employee_id FROM wbom_employees WHERE employee_mobile = $1",
+                "SELECT employee_id FROM fazle_employees_legacy WHERE employee_mobile = $1",
                 row["employee_mobile"],
             )
             if not emp_id:
@@ -180,7 +180,7 @@ async def import_cash_transactions(rows: list[dict]) -> dict[str, Any]:
 
             await execute(
                 """
-                INSERT INTO wbom_cash_transactions
+                INSERT INTO fazle_cash_transactions_archive
                     (employee_id, transaction_type, amount, payment_method,
                      payment_mobile, transaction_date, remarks, created_by)
                 VALUES ($1, $2, $3::numeric, NULLIF($4,''), NULLIF($5,''),
@@ -208,7 +208,7 @@ async def import_attendance(rows: list[dict]) -> dict[str, Any]:
     for row in rows:
         try:
             emp_id = await fetch_val(
-                "SELECT employee_id FROM wbom_employees WHERE employee_mobile = $1",
+                "SELECT employee_id FROM fazle_employees_legacy WHERE employee_mobile = $1",
                 row["employee_mobile"],
             )
             if not emp_id:

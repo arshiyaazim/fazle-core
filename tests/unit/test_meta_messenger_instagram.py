@@ -262,7 +262,7 @@ class TestHandleInstagramMessage:
         be a phone number. This test proves the raw IGSID is stored
         verbatim (no phone-normalization applied) under platform=
         'instagram', which app.main._save_message keys on separately
-        from wbom_whatsapp_messages' phone-based rows for other
+        from fazle_whatsapp_messages' phone-based rows for other
         platforms."""
         from app.main import _handle_instagram_message
         with patch("app.main._meta_channel_duplicate_delivery", new=AsyncMock(return_value=False)), \

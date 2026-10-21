@@ -1,6 +1,6 @@
 Source: knowledge_base/06_developer_system/ocr_engine.md
-SHA256: 9e1c715102cf35d6c10b4faaf476fb78c27704fd3c456737df21f4f616f7e7c8
-Version: 9e1c715102cf
+SHA256: 482ac08953b874be5ea99ad577f4bdb8b9d9f84d5a886ecd07060a643ef43006
+Version: 482ac08953b8
 
 # OCR Engine — Fazle AI Platform
 
@@ -177,7 +177,7 @@ If all scores = 0 → `unknown`. Highest-scoring type wins. Ties: escort > relea
 
 ## Duplicate Detection
 
-**Module:** `modules/image_hash/`
+**Module:** `modules/fazle_image_hash/`
 **Algorithm:** SHA-256 hash of raw image bytes
 **Storage:** `check_and_register(file_path, message_id)` — registers hash in production table on first occurrence
 **Behavior:** If duplicate detected → returns early with Bangla notice: `"এই স্লিপটি পূর্বে জমা হয়েছে। যাচাই চলছে।"`

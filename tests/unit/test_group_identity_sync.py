@@ -1,4 +1,4 @@
-"""Stage D1 (2026-08-28) -- modules.group_identity.
+"""Stage D1 (2026-08-28) -- modules.fazle_group_identity.
 
 Uses a real temporary SQLite file (matching the actual bridge chats-table
 shape) rather than mocking sqlite3, so the read path is genuinely
@@ -35,7 +35,7 @@ class TestGroupChatDiscovery:
             ("8801700000000@s.whatsapp.net", "Some Individual", "2026-08-28 06:00:00+02:00"),
         ])
         try:
-            from modules.group_identity import _read_bridge_group_chats
+            from modules.fazle_group_identity import _read_bridge_group_chats
             rows = _read_bridge_group_chats(db_path)
             assert len(rows) == 1
             assert rows[0]["jid"] == "120363426895117693@g.us"
@@ -54,9 +54,9 @@ class TestGroupChatDiscovery:
             return {"group_jid": args[0]}
 
         try:
-            with patch("modules.group_identity._bridge_db_path", return_value=db_path), \
-                 patch("modules.group_identity.fetch_one", new=_fake_fetch_one):
-                from modules.group_identity import sync_group_identities
+            with patch("modules.fazle_group_identity._bridge_db_path", return_value=db_path), \
+                 patch("modules.fazle_group_identity.fetch_one", new=_fake_fetch_one):
+                from modules.fazle_group_identity import sync_group_identities
                 synced = await sync_group_identities("bridge1")
         finally:
             os.remove(db_path)
@@ -71,7 +71,7 @@ class TestGroupChatDiscovery:
         """The upsert SQL's ON CONFLICT clause must never assign
         business_label -- it is only ever set by an explicit, separate
         action, never inferred here."""
-        from modules.group_identity import sync_group_identities
+        from modules.fazle_group_identity import sync_group_identities
         db_path = _make_chats_db([("120363426895117693@g.us", "Office group", "2026-08-28 06:51:04+02:00")])
         captured = {}
 
@@ -80,8 +80,8 @@ class TestGroupChatDiscovery:
             return {"group_jid": args[0]}
 
         try:
-            with patch("modules.group_identity._bridge_db_path", return_value=db_path), \
-                 patch("modules.group_identity.fetch_one", new=_fake_fetch_one):
+            with patch("modules.fazle_group_identity._bridge_db_path", return_value=db_path), \
+                 patch("modules.fazle_group_identity.fetch_one", new=_fake_fetch_one):
                 await sync_group_identities("bridge1")
         finally:
             os.remove(db_path)
@@ -100,12 +100,12 @@ class TestGroupChatDiscovery:
             return {"group_jid": args[0]}
 
         try:
-            from modules.group_identity import sync_group_identities
-            with patch("modules.group_identity._bridge_db_path", return_value=db_path_v1), \
-                 patch("modules.group_identity.fetch_one", new=_fake_fetch_one):
+            from modules.fazle_group_identity import sync_group_identities
+            with patch("modules.fazle_group_identity._bridge_db_path", return_value=db_path_v1), \
+                 patch("modules.fazle_group_identity.fetch_one", new=_fake_fetch_one):
                 await sync_group_identities("bridge1")
-            with patch("modules.group_identity._bridge_db_path", return_value=db_path_v2), \
-                 patch("modules.group_identity.fetch_one", new=_fake_fetch_one):
+            with patch("modules.fazle_group_identity._bridge_db_path", return_value=db_path_v2), \
+                 patch("modules.fazle_group_identity.fetch_one", new=_fake_fetch_one):
                 await sync_group_identities("bridge1")
         finally:
             os.remove(db_path_v1)
@@ -120,22 +120,22 @@ class TestGroupChatDiscovery:
     async def test_bridge3_zero_groups_is_not_an_error(self):
         db_path = _make_chats_db([])
         try:
-            from modules.group_identity import sync_group_identities
-            with patch("modules.group_identity._bridge_db_path", return_value=db_path):
+            from modules.fazle_group_identity import sync_group_identities
+            with patch("modules.fazle_group_identity._bridge_db_path", return_value=db_path):
                 synced = await sync_group_identities("bridge3")
         finally:
             os.remove(db_path)
         assert synced == 0
 
     async def test_no_configured_path_returns_zero_not_a_crash(self):
-        from modules.group_identity import sync_group_identities
-        with patch("modules.group_identity._bridge_db_path", return_value=None):
+        from modules.fazle_group_identity import sync_group_identities
+        with patch("modules.fazle_group_identity._bridge_db_path", return_value=None):
             synced = await sync_group_identities("bridge1")
         assert synced == 0
 
     async def test_sync_all_bridges_covers_all_three(self):
-        from modules.group_identity import sync_all_bridges
-        with patch("modules.group_identity.sync_group_identities", new=AsyncMock(return_value=5)):
+        from modules.fazle_group_identity import sync_all_bridges
+        with patch("modules.fazle_group_identity.sync_group_identities", new=AsyncMock(return_value=5)):
             result = await sync_all_bridges()
         assert set(result) == {"bridge1", "bridge2", "bridge3"}
 
@@ -149,7 +149,7 @@ class TestE1BusinessLabelAssignment:
             captured["args"] = args
             return "UPDATE 2"
 
-        from modules.group_identity import set_group_business_label
+        from modules.fazle_group_identity import set_group_business_label
         with patch("app.database.execute", new=_fake_execute):
             n = await set_group_business_label("120363426895117693@g.us", "office_internal")
         assert n == 2
@@ -157,7 +157,7 @@ class TestE1BusinessLabelAssignment:
         assert "WHERE group_jid = $2" in captured["sql"]
 
     async def test_is_approved_group_jid_true_only_with_label(self):
-        from modules.group_identity import is_approved_group_jid
+        from modules.fazle_group_identity import is_approved_group_jid
 
         async def _labeled(sql, *args):
             return {"1": 1}
@@ -171,7 +171,7 @@ class TestE1BusinessLabelAssignment:
             assert await is_approved_group_jid("y@g.us") is False
 
     async def test_list_approved_group_jids_caches_and_can_be_force_refreshed(self):
-        from modules import group_identity as gi
+        from modules import fazle_group_identity as gi
         gi._approved_jids_cache["jids"] = []
         gi._approved_jids_cache["checked_at"] = 0.0
 
@@ -192,7 +192,7 @@ class TestE1BusinessLabelAssignment:
         assert calls["n"] == 2
 
     async def test_list_approved_group_jids_keeps_stale_cache_on_db_error(self):
-        from modules import group_identity as gi
+        from modules import fazle_group_identity as gi
         gi._approved_jids_cache["jids"] = ["stale@g.us"]
         gi._approved_jids_cache["checked_at"] = 0.0
 
@@ -211,7 +211,7 @@ class TestNoHardcodedGroupGuessing:
         match. Structural proof: the module source contains no literal
         JID and no 'Al-Rifa' / 'office' substring match logic."""
         import inspect
-        import modules.group_identity as gi
+        import modules.fazle_group_identity as gi
         src = inspect.getsource(gi)
         assert "120363426895117693" not in src
         assert "al-rifa" not in src.lower()

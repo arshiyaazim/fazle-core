@@ -163,7 +163,7 @@ async def _insert_assignable_program(test_db_pool, employee_id, **overrides):
 async def escort_employee(test_db_pool):
     async with test_db_pool.acquire() as conn:
         row = await conn.fetchrow("""
-            INSERT INTO wbom_employees (employee_mobile, employee_name, designation, status, basic_salary)
+            INSERT INTO fazle_employees_legacy (employee_mobile, employee_name, designation, status, basic_salary)
             VALUES ('8801811111111', 'Karim Escort', 'Escort', 'Active', 9000.00)
             RETURNING *
         """)

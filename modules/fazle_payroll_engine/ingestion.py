@@ -200,7 +200,7 @@ async def store_unmatched(
 
     For "Pending Accounting Candidates" we persist whatever the parser detected
     (amount, phone, name, method, date, confidence) so an operator can review
-    and promote it to a real fpe_cash_transactions entry. The ledger itself is
+    and promote it to a real fazle_cash_transactions entry. The ledger itself is
     NEVER touched here — this row is review-queue only.
 
     2026-08-01: when the row is a genuine near-miss cash instruction (a real

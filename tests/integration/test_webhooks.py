@@ -15,7 +15,7 @@ def offline_providers(monkeypatch):
     """Mock current provider entrypoints, not a stale daemon-only call."""
     from app import llm, ollama
     from modules import route_b, hermes_dispatch
-    from modules.intent import classify
+    from modules.fazle_intent import classify
     monkeypatch.setattr(llm, "classify_intent_llm", AsyncMock(side_effect=classify))
     monkeypatch.setattr(llm, "generate_reply", AsyncMock(return_value="ধন্যবাদ।"))
     monkeypatch.setattr(ollama, "generate_reply", AsyncMock(return_value="ধন্যবাদ।"))
@@ -55,11 +55,11 @@ async def test_inbound_to_reply_or_draft_provenance_after_reload(client, test_db
     Domain-specific routing has its own regression suites.
     """
     from app import main
-    from modules import bridge_poller as bp, message_router as router, outbound
+    from modules import fazle_bridge_poller as bp, message_router as router, outbound
     phone, reference = "8801700999000", "provenance-http-1"
     identity = {"role": "family", "identity_role": "family", "identity_confidence": 100,
                 "identity_source": "test", "display_name": "Test", "confidence": 1.0}
-    monkeypatch.setattr("modules.identity_brain.detect_identity", AsyncMock(return_value=identity))
+    monkeypatch.setattr("modules.fazle_identity_brain.detect_identity", AsyncMock(return_value=identity))
     monkeypatch.setattr(router, "detect_identity", AsyncMock(return_value=identity))
     monkeypatch.setattr(router, "_should_silent_skip", AsyncMock(return_value=(False, "")))
     monkeypatch.setattr(bp, "_can_reply", AsyncMock(return_value=True))
@@ -92,7 +92,7 @@ async def test_inbound_to_reply_or_draft_provenance_after_reload(client, test_db
             payload = {"sender": phone, "text": "hello", "id": reference}
             response = await client.post(f"/webhook/mcp{source[-1]}", json=payload)
             assert response.status_code == 200
-    rows = await test_db_pool.fetch("SELECT * FROM wbom_whatsapp_messages WHERE direction='inbound' AND source_message_ref=$1", reference)
+    rows = await test_db_pool.fetch("SELECT * FROM fazle_whatsapp_messages WHERE direction='inbound' AND source_message_ref=$1", reference)
     assert len(rows) == 1
     mid = rows[0]["message_id"]
     provenance = json.loads(rows[0]["metadata_json"])["provenance"]
@@ -295,7 +295,7 @@ class TestMetaMessengerInstagramRouting:
 
         async with test_db_pool.acquire() as conn:
             count = await conn.fetchval(
-                "SELECT COUNT(*) FROM wbom_whatsapp_messages "
+                "SELECT COUNT(*) FROM fazle_whatsapp_messages "
                 "WHERE platform='messenger' AND direction='inbound' AND source_message_ref=$1",
                 "mid.retry-dedup-1",
             )
@@ -362,7 +362,7 @@ class TestMessageDeduplication:
         # Only one message should be archived
         async with test_db_pool.acquire() as conn:
             count = await conn.fetchval(
-                "SELECT COUNT(*) FROM wbom_whatsapp_messages WHERE sender_number=$1",
+                "SELECT COUNT(*) FROM fazle_whatsapp_messages WHERE sender_number=$1",
                 UNKNOWN_PHONE,
             )
         assert count <= 1, "Duplicate message should not be archived twice"

@@ -40,15 +40,15 @@ ALTER TABLE wbom_escort_programs
     REFERENCES wbom_escort_programs(program_id);
 
 ALTER TABLE wbom_escort_programs
-    ADD CONSTRAINT wbom_escort_programs_no_self_replacement
+    ADD CONSTRAINT fazle_escort_programs_no_self_replacement
     CHECK (replaces_program_id IS NULL OR replaces_program_id <> program_id);
 
-CREATE INDEX idx_wbom_escort_programs_replaces
+CREATE INDEX idx_fazle_escort_programs_replaces
     ON wbom_escort_programs (replaces_program_id)
     WHERE replaces_program_id IS NOT NULL;
 
 -- At most one non-terminal (still-active) replacement per predecessor.
-CREATE UNIQUE INDEX idx_wbom_escort_programs_replaces_active_unique
+CREATE UNIQUE INDEX idx_fazle_escort_programs_replaces_active_unique
     ON wbom_escort_programs (replaces_program_id)
     WHERE replaces_program_id IS NOT NULL
       AND status NOT IN ('completed', 'cancelled', 'expired', 'escort_changed');
@@ -59,8 +59,8 @@ COMMIT;
 -- fully cleared / no approved replacement links exist that must be
 -- preserved -- clear the column contents first, then):
 --   BEGIN;
---   DROP INDEX IF EXISTS idx_wbom_escort_programs_replaces_active_unique;
---   DROP INDEX IF EXISTS idx_wbom_escort_programs_replaces;
---   ALTER TABLE wbom_escort_programs DROP CONSTRAINT IF EXISTS wbom_escort_programs_no_self_replacement;
+--   DROP INDEX IF EXISTS idx_fazle_escort_programs_replaces_active_unique;
+--   DROP INDEX IF EXISTS idx_fazle_escort_programs_replaces;
+--   ALTER TABLE wbom_escort_programs DROP CONSTRAINT IF EXISTS fazle_escort_programs_no_self_replacement;
 --   ALTER TABLE wbom_escort_programs DROP COLUMN IF EXISTS replaces_program_id;
 --   COMMIT;

@@ -22,7 +22,7 @@ SELECT
     c.interaction_count,
     c.interest_level,
     c.created_at::DATE AS joined_date
-FROM wbom_contacts c
+FROM fazle_contacts c
 WHERE c.is_active = TRUE
 ORDER BY c.display_name;
 
@@ -37,7 +37,7 @@ SELECT
     e.joining_date,
     e.status,
     e.basic_salary
-FROM wbom_employees e
+FROM fazle_employees_legacy e
 ORDER BY e.employee_name;
 
 -- ── 3. ai_read_recent_messages ───────────────────────────────────────────────
@@ -51,8 +51,8 @@ SELECT
     m.direction,
     m.platform AS source,
     m.received_at
-FROM wbom_whatsapp_messages m
-LEFT JOIN wbom_contacts c ON c.whatsapp_number = m.sender_number
+FROM fazle_whatsapp_messages m
+LEFT JOIN fazle_contacts c ON c.whatsapp_number = m.sender_number
 WHERE m.received_at >= NOW() - INTERVAL '7 days'
 ORDER BY m.received_at DESC
 LIMIT 100;
@@ -73,7 +73,7 @@ SELECT
     ep.assignment_time,
     ep.completion_time
 FROM wbom_escort_programs ep
-LEFT JOIN wbom_employees e ON e.employee_id = ep.escort_employee_id
+LEFT JOIN fazle_employees_legacy e ON e.employee_id = ep.escort_employee_id
 WHERE ep.program_date >= CURRENT_DATE - INTERVAL '30 days'
 ORDER BY ep.program_date DESC, ep.program_id DESC;
 
@@ -92,7 +92,7 @@ SELECT
     a.check_out_time,
     a.remarks
 FROM wbom_attendance a
-JOIN wbom_employees e ON e.employee_id = a.employee_id
+JOIN fazle_employees_legacy e ON e.employee_id = a.employee_id
 WHERE a.attendance_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month'
 ORDER BY a.attendance_date DESC, e.employee_name;
 
@@ -113,7 +113,7 @@ SELECT
     r.total_advances,
     r.total_deductions
 FROM wbom_payroll_runs r
-JOIN wbom_employees e ON e.employee_id = r.employee_id
+JOIN fazle_employees_legacy e ON e.employee_id = r.employee_id
 WHERE r.period_year >= EXTRACT(YEAR FROM CURRENT_DATE)::INT - 1
 ORDER BY r.period_year DESC, r.period_month DESC, e.employee_name;
 

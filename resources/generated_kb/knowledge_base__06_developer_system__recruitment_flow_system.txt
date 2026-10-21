@@ -1,6 +1,6 @@
 Source: knowledge_base/06_developer_system/recruitment_flow_system.md
-SHA256: 8531148122adcc148e71e7f8b07d64649bf229828ab25de1af16ddf7af528008
-Version: 8531148122ad
+SHA256: 98c095e91a989bf2e574e4096729a4fd3c3e2b8bcaa0f6ab2906408493a75515
+Version: 98c095e91a98
 
 # Recruitment Flow System
 **KB Article ID:** DEV-06-RECRUITMENT-FLOW-SYSTEM
@@ -24,7 +24,7 @@ When `recruitment_eligibility()` returns `eligible=True`, the router chooses one
 
 | Path | Trigger | Handler | `autosend` |
 |---|---|---|---|
-| **Funnel** | `INTAKE_KEYWORDS` match in message | `recruitment_flow.intake_message()` | `True` — sent immediately |
+| **Funnel** | `INTAKE_KEYWORDS` or `RECRUITMENT_TRIGGER_PHRASES` match in message | `recruitment_flow.intake_message()` | `True` — sent immediately |
 | **LLM Chat** | Active session + `_QUESTION_HINTS` match | `recruitment_ai.generate_recruitment_reply()` | `False` — goes to admin draft |
 | **Not eligible** | `OPERATIONAL_ROLES` or `OPERATIONAL_INTENTS` detected | Route normally (not recruitment) | — |
 
@@ -44,19 +44,25 @@ An open intake session expires after 24 hours of inactivity. Expired sessions ar
 
 ---
 
-### `INTAKE_KEYWORDS` (~23 unique terms)
+### `INTAKE_KEYWORDS` (bare substring match, ~20 unique terms)
 
 Explicit signals that a sender is seeking employment. Match triggers the funnel (path 1) regardless of session state.
 
 ```
-"job", "চাকরি", "vacancy", "apply", "hire", "recruit",
-"নিয়োগ", "কাজের", "interested", "আগ্রহী", "পদ", "পারব",
-"নেবেন", "জয়েন", "cv", "joining", "office location",
-"office address", "contact number", "whatsapp number",
-"অফিস কোথায়", "অফিসের ঠিকানা", "যোগাযোগ নম্বর"
+"চাকরি", "vacancy", "apply", "hire", "recruit", "নিয়োগ", "কাজের", "পদ", "পারব", "নেবেন", "জয়েন", "cv", "joining", "office location", "office address", "contact number", "whatsapp number", "অফিস কোথায়", "অফিস কোথায়", "অফিসের ঠিকানা", "যোগাযোগ নম্বর"
 ```
 
-Note: `INTAKE_KEYWORDS` is a Python `set` — duplicate entries are automatically deduplicated.
+**2026-08-06 fix:** `"job"`, `"interested"`, and their Bangla equivalent `"আগ্রহী"` were removed from this bare set — a bare substring match on any of the three fired on ordinary non-recruitment text. Confirmed live: an internal test message ("run job health_summary") and a generic business inquiry ("I am interested in learning more about your business") both silently opened a recruitment funnel session on a real WhatsApp number. All three now only count as a trigger inside a job-shaped phrase — see `RECRUITMENT_TRIGGER_PHRASES` below.
+
+### `RECRUITMENT_TRIGGER_PHRASES` (contextual, 31 phrases)
+
+`"job"`, `"interested"`, and `"আগ্রহী"` still trigger the funnel, but only inside one of these job-shaped phrases (requires an accompanying work/post/apply/join word, not standing alone):
+
+```
+"কাজ চাই", "কাজ করতে চাই", "কাজ আছে", "কাজ পাব", "কাজ করতে আগ্রহী", "looking for work", "need a job", "job available", "job interest", "a job", "any job", "job vacancy", "job apply", "apply for job", "job korte chai", "job er jonno", "job ache", "job lagbe", "job pete chai", "job dorkar", "job chai", "interested in this job", "interested in the job", "interested to apply", "interested in working", "interested in joining", "job e interested", "interested for the post", "interested in this post", "interested in recruitment", "interested in the vacancy"
+```
+
+Note: `INTAKE_KEYWORDS` is a Python `set` — duplicate entries are automatically deduplicated. `RECRUITMENT_TRIGGER_PHRASES` is a `tuple` (order-preserving, not deduplicated).
 
 ---
 
@@ -76,14 +82,20 @@ OPERATIONAL_ROLES = frozenset({
 
 ### `OPERATIONAL_INTENTS` — Block Recruitment on These Intents
 
-If the router resolves any of these 8 intents for a sender, recruitment is skipped:
+After the operational-role check, any of these 6 intents skips recruitment:
 
 ```python
 OPERATIONAL_INTENTS = frozenset({
-    "attendance", "leave", "salary_query", "payment_due",
-    "advance_request", "escort_duty", "client_order", "slip_submission",
+    "attendance", "leave", "payment_due", "advance_request",
+    "client_order", "slip_submission",
 })
 ```
+
+`salary_query` and `escort_duty` are intentionally excluded. For
+`unknown`/`candidate`/`new_lead` senders, informational questions for those
+topics proceed to recruitment detection and the KB/RAG reply path. Operational
+roles remain blocked by `OPERATIONAL_ROLES`, while order-shaped escort text
+continues to the escort-order route when recruitment detection does not match.
 
 ---
 
@@ -192,7 +204,7 @@ Stored in `fazle_recruitment_sessions.score_bucket`.
 ## `wbom_candidates` — Permanent Candidate Record (U-01, verified 2026-06-23)
 
 **Source:** Verified via `\d wbom_candidates` on production DB.
-**Relationship to `fazle_recruitment_sessions`:** `fazle_recruitment_sessions` is the **temporary** intake session (expires after SESSION_TTL=24h). `wbom_candidates` is the **permanent** candidate record created when a session completes scoring. FK: `fazle_recruitment_sessions.candidate_id → wbom_candidates.candidate_id ON DELETE SET NULL`.
+**Relationship to `fazle_recruitment_sessions`:** `fazle_recruitment_sessions` is the **temporary** intake session (expires after SESSION_TTL=24h). `wbom_candidates` is the **permanent** candidate record created (or recovered by unique phone) when intake starts, then linked through `fazle_recruitment_sessions.candidate_id`. Collected fields and the final score are copied into the permanent record when scoring completes. FK: `fazle_recruitment_sessions.candidate_id → wbom_candidates.candidate_id ON DELETE SET NULL`.
 
 | Column | Type | Nullable | Default | Notes |
 |---|---|---|---|---|
@@ -214,29 +226,64 @@ Stored in `fazle_recruitment_sessions.score_bucket`.
 | `next_follow_up_at` | TIMESTAMPTZ | — | NULL | Indexed for scheduler follow-up sweep |
 | `source` | VARCHAR(30) | — | `'whatsapp'` | Channel where candidate first appeared |
 | `source_message` | TEXT | — | NULL | Original trigger message |
-| `notes` | TEXT | — | NULL | Admin notes |
+| `notes` | TEXT | — | NULL | Admin notes; also holds the marker-delimited `[EXPERIENCE_CLAIM]` block for responsible roles |
+| `post_intake_status` | TEXT | — | NULL | Migration 072, Owner-locked set: `awaiting_agreement / agreed / joining_ready / salary_objection / not_ready_now / declined / future_contact`. NULL = not yet reached. **Frozen vocabulary** — never extended. |
+| `linked_employee_id` | BIGINT | — | NULL | Migration 077 (2026-08-29). FK → `fazle_employees_legacy(employee_id)` ON DELETE SET NULL. Set exactly once by `link_candidate_to_employee()` when this person becomes an employee. Durable candidate→employee link that survives a later phone change. Partial UNIQUE index enforces 1:1. |
 | `created_at` | TIMESTAMPTZ | NOT NULL | NOW() | Immutable |
 | `updated_at` | TIMESTAMPTZ | NOT NULL | NOW() | Updated on each stage change |
 
-**Indexes:** UNIQUE on `phone`; btree on `score_bucket`, `next_follow_up_at` (partial WHERE NOT NULL), `funnel_stage`, `assigned_recruiter`.
+**Indexes:** UNIQUE on `phone`; btree on `score_bucket`, `next_follow_up_at` (partial WHERE NOT NULL), `funnel_stage`, `assigned_recruiter`, `post_intake_status` (partial WHERE NOT NULL); partial UNIQUE on `linked_employee_id` (WHERE NOT NULL).
 
 **Referenced by:** `fazle_recruitment_sessions` (FK, SET NULL on delete), `wbom_candidate_conversations` (FK, CASCADE), `wbom_recruitment_reminders` (FK, CASCADE).
 
 ---
 
+## `wbom_candidate_conversations` — Candidate Intake Audit (S5)
+
+Every inbound recruitment trigger or step answer is appended before the session advances. The row stores the canonical `candidate_id`, the pre-transition `step`, direction `inbound`, exact message text, and collection timestamp. Migration 062 adds nullable `source_bridge` and `message_id` columns plus a partial unique index on `(source_bridge, message_id)` where `message_id IS NOT NULL`.
+
+When a bridge message ID is present, a conflict proves the message is a retry: the audit insert is suppressed and the intake state does not advance. Messages without an ID remain append-only and cannot be safely deduplicated. Audit persistence is fail-open, but session and permanent-candidate mutations share a transaction in both audited and audit-outage paths. A mutation failure rolls back the transition, retains the current-step reply, and leaves the message retryable.
+
+### Lifecycle events on this table (2026-08-29 closure)
+
+The same append-only table also carries **post-intake lifecycle events** — `_audit_candidate_conversation()` gained a `direction` parameter (`'inbound'` default, `'outbound'` for a message we sent, `'event'` for a fact with no WhatsApp message). `record_candidate_lifecycle_event(candidate_id, event, evidence, …)` writes them; `event` must be in `LIFECYCLE_EVENT_STEPS`:
+
+`invited · invitation_acknowledged · phone_confirmed · travelling · arrived_office · joined · deferred_after_invitation · did_not_arrive · phone_call_note · readiness_confirmed`
+
+These are **events, not states** — the frozen `post_intake_status` vocabulary is unchanged. Events are evidence-backed only (candidate message, authenticated Admin note, or authoritative employee creation); never inferred from silence. `did_not_arrive` is only written from an explicit record, never from absence of a reply.
+
+---
+
+## Recruitment lifecycle closure functions (2026-08-29, Owner directive)
+
+| Function | Purpose |
+|---|---|
+| `link_candidate_to_employee(employee_mobile, employee_id, …)` | GAP 1. Last-9-digit phone match (candidate `phone` and employee `employee_mobile` use inconsistent 01…/8801… forms). Links `WHERE linked_employee_id IS NULL` only; never repoints an already-linked candidate (→ `needs_admin_review`); ambiguous multi-match fails closed. Records a `joined` event. Called best-effort (non-fatal) from `admin_employees.create_employee()` and `create_and_link_wbom()`. |
+| `record_candidate_lifecycle_event(...)` | GAP 2. Append one `LIFECYCLE_EVENT_STEPS` row. |
+| `get_willing_candidates(include_interested=False, limit=None)` | Shortlist. Default: `post_intake_status IN ('joining_ready','agreed')` and not already an employee — never merely `scored`. `include_interested=True` adds the softer `_INTERESTED_STATUSES` with honest labels. Deterministic order: `joining_ready` before `agreed`, then earliest `readiness_confirmed` (else `updated_at`), then `candidate_id`. Score never used for ordering. |
+| `resolve_invite_batch(candidate_ids, limit=None)` | GAP 3. Deterministically orders + **freezes** a recipient set (same ordering as above). Drops candidates already linked to an employee / `declined` / no resolvable phone — never silently substitutes. `limit` = the N in "প্রথম ৫ জন". |
+| `send_invite_batch(recipients, office_date, message_body, authorized_by, …)` | Sends each recipient individually via `outbound.enqueue` with `idempotency_key=f"recruit_invite:{cid}:{office_date}"` (exact-once; replay never re-sends a success; a partial failure isolates). `office_date` must already be an absolute date. One trusted-Admin authorization covers the whole bounded batch — no per-message re-approval. Records an `invited` event per successful send. |
+| `record_admin_phone_call_note(candidate_ref, note, admin_phone, readiness=None)` | GAP 4. Records an authenticated Admin's offline/phone-call fact as a `phone_call_note` event, `source='admin:<phone>'` (never "Hermes heard the call"). Only updates `post_intake_status` if the Admin explicitly supplied `readiness` (must be in the frozen set). |
+| `classify_post_invitation_signal(text) → step\|None` | G. Returns `travelling` / `arrived_office` / `invitation_acknowledged` on explicit markers (e.g. "রওনা দিয়েছি", "অফিসের পথে", "আচ্ছা আসব"), else None. Used by `_route_post_intake_message` so an invited candidate's "I'm on the way" continues from invitation context and never restarts intake. Fail-closed on ambiguity. |
+
+**Personality layer** (`shared/reply_policy.py`, `POLICY_VERSION = "structured_v3"`): the recruitment reply prompt (`build_whatsapp_recruitment_policy`) now frames Fazle as a warm, competent human recruitment officer — natural conversational Bangla, light regional flavor, mild playfulness, humor within a hard safety boundary (`_HUMOR_SAFETY_NOTE` — never about hardship/poverty/illness/disability/age/religion/ethnicity/appearance/rejection). Anti-repetition rules: no per-turn greeting, no restating the question, no "আর কিছু জানতে চান?" loop, history-aware (don't re-ask known fields, don't re-send office contact unless needed), and a low-pressure acknowledgement for "চিন্তা করে দেখি". **Tone only** — business facts, salary figures, readiness classification, authority, privacy, and all DB/action decisions are unchanged and still governed by the Business Rules section + the code around the prompt.
+
+---
+
 ## Key Functions
 
-### `intake_message(phone, text, source) → dict`
+### `intake_message(phone, text, source, role, message_id) → dict`
 
 Main handler for the intake funnel. Returns `{reply, action, session_id}`.
 
 **Flow:**
 1. Load active session via `get_active_session(phone)`
-2. If no session: check `INTAKE_KEYWORDS` → if match, create session → return `name` question
-3. If session exists: advance to next step based on current `collection_step`
-4. Validate input for each step (`_parse_age()` for age, `VALID_POSITIONS` lookup for job_preference)
-5. After `phone_confirm`: compute score → return `INTAKE_COMPLETE_MSG`
-6. Return `{reply: <step_question>, action: "intake", session_id: ...}`
+2. If no session: check intake keywords → create session and permanent candidate, link them, audit the trigger as step `intake`, then return the `name` question
+3. If session exists: audit the inbound message against the current pre-transition `collection_step`
+4. If an ID-bearing audit conflict proves a retry, return the current question without advancing state
+5. Validate input for each step (`_parse_age()` for age, `VALID_POSITIONS` lookup for job_preference)
+6. Advance the session; after `phone_confirm`, compute score and finalize the linked permanent candidate
+7. Return `{reply: <step_question>, action: created|collecting|scored, session_id: ...}`
 
 ### `get_active_session(phone) → Optional[dict]`
 
@@ -290,7 +337,27 @@ Used in path 2 routing. Checks for `_QUESTION_HINTS`:
 | **BR-25** (age 18–55) | `_parse_age()` — rejects ages outside 18–55 |
 | Session TTL 24h | `get_active_session()` — marks sessions older than SESSION_TTL as expired |
 | Operational exclusion | `recruitment_eligibility()` — OPERATIONAL_ROLES + OPERATIONAL_INTENTS block |
-| No fee collection | `recruitment_ai` module (sister module) enforces via `_FEE_PHRASES` guard |
+| No unsolicited fee mention | `modules/hermes_dispatch.py`'s `build_recruitment_context()` (Hermes path, see below) — **correction, 2026-08-12**: this row previously credited `recruitment_ai`'s `_FEE_PHRASES` guard, but `recruitment_ai` has zero live callers (see `recruitment_ai_detail.md`, now marked superseded) — that guard was never actually wired into any production path until the 2026-08-12 fix below. The pre-existing `conversation_layer/recruitment.py` path (live when `hermes_customer_recruitment` is off) still has **no** equivalent guard today. |
+
+---
+
+## Hermes customer-dispatch guardrails (2026-08-12, Owner-directed "Finding E")
+
+When `hermes_customer_recruitment` is active (see `runtime_gateway_flags.md`), both call sites above (`route_recruitment_message()`'s session-continuation path and its main informational-reply path) route through `modules/hermes_dispatch.generate_recruitment_reply()` instead of `conversation_layer.generate_recruitment_reply()`. Two guardrails were ported into `modules/hermes_dispatch.py` from the dead `modules/recruitment_ai/__init__.py` (which had them but was never live) — neither guardrail exists in the `conversation_layer/recruitment.py` path today:
+
+1. **Conditional fee-section inclusion** (`build_recruitment_context(message)`): `resources/ops/recruitment_source_of_truth.txt` is read whole and cached, but its "ভর্তি ফি / ডিপোজিট" section is stripped from the context unless the inbound message itself looks like a fee/deposit question (`_looks_like_fee_question()`) — matching the source file's own instruction not to volunteer fee figures unsolicited. Ported from `recruitment_ai._looks_like_fee_question()` / `build_recruitment_source_context()`'s fee-stripping regex.
+2. **Post-generation fact-check** (`_recruitment_reply_matches_source()`): before `generate_recruitment_reply()` returns a Hermes reply, every numeric token and Bangla place-name-shaped token in the reply must appear in the `kb_context` that was given to Hermes — any reply introducing an unsupported number (invented salary/fee/age figure) or unsupported place name (invented vacancy location) is rejected (returns `None`, which callers already fall through to the safe `conversation_layer` path for, per this module's existing fail-closed contract). Ported from `recruitment_ai.enforce_recruitment_reply_policy()`. This is a conservative check (catches fabricated numbers/places specifically), not a full faithfulness validator.
+
+**Known limitation carried over from the original**: the fact-check compares reply-numbers against `kb_context` only, not against the candidate's own message — a reply that legitimately echoes back a number the candidate stated (e.g. their own age) can be blocked as "unsupported" if that number doesn't independently appear in the source file. Accepted as low-risk (the funnel mostly asks forward questions rather than restating candidate-supplied figures), matching the original module's own design.
+
+---
+
+## Dead-module audit (2026-08-12, Owner-directed)
+
+Two modules once considered candidates for feature loss on deletion were checked feature-by-feature against the live app; **neither has any missing coverage** — safe to delete when convenient:
+
+- **`modules/user_role/__init__.py`** (`detect_role()`): zero live callers. Every capability it had (admin/accountant/employee/contact role resolution) is covered, and in most cases more comprehensively, by `identity_brain.detect_identity()` (see `identity_brain.md`) plus `message_router`'s own direct `settings.accountant_phone` check (Tier 6). Its `relation_name == "partner"` mapping has no live equivalent in `identity_brain`, but a live-DB check (2026-08-12) confirmed `fazle_contacts.relation` has never contained `"partner"` in production — purely theoretical, not a real gap.
+- **`modules/reply_templates/__init__.py`**: only reachable via `conversation_layer/recruitment.py`'s `simulate_current_core_reply()`, itself a shadow/simulation function, not the live `generate_recruitment_reply()`. Its topics (recruitment/greeting/salary_query/complaint/leave/join) are all covered live elsewhere with more detail: recruitment → `recruitment_source_of_truth.txt`; salary_query → `salary_policy.md` + Tier 10 RAG enrichment (2026-08-12 fix, see `hybrid_search.md`); leave → `knowledge_base/01_employee_knowledge/leave_policy.md`, RAG-reachable via Tier 15's existing generic enrichment; join → `recruitment_source_of_truth.txt`'s "আবেদন ও যোগদান" section; complaint always routes to human/admin review (never auto-sent) so no auto-reply content is needed.
 
 ---
 
@@ -298,6 +365,7 @@ Used in path 2 routing. Checks for `_QUESTION_HINTS`:
 
 - `identity_brain.md` — candidate/new_lead detection upstream of recruitment routing
 - `identity_integration.md` — dimension 3 (workflow availability per sender type)
-- `recruitment_ai_detail.md` — LLM-based path 2 handler
+- `recruitment_ai_detail.md` — dead/superseded module; see its own status note
 - `visibility_rules.md` — KB categories accessible to candidate role
 - `automation_pipeline.md` — session expiry scheduler job
+- `runtime_gateway_flags.md` — `hermes_customer_recruitment` and sibling feature flags

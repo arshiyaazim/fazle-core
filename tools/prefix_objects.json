@@ -1,0 +1,2014 @@
+{
+ "indexes": [
+  {
+   "index_name": "fpe_cash_transactions_pkey",
+   "on_table": "fpe_cash_transactions"
+  },
+  {
+   "index_name": "fpe_cash_transactions_txn_ref_key",
+   "on_table": "fpe_cash_transactions"
+  },
+  {
+   "index_name": "idx_fpe_txn_date_desc",
+   "on_table": "fpe_cash_transactions"
+  },
+  {
+   "index_name": "idx_fpe_txn_employee",
+   "on_table": "fpe_cash_transactions"
+  },
+  {
+   "index_name": "idx_fpe_txn_legacy_wbom",
+   "on_table": "fpe_cash_transactions"
+  },
+  {
+   "index_name": "idx_fpe_txn_not_deleted",
+   "on_table": "fpe_cash_transactions"
+  },
+  {
+   "index_name": "idx_fpe_txn_period",
+   "on_table": "fpe_cash_transactions"
+  },
+  {
+   "index_name": "idx_fpe_txn_phone",
+   "on_table": "fpe_cash_transactions"
+  },
+  {
+   "index_name": "idx_fpe_txn_program",
+   "on_table": "fpe_cash_transactions"
+  },
+  {
+   "index_name": "idx_fpe_txn_source",
+   "on_table": "fpe_cash_transactions"
+  },
+  {
+   "index_name": "idx_fpe_txn_source_message",
+   "on_table": "fpe_cash_transactions"
+  },
+  {
+   "index_name": "idx_fpe_txn_status",
+   "on_table": "fpe_cash_transactions"
+  },
+  {
+   "index_name": "fpe_employee_ledger_pkey",
+   "on_table": "fpe_employee_ledger"
+  },
+  {
+   "index_name": "fpe_ledger_unique",
+   "on_table": "fpe_employee_ledger"
+  },
+  {
+   "index_name": "fpe_employees_employee_code_key",
+   "on_table": "fpe_employees"
+  },
+  {
+   "index_name": "fpe_employees_pkey",
+   "on_table": "fpe_employees"
+  },
+  {
+   "index_name": "idx_fpe_emp_canonical",
+   "on_table": "fpe_employees"
+  },
+  {
+   "index_name": "idx_fpe_emp_id_phone",
+   "on_table": "fpe_employees"
+  },
+  {
+   "index_name": "idx_fpe_emp_name_norm",
+   "on_table": "fpe_employees"
+  },
+  {
+   "index_name": "idx_fpe_emp_phone_unique",
+   "on_table": "fpe_employees"
+  },
+  {
+   "index_name": "idx_fpe_emp_primary_phone",
+   "on_table": "fpe_employees"
+  },
+  {
+   "index_name": "idx_fpe_emp_resolution_status",
+   "on_table": "fpe_employees"
+  },
+  {
+   "index_name": "idx_fpe_emp_wbom_link",
+   "on_table": "fpe_employees"
+  },
+  {
+   "index_name": "idx_tx_date",
+   "on_table": "wbom_cash_transactions"
+  },
+  {
+   "index_name": "idx_tx_type_date",
+   "on_table": "wbom_cash_transactions"
+  },
+  {
+   "index_name": "idx_txn_idempotency",
+   "on_table": "wbom_cash_transactions"
+  },
+  {
+   "index_name": "idx_wbom_transactions_date",
+   "on_table": "wbom_cash_transactions"
+  },
+  {
+   "index_name": "idx_wbom_transactions_dedup",
+   "on_table": "wbom_cash_transactions"
+  },
+  {
+   "index_name": "idx_wbom_transactions_employee",
+   "on_table": "wbom_cash_transactions"
+  },
+  {
+   "index_name": "idx_wbom_transactions_type",
+   "on_table": "wbom_cash_transactions"
+  },
+  {
+   "index_name": "idx_wbom_transactions_wa_msg_dedup",
+   "on_table": "wbom_cash_transactions"
+  },
+  {
+   "index_name": "idx_wbom_tx_dedup_migration",
+   "on_table": "wbom_cash_transactions"
+  },
+  {
+   "index_name": "wbom_cash_transactions_pkey",
+   "on_table": "wbom_cash_transactions"
+  },
+  {
+   "index_name": "idx_wbom_contacts_last_seen",
+   "on_table": "wbom_contacts"
+  },
+  {
+   "index_name": "idx_wbom_contacts_name",
+   "on_table": "wbom_contacts"
+  },
+  {
+   "index_name": "idx_wbom_contacts_phone",
+   "on_table": "wbom_contacts"
+  },
+  {
+   "index_name": "idx_wbom_contacts_platform",
+   "on_table": "wbom_contacts"
+  },
+  {
+   "index_name": "idx_wbom_contacts_whatsapp",
+   "on_table": "wbom_contacts"
+  },
+  {
+   "index_name": "wbom_contacts_pkey",
+   "on_table": "wbom_contacts"
+  },
+  {
+   "index_name": "wbom_contacts_whatsapp_platform_uniq",
+   "on_table": "wbom_contacts"
+  },
+  {
+   "index_name": "idx_employees_status",
+   "on_table": "wbom_employees"
+  },
+  {
+   "index_name": "idx_wbom_employees_bkash",
+   "on_table": "wbom_employees"
+  },
+  {
+   "index_name": "idx_wbom_employees_mobile",
+   "on_table": "wbom_employees"
+  },
+  {
+   "index_name": "idx_wbom_employees_name",
+   "on_table": "wbom_employees"
+  },
+  {
+   "index_name": "uq_wbom_employees_mobile",
+   "on_table": "wbom_employees"
+  },
+  {
+   "index_name": "wbom_employees_employee_mobile_key",
+   "on_table": "wbom_employees"
+  },
+  {
+   "index_name": "wbom_employees_pkey",
+   "on_table": "wbom_employees"
+  },
+  {
+   "index_name": "idx_wbom_messages_canonical_phone",
+   "on_table": "wbom_whatsapp_messages"
+  },
+  {
+   "index_name": "idx_wbom_messages_class",
+   "on_table": "wbom_whatsapp_messages"
+  },
+  {
+   "index_name": "idx_wbom_messages_identity",
+   "on_table": "wbom_whatsapp_messages"
+  },
+  {
+   "index_name": "idx_wbom_messages_phone_last10",
+   "on_table": "wbom_whatsapp_messages"
+  },
+  {
+   "index_name": "idx_wbom_messages_received",
+   "on_table": "wbom_whatsapp_messages"
+  },
+  {
+   "index_name": "idx_wbom_messages_sender",
+   "on_table": "wbom_whatsapp_messages"
+  },
+  {
+   "index_name": "idx_wbom_msg_actor_type",
+   "on_table": "wbom_whatsapp_messages"
+  },
+  {
+   "index_name": "idx_wbom_msg_canonical_key",
+   "on_table": "wbom_whatsapp_messages"
+  },
+  {
+   "index_name": "idx_wbom_msg_contact_identifier",
+   "on_table": "wbom_whatsapp_messages"
+  },
+  {
+   "index_name": "idx_wbom_msg_conv_key",
+   "on_table": "wbom_whatsapp_messages"
+  },
+  {
+   "index_name": "idx_wbom_msg_direction",
+   "on_table": "wbom_whatsapp_messages"
+  },
+  {
+   "index_name": "idx_wbom_msg_intent",
+   "on_table": "wbom_whatsapp_messages"
+  },
+  {
+   "index_name": "idx_wbom_msg_meta_source_ref",
+   "on_table": "wbom_whatsapp_messages"
+  },
+  {
+   "index_name": "idx_wbom_msg_platform",
+   "on_table": "wbom_whatsapp_messages"
+  },
+  {
+   "index_name": "idx_wbom_msg_platform_direction",
+   "on_table": "wbom_whatsapp_messages"
+  },
+  {
+   "index_name": "idx_wbom_msg_received_at",
+   "on_table": "wbom_whatsapp_messages"
+  },
+  {
+   "index_name": "idx_wbom_msg_status",
+   "on_table": "wbom_whatsapp_messages"
+  },
+  {
+   "index_name": "idx_wbom_msg_workflow_triggered",
+   "on_table": "wbom_whatsapp_messages"
+  },
+  {
+   "index_name": "uq_wbom_messages_hash",
+   "on_table": "wbom_whatsapp_messages"
+  },
+  {
+   "index_name": "wbom_whatsapp_messages_pkey",
+   "on_table": "wbom_whatsapp_messages"
+  },
+  {
+   "index_name": "wbom_whatsapp_messages_whatsapp_msg_id_key",
+   "on_table": "wbom_whatsapp_messages"
+  },
+  {
+   "index_name": "idx_admin_directives_created_by",
+   "on_table": "fazle_admin_directives"
+  },
+  {
+   "index_name": "idx_admin_directives_status",
+   "on_table": "fazle_admin_directives"
+  },
+  {
+   "index_name": "idx_admin_directives_subject",
+   "on_table": "fazle_admin_directives"
+  },
+  {
+   "index_name": "idx_admins_apikey",
+   "on_table": "fazle_admins"
+  },
+  {
+   "index_name": "idx_admins_phone",
+   "on_table": "fazle_admins"
+  },
+  {
+   "index_name": "idx_admins_status",
+   "on_table": "fazle_admins"
+  },
+  {
+   "index_name": "idx_assistant_feature_flags_feature_name",
+   "on_table": "assistant_feature_flags"
+  },
+  {
+   "index_name": "idx_attendance_date",
+   "on_table": "wbom_attendance"
+  },
+  {
+   "index_name": "idx_attendance_status_date",
+   "on_table": "wbom_attendance"
+  },
+  {
+   "index_name": "idx_audit_command",
+   "on_table": "fazle_admin_audit"
+  },
+  {
+   "index_name": "idx_b19_audit_actor",
+   "on_table": "fazle_admin_audit"
+  },
+  {
+   "index_name": "idx_b19_audit_command",
+   "on_table": "fazle_admin_audit"
+  },
+  {
+   "index_name": "idx_b19_audit_created",
+   "on_table": "fazle_admin_audit"
+  },
+  {
+   "index_name": "idx_chat_history_thread_sent",
+   "on_table": "chat_history"
+  },
+  {
+   "index_name": "idx_client_billing_profiles_active",
+   "on_table": "wbom_client_billing_profiles"
+  },
+  {
+   "index_name": "idx_client_billing_profiles_contact_id",
+   "on_table": "wbom_client_billing_profiles"
+  },
+  {
+   "index_name": "idx_client_billing_profiles_contact_mobile",
+   "on_table": "wbom_client_billing_profiles"
+  },
+  {
+   "index_name": "idx_contact_roles_phone",
+   "on_table": "fazle_contact_roles"
+  },
+  {
+   "index_name": "idx_contact_roles_role",
+   "on_table": "fazle_contact_roles"
+  },
+  {
+   "index_name": "idx_conv_shadow_cmp_created",
+   "on_table": "fazle_conversation_shadow_comparisons"
+  },
+  {
+   "index_name": "idx_conv_shadow_cmp_domain",
+   "on_table": "fazle_conversation_shadow_comparisons"
+  },
+  {
+   "index_name": "idx_conv_shadow_cmp_grouping_action",
+   "on_table": "fazle_conversation_shadow_comparisons"
+  },
+  {
+   "index_name": "idx_conv_shadow_cmp_thread",
+   "on_table": "fazle_conversation_shadow_comparisons"
+  },
+  {
+   "index_name": "idx_db_backups_started_at",
+   "on_table": "fazle_db_backups"
+  },
+  {
+   "index_name": "idx_db_backups_status",
+   "on_table": "fazle_db_backups"
+  },
+  {
+   "index_name": "idx_draft_audit_draft",
+   "on_table": "fazle_draft_audit_log"
+  },
+  {
+   "index_name": "idx_draft_audit_event",
+   "on_table": "fazle_draft_audit_log"
+  },
+  {
+   "index_name": "idx_draft_replies_created",
+   "on_table": "fazle_draft_replies"
+  },
+  {
+   "index_name": "idx_draft_replies_recipient",
+   "on_table": "fazle_draft_replies"
+  },
+  {
+   "index_name": "idx_draft_replies_type",
+   "on_table": "fazle_draft_replies"
+  },
+  {
+   "index_name": "idx_draft_status",
+   "on_table": "fazle_draft_replies"
+  },
+  {
+   "index_name": "idx_eog_message_ts",
+   "on_table": "escort_order_groups"
+  },
+  {
+   "index_name": "idx_eog_mother_vessel",
+   "on_table": "escort_order_groups"
+  },
+  {
+   "index_name": "idx_eog_sender_phone",
+   "on_table": "escort_order_groups"
+  },
+  {
+   "index_name": "idx_eol_escort_mobile",
+   "on_table": "escort_order_lighters"
+  },
+  {
+   "index_name": "idx_eol_group_id",
+   "on_table": "escort_order_lighters"
+  },
+  {
+   "index_name": "idx_eol_lighter_vessel",
+   "on_table": "escort_order_lighters"
+  },
+  {
+   "index_name": "idx_eol_program_id",
+   "on_table": "escort_order_lighters"
+  },
+  {
+   "index_name": "idx_eral_action",
+   "on_table": "escort_roster_audit_logs"
+  },
+  {
+   "index_name": "idx_eral_created_at",
+   "on_table": "escort_roster_audit_logs"
+  },
+  {
+   "index_name": "idx_eral_program_id",
+   "on_table": "escort_roster_audit_logs"
+  },
+  {
+   "index_name": "idx_ere_escort_employee",
+   "on_table": "escort_roster_entries"
+  },
+  {
+   "index_name": "idx_ere_lighter_vessel",
+   "on_table": "escort_roster_entries"
+  },
+  {
+   "index_name": "idx_ere_mother_vessel",
+   "on_table": "escort_roster_entries"
+  },
+  {
+   "index_name": "idx_ere_program_id",
+   "on_table": "escort_roster_entries"
+  },
+  {
+   "index_name": "idx_ere_start_date",
+   "on_table": "escort_roster_entries"
+  },
+  {
+   "index_name": "idx_ere_status",
+   "on_table": "escort_roster_entries"
+  },
+  {
+   "index_name": "idx_erm_admin_action",
+   "on_table": "escort_release_matches"
+  },
+  {
+   "index_name": "idx_erm_extraction_id",
+   "on_table": "escort_release_matches"
+  },
+  {
+   "index_name": "idx_erm_program_id",
+   "on_table": "escort_release_matches"
+  },
+  {
+   "index_name": "idx_escort_roster_change_requests_program",
+   "on_table": "escort_roster_change_requests"
+  },
+  {
+   "index_name": "idx_escort_roster_change_requests_status",
+   "on_table": "escort_roster_change_requests"
+  },
+  {
+   "index_name": "idx_escort_slip_created",
+   "on_table": "escort_slip_extractions"
+  },
+  {
+   "index_name": "idx_escort_slip_vessel",
+   "on_table": "escort_slip_extractions"
+  },
+  {
+   "index_name": "idx_esl_date",
+   "on_table": "escort_shift_logs"
+  },
+  {
+   "index_name": "idx_esl_program_id",
+   "on_table": "escort_shift_logs"
+  },
+  {
+   "index_name": "idx_fazle_admins_login_token_hash",
+   "on_table": "fazle_admins"
+  },
+  {
+   "index_name": "idx_fazle_admins_username",
+   "on_table": "fazle_admins"
+  },
+  {
+   "index_name": "idx_fazle_contact_aliases_phone",
+   "on_table": "fazle_contact_aliases"
+  },
+  {
+   "index_name": "idx_fazle_contact_hard_delete_log_phone",
+   "on_table": "fazle_contact_hard_delete_log"
+  },
+  {
+   "index_name": "idx_fazle_contact_presence_bridge",
+   "on_table": "fazle_contact_presence"
+  },
+  {
+   "index_name": "idx_fazle_contact_roles_phone",
+   "on_table": "fazle_contact_roles"
+  },
+  {
+   "index_name": "idx_fazle_conversation_threads_bridge_counterparty",
+   "on_table": "fazle_conversation_threads"
+  },
+  {
+   "index_name": "idx_fazle_conversation_threads_domain_state",
+   "on_table": "fazle_conversation_threads"
+  },
+  {
+   "index_name": "idx_fazle_conversation_threads_expires_at",
+   "on_table": "fazle_conversation_threads"
+  },
+  {
+   "index_name": "idx_fazle_conversation_threads_open_state",
+   "on_table": "fazle_conversation_threads"
+  },
+  {
+   "index_name": "idx_fazle_conversation_threads_related_object",
+   "on_table": "fazle_conversation_threads"
+  },
+  {
+   "index_name": "idx_fazle_identity_role_domain_scope",
+   "on_table": "fazle_identity_role_assignments"
+  },
+  {
+   "index_name": "idx_fazle_identity_role_history",
+   "on_table": "fazle_identity_role_assignments"
+  },
+  {
+   "index_name": "idx_fazle_identity_role_subject_active",
+   "on_table": "fazle_identity_role_assignments"
+  },
+  {
+   "index_name": "idx_fazle_identity_subjects_auth_version",
+   "on_table": "fazle_identity_subjects"
+  },
+  {
+   "index_name": "idx_fazle_identity_subjects_kind_state",
+   "on_table": "fazle_identity_subjects"
+  },
+  {
+   "index_name": "idx_fazle_outbound_holds_conversation_state",
+   "on_table": "fazle_outbound_holds"
+  },
+  {
+   "index_name": "idx_fazle_outbound_holds_history",
+   "on_table": "fazle_outbound_holds"
+  },
+  {
+   "index_name": "idx_fazle_outbound_holds_identity_state",
+   "on_table": "fazle_outbound_holds"
+  },
+  {
+   "index_name": "idx_fazle_payment_drafts_employee",
+   "on_table": "fazle_payment_drafts"
+  },
+  {
+   "index_name": "idx_fkb_is_active",
+   "on_table": "fazle_knowledge_base"
+  },
+  {
+   "index_name": "idx_fpe_aliases_lookup",
+   "on_table": "fpe_employee_aliases"
+  },
+  {
+   "index_name": "idx_fpe_audit_entity",
+   "on_table": "fpe_accounting_audit_logs"
+  },
+  {
+   "index_name": "idx_fpe_cash_txn_date",
+   "on_table": "fpe_cash_transactions"
+  },
+  {
+   "index_name": "idx_fpe_diag_created",
+   "on_table": "fpe_processing_diagnostics"
+  },
+  {
+   "index_name": "idx_fpe_diag_failure",
+   "on_table": "fpe_processing_diagnostics"
+  },
+  {
+   "index_name": "idx_fpe_diag_type_status",
+   "on_table": "fpe_processing_diagnostics"
+  },
+  {
+   "index_name": "idx_fpe_diag_worker",
+   "on_table": "fpe_processing_diagnostics"
+  },
+  {
+   "index_name": "idx_fpe_employee_edit_requests_employee_id",
+   "on_table": "fpe_employee_edit_requests"
+  },
+  {
+   "index_name": "idx_fpe_employee_edit_requests_status",
+   "on_table": "fpe_employee_edit_requests"
+  },
+  {
+   "index_name": "idx_fpe_employees_code",
+   "on_table": "fpe_employees"
+  },
+  {
+   "index_name": "idx_fpe_employees_phone",
+   "on_table": "fpe_employees"
+  },
+  {
+   "index_name": "idx_fpe_gapscan_source_started",
+   "on_table": "fpe_gap_scan_runs"
+  },
+  {
+   "index_name": "idx_fpe_identity_anomalies_unresolved_recent",
+   "on_table": "fpe_identity_anomalies"
+  },
+  {
+   "index_name": "idx_fpe_income_emp",
+   "on_table": "fpe_income_transactions"
+  },
+  {
+   "index_name": "idx_fpe_income_not_deleted",
+   "on_table": "fpe_income_transactions"
+  },
+  {
+   "index_name": "idx_fpe_income_period",
+   "on_table": "fpe_income_transactions"
+  },
+  {
+   "index_name": "idx_fpe_income_reporter",
+   "on_table": "fpe_income_transactions"
+  },
+  {
+   "index_name": "idx_fpe_income_txn_date",
+   "on_table": "fpe_income_transactions"
+  },
+  {
+   "index_name": "idx_fpe_mps_status",
+   "on_table": "fpe_message_processing_state"
+  },
+  {
+   "index_name": "idx_fpe_mps_status_attempts",
+   "on_table": "fpe_message_processing_state"
+  },
+  {
+   "index_name": "idx_fpe_norm_audit_action",
+   "on_table": "fpe_normalization_audit_logs"
+  },
+  {
+   "index_name": "idx_fpe_norm_audit_entity",
+   "on_table": "fpe_normalization_audit_logs"
+  },
+  {
+   "index_name": "idx_fpe_reslinks_canonical",
+   "on_table": "fpe_employee_resolution_links"
+  },
+  {
+   "index_name": "idx_fpe_reslinks_employee",
+   "on_table": "fpe_employee_resolution_links"
+  },
+  {
+   "index_name": "idx_fpe_review_audit_action",
+   "on_table": "fpe_review_audit_logs"
+  },
+  {
+   "index_name": "idx_fpe_review_audit_actor",
+   "on_table": "fpe_review_audit_logs"
+  },
+  {
+   "index_name": "idx_fpe_review_audit_item",
+   "on_table": "fpe_review_audit_logs"
+  },
+  {
+   "index_name": "idx_fpe_review_candidate",
+   "on_table": "fpe_employee_review_queue"
+  },
+  {
+   "index_name": "idx_fpe_review_status",
+   "on_table": "fpe_employee_review_queue"
+  },
+  {
+   "index_name": "idx_fpe_txn_emp_name_raw_trgm",
+   "on_table": "fpe_cash_transactions"
+  },
+  {
+   "index_name": "idx_fpe_txn_raw_collapsed_trgm",
+   "on_table": "fpe_cash_transactions"
+  },
+  {
+   "index_name": "idx_fpe_unmatched_pending_amount",
+   "on_table": "fpe_unmatched_messages"
+  },
+  {
+   "index_name": "idx_fpe_unmatched_review_status",
+   "on_table": "fpe_unmatched_messages"
+  },
+  {
+   "index_name": "idx_fpe_wam_chat",
+   "on_table": "fpe_wa_messages"
+  },
+  {
+   "index_name": "idx_fpe_wam_source",
+   "on_table": "fpe_wa_messages"
+  },
+  {
+   "index_name": "idx_fuc_name",
+   "on_table": "fazle_unified_contacts"
+  },
+  {
+   "index_name": "idx_hdivs_date",
+   "on_table": "hermes_divergence_snapshots"
+  },
+  {
+   "index_name": "idx_hdivs_regress",
+   "on_table": "hermes_divergence_snapshots"
+  },
+  {
+   "index_name": "idx_hdivs_role",
+   "on_table": "hermes_divergence_snapshots"
+  },
+  {
+   "index_name": "idx_hdivs_trace",
+   "on_table": "hermes_divergence_snapshots"
+  },
+  {
+   "index_name": "idx_hermes_action_approvals_domain",
+   "on_table": "hermes_action_approvals"
+  },
+  {
+   "index_name": "idx_hermes_action_approvals_status",
+   "on_table": "hermes_action_approvals"
+  },
+  {
+   "index_name": "idx_hermes_action_approvals_task",
+   "on_table": "hermes_action_approvals"
+  },
+  {
+   "index_name": "idx_hermes_dal_action",
+   "on_table": "hermes_decision_audit_log"
+  },
+  {
+   "index_name": "idx_hermes_dal_sender",
+   "on_table": "hermes_decision_audit_log"
+  },
+  {
+   "index_name": "idx_hermes_dal_trace",
+   "on_table": "hermes_decision_audit_log"
+  },
+  {
+   "index_name": "idx_hermes_event_log_name",
+   "on_table": "hermes_event_log"
+  },
+  {
+   "index_name": "idx_hermes_event_log_trace",
+   "on_table": "hermes_event_log"
+  },
+  {
+   "index_name": "idx_hermes_event_log_ts",
+   "on_table": "hermes_event_log"
+  },
+  {
+   "index_name": "idx_hermes_task_events_task",
+   "on_table": "hermes_task_events"
+  },
+  {
+   "index_name": "idx_hermes_tasks_parent",
+   "on_table": "hermes_tasks"
+  },
+  {
+   "index_name": "idx_hermes_tasks_status",
+   "on_table": "hermes_tasks"
+  },
+  {
+   "index_name": "idx_hermes_tasks_trace",
+   "on_table": "hermes_tasks"
+  },
+  {
+   "index_name": "idx_kb_active",
+   "on_table": "fazle_knowledge_base"
+  },
+  {
+   "index_name": "idx_kb_category",
+   "on_table": "fazle_knowledge_base"
+  },
+  {
+   "index_name": "idx_kb_key",
+   "on_table": "fazle_knowledge_base"
+  },
+  {
+   "index_name": "idx_llm_log_trainable",
+   "on_table": "llm_conversation_log"
+  },
+  {
+   "index_name": "idx_llm_log_ts",
+   "on_table": "llm_conversation_log"
+  },
+  {
+   "index_name": "idx_llm_memory_draft",
+   "on_table": "llm_learning_memory"
+  },
+  {
+   "index_name": "idx_llm_memory_intent",
+   "on_table": "llm_learning_memory"
+  },
+  {
+   "index_name": "idx_llm_memory_pending",
+   "on_table": "llm_learning_memory"
+  },
+  {
+   "index_name": "idx_llm_memory_provider",
+   "on_table": "llm_learning_memory"
+  },
+  {
+   "index_name": "idx_location_audit_event_created",
+   "on_table": "assistant_ext_location_audit"
+  },
+  {
+   "index_name": "idx_location_audit_success_created",
+   "on_table": "assistant_ext_location_audit"
+  },
+  {
+   "index_name": "idx_location_audit_target_created",
+   "on_table": "assistant_ext_location_audit"
+  },
+  {
+   "index_name": "idx_locks_expires",
+   "on_table": "fazle_processing_locks"
+  },
+  {
+   "index_name": "idx_model_decisions_created_at",
+   "on_table": "assistant_model_decisions"
+  },
+  {
+   "index_name": "idx_model_decisions_request",
+   "on_table": "assistant_model_decisions"
+  },
+  {
+   "index_name": "idx_model_decisions_task_created",
+   "on_table": "assistant_model_decisions"
+  },
+  {
+   "index_name": "idx_model_eval_samples_created_at",
+   "on_table": "assistant_model_eval_samples"
+  },
+  {
+   "index_name": "idx_model_eval_samples_task_active",
+   "on_table": "assistant_model_eval_samples"
+  },
+  {
+   "index_name": "idx_msg_queue_retry",
+   "on_table": "fazle_message_queue"
+  },
+  {
+   "index_name": "idx_msg_queue_sender",
+   "on_table": "fazle_message_queue"
+  },
+  {
+   "index_name": "idx_msg_queue_status_enqueued",
+   "on_table": "fazle_message_queue"
+  },
+  {
+   "index_name": "idx_outbound_authorization_conversation",
+   "on_table": "fazle_outbound_queue"
+  },
+  {
+   "index_name": "idx_outbound_authorization_identity_version",
+   "on_table": "fazle_outbound_queue"
+  },
+  {
+   "index_name": "idx_outbound_authorization_pending",
+   "on_table": "fazle_outbound_queue"
+  },
+  {
+   "index_name": "idx_outbound_pending",
+   "on_table": "fazle_outbound_queue"
+  },
+  {
+   "index_name": "idx_outbound_status_created",
+   "on_table": "fazle_outbound_queue"
+  },
+  {
+   "index_name": "idx_pay_correction_log_draft",
+   "on_table": "fazle_payment_correction_log"
+  },
+  {
+   "index_name": "idx_payment_drafts_program_type",
+   "on_table": "fazle_payment_drafts"
+  },
+  {
+   "index_name": "idx_payment_drafts_transaction_id",
+   "on_table": "fazle_payment_drafts"
+  },
+  {
+   "index_name": "idx_payment_drafts_txn_ref",
+   "on_table": "fazle_payment_drafts"
+  },
+  {
+   "index_name": "idx_payroll_approval_log_actor",
+   "on_table": "wbom_payroll_approval_log"
+  },
+  {
+   "index_name": "idx_payroll_approval_log_run",
+   "on_table": "wbom_payroll_approval_log"
+  },
+  {
+   "index_name": "idx_payroll_approval_log_ts",
+   "on_table": "wbom_payroll_approval_log"
+  },
+  {
+   "index_name": "idx_payroll_run_items_run",
+   "on_table": "wbom_payroll_run_items"
+  },
+  {
+   "index_name": "idx_payroll_run_items_type",
+   "on_table": "wbom_payroll_run_items"
+  },
+  {
+   "index_name": "idx_payroll_runs_employee",
+   "on_table": "wbom_payroll_runs"
+  },
+  {
+   "index_name": "idx_payroll_runs_payout_idem",
+   "on_table": "wbom_payroll_runs"
+  },
+  {
+   "index_name": "idx_payroll_runs_payout_target",
+   "on_table": "wbom_payroll_runs"
+  },
+  {
+   "index_name": "idx_payroll_runs_period",
+   "on_table": "wbom_payroll_runs"
+  },
+  {
+   "index_name": "idx_payroll_runs_status",
+   "on_table": "wbom_payroll_runs"
+  },
+  {
+   "index_name": "idx_payroll_runs_unique_active",
+   "on_table": "wbom_payroll_runs"
+  },
+  {
+   "index_name": "idx_pdraft_conversation",
+   "on_table": "fazle_payment_drafts"
+  },
+  {
+   "index_name": "idx_pdraft_emp",
+   "on_table": "fazle_payment_drafts"
+  },
+  {
+   "index_name": "idx_pdraft_status",
+   "on_table": "fazle_payment_drafts"
+  },
+  {
+   "index_name": "idx_pdraft_ts",
+   "on_table": "fazle_payment_drafts"
+  },
+  {
+   "index_name": "idx_pdraft_type",
+   "on_table": "fazle_payment_drafts"
+  },
+  {
+   "index_name": "idx_phase3_ai_route_audit_route_time",
+   "on_table": "phase3_ai_route_audit"
+  },
+  {
+   "index_name": "idx_phase3_ai_routes_priority",
+   "on_table": "phase3_ai_routes"
+  },
+  {
+   "index_name": "idx_phase3_system_secret_audit_ref_time",
+   "on_table": "phase3_system_secret_audit"
+  },
+  {
+   "index_name": "idx_phone_norm_canonical",
+   "on_table": "phone_normalization_log"
+  },
+  {
+   "index_name": "idx_programs_date",
+   "on_table": "wbom_escort_programs"
+  },
+  {
+   "index_name": "idx_programs_status_date",
+   "on_table": "wbom_escort_programs"
+  },
+  {
+   "index_name": "idx_queue_leases_dead",
+   "on_table": "fazle_queue_leases"
+  },
+  {
+   "index_name": "idx_queue_leases_expires",
+   "on_table": "fazle_queue_leases"
+  },
+  {
+   "index_name": "idx_queue_leases_msg_intent",
+   "on_table": "fazle_queue_leases"
+  },
+  {
+   "index_name": "idx_queue_leases_worker",
+   "on_table": "fazle_queue_leases"
+  },
+  {
+   "index_name": "idx_recon_source_ref",
+   "on_table": "fazle_reconciliation_log"
+  },
+  {
+   "index_name": "idx_recruit_bucket",
+   "on_table": "fazle_recruitment_sessions"
+  },
+  {
+   "index_name": "idx_recruit_phone",
+   "on_table": "fazle_recruitment_sessions"
+  },
+  {
+   "index_name": "idx_recruit_stage",
+   "on_table": "fazle_recruitment_sessions"
+  },
+  {
+   "index_name": "idx_recruitment_sessions_phone",
+   "on_table": "fazle_recruitment_sessions"
+  },
+  {
+   "index_name": "idx_recruitment_sessions_phone_active",
+   "on_table": "fazle_recruitment_sessions"
+  },
+  {
+   "index_name": "idx_recruitment_sessions_stage",
+   "on_table": "fazle_recruitment_sessions"
+  },
+  {
+   "index_name": "idx_recruitment_sessions_status",
+   "on_table": "fazle_recruitment_sessions"
+  },
+  {
+   "index_name": "idx_reminders_topic_sent",
+   "on_table": "fazle_reminders_sent"
+  },
+  {
+   "index_name": "idx_report_cache_expires",
+   "on_table": "fazle_report_cache"
+  },
+  {
+   "index_name": "idx_report_runs_name_at",
+   "on_table": "fazle_report_runs"
+  },
+  {
+   "index_name": "idx_reviewed_replies_phone",
+   "on_table": "fazle_reviewed_replies"
+  },
+  {
+   "index_name": "idx_reviewed_replies_scope",
+   "on_table": "fazle_reviewed_replies"
+  },
+  {
+   "index_name": "idx_reviewed_replies_source_draft",
+   "on_table": "fazle_reviewed_replies"
+  },
+  {
+   "index_name": "idx_route_b_handoffs_message_id_unique",
+   "on_table": "fazle_route_b_handoffs"
+  },
+  {
+   "index_name": "idx_route_b_handoffs_phone_recent",
+   "on_table": "fazle_route_b_handoffs"
+  },
+  {
+   "index_name": "idx_runtime_nodes_app_name",
+   "on_table": "fazle_runtime_nodes"
+  },
+  {
+   "index_name": "idx_runtime_nodes_last_seen",
+   "on_table": "fazle_runtime_nodes"
+  },
+  {
+   "index_name": "idx_runtime_nodes_status",
+   "on_table": "fazle_runtime_nodes"
+  },
+  {
+   "index_name": "idx_social_flagged_status",
+   "on_table": "social_flagged_items"
+  },
+  {
+   "index_name": "idx_social_inbox_platform_received",
+   "on_table": "social_inbox_events"
+  },
+  {
+   "index_name": "idx_social_inbox_reply_status",
+   "on_table": "social_inbox_events"
+  },
+  {
+   "index_name": "idx_social_reply_queue_status_due",
+   "on_table": "social_reply_queue"
+  },
+  {
+   "index_name": "idx_staging_payments_status",
+   "on_table": "wbom_staging_payments"
+  },
+  {
+   "index_name": "idx_state_version_bumped_at",
+   "on_table": "fazle_state_version"
+  },
+  {
+   "index_name": "idx_user_memory_phone",
+   "on_table": "user_memory"
+  },
+  {
+   "index_name": "idx_user_memory_type",
+   "on_table": "user_memory"
+  },
+  {
+   "index_name": "idx_user_profiles_role",
+   "on_table": "user_profiles"
+  },
+  {
+   "index_name": "idx_wbom_attendance_date",
+   "on_table": "wbom_attendance"
+  },
+  {
+   "index_name": "idx_wbom_attendance_employee",
+   "on_table": "wbom_attendance"
+  },
+  {
+   "index_name": "idx_wbom_billing_contact",
+   "on_table": "wbom_billing_records"
+  },
+  {
+   "index_name": "idx_wbom_billing_number",
+   "on_table": "wbom_billing_records"
+  },
+  {
+   "index_name": "idx_wbom_billing_payment_log_actor",
+   "on_table": "wbom_billing_payment_log"
+  },
+  {
+   "index_name": "idx_wbom_billing_payment_log_bill_id",
+   "on_table": "wbom_billing_payment_log"
+  },
+  {
+   "index_name": "idx_wbom_candidates_post_intake_status",
+   "on_table": "wbom_candidates"
+  },
+  {
+   "index_name": "idx_wbom_cases_contact",
+   "on_table": "wbom_cases"
+  },
+  {
+   "index_name": "idx_wbom_cases_employee",
+   "on_table": "wbom_cases"
+  },
+  {
+   "index_name": "idx_wbom_cases_opened_at",
+   "on_table": "wbom_cases"
+  },
+  {
+   "index_name": "idx_wbom_cases_status_due",
+   "on_table": "wbom_cases"
+  },
+  {
+   "index_name": "idx_wbom_cases_type_status",
+   "on_table": "wbom_cases"
+  },
+  {
+   "index_name": "idx_wbom_employee_requests_employee",
+   "on_table": "wbom_employee_requests"
+  },
+  {
+   "index_name": "idx_wbom_employees_name_trgm",
+   "on_table": "wbom_employees"
+  },
+  {
+   "index_name": "idx_wbom_escort_programs_replaces",
+   "on_table": "wbom_escort_programs"
+  },
+  {
+   "index_name": "idx_wbom_escort_programs_replaces_active_unique",
+   "on_table": "wbom_escort_programs"
+  },
+  {
+   "index_name": "idx_wbom_group_identities_business_label",
+   "on_table": "wbom_group_identities"
+  },
+  {
+   "index_name": "idx_wbom_identity_links_identifier",
+   "on_table": "wbom_identity_links"
+  },
+  {
+   "index_name": "idx_wbom_identity_links_revocation_actor",
+   "on_table": "wbom_identity_links"
+  },
+  {
+   "index_name": "idx_wbom_identity_links_subject_active",
+   "on_table": "wbom_identity_links"
+  },
+  {
+   "index_name": "idx_wbom_identity_platform_user",
+   "on_table": "wbom_identity_links"
+  },
+  {
+   "index_name": "idx_wbom_programs_date",
+   "on_table": "wbom_escort_programs"
+  },
+  {
+   "index_name": "idx_wbom_programs_end_date",
+   "on_table": "wbom_escort_programs"
+  },
+  {
+   "index_name": "idx_wbom_programs_lighter",
+   "on_table": "wbom_escort_programs"
+  },
+  {
+   "index_name": "idx_wbom_programs_mother",
+   "on_table": "wbom_escort_programs"
+  },
+  {
+   "index_name": "idx_wbom_programs_start_date",
+   "on_table": "wbom_escort_programs"
+  },
+  {
+   "index_name": "idx_wbom_programs_status",
+   "on_table": "wbom_escort_programs"
+  },
+  {
+   "index_name": "idx_wbom_unmatched_confirmations_created_at",
+   "on_table": "wbom_unmatched_confirmations"
+  },
+  {
+   "index_name": "idx_wbom_unmatched_confirmations_status",
+   "on_table": "wbom_unmatched_confirmations"
+  },
+  {
+   "index_name": "uq_candidate_conversations_bridge_message",
+   "on_table": "wbom_candidate_conversations"
+  },
+  {
+   "index_name": "uq_error_log_dedup",
+   "on_table": "fazle_error_log"
+  },
+  {
+   "index_name": "uq_fazle_identity_role_active",
+   "on_table": "fazle_identity_role_assignments"
+  },
+  {
+   "index_name": "uq_fazle_outbound_hold_conversation_active",
+   "on_table": "fazle_outbound_holds"
+  },
+  {
+   "index_name": "uq_fazle_outbound_hold_identity_active",
+   "on_table": "fazle_outbound_holds"
+  },
+  {
+   "index_name": "uq_fpe_identity_anomalies_open",
+   "on_table": "fpe_identity_anomalies"
+  },
+  {
+   "index_name": "uq_hermes_action_approvals_idempotency_live",
+   "on_table": "hermes_action_approvals"
+  },
+  {
+   "index_name": "uq_wbom_candidates_linked_employee",
+   "on_table": "wbom_candidates"
+  },
+  {
+   "index_name": "uq_wbom_escort_confirmed_exact",
+   "on_table": "wbom_escort_programs"
+  },
+  {
+   "index_name": "uq_wbom_unmatched_confirmations_source_message",
+   "on_table": "wbom_unmatched_confirmations"
+  }
+ ],
+ "constraints": [
+  {
+   "constraint_name": "fpe_cash_transactions_employee_id_fkey",
+   "on_table": "fpe_cash_transactions",
+   "contype": "f",
+   "references_table": "fpe_employees"
+  },
+  {
+   "constraint_name": "fpe_cash_transactions_fpe_wa_message_id_fkey",
+   "on_table": "fpe_cash_transactions",
+   "contype": "f",
+   "references_table": "fpe_wa_messages"
+  },
+  {
+   "constraint_name": "fpe_cash_transactions_pkey",
+   "on_table": "fpe_cash_transactions",
+   "contype": "p",
+   "references_table": null
+  },
+  {
+   "constraint_name": "fpe_cash_transactions_reversed_txn_id_fkey",
+   "on_table": "fpe_cash_transactions",
+   "contype": "f",
+   "references_table": "fpe_cash_transactions"
+  },
+  {
+   "constraint_name": "fpe_cash_transactions_txn_ref_key",
+   "on_table": "fpe_cash_transactions",
+   "contype": "u",
+   "references_table": null
+  },
+  {
+   "constraint_name": "fpe_employee_ledger_employee_id_fkey",
+   "on_table": "fpe_employee_ledger",
+   "contype": "f",
+   "references_table": "fpe_employees"
+  },
+  {
+   "constraint_name": "fpe_employee_ledger_pkey",
+   "on_table": "fpe_employee_ledger",
+   "contype": "p",
+   "references_table": null
+  },
+  {
+   "constraint_name": "fpe_ledger_unique",
+   "on_table": "fpe_employee_ledger",
+   "contype": "u",
+   "references_table": null
+  },
+  {
+   "constraint_name": "fpe_employees_canonical_employee_id_fkey",
+   "on_table": "fpe_employees",
+   "contype": "f",
+   "references_table": "fpe_employees"
+  },
+  {
+   "constraint_name": "fpe_employees_employee_code_key",
+   "on_table": "fpe_employees",
+   "contype": "u",
+   "references_table": null
+  },
+  {
+   "constraint_name": "fpe_employees_pkey",
+   "on_table": "fpe_employees",
+   "contype": "p",
+   "references_table": null
+  },
+  {
+   "constraint_name": "wbom_cash_transactions_employee_id_fkey",
+   "on_table": "wbom_cash_transactions",
+   "contype": "f",
+   "references_table": "wbom_employees"
+  },
+  {
+   "constraint_name": "wbom_cash_transactions_pkey",
+   "on_table": "wbom_cash_transactions",
+   "contype": "p",
+   "references_table": null
+  },
+  {
+   "constraint_name": "wbom_cash_transactions_program_id_fkey",
+   "on_table": "wbom_cash_transactions",
+   "contype": "f",
+   "references_table": "wbom_escort_programs"
+  },
+  {
+   "constraint_name": "wbom_cash_transactions_reversal_of_fkey",
+   "on_table": "wbom_cash_transactions",
+   "contype": "f",
+   "references_table": "wbom_cash_transactions"
+  },
+  {
+   "constraint_name": "wbom_contacts_business_type_id_fkey",
+   "on_table": "wbom_contacts",
+   "contype": "f",
+   "references_table": "wbom_business_types"
+  },
+  {
+   "constraint_name": "wbom_contacts_client_status_id_fkey",
+   "on_table": "wbom_contacts",
+   "contype": "f",
+   "references_table": "wbom_client_statuses"
+  },
+  {
+   "constraint_name": "wbom_contacts_client_tier_id_fkey",
+   "on_table": "wbom_contacts",
+   "contype": "f",
+   "references_table": "wbom_client_tiers"
+  },
+  {
+   "constraint_name": "wbom_contacts_pkey",
+   "on_table": "wbom_contacts",
+   "contype": "p",
+   "references_table": null
+  },
+  {
+   "constraint_name": "wbom_contacts_relation_type_id_fkey",
+   "on_table": "wbom_contacts",
+   "contype": "f",
+   "references_table": "wbom_relation_types"
+  },
+  {
+   "constraint_name": "wbom_contacts_whatsapp_platform_uniq",
+   "on_table": "wbom_contacts",
+   "contype": "u",
+   "references_table": null
+  },
+  {
+   "constraint_name": "uq_wbom_employees_mobile",
+   "on_table": "wbom_employees",
+   "contype": "u",
+   "references_table": null
+  },
+  {
+   "constraint_name": "wbom_employees_employee_mobile_key",
+   "on_table": "wbom_employees",
+   "contype": "u",
+   "references_table": null
+  },
+  {
+   "constraint_name": "wbom_employees_pkey",
+   "on_table": "wbom_employees",
+   "contype": "p",
+   "references_table": null
+  },
+  {
+   "constraint_name": "ck_wbom_messages_sender_name_source",
+   "on_table": "wbom_whatsapp_messages",
+   "contype": "c",
+   "references_table": null
+  },
+  {
+   "constraint_name": "wbom_whatsapp_messages_contact_id_fkey",
+   "on_table": "wbom_whatsapp_messages",
+   "contype": "f",
+   "references_table": "wbom_contacts"
+  },
+  {
+   "constraint_name": "wbom_whatsapp_messages_pkey",
+   "on_table": "wbom_whatsapp_messages",
+   "contype": "p",
+   "references_table": null
+  },
+  {
+   "constraint_name": "wbom_whatsapp_messages_related_program_id_fkey",
+   "on_table": "wbom_whatsapp_messages",
+   "contype": "f",
+   "references_table": "wbom_escort_programs"
+  },
+  {
+   "constraint_name": "wbom_whatsapp_messages_related_transaction_id_fkey",
+   "on_table": "wbom_whatsapp_messages",
+   "contype": "f",
+   "references_table": "wbom_cash_transactions"
+  },
+  {
+   "constraint_name": "wbom_whatsapp_messages_template_used_id_fkey",
+   "on_table": "wbom_whatsapp_messages",
+   "contype": "f",
+   "references_table": "wbom_message_templates"
+  },
+  {
+   "constraint_name": "wbom_whatsapp_messages_whatsapp_msg_id_key",
+   "on_table": "wbom_whatsapp_messages",
+   "contype": "u",
+   "references_table": null
+  },
+  {
+   "constraint_name": "check_cash_accounting_period_format",
+   "on_table": "fpe_cash_transactions",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "check_income_accounting_period_format",
+   "on_table": "fpe_income_transactions",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "chk_runtime_nodes_status",
+   "on_table": "fazle_runtime_nodes",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "escort_roster_change_requests_action_check",
+   "on_table": "escort_roster_change_requests",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "fazle_admin_audit_pkey",
+   "on_table": "fazle_admin_audit",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "fazle_admin_roles_admin_id_fkey",
+   "on_table": "fazle_admin_roles",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "fazle_admin_roles_pkey",
+   "on_table": "fazle_admin_roles",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "fazle_admin_roles_role_name_fkey",
+   "on_table": "fazle_admin_roles",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "fazle_admins_phone_key",
+   "on_table": "fazle_admins",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "fazle_admins_pkey",
+   "on_table": "fazle_admins",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "fazle_contact_roles_phone_platform_key",
+   "on_table": "fazle_contact_roles",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "fazle_contact_roles_pkey",
+   "on_table": "fazle_contact_roles",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "fazle_db_backups_pkey",
+   "on_table": "fazle_db_backups",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "fazle_error_log_pkey",
+   "on_table": "fazle_error_log",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "fazle_outbound_queue_authorization_identity_fk",
+   "on_table": "fazle_outbound_queue",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "fazle_outbound_queue_authorization_roles_ck",
+   "on_table": "fazle_outbound_queue",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "fazle_outbound_queue_authorization_version_ck",
+   "on_table": "fazle_outbound_queue",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "fazle_outbound_queue_idempotency_key_key",
+   "on_table": "fazle_outbound_queue",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "fazle_outbound_queue_pkey",
+   "on_table": "fazle_outbound_queue",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "fazle_payment_drafts_employee_fkey",
+   "on_table": "fazle_payment_drafts",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "fazle_payment_drafts_program_fkey",
+   "on_table": "fazle_payment_drafts",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "fazle_report_cache_pkey",
+   "on_table": "fazle_report_cache",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "fazle_roles_pkey",
+   "on_table": "fazle_roles",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "fazle_service_heartbeats_pkey",
+   "on_table": "fazle_service_heartbeats",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "fk_eol_group",
+   "on_table": "escort_order_lighters",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "fk_eol_program",
+   "on_table": "escort_order_lighters",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "fpe_income_transactions_amount_check",
+   "on_table": "fpe_income_transactions",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "fpe_transaction_repairs_new_txn_id_fkey",
+   "on_table": "fpe_transaction_repairs",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "fpe_transaction_repairs_reversal_txn_id_fkey",
+   "on_table": "fpe_transaction_repairs",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "fpe_transaction_repairs_transaction_id_fkey",
+   "on_table": "fpe_transaction_repairs",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "hermes_action_approvals_action_type_check",
+   "on_table": "hermes_action_approvals",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "llm_conversation_log_pkey",
+   "on_table": "llm_conversation_log",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "wbom_attendance_approval_channel_check",
+   "on_table": "wbom_attendance",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "wbom_attendance_employee_id_attendance_date_key",
+   "on_table": "wbom_attendance",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "wbom_attendance_employee_id_fkey",
+   "on_table": "wbom_attendance",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "wbom_attendance_entry_source_check",
+   "on_table": "wbom_attendance",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "wbom_attendance_pkey",
+   "on_table": "wbom_attendance",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "wbom_attendance_source_draft_id_fkey",
+   "on_table": "wbom_attendance",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "wbom_billing_records_payment_status_check",
+   "on_table": "wbom_billing_records",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "wbom_billing_records_program_id_key",
+   "on_table": "wbom_billing_records",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "wbom_business_types_pkey",
+   "on_table": "wbom_business_types",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "wbom_cases_contact_id_fkey",
+   "on_table": "wbom_cases",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "wbom_cases_employee_id_fkey",
+   "on_table": "wbom_cases",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "wbom_cases_pkey",
+   "on_table": "wbom_cases",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "wbom_cases_related_program_id_fkey",
+   "on_table": "wbom_cases",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "wbom_employee_requests_employee_id_fkey",
+   "on_table": "wbom_employee_requests",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "wbom_employee_requests_pkey",
+   "on_table": "wbom_employee_requests",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "wbom_escort_programs_contact_id_fkey",
+   "on_table": "wbom_escort_programs",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "wbom_escort_programs_escort_employee_id_fkey",
+   "on_table": "wbom_escort_programs",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "wbom_escort_programs_no_self_replacement",
+   "on_table": "wbom_escort_programs",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "wbom_escort_programs_pkey",
+   "on_table": "wbom_escort_programs",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "wbom_escort_programs_status_check",
+   "on_table": "wbom_escort_programs",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "wbom_identity_links_identity_fk",
+   "on_table": "wbom_identity_links",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "wbom_identity_links_verification_state_ck",
+   "on_table": "wbom_identity_links",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "wbom_identity_links_verified_admin_fk",
+   "on_table": "wbom_identity_links",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "wbom_message_templates_pkey",
+   "on_table": "wbom_message_templates",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "wbom_payroll_approval_log_pkey",
+   "on_table": "wbom_payroll_approval_log",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "wbom_payroll_approval_log_run_id_fkey",
+   "on_table": "wbom_payroll_approval_log",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "wbom_payroll_run_items_pkey",
+   "on_table": "wbom_payroll_run_items",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "wbom_payroll_run_items_run_id_fkey",
+   "on_table": "wbom_payroll_run_items",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "wbom_payroll_runs_employee_id_fkey",
+   "on_table": "wbom_payroll_runs",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "wbom_payroll_runs_pkey",
+   "on_table": "wbom_payroll_runs",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "wbom_relation_types_pkey",
+   "on_table": "wbom_relation_types",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "wbom_salary_records_employee_id_fkey",
+   "on_table": "wbom_salary_records",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "wbom_salary_records_employee_id_month_year_key",
+   "on_table": "wbom_salary_records",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "wbom_salary_records_pkey",
+   "on_table": "wbom_salary_records",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "wbom_staging_payments_final_transaction_id_fkey",
+   "on_table": "wbom_staging_payments",
+   "contype": "",
+   "references_table": null
+  },
+  {
+   "constraint_name": "wbom_staging_payments_pkey",
+   "on_table": "wbom_staging_payments",
+   "contype": "",
+   "references_table": null
+  }
+ ],
+ "sequences": [
+  {
+   "sequence_name": "fpe_cash_transactions_id_seq",
+   "schema": "public"
+  },
+  {
+   "sequence_name": "fpe_employee_ledger_id_seq",
+   "schema": "public"
+  },
+  {
+   "sequence_name": "fpe_employees_id_seq",
+   "schema": "public"
+  },
+  {
+   "sequence_name": "wbom_cash_transactions_transaction_id_seq",
+   "schema": "public"
+  },
+  {
+   "sequence_name": "wbom_contacts_contact_id_seq",
+   "schema": "public"
+  },
+  {
+   "sequence_name": "wbom_employees_employee_id_seq",
+   "schema": "public"
+  },
+  {
+   "sequence_name": "wbom_whatsapp_messages_message_id_seq",
+   "schema": "public"
+  },
+  {
+   "sequence_name": "fazle_admin_audit_id_seq",
+   "schema": "public"
+  },
+  {
+   "sequence_name": "fazle_admins_id_seq",
+   "schema": "public"
+  },
+  {
+   "sequence_name": "fazle_db_backups_id_seq",
+   "schema": "public"
+  },
+  {
+   "sequence_name": "fazle_error_log_id_seq",
+   "schema": "public"
+  },
+  {
+   "sequence_name": "fazle_outbound_queue_id_seq",
+   "schema": "public"
+  },
+  {
+   "sequence_name": "fazle_reconciliation_log_id_seq",
+   "schema": "public"
+  },
+  {
+   "sequence_name": "fazle_reminders_sent_id_seq",
+   "schema": "public"
+  },
+  {
+   "sequence_name": "fazle_report_runs_id_seq",
+   "schema": "public"
+  },
+  {
+   "sequence_name": "fpe_transaction_repairs_id_seq",
+   "schema": "public"
+  },
+  {
+   "sequence_name": "llm_conversation_log_id_seq",
+   "schema": "public"
+  },
+  {
+   "sequence_name": "wbom_attendance_attendance_id_seq",
+   "schema": "public"
+  },
+  {
+   "sequence_name": "wbom_business_types_business_type_id_seq",
+   "schema": "public"
+  },
+  {
+   "sequence_name": "wbom_cases_case_id_seq",
+   "schema": "public"
+  },
+  {
+   "sequence_name": "wbom_employee_requests_request_id_seq",
+   "schema": "public"
+  },
+  {
+   "sequence_name": "wbom_escort_programs_program_id_seq",
+   "schema": "public"
+  },
+  {
+   "sequence_name": "wbom_message_templates_template_id_seq",
+   "schema": "public"
+  },
+  {
+   "sequence_name": "wbom_payroll_approval_log_log_id_seq",
+   "schema": "public"
+  },
+  {
+   "sequence_name": "wbom_payroll_run_items_item_id_seq",
+   "schema": "public"
+  },
+  {
+   "sequence_name": "wbom_payroll_runs_run_id_seq",
+   "schema": "public"
+  },
+  {
+   "sequence_name": "wbom_relation_types_relation_type_id_seq",
+   "schema": "public"
+  },
+  {
+   "sequence_name": "wbom_salary_records_salary_id_seq",
+   "schema": "public"
+  },
+  {
+   "sequence_name": "wbom_staging_payments_staging_id_seq",
+   "schema": "public"
+  }
+ ],
+ "triggers": [
+  {
+   "trigger_name": "fpe_txn_updated_at_trig",
+   "on_table": "fpe_cash_transactions",
+   "function_name": "fpe_txn_set_updated_at"
+  },
+  {
+   "trigger_name": "trg_wbom_msg_autofill",
+   "on_table": "wbom_whatsapp_messages",
+   "function_name": "wbom_msg_autofill"
+  }
+ ]
+}

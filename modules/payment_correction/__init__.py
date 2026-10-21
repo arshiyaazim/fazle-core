@@ -6,7 +6,7 @@ Immutable-ledger approach:
 - adjust_payment    : creates a linked correction draft; caller approves it via PAID command
 - list_corrections  : recent correction log rows for dashboard/reporting
 
-Admin WhatsApp commands (wired in modules.admin_commands):
+Admin WhatsApp commands (wired in modules.fazle_admin_commands):
   REVERSE <draft_id> <reason>
   ADJUST  <draft_id> <new_amount> <method> [reason]
 """
@@ -45,7 +45,7 @@ async def reverse_payment(
 
     Steps:
     1. Validate draft exists and is in 'approved' or 'sent' status.
-    2. Find the matching fpe_cash_transactions row via draft.transaction_id.
+    2. Find the matching fazle_cash_transactions row via draft.transaction_id.
     3. Call FPE reverse_transaction() to create an immutable reversal row.
     4. Update fazle_payment_drafts to status='reversed', store correction metadata.
     5. Write fazle_payment_correction_log row.

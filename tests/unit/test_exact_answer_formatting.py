@@ -105,7 +105,7 @@ class TestPayrollPageSummaryExactAnswer:
                 {"employee_name": "রহিম", "amount": 1000.0, "payout_method": "bkash", "txn_date": "2026-07-30"},
                 {"employee_name": "করিম", "amount": 1500.0, "payout_method": "nagad", "txn_date": "2026-07-30"},
             ],
-            "source": "fpe_cash_transactions",
+            "source": "fazle_cash_transactions",
         })])
         with patch("modules.ai_console.provider_registry.ai.generate_chat_reply", new=AsyncMock()) as mock_llm:
             result = await adapter.respond("আজকের পেমেন্ট কতজন?", evidence)
@@ -114,11 +114,11 @@ class TestPayrollPageSummaryExactAnswer:
         reply = result["response"]
         assert "২ জন" in reply
         assert "৳" in reply
-        assert reply.endswith("(সোর্স: fpe_cash_transactions)")
+        assert reply.endswith("(সোর্স: fazle_cash_transactions)")
 
     async def test_no_rows(self, adapter):
         evidence = _evidence([_business_item("payroll_page_summary", {
-            "total_transactions": 0, "period": "all", "rows": [], "source": "fpe_cash_transactions",
+            "total_transactions": 0, "period": "all", "rows": [], "source": "fazle_cash_transactions",
         })])
         with patch("modules.ai_console.provider_registry.ai.generate_chat_reply", new=AsyncMock()) as mock_llm:
             result = await adapter.respond("পেমেন্ট সামারি দাও", evidence)

@@ -27,7 +27,7 @@ from app.database import execute, fetch_val, fetch_one
 async def _ensure_wbom_contacts_columns():
     """Pre-existing, unrelated test-environment gap (not introduced by this
     change, not fixed here): migration 029's `CREATE TABLE IF NOT EXISTS
-    public.wbom_contacts (...)` is the only migration that creates this
+    public.fazle_contacts (...)` is the only migration that creates this
     table and defines these columns -- yet on a fresh database built from
     db/migrations/*.sql in order, several of its later-listed columns
     (personality_hint onward) are missing from the live table (confirmed by
@@ -36,15 +36,15 @@ async def _ensure_wbom_contacts_columns():
     the wbom_candidates/003b gap was handled in test_route_b_handoff.py --
     this file's tests genuinely need these columns to exist."""
     for stmt in (
-        "ALTER TABLE wbom_contacts ADD COLUMN IF NOT EXISTS personality_hint varchar(200) DEFAULT ''",
-        "ALTER TABLE wbom_contacts ADD COLUMN IF NOT EXISTS interaction_count integer DEFAULT 0",
-        "ALTER TABLE wbom_contacts ADD COLUMN IF NOT EXISTS interest_level varchar(20) DEFAULT 'unknown'",
-        "ALTER TABLE wbom_contacts ADD COLUMN IF NOT EXISTS last_seen timestamptz DEFAULT now()",
-        "ALTER TABLE wbom_contacts ADD COLUMN IF NOT EXISTS keep_reason text",
-        "ALTER TABLE wbom_contacts ADD COLUMN IF NOT EXISTS triage_at timestamptz DEFAULT now()",
-        "ALTER TABLE wbom_contacts ADD COLUMN IF NOT EXISTS keep_tier text",
-        "ALTER TABLE wbom_contacts ADD COLUMN IF NOT EXISTS marked_for_delete_at timestamptz",
-        "ALTER TABLE wbom_contacts ADD COLUMN IF NOT EXISTS is_protected boolean DEFAULT false",
+        "ALTER TABLE fazle_contacts ADD COLUMN IF NOT EXISTS personality_hint varchar(200) DEFAULT ''",
+        "ALTER TABLE fazle_contacts ADD COLUMN IF NOT EXISTS interaction_count integer DEFAULT 0",
+        "ALTER TABLE fazle_contacts ADD COLUMN IF NOT EXISTS interest_level varchar(20) DEFAULT 'unknown'",
+        "ALTER TABLE fazle_contacts ADD COLUMN IF NOT EXISTS last_seen timestamptz DEFAULT now()",
+        "ALTER TABLE fazle_contacts ADD COLUMN IF NOT EXISTS keep_reason text",
+        "ALTER TABLE fazle_contacts ADD COLUMN IF NOT EXISTS triage_at timestamptz DEFAULT now()",
+        "ALTER TABLE fazle_contacts ADD COLUMN IF NOT EXISTS keep_tier text",
+        "ALTER TABLE fazle_contacts ADD COLUMN IF NOT EXISTS marked_for_delete_at timestamptz",
+        "ALTER TABLE fazle_contacts ADD COLUMN IF NOT EXISTS is_protected boolean DEFAULT false",
     ):
         await execute(stmt)
 
@@ -54,7 +54,7 @@ def _phone() -> str:
 
 
 async def _cleanup(phone: str) -> None:
-    await execute("DELETE FROM wbom_contacts WHERE whatsapp_number = $1", phone)
+    await execute("DELETE FROM fazle_contacts WHERE whatsapp_number = $1", phone)
     await execute("DELETE FROM fazle_contact_presence WHERE phone = $1", phone)
     await execute("DELETE FROM fazle_contact_hard_delete_log WHERE phone = $1", phone)
     await execute("DELETE FROM fazle_draft_replies WHERE recipient = $1", phone)
@@ -62,7 +62,7 @@ async def _cleanup(phone: str) -> None:
 
 async def _seed_contact(phone: str, name: str, *, is_protected: bool = False) -> None:
     await execute(
-        """INSERT INTO wbom_contacts (whatsapp_number, display_name, platform, is_active, is_protected, last_seen, updated_at)
+        """INSERT INTO fazle_contacts (whatsapp_number, display_name, platform, is_active, is_protected, last_seen, updated_at)
            VALUES ($1, $2, 'whatsapp', true, $3, NOW(), NOW())
            ON CONFLICT (whatsapp_number, platform) DO UPDATE
                SET display_name = $2, is_active = true, is_protected = $3, marked_for_delete_at = NULL""",
@@ -107,7 +107,7 @@ async def test_read_failure_skips_absence_processing_and_alerts(monkeypatch):
         alert_mock.assert_awaited_once()
 
         # The contact must be completely untouched -- still active, absence count unchanged.
-        row = await fetch_one("SELECT is_active FROM wbom_contacts WHERE whatsapp_number=$1", phone)
+        row = await fetch_one("SELECT is_active FROM fazle_contacts WHERE whatsapp_number=$1", phone)
         assert row["is_active"] is True
         count = await fetch_val(
             "SELECT consecutive_absences FROM fazle_contact_presence WHERE phone=$1 AND bridge='bridge1'", phone,
@@ -180,7 +180,7 @@ async def test_hard_delete_skipped_when_active_on_other_bridge(monkeypatch):
         result = await cs._handle_missing_contacts("bridge2", current_phones=set())
 
         assert result["hard_deleted"] == 0
-        row = await fetch_one("SELECT whatsapp_number FROM wbom_contacts WHERE whatsapp_number=$1", phone)
+        row = await fetch_one("SELECT whatsapp_number FROM fazle_contacts WHERE whatsapp_number=$1", phone)
         assert row is not None  # still exists
         log_row = await fetch_one("SELECT id FROM fazle_contact_hard_delete_log WHERE phone=$1", phone)
         assert log_row is None  # never logged as hard-deleted
@@ -203,7 +203,7 @@ async def test_hard_delete_proceeds_when_absent_on_all_bridges():
         result = await cs._handle_missing_contacts("bridge2", current_phones=set())
 
         assert result["hard_deleted"] == 1
-        row = await fetch_one("SELECT whatsapp_number FROM wbom_contacts WHERE whatsapp_number=$1", phone)
+        row = await fetch_one("SELECT whatsapp_number FROM fazle_contacts WHERE whatsapp_number=$1", phone)
         assert row is None
         log_row = await fetch_one("SELECT id FROM fazle_contact_hard_delete_log WHERE phone=$1", phone)
         assert log_row is not None
@@ -240,7 +240,7 @@ async def test_soft_delete_on_first_miss_unchanged():
 
         assert result["soft_deleted"] == 1
         assert result["hard_deleted"] == 0
-        row = await fetch_one("SELECT is_active, marked_for_delete_at FROM wbom_contacts WHERE whatsapp_number=$1", phone)
+        row = await fetch_one("SELECT is_active, marked_for_delete_at FROM fazle_contacts WHERE whatsapp_number=$1", phone)
         assert row["is_active"] is False
         assert row["marked_for_delete_at"] is not None
     finally:
@@ -256,7 +256,7 @@ async def test_reappearing_contact_reactivated_rollback():
     phone = _phone()
     try:
         await execute(
-            """INSERT INTO wbom_contacts (whatsapp_number, display_name, platform, is_active, marked_for_delete_at, last_seen, updated_at)
+            """INSERT INTO fazle_contacts (whatsapp_number, display_name, platform, is_active, marked_for_delete_at, last_seen, updated_at)
                VALUES ($1, 'Old Name', 'whatsapp', false, NOW(), NOW(), NOW())""",
             phone,
         )
@@ -265,7 +265,7 @@ async def test_reappearing_contact_reactivated_rollback():
         await cs._mark_present(phone, "bridge1")
 
         row = await fetch_one(
-            "SELECT is_active, marked_for_delete_at FROM wbom_contacts WHERE whatsapp_number=$1", phone,
+            "SELECT is_active, marked_for_delete_at FROM fazle_contacts WHERE whatsapp_number=$1", phone,
         )
         assert row["is_active"] is True
         assert row["marked_for_delete_at"] is None
@@ -290,7 +290,7 @@ async def test_protected_contact_never_touched():
 
         assert result["soft_deleted"] == 0
         assert result["hard_deleted"] == 0
-        row = await fetch_one("SELECT is_active FROM wbom_contacts WHERE whatsapp_number=$1", phone)
+        row = await fetch_one("SELECT is_active FROM fazle_contacts WHERE whatsapp_number=$1", phone)
         assert row["is_active"] is True
     finally:
         await _cleanup(phone)
@@ -353,7 +353,7 @@ async def test_KNOWN_GAP_rename_to_shorter_name_does_not_apply():
         await cs._upsert_contacts([{"phone": phone, "display_name": "A Very Long Original Name", "source_bridge": "bridge1"}])
         await cs._upsert_contacts([{"phone": phone, "display_name": "Short", "source_bridge": "bridge1"}])
 
-        row = await fetch_one("SELECT display_name FROM wbom_contacts WHERE whatsapp_number=$1", phone)
+        row = await fetch_one("SELECT display_name FROM fazle_contacts WHERE whatsapp_number=$1", phone)
         assert row["display_name"] == "A Very Long Original Name"  # KNOWN GAP: should be "Short"
     finally:
         await _cleanup(phone)

@@ -18,7 +18,7 @@ time, six times longer than the intended, commented "every 5 min"
 `/api/send-status` sat `allowed:false` for 18+ minutes with no bridge or
 session problem at all.
 
-Fix: `modules/bridge_poller/__init__.py` now tracks elapsed wall-clock
+Fix: `modules/fazle_bridge_poller/__init__.py` now tracks elapsed wall-clock
 time via `time.monotonic()` (`_last_gate_check`) instead of iteration
 count -- the check fires whenever `time.monotonic() - _last_gate_check
 >= _SEND_GATE_CHECK_INTERVAL`, independent of how the adaptive backoff
@@ -57,7 +57,7 @@ import time
 
 import pytest
 
-import modules.bridge_poller as bp
+import modules.fazle_bridge_poller as bp
 
 pytestmark = pytest.mark.unit
 

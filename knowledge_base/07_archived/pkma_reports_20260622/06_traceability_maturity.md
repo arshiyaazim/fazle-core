@@ -48,7 +48,7 @@ Zero traceability = knowledge exists but origin is unknown
 | Release date validation | release_slip_workflow.md | modules/escort_lifecycle | _validate_release_date() | — |
 | Attendance state machine | attendance_workflow.md | modules/attendance | save_attendance() | wbom_attendance (ON CONFLICT UPDATE) |
 | Attendance parser | attendance_workflow.md | modules/attendance_parser | _DATE_PATTERNS | — |
-| Payment draft state | payment_workflow.md | modules/payment_workflow | create_escort_payment_draft() | wbom_payment_drafts |
+| Payment draft state | payment_workflow.md | modules/fazle_payment_workflow | create_escort_payment_draft() | wbom_payment_drafts |
 | Employee verification | payment_workflow.md | modules/employee_verification | run_verification_step() | — |
 | Recruitment session SM | recruitment_workflow.md | modules/recruitment_flow | advance_session() | fazle_recruitment_sessions |
 | Recruitment age | recruitment_business_rules.md | modules/recruitment_flow | _parse_age() | — |
@@ -69,8 +69,8 @@ Zero traceability = knowledge exists but origin is unknown
 | LLM reply chain | automation_pipeline.md | app/llm.py | generate_reply() | — |
 | Automated suffix | automation_pipeline.md | app/bridge.py | _AUTOMATED_SUFFIX | — |
 | All 15 scheduler jobs | automation_pipeline.md | modules/scheduler/__init__.py | start_scheduler() | — |
-| All 37 admin commands | admin_operations_overview.md | modules/admin_commands | dispatch_command() | Multiple |
-| Identity resolution | identity_overview.md | modules/identity_brain | resolve_identity() | fazle_contact_roles, fazle_admins |
+| All 37 admin commands | admin_operations_overview.md | modules/fazle_admin_commands | dispatch_command() | Multiple |
+| Identity resolution | identity_overview.md | modules/fazle_identity_brain | resolve_identity() | fazle_contact_roles, fazle_admins |
 | Phone normalization | identity_overview.md | modules/phone_normalizer | normalize_bd_phone() | — |
 | RBAC hierarchy | role_permissions.md | modules/rbac | COMMAND_ROLE | fazle_admins |
 | Bootstrap admin | admin_role_management.md | modules/rbac | ensure_bootstrap_admins() | fazle_admins |

@@ -148,7 +148,7 @@ async def flow_employee(test_db_pool):
     """Guard employee used throughout the full lifecycle flow."""
     async with test_db_pool.acquire() as conn:
         row = await conn.fetchrow("""
-            INSERT INTO wbom_employees
+            INSERT INTO fazle_employees_legacy
                 (employee_mobile, employee_name, designation, status,
                  basic_salary, bkash_number, nagad_number)
             VALUES ('8801811111111', 'Karim Guard', 'Security Guard', 'Active',
@@ -246,7 +246,7 @@ class TestFullEscortPaymentFlow:
         # Some message should be stored
         count = await _qval(
             test_db_pool,
-            "SELECT COUNT(*) FROM wbom_whatsapp_messages WHERE sender_number=$1",
+            "SELECT COUNT(*) FROM fazle_whatsapp_messages WHERE sender_number=$1",
             CLIENT_PHONE,
         )
         assert count >= 1, "Inbound message must be persisted"
@@ -387,7 +387,7 @@ class TestFullEscortPaymentFlow:
         import app.database as db
         db._pool = test_db_pool
 
-        from modules.payment_workflow import finalize_payment
+        from modules.fazle_payment_workflow import finalize_payment
 
         result = await finalize_payment(
             draft_id=pending_draft["id"],
@@ -411,7 +411,7 @@ class TestFullEscortPaymentFlow:
         import app.database as db
         db._pool = test_db_pool
 
-        from modules.payment_workflow import finalize_payment
+        from modules.fazle_payment_workflow import finalize_payment
         await finalize_payment(
             draft_id=pending_draft["id"],
             approved_amount=1500.0,
@@ -420,7 +420,7 @@ class TestFullEscortPaymentFlow:
 
         txn = await _qrow(
             test_db_pool,
-            "SELECT * FROM wbom_cash_transactions WHERE employee_id=$1 LIMIT 1",
+            "SELECT * FROM fazle_cash_transactions_archive WHERE employee_id=$1 LIMIT 1",
             flow_employee["employee_id"],
         )
         assert float(txn["amount"]) == pytest.approx(1500.0)
@@ -434,7 +434,7 @@ class TestFullEscortPaymentFlow:
         import app.database as db
         db._pool = test_db_pool
 
-        from modules.payment_workflow import finalize_payment
+        from modules.fazle_payment_workflow import finalize_payment
 
         result = await finalize_payment(
             draft_id=pending_draft["id"],
@@ -562,7 +562,7 @@ class TestDBStateVerification:
         import app.database as db
         db._pool = test_db_pool
 
-        from modules.payment_workflow import finalize_payment
+        from modules.fazle_payment_workflow import finalize_payment
         await finalize_payment(
             draft_id=pending_draft["id"],
             approved_amount=1500.0,
@@ -571,7 +571,7 @@ class TestDBStateVerification:
 
         txn = await _qrow(
             test_db_pool,
-            "SELECT program_id FROM wbom_cash_transactions WHERE employee_id=$1",
+            "SELECT program_id FROM fazle_cash_transactions_archive WHERE employee_id=$1",
             flow_employee["employee_id"],
         )
         # payment_workflow stores program_id if the draft has one
@@ -589,7 +589,7 @@ class TestDBStateVerification:
         # Add an advance transaction
         async with test_db_pool.acquire() as conn:
             await conn.execute("""
-                INSERT INTO wbom_cash_transactions
+                INSERT INTO fazle_cash_transactions_archive
                     (employee_id, transaction_type, amount, transaction_date, status)
                 VALUES ($1, 'advance', 1000.00, '2026-05-03', 'Completed')
             """, flow_employee["employee_id"])
@@ -635,13 +635,13 @@ class TestAuditLogs:
             compute_run, submit_run, approve_run, lock_run, mark_paid,
         )
 
-        # mark_paid() fails closed without an active fpe_employees row
+        # mark_paid() fails closed without an active fazle_employees row
         # linked via wbom_employee_id (2026-07-15 fix, see
         # knowledge_base/06_developer_system/payroll_module.md) -- Phase 2C
         # test-drift fix, 2026-07-18.
         async with test_db_pool.acquire() as conn:
             await conn.execute("""
-                INSERT INTO fpe_employees
+                INSERT INTO fazle_employees
                     (employee_code, full_name, name_normalized, primary_phone,
                      status, wbom_employee_id)
                 VALUES ('EMP-APPROVALLOG', $1, $2, $3, 'active', $4)
@@ -846,7 +846,7 @@ class TestOutboundQueue:
         """Accountant message can be enqueued after payment finalization."""
         await self._setup(test_db_pool)
 
-        from modules.payment_workflow import finalize_payment
+        from modules.fazle_payment_workflow import finalize_payment
         from modules.outbound import enqueue, pending_count
         import app.database as db
         db._pool = test_db_pool
@@ -1031,7 +1031,7 @@ class TestFinalConsistency:
         assert draft_id is not None
 
         # Step 7+8: Finalize payment
-        from modules.payment_workflow import finalize_payment
+        from modules.fazle_payment_workflow import finalize_payment
         fin = await finalize_payment(
             draft_id=draft_id,
             approved_amount=1500.0,
@@ -1074,11 +1074,11 @@ class TestFinalConsistency:
         assert draft_row["accountant_msg"] is not None
 
         # 4. One cash transaction exists
-        # Real payments write to fpe_cash_transactions (modules/fazle_payroll_engine/
-        # accounting.py) — wbom_cash_transactions is never written by any code path.
+        # Real payments write to fazle_cash_transactions (modules/fazle_payroll_engine/
+        # accounting.py) — fazle_cash_transactions_archive is never written by any code path.
         txn_count = await _qval(
             test_db_pool,
-            "SELECT COUNT(*) FROM fpe_cash_transactions WHERE employee_id=$1", eid,
+            "SELECT COUNT(*) FROM fazle_cash_transactions WHERE employee_id=$1", eid,
         )
         assert txn_count == 1
 
@@ -1117,7 +1117,7 @@ class TestFinalConsistency:
 
         async with test_db_pool.acquire() as conn:
             await conn.execute("""
-                INSERT INTO wbom_cash_transactions
+                INSERT INTO fazle_cash_transactions_archive
                     (employee_id, transaction_type, amount, transaction_date, status)
                 VALUES ($1, 'advance', $2, '2026-05-10', 'Completed')
             """, flow_employee["employee_id"], advance_amount)
@@ -1140,7 +1140,7 @@ class TestFinalConsistency:
 
         async with test_db_pool.acquire() as conn:
             emp1 = dict(await conn.fetchrow("""
-                INSERT INTO wbom_employees
+                INSERT INTO fazle_employees_legacy
                     (employee_mobile, employee_name, designation, status, basic_salary)
                 VALUES ('8801811111001', 'Guard One', 'Guard', 'Active', 8000)
                 RETURNING *
@@ -1152,7 +1152,7 @@ class TestFinalConsistency:
             # (higher than emp1's *total*), an unrelated test-data design
             # flaw, not a production bug (Phase 2C, 2026-07-18).
             emp2 = dict(await conn.fetchrow("""
-                INSERT INTO wbom_employees
+                INSERT INTO fazle_employees_legacy
                     (employee_mobile, employee_name, designation, status, basic_salary)
                 VALUES ('8801811111002', 'Guard Two', 'Guard', 'Active', 7000)
                 RETURNING *
@@ -1206,7 +1206,7 @@ class TestFailureInjection:
         import app.database as db
         db._pool = test_db_pool
 
-        from modules.payment_workflow import finalize_payment
+        from modules.fazle_payment_workflow import finalize_payment
 
         result = await finalize_payment(
             draft_id=999999,
@@ -1252,7 +1252,7 @@ class TestFailureInjection:
         import app.database as db
         db._pool = test_db_pool
 
-        from modules.payment_workflow import create_advance_request_draft
+        from modules.fazle_payment_workflow import create_advance_request_draft
 
         result = await create_advance_request_draft(
             employee_id=999999,
@@ -1266,7 +1266,7 @@ class TestFailureInjection:
         import app.database as db
         db._pool = test_db_pool
 
-        from modules.payment_workflow import create_escort_payment_draft
+        from modules.fazle_payment_workflow import create_escort_payment_draft
 
         result = await create_escort_payment_draft(employee_id=999999)
         assert "error" in result
@@ -1375,7 +1375,7 @@ class TestDuplicateMessages:
         import app.database as db
         db._pool = test_db_pool
 
-        from modules.payment_workflow import finalize_payment
+        from modules.fazle_payment_workflow import finalize_payment
 
         await finalize_payment(draft_id=pending_draft["id"],
                                 approved_amount=1500.0, method="bkash")
@@ -1387,7 +1387,7 @@ class TestDuplicateMessages:
         # But MUST not create a second cash transaction
         txn_count = await _qval(
             test_db_pool,
-            "SELECT COUNT(*) FROM wbom_cash_transactions WHERE employee_id=$1",
+            "SELECT COUNT(*) FROM fazle_cash_transactions_archive WHERE employee_id=$1",
             flow_employee["employee_id"],
         )
         # finalize_payment does not guard against double-finalize at the module level;
@@ -1594,7 +1594,7 @@ class TestPaymentCorrection:
         """Insert a completed escort_payment transaction directly."""
         async with pool.acquire() as conn:
             row = await conn.fetchrow("""
-                INSERT INTO wbom_cash_transactions
+                INSERT INTO fazle_cash_transactions_archive
                     (employee_id, transaction_type, amount, payment_method,
                      transaction_date, status, remarks)
                 VALUES ($1, 'escort_payment', $2, 'bkash',
@@ -1683,7 +1683,7 @@ class TestPaymentCorrection:
         # Insert advance transaction
         async with test_db_pool.acquire() as conn:
             txn = dict(await conn.fetchrow("""
-                INSERT INTO wbom_cash_transactions
+                INSERT INTO fazle_cash_transactions_archive
                     (employee_id, transaction_type, amount, transaction_date, status)
                 VALUES ($1, 'advance', 2000.00, '2026-05-10', 'Completed')
                 RETURNING *
@@ -1800,12 +1800,12 @@ class TestAPIIntegration:
         import app.database as db
         db._pool = test_db_pool
 
-        # mark_paid() fails closed without an active fpe_employees row
+        # mark_paid() fails closed without an active fazle_employees row
         # linked via wbom_employee_id (2026-07-15 fix) -- Phase 2C
         # test-drift fix, 2026-07-18.
         async with test_db_pool.acquire() as conn:
             await conn.execute("""
-                INSERT INTO fpe_employees
+                INSERT INTO fazle_employees
                     (employee_code, full_name, name_normalized, primary_phone,
                      status, wbom_employee_id)
                 VALUES ('EMP-APIFULLCHAIN', $1, $2, $3, 'active', $4)
@@ -1855,7 +1855,7 @@ class TestAPIIntegration:
         draft_id = r.json()["draft_id"]
         assert draft_id is not None
 
-        from modules.payment_workflow import finalize_payment
+        from modules.fazle_payment_workflow import finalize_payment
         fin = await finalize_payment(
             draft_id=draft_id, approved_amount=1500.0, method="bkash"
         )

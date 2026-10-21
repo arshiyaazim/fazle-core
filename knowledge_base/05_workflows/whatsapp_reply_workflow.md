@@ -12,7 +12,7 @@ runtime_index: true
 **Scope:** Shared WhatsApp DM routing for `bridge1`, `bridge2`, and `meta`
 **Policy Type:** Active operational workflow
 **Language:** Bangla + system identifiers in English
-**Source modules:** `modules.message_router`, `modules.identity_brain`, `modules.route_b`
+**Source modules:** `modules.message_router`, `modules.fazle_identity_brain`, `modules.route_b`
 
 ---
 
@@ -154,7 +154,7 @@ WhatsApp DM-এর জন্য দুইটি parallel reply engine রাখ�
 
 ### 7.1 Approved roles
 
-System-level routing-এ নিচের role-গুলো বিবেচনায় থাকবে (source: `modules.identity_brain._ROLE_PRIORITY`):
+System-level routing-এ নিচের role-গুলো বিবেচনায় থাকবে (source: `modules.fazle_identity_brain._ROLE_PRIORITY`):
 
 - `admin`
 - `accountant`
@@ -173,7 +173,7 @@ System-level routing-এ নিচের role-গুলো বিবেচনা
 
 **Routing:** `internal_coordinator` → **Route A**
 
-**Example:** `+8801817201596` (Alim) → `internal_coordinator` (seeded in `fazle_contact_roles`, 2026-07-21 — overrides a bogus auto-created `wbom_employees` stub without modifying that table).
+**Example:** `+8801817201596` (Alim) → `internal_coordinator` (seeded in `fazle_contact_roles`, 2026-07-21 — overrides a bogus auto-created `fazle_employees_legacy` stub without modifying that table).
 
 ### 7.3 Former / Inactive Policy
 
@@ -195,7 +195,7 @@ System-level routing-এ নিচের role-গুলো বিবেচনা
 
 **Important:** এই প্রশ্নগুলো rigid script হিসেবে না, **context-aware conversational logic** হিসেবে ব্যবহার হবে।
 
-**Implementation note:** lifecycle (active/former/on_leave) একটি read-only heuristic (`wbom_employees.status` + `wbom_attendance` recency — কোনো নতুন column ছাড়া), Route B prompt-এর context হিসেবে carry হয়, routing সিদ্ধান্ত হিসেবে নয় — active/former/on-leave escort/guard সবাই একইভাবে Route B-তে যায়।
+**Implementation note:** lifecycle (active/former/on_leave) একটি read-only heuristic (`fazle_employees_legacy.status` + `wbom_attendance` recency — কোনো নতুন column ছাড়া), Route B prompt-এর context হিসেবে carry হয়, routing সিদ্ধান্ত হিসেবে নয় — active/former/on-leave escort/guard সবাই একইভাবে Route B-তে যায়।
 
 ---
 
@@ -305,7 +305,7 @@ Route B local AI **read-only** access পাবে approved context sources-এ�
 
 ### 11.1 Allowed read sources
 
-**1) `wbom_whatsapp_messages`** — Allowed fields: `sender_number`, `receiver_number`, `direction`, `message_body`, `ai_response`, `source_timestamp`, `platform`, `identity_role`, `identity_confidence`, `classification`, `intent_detected`, `extracted_text`. Purpose: recent conversation history, both inbound and outbound.
+**1) `fazle_whatsapp_messages`** — Allowed fields: `sender_number`, `receiver_number`, `direction`, `message_body`, `ai_response`, `source_timestamp`, `platform`, `identity_role`, `identity_confidence`, `classification`, `intent_detected`, `extracted_text`. Purpose: recent conversation history, both inbound and outbound.
 
 **Correction (2026-08-06, Universal AI Responder Phase 2):** "both inbound
 and outbound" was already true for Route B's own separate history function
@@ -320,7 +320,7 @@ history immediately, regardless of the shadow flag's state, since the flag
 only controls which *pipeline* generates Tier 15's reply, not what history
 context is built for either pipeline.
 
-**2) `wbom_contacts`** — Allowed fields: `display_name`, `relation`, `company_name`, `notes`, `personality_hint`, `last_seen`, `interaction_count`. Purpose: saved contact metadata.
+**2) `fazle_contacts`** — Allowed fields: `display_name`, `relation`, `company_name`, `notes`, `personality_hint`, `last_seen`, `interaction_count`. Purpose: saved contact metadata.
 
 **3) Per-bridge WhatsApp SQLite contact store (`whatsmeow_contacts`)** — Read-only mode only. Allowed fields: `push_name`, `first_name`, `full_name`, `business_name`. Purpose: actual WhatsApp-side profile identity hints.
 
@@ -332,9 +332,9 @@ context is built for either pipeline.
 
 Route B handler নিচের table-এ direct query করবে না:
 
-- `wbom_employees`
-- `fpe_employees`
-- `fpe_cash_transactions`
+- `fazle_employees_legacy`
+- `fazle_employees`
+- `fazle_cash_transactions`
 - `wbom_escort_programs`
 - `escort_roster_entries`
 - `wbom_attendance`
@@ -347,7 +347,7 @@ Route B handler নিচের table-এ direct query করবে না:
 
 নতুন routing চালু হলেও existing safety net ভাঙা যাবে না।
 
-**Must preserve** (all enforced inside `modules.bridge_poller.process_bridge_inbound()`, shared by every entry point):
+**Must preserve** (all enforced inside `modules.fazle_bridge_poller.process_bridge_inbound()`, shared by every entry point):
 
 - cooldown
 - keyword-flood protection
@@ -447,17 +447,17 @@ to a human review draft, but via the pre-existing, role-agnostic escort-order
 safety net (§9's `intent`+shape gate), not this gate.
 
 **Implementation:** two enforcement points, both in `modules/message_router/__init__.py`:
-1. `_should_silent_skip()` — early gate keyed off `wbom_contacts.display_name`
+1. `_should_silent_skip()` — early gate keyed off `fazle_contacts.display_name`
    (fires before identity resolution). Fixed 2026-07-22: previously fell
    into an either/or with `.env`-configured names and silently dropped the
    static keyword list whenever `DRAFT_ALWAYS_NAMES`/`DRAFT_ALWAYS_ROLES` had
    any custom tokens configured (true in production) — now a union of both.
 2. Route B branch backstop (§4.2) — keyed off `identity_brain`'s own resolved
-   `display_name`, for a contact not yet synced into `wbom_contacts`
+   `display_name`, for a contact not yet synced into `fazle_contacts`
    (see `knowledge_base/06_developer_system/contact_sync.md`).
 
 **Registered-employee exemption (2026-07-22 addition):** a phone verified in
-the canonical employee tables (`wbom_employees`/`fpe_employees`, active or
+the canonical employee tables (`fazle_employees_legacy`/`fazle_employees`, active or
 inactive — checked via the new `identity_brain.is_registered_employee_phone()`)
 now bypasses `_should_silent_skip()`'s name-token match entirely, checked
 *before* the token match runs. Previously a genuine employee saved under a
@@ -511,7 +511,7 @@ only decides *when* to call them and *with what corroboration*.
    Ollama's raw category is never sufficient by itself.
 2. **Employee/former-employee claim (Stage 2, same flag, built + tested,
    never live-enabling access).** Because identity_brain's Step 3 phone
-   lookup matches `wbom_employees` regardless of Active/Inactive status,
+   lookup matches `fazle_employees_legacy` regardless of Active/Inactive status,
    any sender reaching Route B by construction has a phone that did **not**
    match — so a claim here can never be resolved to live Tier 10 access
    this way. `resolve_employee_identity()` (phone/employee_id-based, name-
@@ -520,7 +520,7 @@ only decides *when* to call them and *with what corroboration*.
    always produces an admin-review draft only (`fazle_draft_replies`,
    `intent='route_b_employee_claim_review'`), reply `""` to the sender
    either way. Genuine access is only ever (re-)granted the existing way:
-   an admin corrects/links the phone on `wbom_employees`, after which
+   an admin corrects/links the phone on `fazle_employees_legacy`, after which
    identity_brain recognizes it automatically on the sender's next message.
    Cooldown (`ROUTE_B_HANDOFF_COOLDOWN_HOURS`, default 6h) suppresses a
    second draft for a repeated claim from the same phone.
@@ -530,7 +530,7 @@ only decides *when* to call them and *with what corroboration*.
    after that one is turned on).** Reuses `modules.escort.is_order_complete()`
    (§9's own gate, extracted to a public function, behavior-preserving) —
    first against the current message alone, then, if incomplete, against
-   the governed conversation history (`wbom_whatsapp_messages`, never
+   the governed conversation history (`fazle_whatsapp_messages`, never
    Ollama's own output) concatenated with the current message, for fields
    spread across turns. Complete → `handle_escort_client_message(..., is_verified=False)`,
    the same unverified-sender structured-draft path §9 already uses.

@@ -197,8 +197,8 @@ is still heuristic (phone+timestamp), per the original audit's Section C.
 **Smallest next step, if this becomes a real operational need**: thread
 `source_message_id`/`trace_id` into `fazle_payment_drafts` at the point
 each draft-creation call site already runs (`modules/employee_
-conversation/__init__.py:590`, `modules/payment_ingest/__init__.py:350`,
-`modules/payment_workflow/__init__.py:213,318`, `modules/route_b/
+conversation/__init__.py:590`, `modules/fazle_payment_ingest/__init__.py:350`,
+`modules/fazle_payment_workflow/__init__.py:213,318`, `modules/route_b/
 __init__.py:194`, `modules/fazle_payroll_engine/workers.py:667`) — one
 additive nullable column on `fazle_payment_drafts`, no new table, same
 pattern as migration 067. Not implemented now: no live operational need

@@ -9,7 +9,7 @@ from dataclasses import dataclass
 
 from app.database import execute
 
-from modules.identity_brain import detect_identity
+from modules.fazle_identity_brain import detect_identity
 
 from . import reply_rules as rules
 from .classifier import Classification, classify_comment, classify_message

@@ -69,14 +69,14 @@ trusting this file's older sections for anything routing/identity-related.
 All Owner-authorized, all committed, all documented in `management_decisions.md`:
 
 - **S13 (2026-07-15):** social auto-reply reverted to Selective-draft policy (not blanket);
-  `mark_paid()` now posts to `fpe_cash_transactions` and fails closed if unlinked;
+  `mark_paid()` now posts to `fazle_cash_transactions` and fails closed if unlinked;
   settlement formula prorates office-staff basic salary by attendance
   (`compute_run(prorate_basic=True)`, still dormant — flag stays off, 0 eligible employees);
   WBOM status-casing lookup fixed (`LOWER(status)`).
 - **S14 (2026-07-16):** payroll "View All Transactions" double-fetch/stale-filter bug fixed;
   new `/payroll/transactions/{employee_id}` deep-link route.
 - **S15 (2026-07-16):** Employees-panel edits to Salary/Designation/Joining Date now sync
-  `wbom_employees` → `fpe_employees` (previously silently didn't); a pre-existing
+  `fazle_employees_legacy` → `fazle_employees` (previously silently didn't); a pre-existing
   `joining_date` 500 (raw string into a `DATE` column) fixed alongside it.
 - **S16-S18 (2026-07-16):** three-round escort-data audit. Confirmed the sender-validation
   gate and 24h hard-delete Owner asked to add **already existed** (commits `41916b0`,
@@ -127,7 +127,7 @@ at a time with a commit + restart-verify after each:
   function still cross-imported by `client_billing/profiles.py`; hotfixed same session).
   Full incident writeup in `management_decisions.md`.
 - **Step 8:** fixed the blocking `sqlite3.connect()` call inside `async def _poll_bridge()`
-  (`modules/bridge_poller/__init__.py`) — extracted a sync helper, dispatched via
+  (`modules/fazle_bridge_poller/__init__.py`) — extracted a sync helper, dispatched via
   `asyncio.to_thread()`. Found (not fixed) a second instance of the same bug class in
   `modules/escort_roster/history_sync.py:779` — see "Technical Debt" below.
 
@@ -157,10 +157,10 @@ before every change, no exceptions):
 - **Step 3 — Finance-First Link/Sync Integrity audit,** requested separately after Steps
   1-2 closed: a read-only audit (ownership matrix, writer inventory, mismatch report,
   top-3 root-cause paths — full report in `management_decisions.md` S20-08) into
-  unlinked/out-of-sync row creation between `wbom_employees`/`fpe_employees` breaking
+  unlinked/out-of-sync row creation between `fazle_employees_legacy`/`fazle_employees` breaking
   finance workflows, followed by 3 Owner-approved, narrowly-scoped fixes:
   - **Phase 1:** disabled `message_router::_seed_unknown_employee_identity()` — it
-    auto-created a `wbom_employees` row (and indirectly seeded `fpe_employees`) for
+    auto-created a `fazle_employees_legacy` row (and indirectly seeded `fazle_employees`) for
     **any** sender identity_brain classified as `"unknown"` whose message merely looked
     like an attendance/escort/advance-request, with zero trust check of its own. By
     construction every such sender had already failed every trust check the system has.
@@ -173,15 +173,15 @@ before every change, no exceptions):
     retry, risking duplicate employee rows for someone already registered. 2-line fix;
     trusted auto-create, no-reply, and no-review-queue behavior all verified unchanged.
     Commit `38dbedd`.
-  - **Phase 3:** added `modules/reports::_b_unresolved_fpe_employees()`, a read-only
-    report distinguishing genuinely-unlinked `fpe_employees` rows from rows that are
+  - **Phase 3:** added `modules/reports::_b_unresolved_fazle_employees()`, a read-only
+    report distinguishing genuinely-unlinked `fazle_employees` rows from rows that are
     already correctly linked but carry a stale `resolution_status` label (the Phase 2
     finding) — never conflated. Confirmed live against production:
     `172 (no_wbom_match) + 81 (wbom_match_unlinked) = 253`, matching the audit's live
     finding exactly; `153` more `linked_but_mislabeled`. Served via the existing generic
     `GET /reports/{name}` dispatcher, no new route. Commit `b0c0057`.
   - **Explicitly excluded from this session, unless separately approved later:**
-    `wbom_*`→`fpe_*` renames, the `wbom_employees`↔`fpe_employees` merge,
+    `wbom_*`→`fpe_*` renames, the `fazle_employees_legacy`↔`fazle_employees` merge,
     `employee_id_phone` uniqueness changes, escort dual-write concurrency,
     `accounting.py` semantics changes, `admin_transactions` bypass cleanup, and the
     pre-existing operator-manual-entry review-queue gap found during Phase 0 (documented,
@@ -261,7 +261,7 @@ detailed under "Technical Debt" below.
    blocking SQLite call in async context.** Same bug class as the `bridge_poller` fix
    (commit `a5d3871`), not yet applied here. See "Technical Debt" below for full detail.
 10. **[x] RESOLVED 2026-07-17 (Session 20 Step 3, Phase 1) — unknown/untrusted-sender
-    auto-create of `wbom_employees`/`fpe_employees` rows.** `message_router.py::
+    auto-create of `fazle_employees_legacy`/`fazle_employees` rows.** `message_router.py::
     _seed_unknown_employee_identity()` disabled — every sender reaching it had already
     failed every trust check identity_brain has (not admin, not accountant, not
     escort-client, not an existing employee/contact), so auto-creating a row from
@@ -274,14 +274,14 @@ detailed under "Technical Debt" below.
     finance path employee-search gap.** `payment_ingest::_match_or_create_instruction_employee()`
     collapsed `employee_id_mobile`/`payout_mobile` into one search key before ever
     calling `match_employee()`, so an explicit ID-mobile miss never fell back to a
-    second search against the payout number — risking a duplicate `wbom_employees`/
-    `fpe_employees` row for an already-registered employee. Fixed with a 2-line
+    second search against the payout number — risking a duplicate `fazle_employees_legacy`/
+    `fazle_employees` row for an already-registered employee. Fixed with a 2-line
     fallback; trusted auto-create, no-reply, and no-review-queue behavior all
     preserved and verified unchanged. See `management_decisions.md` Session 20 Step 3
     Phase 2 (S20-10), commit `38dbedd`.
-12. **[x] DONE 2026-07-17 (Session 20 Step 3, Phase 3) — `unresolved_fpe_employees`
+12. **[x] DONE 2026-07-17 (Session 20 Step 3, Phase 3) — `unresolved_fazle_employees`
     read-only report.** New builder in `modules/reports/__init__.py`, served via the
-    existing `GET /reports/{name}` dispatcher (no new route). Splits `fpe_employees`
+    existing `GET /reports/{name}` dispatcher (no new route). Splits `fazle_employees`
     rows needing review into `no_wbom_match`, `wbom_match_unlinked`, and
     `linked_but_mislabeled` (the last is the Phase 2 "already linked, stale label"
     finding — reported separately, not flagged as broken). Confirmed live against
@@ -440,7 +440,7 @@ Full write-up (updated to "ROOT CAUSE CONFIRMED AND FIXED"):
 Was 11 pre-existing failures (Phase 1H). Classified every one into Root Cause / Production
 Bug / Test Drift / Legacy. 3 were genuine test drift (missing linked FPE employee for
 `mark_paid()`'s fail-closed check, and one unrelated test-data salary-value flaw) — fixed.
-The other 8 are legacy `wbom_cash_transactions` table drift or intentionally-disabled/
+The other 8 are legacy `fazle_cash_transactions_archive` table drift or intentionally-disabled/
 removed endpoints — confirmed non-blocking, left alone per "do not rewrite legacy
 expectations merely to obtain green tests." Suite now 51 passed / 8 failed. Full record:
 `management_decisions.md` Phase 2C. Commit `7b9fe41`.
@@ -535,7 +535,7 @@ readable/updatable via `PUT` as long as `role` itself isn't part of the update �
 data migration, no schema change. See `management_decisions.md` for the full record
 and existing-role audit.
 
-**🟢 RESOLVED 2026-07-17 (Session 23, Phase 1C) — `fpe_employees.resolution_status`
+**🟢 RESOLVED 2026-07-17 (Session 23, Phase 1C) — `fazle_employees.resolution_status`
 consistency.** Was: 7 writers across 3 modules (not just the originally-cited
 `fpe_bridge.py` function) set `wbom_employee_id` without also flipping
 `resolution_status` from the schema default `'unresolved'` to `'resolved'`. Fixed with
@@ -546,7 +546,7 @@ dedup-workflow states (`duplicate`/`canonical`/`inactive`) and the confirmed-leg
 `resolved`+unlinked `admin_manual_create` rows. Historical backfill executed same
 session: 153 affected rows corrected in one audited transaction (rollback artifact:
 `knowledge_base/00_governance/phase1c_backfill_audit_20260717.json`). Live-verified:
-`unresolved_fpe_employees` report's `linked_but_mislabeled_count` **153 → 0**;
+`unresolved_fazle_employees` report's `linked_but_mislabeled_count` **153 → 0**;
 `no_wbom_match`/`wbom_match_unlinked` unchanged. Full record:
 `management_decisions.md` Session 23 Stage 1. Commits `55a2d79`, `c2671fb`, `20c3778`.
 
@@ -585,11 +585,11 @@ release-confirmation date was always chronologically before the program's effect
 start regardless of "today" (not a staleness issue — the program start itself defaults
 to row-insertion date, not the parsed order text), and 1 multi-turn conversation-flow
 drift (advance requests are now a strict 4-turn state machine). All fixed; also
-uncovered and fixed 5 separate legacy-table (`wbom_cash_transactions` →
-`fpe_cash_transactions`) assertion drifts in the same file. **Confirmed real,
+uncovered and fixed 5 separate legacy-table (`fazle_cash_transactions_archive` →
+`fazle_cash_transactions`) assertion drifts in the same file. **Confirmed real,
 un-fixed production bug found in the process:** `compute_run()`'s advances query
-resolves `fpe_cash_transactions.employee_id` using the WBOM employee_id, but that
-column's FK target is `fpe_employees(id)` — a different ID space; `mark_paid()` in
+resolves `fazle_cash_transactions.employee_id` using the WBOM employee_id, but that
+column's FK target is `fazle_employees(id)` — a different ID space; `mark_paid()` in
 the same file resolves this correctly elsewhere. Real advances are silently never
 deducted from payroll unless the two IDs coincidentally match. Needs its own
 Owner-approved proposal (payroll formula change) — not fixed, left as an
@@ -607,14 +607,14 @@ multi-line background-bash invocation documented elsewhere in this same session
 (redirection + trailing commands flattened by `eval` into bogus extra pytest
 arguments) — an agent-tooling artifact, not a product or test defect. The file's 11
 real failures are a separate, explicitly out-of-scope backlog item (mostly the same
-`wbom_cash_transactions`/`compute_run()` drift as Phase 1G, plus one deliberately
+`fazle_cash_transactions_archive`/`compute_run()` drift as Phase 1G, plus one deliberately
 removed route and one intentionally-hardened endpoint) — not fixed here. Full
 record: `management_decisions.md` Phase 1H.
 
 **🟢 RESOLVED 2026-07-18 — `compute_run()`'s advance-deduction employee-ID bug
 (the one flagged as un-fixed in Phase 1G above).** Fixed: resolves the linked,
-active `fpe_employees` row via `wbom_employee_id` first (matching
-`_transition()`'s existing pattern), then queries `fpe_cash_transactions` by
+active `fazle_employees` row via `wbom_employee_id` first (matching
+`_transition()`'s existing pattern), then queries `fazle_cash_transactions` by
 that id. Production audit (read-only): 194 advance transactions all-time
 (~70 distinct FPE employees, ৳153,408 total); 15/15 sampled real
 advance-bearing employees had `id != wbom_employee_id`. **Zero realized
@@ -633,13 +633,13 @@ verified against current code 2026-07-19 and corrected).** Commit
 `69897d7` ("fix(money): resolve remaining employee-ID-space bugs found
 across the payroll/payment surface") fixed all four the same day as the
 `compute_run()` fix above:
-- `modules/payment_workflow/__init__.py::create_escort_payment_draft()` —
+- `modules/fazle_payment_workflow/__init__.py::create_escort_payment_draft()` —
   was the highest-priority one of these (computes every real escort payment
   draft's `net_payable` on release, real money moving today). Now resolves
-  the linked, active `fpe_employees` row via `wbom_employee_id` before
-  querying `fpe_cash_transactions`, matching `compute_run()`'s pattern; no
+  the linked, active `fazle_employees` row via `wbom_employee_id` before
+  querying `fazle_cash_transactions`, matching `compute_run()`'s pattern; no
   link → 0 advances (data-completeness fact, not an error).
-- `modules/payment_workflow/__init__.py::create_advance_request_draft()` —
+- `modules/fazle_payment_workflow/__init__.py::create_advance_request_draft()` —
   same fix applied to the display-only "paid this month" figure.
 - `modules/payroll_logic/__init__.py::get_payroll_summary()` — same fix
   applied across the 3 queries feeding customer-facing WhatsApp

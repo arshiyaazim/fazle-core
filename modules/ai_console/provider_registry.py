@@ -182,12 +182,12 @@ class LLMProviderAdapter(ProviderAdapter):
                             )
                         if len(rows) > 10:
                             lines.append(f"... এবং আরও {_bn_num(len(rows) - 10)}টি লেনদেন")
-                        lines.append("(সোর্স: fpe_cash_transactions)")
+                        lines.append("(সোর্স: fazle_cash_transactions)")
                         exact_answer = "\n".join(lines)
                     else:
                         exact_answer = (
                             "কোনো পেমেন্ট লেনদেন পাওয়া যায়নি। "
-                            "(সোর্স: fpe_cash_transactions)"
+                            "(সোর্স: fazle_cash_transactions)"
                         )
                 elif tool_name == "escort_roster_page_summary" and family == "business":
                     rows = data.get("rows") or []

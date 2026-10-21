@@ -22,7 +22,7 @@ class TestEveryKnownRoleMapsToExactlyOneLane:
         identity_brain -- new roles fall through to the safe default
         (OWNER_SUPERVISED_DRAFT), never crash, never silently become
         autonomous by accident."""
-        from modules.identity_brain import _ROLE_PRIORITY
+        from modules.fazle_identity_brain import _ROLE_PRIORITY
         for role in _ROLE_PRIORITY:
             decision = resolve_authority_lane(LaneContext(identity_role=role))
             assert decision.lane in (

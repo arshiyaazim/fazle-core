@@ -7,8 +7,8 @@ production, traced across two independent mechanisms this stage found by
 reading the actual code (not assumed):
 
   1. modules.route_b (the Ollama-only reply generator for escort/
-     security_guard/candidate/unknown roles) never queries wbom_employees/
-     fpe_cash_transactions/wbom_escort_programs/attendance tables at all
+     security_guard/candidate/unknown roles) never queries fazle_employees_legacy/
+     fazle_cash_transactions/wbom_escort_programs/attendance tables at all
      (confirmed by its own module docstring) -- it structurally cannot
      leak private business data because it has no DB access to it.
 
@@ -20,7 +20,7 @@ reading the actual code (not assumed):
      to ADMIN REVIEW ONLY, never to actual data access.
 
 Both mechanisms anchor identity to the WhatsApp-verified sender phone
-(modules.identity_brain._lookup_employee(phone) /
+(modules.fazle_identity_brain._lookup_employee(phone) /
 _lookup_attendance_identity(phone) / _lookup_cash_identity(phone) --
 Stage E6/E7's own proven linkage), never to a name/employee_id a sender
 merely typed. This module doesn't replace any of that -- it exposes the
@@ -41,14 +41,14 @@ def is_authorized_for_employee_data(
     """The CRITICAL PRIVACY RULE, as one testable function.
 
     requester_employee_id: the id resolved from the REQUESTER's own
-    WhatsApp-verified sender phone (modules.identity_brain._lookup_employee
+    WhatsApp-verified sender phone (modules.fazle_identity_brain._lookup_employee
     (phone) -- never from a name/id the requester merely typed in message
     text; a name-match-only resolution, per resolve_employee_identity()'s
     own verified=False contract, must never be passed here as if it were
     a real requester_employee_id).
 
     requester_identity_role: 'admin' (or 'accountant', which -- per
-    modules.identity_brain._ROLE_PRIORITY -- sits above ordinary employee
+    modules.fazle_identity_brain._ROLE_PRIORITY -- sits above ordinary employee
     tiers) retains broader access per existing RBAC, unchanged by this
     rule (Stage G17's own explicit carve-out). Every other role is scoped
     to its own data only.
@@ -78,7 +78,7 @@ async def resolve_requester_employee_id(phone: str) -> Optional[int]:
     phone-anchored resolver (Stage E6's own linkage) -- the ONLY
     legitimate source for requester_employee_id above. Never call this
     with anything but the WhatsApp-verified sender phone."""
-    from modules.identity_brain import _lookup_employee
+    from modules.fazle_identity_brain import _lookup_employee
     emp = await _lookup_employee(phone)
     return emp.get("employee_id") if emp else None
 
@@ -97,7 +97,7 @@ async def get_own_payroll_summary(requester_phone: str) -> dict:
     (modules.recruitment_flow's templates, e.g. "বয়সসীমা ১৮-৫৫...
     বেতন...") -- that answers "what does this JOB pay", a different
     question from "what is MY payroll record", a structurally different
-    data source (wbom_employees.basic_salary vs a policy-text template),
+    data source (fazle_employees_legacy.basic_salary vs a policy-text template),
     so there is no comingling risk between the two."""
     employee_id = await resolve_requester_employee_id(requester_phone)
     if employee_id is None:
@@ -105,7 +105,7 @@ async def get_own_payroll_summary(requester_phone: str) -> dict:
             "ok": False,
             "error": "identity not resolved from this phone -- cannot disclose payroll data to an unverified sender",
         }
-    from modules.identity_brain import _lookup_employee
+    from modules.fazle_identity_brain import _lookup_employee
     emp = await _lookup_employee(requester_phone)
     if not emp:
         return {"ok": False, "error": "employee record not found"}

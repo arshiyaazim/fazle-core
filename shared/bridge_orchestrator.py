@@ -41,7 +41,7 @@ bridge3 (REC2, Phase E, wired 2026-08-04)
   TO the admin's bridge2 self-chat number via alternate bridges — bridge3 is
   a different device (REC2) and must never silently receive a message meant
   for bridge2's own number. bridge3 replies are sent back on bridge3 itself,
-  via modules.bridge_poller's same-bridge reply path + modules.outbound.
+  via modules.fazle_bridge_poller's same-bridge reply path + modules.outbound.
 """
 from __future__ import annotations
 

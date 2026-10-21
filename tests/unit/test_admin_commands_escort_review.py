@@ -1,5 +1,5 @@
 """
-Unit tests — modules.admin_commands dispatch for the Step 5 (2026-08-01)
+Unit tests — modules.fazle_admin_commands dispatch for the Step 5 (2026-08-01)
 escort-confirmation-review command: "<id> Type: APPROVE|EDIT|REJECT".
 
 DB-independent: mocks rbac and the modules.escort handler functions
@@ -21,7 +21,7 @@ _RBAC_ALLOW = {"allowed": True, "required_role": "admin", "admin": True}
 class TestEscortReviewDispatch:
 
     async def test_approve_routes_correctly(self):
-        from modules.admin_commands import process_admin_command
+        from modules.fazle_admin_commands import process_admin_command
 
         with patch("modules.rbac.check_permission", new=AsyncMock(return_value=_RBAC_ALLOW)), \
              patch("modules.rbac.record_audit", new=AsyncMock()), \
@@ -32,7 +32,7 @@ class TestEscortReviewDispatch:
         assert reply == "✅ approved"
 
     async def test_reject_routes_correctly(self):
-        from modules.admin_commands import process_admin_command
+        from modules.fazle_admin_commands import process_admin_command
 
         with patch("modules.rbac.check_permission", new=AsyncMock(return_value=_RBAC_ALLOW)), \
              patch("modules.rbac.record_audit", new=AsyncMock()), \
@@ -43,7 +43,7 @@ class TestEscortReviewDispatch:
         assert reply == "🚫 rejected"
 
     async def test_edit_routes_with_corrected_text(self):
-        from modules.admin_commands import process_admin_command
+        from modules.fazle_admin_commands import process_admin_command
 
         corrected = "Mother Vessel: MV X\nLighter Vessel: Y\nEscort Mobile: 01700000000"
         with patch("modules.rbac.check_permission", new=AsyncMock(return_value=_RBAC_ALLOW)), \
@@ -55,7 +55,7 @@ class TestEscortReviewDispatch:
         assert reply == "✏️ edited"
 
     async def test_edit_without_text_rejected_before_reaching_handler(self):
-        from modules.admin_commands import process_admin_command
+        from modules.fazle_admin_commands import process_admin_command
 
         with patch("modules.rbac.check_permission", new=AsyncMock(return_value=_RBAC_ALLOW)), \
              patch("modules.rbac.record_audit", new=AsyncMock()), \
@@ -66,7 +66,7 @@ class TestEscortReviewDispatch:
         assert "সম্পূর্ণ" in reply or "complete" in reply.lower() or "❌" in reply
 
     async def test_rbac_denied_blocks_dispatch(self):
-        from modules.admin_commands import process_admin_command
+        from modules.fazle_admin_commands import process_admin_command
 
         with patch("modules.rbac.check_permission", new=AsyncMock(
             return_value={"allowed": False, "required_role": "admin", "reason": "insufficient"}

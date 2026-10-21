@@ -13,7 +13,7 @@ rather than duplicating phone-validation logic.
 
 employee_wage_general/24h/12h/monthly exist for the profit-ESTIMATION
 calculation on this table only. They must never feed into, override, or be
-read by modules.payroll, modules.payment_workflow, or any real
+read by modules.payroll, modules.fazle_payment_workflow, or any real
 guard-payment calculation — see docs/CANONICAL_BUSINESS_RULES.md Payroll
 section.
 """
@@ -61,7 +61,7 @@ def _validate_numeric_fields(fields: dict[str, Any]) -> None:
 async def _validate_contact_id(contact_id: Optional[int]) -> None:
     if contact_id is None:
         return
-    exists = await fetch_val("SELECT 1 FROM wbom_contacts WHERE contact_id = $1", contact_id)
+    exists = await fetch_val("SELECT 1 FROM fazle_contacts WHERE contact_id = $1", contact_id)
     if not exists:
         raise HTTPException(status_code=400, detail=f"contact_id {contact_id} does not exist")
 

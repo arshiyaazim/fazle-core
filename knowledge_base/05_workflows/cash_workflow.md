@@ -16,7 +16,7 @@ Admin Payment Message -> Accountant Receipt -> Transaction Parse -> Duplicate Ch
 Daily cash payment has two separate paths:
 
 1. Employee/Escort request path: employee asks for advance/payment -> system verifies identity/duty/slip/payment method -> creates `fazle_payment_drafts` only -> waits for admin action. This path never writes a final cash transaction.
-2. Admin -> Accountant instruction path: admin sends a payment instruction to accountant -> message is treated as final payment proof -> parser writes `fpe_cash_transactions` directly via `create_transaction()`. No additional verification or draft is required.
+2. Admin -> Accountant instruction path: admin sends a payment instruction to accountant -> message is treated as final payment proof -> parser writes `fazle_cash_transactions` directly via `create_transaction()`. No additional verification or draft is required.
 
 Admin's message reaching the accountant is the completion trigger.
 
@@ -60,12 +60,12 @@ Runo
 
 Parsing rules (`modules/fazle_payroll_engine/parser.py::_extract_name`,
 fixed 2026-08-01 — see incident note below):
-- `ID:` mobile is the employee lookup key (`wbom_employees.employee_mobile`) — only when the token right after `ID:` is itself phone-shaped. When it isn't (e.g. `ID: Runo`), that token is the name, never the lookup key, and is never deleted during parsing.
+- `ID:` mobile is the employee lookup key (`fazle_employees_legacy.employee_mobile`) — only when the token right after `ID:` is itself phone-shaped. When it isn't (e.g. `ID: Runo`), that token is the name, never the lookup key, and is never deleted during parsing.
 - Without `ID:`, the payout mobile is also the employee lookup key.
 - `(B)` = bkash, `(N)` = nagad, `(C)` = cash, `(R)` = rocket, `(BANK)` = bank. Full-word variants (`Cash`, `Nagad`, `Bkash`/`Bikash`, `Rocket`, `Bank`) are also accepted on input, case-insensitive, since 2026-07-13. Bengali words (`নগদ`, `বিকাশ`, `ক্যাশ`, `রকেট`) and a bare (non-parenthesized) method word anywhere in the message are also accepted since 2026-08-01. Outbound system-generated messages always use the single-letter/`BANK` codes.
 - Amount accepts `/-`, `/`, `/+`, or a bare `taka`/`tk`/`টাকা` word suffix (no slash) since 2026-08-01, e.g. `800 taka`, `৮০০ টাকা`.
-- Missing employee is auto-created using existing `wbom_employees` columns only.
-- Final ledger row is stored in `fpe_cash_transactions` via `create_transaction()`; existing DB schema is not changed.
+- Missing employee is auto-created using existing `fazle_employees_legacy` columns only.
+- Final ledger row is stored in `fazle_cash_transactions` via `create_transaction()`; existing DB schema is not changed.
 
 **2026-08-01 incident note:** a message shaped like `ID: <Name> <phone>(method) amount/-` (no numeric ID — the sender always referred to this contact by name only) was silently diverted to the review queue instead of the ledger. The old name-extraction logic stripped `ID:` plus whatever single token followed it, assuming that token was always the numeric ID, deleting the name along with the label whenever it wasn't. Confirmed against 4 real prior transactions for the same contact, all with the identical shape. Fixed by only consuming the post-`ID:` token when it is phone-shaped.
 
@@ -76,7 +76,7 @@ queue (`fpe_unmatched_messages`) — only `amount` + `payout_phone` +
 `payout_method` are (payment_business_rules.md: mobile-based lookup is the
 authoritative employee identity). But `employee_name_raw` **is** required
 for `validate_for_accounting()` to accept a `payment`-type message straight
-into `fpe_cash_transactions` (`modules/fazle_payroll_engine/validation.py`,
+into `fazle_cash_transactions` (`modules/fazle_payroll_engine/validation.py`,
 `MESSAGE_RULES['payment'].required_fields`) — a name-extraction miss on a
 message that genuinely doesn't mention a name (e.g. `01773558211(N) 800/-`)
 correctly routes to the review queue rather than fabricating a name or
@@ -94,7 +94,7 @@ it existed.
 
 ## Non-Transaction Summary Rule
 
-Accountant company summaries such as `জমা`, `টোটাল বাকি`, and `অগ্রিম জমা থাকে` are informational. They are acknowledged but not written to `fpe_cash_transactions`, because they are not employee-level payments.
+Accountant company summaries such as `জমা`, `টোটাল বাকি`, and `অগ্রিম জমা থাকে` are informational. They are acknowledged but not written to `fazle_cash_transactions`, because they are not employee-level payments.
 
 ## Duplicate Rule
 

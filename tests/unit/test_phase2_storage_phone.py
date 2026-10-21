@@ -4,7 +4,7 @@ tests/unit/test_phase2_storage_phone.py
 
 Pure unit tests for modules.phone_normalizer.storage_canonical_phone /
 storage_phone_last10 — the write-time canonicalizer for
-wbom_whatsapp_messages.canonical_phone (2026-09-01).
+fazle_whatsapp_messages.canonical_phone (2026-09-01).
 """
 from modules.phone_normalizer import storage_canonical_phone, storage_phone_last10
 

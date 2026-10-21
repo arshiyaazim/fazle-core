@@ -7,7 +7,7 @@ Deletes 18 wbom_escort_programs rows created by senders that are neither a
 registered admin number nor a registered escort-client number. All 18
 predate the 2026-06-27 sender-validation gate (commit 41916b0) and are
 verified financially inert (no escort_employee_id, zero
-fpe_cash_transactions references) — see the audit doc for the full
+fazle_cash_transactions references) — see the audit doc for the full
 verification query.
 
 Explicitly NOT touched: program_id 940 (is_historical=true) and the 5

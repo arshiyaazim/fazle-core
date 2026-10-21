@@ -1,5 +1,8 @@
 # B26 — Reviewed Reply Memory Design
 
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 This document defines the technical design for `B26`, the first batch in
 the `P0` execution sequence documented in
 [WORKSPACE_P0_EXECUTION_BACKLOG_2026-04-29.md](WORKSPACE_P0_EXECUTION_BACKLOG_2026-04-29.md).

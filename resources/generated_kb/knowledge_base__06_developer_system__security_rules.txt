@@ -1,6 +1,6 @@
 Source: knowledge_base/06_developer_system/security_rules.md
-SHA256: 3f9edae5221035373a5beed3bb24d4ea5c3723f1306b4c2269c1b068a10846ea
-Version: 3f9edae52210
+SHA256: e357e26560d3a94eaf772b72853784d4af4c94c49753065c50a50e08e1e72304
+Version: e357e26560d3
 
 # Security Rules
 
@@ -146,6 +146,6 @@ Every admin WhatsApp command is deduplicated using SHA1(command_text + sender_ph
 
 **Purpose:** Prevents accidental double-execution from network retries or admin re-sends.
 
-**Source Module:** `modules/admin_commands`
+**Source Module:** `modules/fazle_admin_commands`
 **Source Function:** `_dedup_seen`
 **PKCA Report:** 10_hidden_rule_coverage_report.md (HK-37)

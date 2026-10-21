@@ -2,7 +2,7 @@
 
 2026-08-18 fix (HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md):
 this route's SELECT previously listed `classification` (a legacy column never
-written for wbom_whatsapp_messages -- confirmed by a repo-wide grep and a live
+written for fazle_whatsapp_messages -- confirmed by a repo-wide grep and a live
 schema check) but omitted `identity_role`/`identity_confidence`/
 `intent_detected`, which bridge_poller actually populates for every message.
 This test asserts the query now selects the real columns and that the route

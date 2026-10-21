@@ -11,8 +11,8 @@ review, all explicitly signed off by Owner:
   - 3   (duplicate of 10 -- same 2026-04-18 bulk-seed batch, identical fields)
 
 Pre-delete verification (see audit doc): zero references in
-fpe_cash_transactions, wbom_cash_transactions, wbom_billing_records,
-wbom_cases, wbom_whatsapp_messages.related_program_id,
+fazle_cash_transactions, fazle_cash_transactions_archive, wbom_billing_records,
+wbom_cases, fazle_whatsapp_messages.related_program_id,
 fazle_payment_drafts.escort_program_id, escort_order_lighters for all three
 program_ids. escort_employee_id IS NULL on all three. escort_shift_logs has
 release-log entries for 1 and 3 (no FK constraint) -- deleted alongside so

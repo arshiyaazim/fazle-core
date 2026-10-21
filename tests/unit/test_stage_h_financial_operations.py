@@ -74,7 +74,7 @@ class TestH1TransportBoundIdentity:
 class TestH2H3PayrollPrivacyAndApplicantIsolation:
     async def test_own_payroll_summary_refuses_unresolved_identity(self):
         from modules.employee_privacy import get_own_payroll_summary
-        with patch("modules.identity_brain._lookup_employee", new=AsyncMock(return_value=None)):
+        with patch("modules.fazle_identity_brain._lookup_employee", new=AsyncMock(return_value=None)):
             result = await get_own_payroll_summary("01700000000")
         assert result["ok"] is False
         assert "unverified" in result["error"]
@@ -82,7 +82,7 @@ class TestH2H3PayrollPrivacyAndApplicantIsolation:
     async def test_own_payroll_summary_returns_only_own_fields_no_raw_dump(self):
         from modules.employee_privacy import get_own_payroll_summary
         emp = {"employee_id": 42, "employee_name": "X", "designation": "Guard", "basic_salary": 15000, "status": "active"}
-        with patch("modules.identity_brain._lookup_employee", new=AsyncMock(return_value=emp)):
+        with patch("modules.fazle_identity_brain._lookup_employee", new=AsyncMock(return_value=emp)):
             result = await get_own_payroll_summary("01700000000")
         assert result["ok"] is True
         assert result["employee_id"] == 42
@@ -294,7 +294,7 @@ class TestCashCards:
 
 class TestH10CommandRegistryConsistency:
     def test_cash_commands_registered_in_classify_command(self):
-        from modules.admin_commands import _classify_command
+        from modules.fazle_admin_commands import _classify_command
         assert _classify_command("CASH APPROVE abcdef123456") == "cash_approve"
         assert _classify_command("CASH REJECT abcdef123456 bad amount") == "cash_reject"
         assert _classify_command("CASH REVERSE abcdef123456 owner confirmed mistake") == "cash_reverse"
@@ -308,12 +308,12 @@ class TestH10CommandRegistryConsistency:
     def test_help_text_mentions_every_new_cash_command(self):
         """Parser-vs-HELP consistency: every genuinely-implemented cash
         command token appears in _HELP_TEXT."""
-        from modules.admin_commands import _HELP_TEXT
+        from modules.fazle_admin_commands import _HELP_TEXT
         for token in ("CASH APPROVE", "CASH REJECT", "CASH REVERSE"):
             assert token in _HELP_TEXT
 
     def test_is_admin_command_recognizes_cash_commands(self):
-        from modules.admin_commands import is_admin_command
+        from modules.fazle_admin_commands import is_admin_command
         assert is_admin_command("CASH APPROVE abcdef123456") is True
         assert is_admin_command("CASH REJECT abcdef123456 reason") is True
         assert is_admin_command("CASH REVERSE abcdef123456 reason") is True

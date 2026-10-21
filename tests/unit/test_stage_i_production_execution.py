@@ -221,6 +221,6 @@ class TestProposalLifecycle:
 
 class TestHelpConsistencyStageI:
     def test_cash_details_registered_if_help_mentions_it(self):
-        from modules.admin_commands import _HELP_TEXT, _classify_command
+        from modules.fazle_admin_commands import _HELP_TEXT, _classify_command
         if "CASH DETAILS" in _HELP_TEXT:
             assert _classify_command("CASH DETAILS abcdef123456") is not None

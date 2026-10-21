@@ -8,7 +8,7 @@ pytestmark = pytest.mark.unit
 
 async def _make_contact(conn, phone="8801670535255"):
     return await conn.fetchval(
-        "INSERT INTO wbom_contacts (whatsapp_number) VALUES ($1) RETURNING contact_id", phone
+        "INSERT INTO fazle_contacts (whatsapp_number) VALUES ($1) RETURNING contact_id", phone
     )
 
 

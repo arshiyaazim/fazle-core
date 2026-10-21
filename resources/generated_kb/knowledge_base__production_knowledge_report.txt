@@ -1,8 +1,12 @@
 Source: knowledge_base/production_knowledge_report.md
-SHA256: 35829e04d798fdf9a6a428fa08f45fc646d17342233c32f272d6cf8a94b3422b
-Version: 35829e04d798
+SHA256: 49991d66eeb81d3e0e8621e0c9877368e6fb76816666941bd174c08860265739
+Version: 49991d66eeb8
 
 # PKE-KBE PRODUCTION KNOWLEDGE REPORT
+
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 ## Fazle AI Platform — Al-Aqsa Security & Logistics Services Ltd.
 **Report Date:** 2026-06-19
 **Author:** Enterprise Knowledge Engineering System (Claude AI)
@@ -346,9 +350,9 @@ All operations are idempotent — safe to re-trigger if message sent twice.
 
 **Resolution Source Order:**
 1. seed_rule (`fazle_contact_roles` table — most authoritative)
-2. db_employee (check `wbom_employees` table)
+2. db_employee (check `fazle_employees_legacy` table)
 3. escort_roster (check `wbom_escort_programs` — master mobile)
-4. db_contact (`wbom_contacts` table)
+4. db_contact (`fazle_contacts` table)
 5. text_hint (keyword analysis of the message content)
 6. unknown (default fallback)
 
@@ -380,7 +384,7 @@ All operations are idempotent — safe to re-trigger if message sent twice.
 2. `parse_payment_sms()` — extract method, TrxID, amount, mobile, date, sender name
 3. Match employee by phone or name (using rapidfuzz)
 4. INSERT into `wbom_staging_payments` (idempotency key = sha256 of method|trxid|amount|mobile|date)
-5. `auto_finalize()` — promote to `wbom_cash_transactions` if conditions met
+5. `auto_finalize()` — promote to `fazle_cash_transactions_archive` if conditions met
 
 **Auto-approve conditions:**
 - `name_ratio >= 0.92` (rapidfuzz match)
@@ -816,9 +820,9 @@ INBOUND MESSAGE
 │
 ├─ Step 3: Resolve Identity
 │   seed_rule (fazle_contact_roles, priority highest)
-│   → db_employee (wbom_employees)
+│   → db_employee (fazle_employees_legacy)
 │   → escort_roster (wbom_escort_programs master_mobile)
-│   → db_contact (wbom_contacts)
+│   → db_contact (fazle_contacts)
 │   → text_hint (keyword analysis)
 │   → unknown
 │
@@ -874,14 +878,14 @@ INBOUND MESSAGE
 
 | Table | Purpose |
 |---|---|
-| `wbom_employees` | Employee master records (employee_id, employee_name, designation, basic_salary, status) |
+| `fazle_employees_legacy` | Employee master records (employee_id, employee_name, designation, basic_salary, status) |
 | `wbom_escort_programs` | Escort assignments (program_date, escort_employee_id, master_mobile, status, day_count, conveyance) |
-| `wbom_cash_transactions` | Finalized payment records (transaction_type in/out, amount, method, status='Completed') |
+| `fazle_cash_transactions_archive` | Finalized payment records (transaction_type in/out, amount, method, status='Completed') |
 | `wbom_staging_payments` | Pending payment SMS (before auto-approve or manual finalize) |
 | `wbom_payroll_runs` | Payroll computation results per employee per period |
 | `wbom_salary_records` | Historical salary records |
-| `wbom_contacts` | Contact directory |
-| `wbom_whatsapp_messages` | Persisted WhatsApp DMs |
+| `fazle_contacts` | Contact directory |
+| `fazle_whatsapp_messages` | Persisted WhatsApp DMs |
 
 ## I-02 · Platform Tables
 
@@ -942,7 +946,7 @@ Per Management Decision C-09:
 1. Admin sends payment info to accountant
 2. Accountant confirms receipt
 3. Receipt confirmation = payment complete
-4. Ledger (`wbom_cash_transactions`) updates immediately
+4. Ledger (`fazle_cash_transactions_archive`) updates immediately
 
 ## J-04 · Advance Rules
 

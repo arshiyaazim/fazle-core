@@ -1,6 +1,6 @@
 """Media placeholder hardening (2026-08-29 maintenance).
 
-Verified defect: modules.bridge_poller._fetch_new_messages fills a synthetic
+Verified defect: modules.fazle_bridge_poller._fetch_new_messages fills a synthetic
 `text = "[media:<type>]"` for an inbound media message with no caption/content
 and no bridge-side `processed_text`. That placeholder is truthy, so downstream
 it was routed to the intent classifier / RAG / semantic gate / Hermes AS IF the
@@ -91,7 +91,7 @@ def _mk(tmp_path, rows):
 
 
 def test_media_without_caption_becomes_placeholder(tmp_path):
-    from modules.bridge_poller import _fetch_new_messages
+    from modules.fazle_bridge_poller import _fetch_new_messages
     mdb, wdb = _mk(tmp_path, [{
         "id": "V1", "chat_jid": "8801700000001@s.whatsapp.net",
         "sender": "8801700000001@s.whatsapp.net", "content": None,
@@ -105,7 +105,7 @@ def test_media_without_caption_becomes_placeholder(tmp_path):
 
 
 def test_media_with_real_caption_keeps_caption(tmp_path):
-    from modules.bridge_poller import _fetch_new_messages
+    from modules.fazle_bridge_poller import _fetch_new_messages
     mdb, wdb = _mk(tmp_path, [{
         "id": "V2", "chat_jid": "8801700000002@s.whatsapp.net",
         "sender": "8801700000002@s.whatsapp.net", "content": "এই রসিদটা দেখেন",
@@ -122,7 +122,7 @@ def test_media_with_real_caption_keeps_caption(tmp_path):
 async def _call_pbi(monkeypatch, text, *, is_extracted_media=False):
     """Call process_bridge_inbound with the classifier + recruitment eligibility
     spied. Returns (classify_calls, elig_calls)."""
-    import modules.bridge_poller as bp
+    import modules.fazle_bridge_poller as bp
     classify_spy = MagicMock(return_value="unknown")
     elig_spy = AsyncMock(return_value={"eligible": False})
     monkeypatch.setattr(bp, "classify_intent", classify_spy)
@@ -169,7 +169,7 @@ async def test_extracted_media_text_routes(monkeypatch):
 #    same convention as test_group_ingestion_stage_e3) ─────────────────────
 
 def _poll_bridge_src():
-    import modules.bridge_poller as bp
+    import modules.fazle_bridge_poller as bp
     return inspect.getsource(bp._poll_bridge)
 
 

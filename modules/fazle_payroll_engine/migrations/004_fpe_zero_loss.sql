@@ -9,9 +9,9 @@
 --   * Add fpe_gap_scan_runs to record bridge-vs-archive ID gap fills.
 --
 -- INVARIANTS PRESERVED:
---   - fpe_cash_transactions is NEVER altered. The ledger remains strict and
+--   - fazle_cash_transactions is NEVER altered. The ledger remains strict and
 --     contains only verified accounting entries.
---   - fpe_employee_ledger is untouched.
+--   - fazle_employee_ledger is untouched.
 --   - fpe_accounting_audit_logs is untouched.
 --   - All statements are idempotent (IF NOT EXISTS / safe ALTER).
 -- ============================================================
@@ -47,11 +47,11 @@ ALTER TABLE fpe_unmatched_messages
 
 ALTER TABLE fpe_unmatched_messages
     ADD COLUMN IF NOT EXISTS resolved_employee_id    BIGINT
-        REFERENCES fpe_employees(id);
+        REFERENCES fazle_employees(id);
 
 ALTER TABLE fpe_unmatched_messages
     ADD COLUMN IF NOT EXISTS promoted_txn_id         BIGINT
-        REFERENCES fpe_cash_transactions(id);
+        REFERENCES fazle_cash_transactions(id);
 
 ALTER TABLE fpe_unmatched_messages
     ADD COLUMN IF NOT EXISTS reviewer                TEXT;
@@ -59,10 +59,10 @@ ALTER TABLE fpe_unmatched_messages
 ALTER TABLE fpe_unmatched_messages
     ADD COLUMN IF NOT EXISTS review_note             TEXT;
 
-CREATE INDEX IF NOT EXISTS idx_fpe_unmatched_review_status
+CREATE INDEX IF NOT EXISTS idx_fazle_unmatched_review_status
     ON fpe_unmatched_messages(review_status);
 
-CREATE INDEX IF NOT EXISTS idx_fpe_unmatched_pending_amount
+CREATE INDEX IF NOT EXISTS idx_fazle_unmatched_pending_amount
     ON fpe_unmatched_messages(review_status, detected_amount)
     WHERE review_status = 'pending';
 
@@ -71,7 +71,7 @@ CREATE INDEX IF NOT EXISTS idx_fpe_unmatched_pending_amount
 -- The DLQ view exposes messages that the worker has given up on
 -- (status='failed' AND attempts >= MAX_ATTEMPTS).
 
-CREATE INDEX IF NOT EXISTS idx_fpe_mps_status_attempts
+CREATE INDEX IF NOT EXISTS idx_fazle_mps_status_attempts
     ON fpe_message_processing_state(status, attempts);
 
 
@@ -90,5 +90,5 @@ CREATE TABLE IF NOT EXISTS fpe_gap_scan_runs (
     finished_at     TIMESTAMPTZ
 );
 
-CREATE INDEX IF NOT EXISTS idx_fpe_gapscan_source_started
+CREATE INDEX IF NOT EXISTS idx_fazle_gapscan_source_started
     ON fpe_gap_scan_runs(source, started_at DESC);

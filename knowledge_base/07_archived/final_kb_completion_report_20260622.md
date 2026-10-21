@@ -7,6 +7,10 @@ runtime_index: false
 ---
 
 # Final KB Completion Report — Wave-2B
+
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **Date:** 2026-06-22
 **Program:** KSP Wave-2B + Final KB Completion (FINAL MASTER PROMPT)
 **Authority:** Management-approved execution plan; production read-only access

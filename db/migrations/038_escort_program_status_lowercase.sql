@@ -20,7 +20,7 @@
 -- (production distinct values): confirmed=175, Running=75, Completed=64,
 -- expired=27, Assigned=1 (342 total). 'Assigned' maps to 'confirmed', not
 -- 'draft' -- rows in this state already had an escort assigned via the
--- ESCORTCONFIRM command (modules/admin_commands/__init__.py::_cmd_escort_
+-- ESCORTCONFIRM command (modules/fazle_admin_commands/__init__.py::_cmd_escort_
 -- confirm, which set status='Assigned' precisely at the assignment step;
 -- that write-site is updated by this same change-set to write 'confirmed'
 -- going forward).
@@ -40,10 +40,10 @@ ALTER TABLE wbom_escort_programs ALTER COLUMN status SET DEFAULT 'draft';
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'wbom_escort_programs_status_check'
+        SELECT 1 FROM pg_constraint WHERE conname = 'fazle_escort_programs_status_check'
     ) THEN
         ALTER TABLE wbom_escort_programs
-            ADD CONSTRAINT wbom_escort_programs_status_check
+            ADD CONSTRAINT fazle_escort_programs_status_check
             CHECK (status IN ('draft', 'confirmed', 'running', 'completed', 'cancelled', 'expired'));
     END IF;
 END $$;

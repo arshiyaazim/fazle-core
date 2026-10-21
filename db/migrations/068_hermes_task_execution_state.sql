@@ -19,7 +19,7 @@
 --                               deploys / migrations / restarts / production
 --                               writes / opencode_dispatch calls
 --
--- Shape deliberately mirrors modules/draft_approval/'s existing, proven
+-- Shape deliberately mirrors modules/fazle_draft_approval/'s existing, proven
 -- fazle_payment_drafts + fazle_draft_audit_log pattern (pending/approved/
 -- rejected states, before/after JSONB audit rows, server-side-only actor
 -- resolution) rather than inventing a new one.

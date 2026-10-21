@@ -32,7 +32,7 @@ async def find_by_mobile(mobile: str) -> dict[str, Any] | None:
         """
         SELECT employee_id, employee_name, designation, basic_salary, status,
                employee_mobile, joining_date
-        FROM wbom_employees
+        FROM fazle_employees_legacy
         WHERE employee_mobile = ANY($1)
           AND status NOT IN ('deleted', 'terminated')
         LIMIT 1
@@ -52,8 +52,8 @@ async def find_by_mobile(mobile: str) -> dict[str, Any] | None:
                COALESCE(w.status, CASE WHEN e.status = 'active' THEN 'Active' ELSE 'Inactive' END) AS status,
                COALESCE(w.employee_mobile, e.primary_phone, e.employee_id_phone) AS employee_mobile,
                w.joining_date
-        FROM fpe_employees e
-        LEFT JOIN wbom_employees w ON w.employee_id = e.wbom_employee_id
+        FROM fazle_employees e
+        LEFT JOIN fazle_employees_legacy w ON w.employee_id = e.wbom_employee_id
         WHERE e.status = 'active'
           AND (e.primary_phone = ANY($1) OR e.employee_id_phone = ANY($1))
         ORDER BY e.id DESC
@@ -68,7 +68,7 @@ async def find_by_name(name: str) -> dict[str, Any] | None:
         """
         SELECT employee_id, employee_name, designation, basic_salary, status,
                employee_mobile, joining_date
-        FROM wbom_employees
+        FROM fazle_employees_legacy
         WHERE lower(employee_name) LIKE lower($1)
           AND status NOT IN ('deleted', 'terminated')
         ORDER BY employee_id DESC
@@ -88,8 +88,8 @@ async def find_by_name(name: str) -> dict[str, Any] | None:
                COALESCE(w.status, CASE WHEN e.status = 'active' THEN 'Active' ELSE 'Inactive' END) AS status,
                COALESCE(w.employee_mobile, e.primary_phone, e.employee_id_phone) AS employee_mobile,
                w.joining_date
-        FROM fpe_employees e
-        LEFT JOIN wbom_employees w ON w.employee_id = e.wbom_employee_id
+        FROM fazle_employees e
+        LEFT JOIN fazle_employees_legacy w ON w.employee_id = e.wbom_employee_id
         WHERE e.status = 'active'
           AND lower(e.full_name) LIKE lower($1)
         ORDER BY e.id DESC
@@ -104,7 +104,7 @@ async def get_payment_history(employee_id: int) -> list[dict[str, Any]]:
         """
         SELECT amount, payout_method AS payment_method, txn_date AS transaction_date,
                transaction_status AS status, txn_category AS transaction_type
-        FROM fpe_cash_transactions
+        FROM fazle_cash_transactions
         WHERE employee_id = $1
           AND transaction_status = 'final'
           AND deleted_at IS NULL
@@ -119,7 +119,7 @@ async def get_total_paid(employee_id: int) -> float:
     val = await fetch_val(
         """
         SELECT COALESCE(SUM(amount), 0)
-        FROM fpe_cash_transactions
+        FROM fazle_cash_transactions
         WHERE employee_id = $1
           AND transaction_status = 'final'
           AND deleted_at IS NULL

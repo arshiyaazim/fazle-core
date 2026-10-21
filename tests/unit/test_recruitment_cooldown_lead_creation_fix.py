@@ -4,7 +4,7 @@
 well inside REPLY_COOLDOWN=60s. Live-confirmed on production: zero reply,
 zero recruitment lead. Two independent bugs combined to cause this:
 
-1. modules.bridge_poller.process_bridge_inbound() ran recruitment_eligibility()
+1. modules.fazle_bridge_poller.process_bridge_inbound() ran recruitment_eligibility()
    (and therefore any lead/session creation) AFTER its cooldown early-return —
    so a cooldown-suppressed message never even got a chance to open a
    recruitment session, not just never got a reply sent.
@@ -76,7 +76,7 @@ async def test_cooldown_suppressed_reply_still_opens_recruitment_funnel():
     is an explicit, autosend-eligible recruitment trigger with no existing
     session, process_bridge_inbound() must still open the funnel via
     intake_message() — it may suppress the SEND, never the bookkeeping."""
-    from modules.bridge_poller import process_bridge_inbound
+    from modules.fazle_bridge_poller import process_bridge_inbound
 
     decision = {
         "eligible": True,
@@ -87,11 +87,11 @@ async def test_cooldown_suppressed_reply_still_opens_recruitment_funnel():
     intake_mock = AsyncMock(return_value={"reply": "...", "action": "created", "session_id": 202})
     process_message_mock = AsyncMock(return_value=("should not be reached", None))
 
-    with patch("modules.bridge_poller._can_reply", new=AsyncMock(return_value=False)), \
-         patch("modules.bridge_poller.recruitment_eligibility", new=AsyncMock(return_value=decision)), \
-         patch("modules.bridge_poller.classify_intent", return_value="unknown"), \
+    with patch("modules.fazle_bridge_poller._can_reply", new=AsyncMock(return_value=False)), \
+         patch("modules.fazle_bridge_poller.recruitment_eligibility", new=AsyncMock(return_value=decision)), \
+         patch("modules.fazle_bridge_poller.classify_intent", return_value="unknown"), \
          patch("modules.recruitment_flow.intake_message", new=intake_mock), \
-         patch("modules.bridge_poller.process_message", new=process_message_mock):
+         patch("modules.fazle_bridge_poller.process_message", new=process_message_mock):
         await process_bridge_inbound(
             "bridge3", "8801966011609", "আমি কাজ করতে চাই",
             id_role="unknown", id_conf=0, id_name="", message_id="msg-1609",
@@ -110,7 +110,7 @@ async def test_cooldown_suppressed_reply_does_not_open_funnel_when_session_alrea
     best-effort intake_message(trigger_text="চাকরি") FORCE-OPEN call must
     not fire again (idempotency — repeated messages must not create
     duplicate leads/sessions via that specific force-open mechanism)."""
-    from modules.bridge_poller import process_bridge_inbound
+    from modules.fazle_bridge_poller import process_bridge_inbound
 
     decision = {
         "eligible": True,
@@ -124,11 +124,11 @@ async def test_cooldown_suppressed_reply_does_not_open_funnel_when_session_alrea
     # mocked here too so this test still only exercises the gate itself.
     process_message_mock = AsyncMock(return_value=("...", None))
 
-    with patch("modules.bridge_poller._can_reply", new=AsyncMock(return_value=False)), \
-         patch("modules.bridge_poller.recruitment_eligibility", new=AsyncMock(return_value=decision)), \
-         patch("modules.bridge_poller.classify_intent", return_value="unknown"), \
+    with patch("modules.fazle_bridge_poller._can_reply", new=AsyncMock(return_value=False)), \
+         patch("modules.fazle_bridge_poller.recruitment_eligibility", new=AsyncMock(return_value=decision)), \
+         patch("modules.fazle_bridge_poller.classify_intent", return_value="unknown"), \
          patch("modules.recruitment_flow.intake_message", new=intake_mock), \
-         patch("modules.bridge_poller.process_message", new=process_message_mock):
+         patch("modules.fazle_bridge_poller.process_message", new=process_message_mock):
         await process_bridge_inbound(
             "bridge3", "8801966011609", "২৫",
             id_role="unknown", id_conf=0, id_name="", message_id="msg-1609-2",
@@ -151,7 +151,7 @@ async def test_cooldown_blocked_active_session_still_gets_full_processing():
     a direct expected answer, not spam — full processing (which is what
     actually saves the field, advances the step, and sends the reply)
     must still run, not be skipped."""
-    from modules.bridge_poller import process_bridge_inbound
+    from modules.fazle_bridge_poller import process_bridge_inbound
 
     decision = {
         "eligible": True,
@@ -161,10 +161,10 @@ async def test_cooldown_blocked_active_session_still_gets_full_processing():
     }
     process_message_mock = AsyncMock(return_value=("ধন্যবাদ। আপনার বয়স নোট করা হয়েছে।", None))
 
-    with patch("modules.bridge_poller._can_reply", new=AsyncMock(return_value=False)), \
-         patch("modules.bridge_poller.recruitment_eligibility", new=AsyncMock(return_value=decision)), \
-         patch("modules.bridge_poller.classify_intent", return_value="unknown"), \
-         patch("modules.bridge_poller.process_message", new=process_message_mock):
+    with patch("modules.fazle_bridge_poller._can_reply", new=AsyncMock(return_value=False)), \
+         patch("modules.fazle_bridge_poller.recruitment_eligibility", new=AsyncMock(return_value=decision)), \
+         patch("modules.fazle_bridge_poller.classify_intent", return_value="unknown"), \
+         patch("modules.fazle_bridge_poller.process_message", new=process_message_mock):
         await process_bridge_inbound(
             "bridge3", "8801966011609", "৩২",
             id_role="unknown", id_conf=0, id_name="", message_id="msg-age-1",
@@ -178,7 +178,7 @@ async def test_cooldown_blocked_active_session_still_gets_full_processing():
 async def test_cooldown_blocked_no_session_still_returns_early_unchanged():
     """The exact prior behavior (no active session yet) must be completely
     unaffected by this fix — process_message() must still be skipped."""
-    from modules.bridge_poller import process_bridge_inbound
+    from modules.fazle_bridge_poller import process_bridge_inbound
 
     decision = {
         "eligible": True,
@@ -189,11 +189,11 @@ async def test_cooldown_blocked_no_session_still_returns_early_unchanged():
     intake_mock = AsyncMock(return_value={"reply": "...", "action": "created", "session_id": 202})
     process_message_mock = AsyncMock(return_value=("should not be reached", None))
 
-    with patch("modules.bridge_poller._can_reply", new=AsyncMock(return_value=False)), \
-         patch("modules.bridge_poller.recruitment_eligibility", new=AsyncMock(return_value=decision)), \
-         patch("modules.bridge_poller.classify_intent", return_value="unknown"), \
+    with patch("modules.fazle_bridge_poller._can_reply", new=AsyncMock(return_value=False)), \
+         patch("modules.fazle_bridge_poller.recruitment_eligibility", new=AsyncMock(return_value=decision)), \
+         patch("modules.fazle_bridge_poller.classify_intent", return_value="unknown"), \
          patch("modules.recruitment_flow.intake_message", new=intake_mock), \
-         patch("modules.bridge_poller.process_message", new=process_message_mock):
+         patch("modules.fazle_bridge_poller.process_message", new=process_message_mock):
         await process_bridge_inbound(
             "bridge3", "8801700000099", "আমি কাজ করতে চাই",
             id_role="unknown", id_conf=0, id_name="", message_id="msg-no-session",
@@ -205,7 +205,7 @@ async def test_cooldown_blocked_no_session_still_returns_early_unchanged():
 async def test_no_cooldown_active_session_unaffected():
     """When cooldown is NOT active at all, behavior (full processing) is
     completely unchanged by this fix regardless of active_session."""
-    from modules.bridge_poller import process_bridge_inbound
+    from modules.fazle_bridge_poller import process_bridge_inbound
 
     decision = {
         "eligible": True,
@@ -215,10 +215,10 @@ async def test_no_cooldown_active_session_unaffected():
     }
     process_message_mock = AsyncMock(return_value=("...", None))
 
-    with patch("modules.bridge_poller._can_reply", new=AsyncMock(return_value=True)), \
-         patch("modules.bridge_poller.recruitment_eligibility", new=AsyncMock(return_value=decision)), \
-         patch("modules.bridge_poller.classify_intent", return_value="unknown"), \
-         patch("modules.bridge_poller.process_message", new=process_message_mock):
+    with patch("modules.fazle_bridge_poller._can_reply", new=AsyncMock(return_value=True)), \
+         patch("modules.fazle_bridge_poller.recruitment_eligibility", new=AsyncMock(return_value=decision)), \
+         patch("modules.fazle_bridge_poller.classify_intent", return_value="unknown"), \
+         patch("modules.fazle_bridge_poller.process_message", new=process_message_mock):
         await process_bridge_inbound(
             "bridge3", "8801966011609", "৩২",
             id_role="unknown", id_conf=0, id_name="", message_id="msg-age-2",
@@ -230,14 +230,14 @@ async def test_no_cooldown_active_session_unaffected():
 async def test_cooldown_suppressed_reply_does_not_open_funnel_when_not_eligible():
     """An ordinary, non-recruitment message suppressed by cooldown must not
     trigger any recruitment side effect at all."""
-    from modules.bridge_poller import process_bridge_inbound
+    from modules.fazle_bridge_poller import process_bridge_inbound
 
     decision = {"eligible": False, "autosend": False, "reason": "no_recruitment_context", "active_session": None}
     intake_mock = AsyncMock()
 
-    with patch("modules.bridge_poller._can_reply", new=AsyncMock(return_value=False)), \
-         patch("modules.bridge_poller.recruitment_eligibility", new=AsyncMock(return_value=decision)), \
-         patch("modules.bridge_poller.classify_intent", return_value="greeting"), \
+    with patch("modules.fazle_bridge_poller._can_reply", new=AsyncMock(return_value=False)), \
+         patch("modules.fazle_bridge_poller.recruitment_eligibility", new=AsyncMock(return_value=decision)), \
+         patch("modules.fazle_bridge_poller.classify_intent", return_value="greeting"), \
          patch("modules.recruitment_flow.intake_message", new=intake_mock):
         await process_bridge_inbound(
             "bridge3", "8801700000002", "Hello!",

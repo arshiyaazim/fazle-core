@@ -24,8 +24,8 @@ async def _ensure_feature_flags_table(test_db_pool):
 
 async def test_t020_safeops_killswitch_does_not_block_legacy_approve_flow(test_db_pool):
     import app.database as db_module
-    from modules import admin_commands
-    from modules.admin_commands import process_admin_command
+    from modules import fazle_admin_commands as admin_commands
+    from modules.fazle_admin_commands import process_admin_command
     from modules.preflight_guard import is_feature_active, kill_switch_feature
 
     db_module._pool = test_db_pool
@@ -83,8 +83,8 @@ async def test_t020_safeops_killswitch_does_not_block_legacy_approve_flow(test_d
 
 async def test_t020_safeops_killswitch_does_not_block_legacy_reject_flow(test_db_pool):
     import app.database as db_module
-    from modules import admin_commands
-    from modules.admin_commands import process_admin_command
+    from modules import fazle_admin_commands as admin_commands
+    from modules.fazle_admin_commands import process_admin_command
     from modules.preflight_guard import is_feature_active, kill_switch_feature
 
     db_module._pool = test_db_pool

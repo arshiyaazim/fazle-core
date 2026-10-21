@@ -1,5 +1,9 @@
 # Hermes Message-Context & Reply-Execution Gap Audit — 2026-08-19
 
+
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 Read-only audit + minimal implementation plan. Sister/follow-on to
 `HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md`. No
 production code changed, no service restarted, no message sent. One real
@@ -401,7 +405,7 @@ nice-to-have.
   session.
 - No duplicate role logic — same function, same source.
 - No duplicate intent classifier — `classify_intent` still calls
-  `modules.intent.classify()` directly; its docstring now correctly says
+  `modules.fazle_intent.classify()` directly; its docstring now correctly says
   it's the fallback, not a second implementation of the LLM-first path.
 - No parallel policy engine — `chosen_action`/RBAC/mode-gate are read
   where they already live (`hermes_decision_audit_log`,

@@ -1,6 +1,6 @@
 Source: knowledge_base/02_admin_knowledge/admin_role_management.md
-SHA256: 635dbbf518cba56293ade0a2d3e8448e1459c06a0cf9d9cde2a282ae1ab1a774
-Version: 635dbbf518cb
+SHA256: 38fb86dc8725b9dfc607524a9bb22872e0811d7fb3058f98563a4b256ffd15c1
+Version: 38fb86dc8725
 
 # Admin Role Management
 
@@ -63,7 +63,7 @@ USER REMOVE 01799999999
 USER APIKEY 01711234567
 ```
 
-**Source Module:** `modules/admin_commands`, `modules/rbac`
+**Source Module:** `modules/fazle_admin_commands`, `modules/rbac`
 **PKCA Report:** 12_command_coverage_report.md
 **Management Authority:** Production evidence; documented 2026-06-22
 

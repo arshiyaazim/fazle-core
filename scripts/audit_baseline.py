@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 """Generate Phase 0 baseline inventories for Fazle Core."""
 from __future__ import annotations

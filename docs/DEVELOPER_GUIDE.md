@@ -71,7 +71,7 @@ All pages live in `/home/azim/core/app/static/*.html`, served both via dedicated
 - **Tabs:** Overview, Drafts, Reports, Users, Audit, Backups, Scheduler, RAG, Observability, Chat Lab
 - **APIs:** `GET /admin/overview`, `/admin/drafts`, `/admin/payment-drafts`, `/reports`, `/reports/{name}`, `/admin/users` (GET/POST), `/admin/users/{phone}/apikey`, `/admin/users/{phone}/disable`, `/admin/audit`, `/backup/list`, `/backup/run`, `/scheduler/status`, `/rag/stats`, `/rag/reindex`, `/rag/search`, `/observability/summary`, `/observability/errors`, `/chat/models`, `/chat/message`
 - **Buttons:** Refresh, Logout, Run Report, Add User, Issue Key, Disable User, audit filter, Run Backup Now, Rebuild RAG Index, RAG Search, send/clear chat
-- **Related tables:** `wbom_contacts`, `wbom_whatsapp_messages`, `fazle_draft_replies`, `fazle_payment_drafts`, `fazle_admins`, `fazle_admin_audit`
+- **Related tables:** `fazle_contacts`, `fazle_whatsapp_messages`, `fazle_draft_replies`, `fazle_payment_drafts`, `fazle_admins`, `fazle_admin_audit`
 
 ### drafts.html
 - **URL:** `/drafts`
@@ -112,14 +112,14 @@ All pages live in `/home/azim/core/app/static/*.html`, served both via dedicated
 - **APIs:** full `/api/wa/*` surface — contacts (list/sync/get/patch/delete/block/unblock), messages, send, drafts (approve/reject/edit), settings, broadcast, groups, `/api/wa/stream` (SSE)
 - **Search:** "Search contacts…" → `search` param → `ILIKE` on `sender_number`, `display_name` (`modules/wa_chat_frontend/__init__.py:256-257,290-291`, verified)
 - **Buttons:** Sync contacts, bulk-select + Broadcast, per-draft Approve/Reject/Edit, contact edit/block/delete, group create/delete/send
-- **Related tables:** `fazle_draft_replies`, `fazle_runtime_settings`, `wbom_contacts`, `wbom_whatsapp_messages`
+- **Related tables:** `fazle_draft_replies`, `fazle_runtime_settings`, `fazle_contacts`, `fazle_whatsapp_messages`
 - ⚠️ Same router-mounting caveat as `drafts.html` above (`social_auto_reply` router was also found unmounted and restored 2026-07-09) — this page's control surface depends on that fix taking effect on next restart.
 
 ### payroll.html (~4,800 lines, largest page — sampled by tab)
 - **URL:** `/payroll` plus deep-link SPA routes `/payroll/overview|transactions|search|employees|addemployee|unmatched|review|sync|manual|operator|cash|income|admin`, plus `/payroll/transactions/{employee_id}` (employee-scoped transactions view — "View All Transactions" button in the Employees panel; server just serves the same SPA shell, the ID is read and applied client-side by `payroll.html`'s router)
 - **Auth:** supports both API-key and username/password login (`POST /api/admin/login`); session check returns role flags (`can_edit_delete_transactions`, `is_restricted_office_assistant`, `can_manage_admin`) that gate UI visibility (e.g. Admin tab hidden unless `can_manage_admin`)
-- **Tabs (abbreviated — see the search-fields table below for their search behavior):** Overview (stats + recent txns), Transactions (period/date/method/employee filters, Add Payment), Search (read-only employee lookup), Employees (list + Add Employee form), Unmatched (review queue), Review Queue (pending accounting candidates, bulk promote/reject/dismiss), Sync (FPE sync status/trigger), Manual Entry (manual transaction + reversal), Operator (operator-submitted pending approval), Cash (cash transaction search + "WhatsApp Shorthand Staging" sub-table), Income (income entry form + search), Admin (role-gated — add admin user, salary baseline, activity log; also calls the separate `/api/admin/employees`/`/api/admin/transactions` CRUD surface, which uses `wbom_employees`, distinct from `fpe_employees` used elsewhere on this page)
-- **Related tables:** `fpe_employees`, `fpe_employee_aliases`, `fpe_cash_transactions`, `fpe_income_transactions`, `wbom_staging_payments`, `wbom_employees` (Admin tab CRUD only)
+- **Tabs (abbreviated — see the search-fields table below for their search behavior):** Overview (stats + recent txns), Transactions (period/date/method/employee filters, Add Payment), Search (read-only employee lookup), Employees (list + Add Employee form), Unmatched (review queue), Review Queue (pending accounting candidates, bulk promote/reject/dismiss), Sync (FPE sync status/trigger), Manual Entry (manual transaction + reversal), Operator (operator-submitted pending approval), Cash (cash transaction search + "WhatsApp Shorthand Staging" sub-table), Income (income entry form + search), Admin (role-gated — add admin user, salary baseline, activity log; also calls the separate `/api/admin/employees`/`/api/admin/transactions` CRUD surface, which uses `fazle_employees_legacy`, distinct from `fazle_employees` used elsewhere on this page)
+- **Related tables:** `fazle_employees`, `fpe_employee_aliases`, `fazle_cash_transactions`, `fpe_income_transactions`, `wbom_staging_payments`, `fazle_employees_legacy` (Admin tab CRUD only)
 
 ### ux-preview.html / ux-preview-v2.html
 - **Not routed** through `app/main.py` at all — reachable only via the generic static mount. Zero `fetch()` calls, no auth, no DB tables — static before/after design mockups, not a live tool.
@@ -135,7 +135,7 @@ All pages live in `/home/azim/core/app/static/*.html`, served both via dedicated
 | escort-roster.html | "Search vessel, escort, mobile…" | `search` | `mother_vessel`, `lighter_vessel`, `escort_name`, `master_mobile`, `escort_mobile`, `destination` (`ILIKE`) | Verified |
 | wa_chat.html | "Search contacts…" | `search` | `sender_number`, `display_name` (`ILIKE`) | Verified |
 | payroll.html (Employees) | "name, alias, phone, or employee ID…" | `q` | `full_name`, `employee_id_phone`, `primary_phone`, `employee_code`, + `fpe_employee_aliases.alias_value` | Verified |
-| payroll.html (Search/Overview/Manual/Operator) | smart-search boxes | `q` (`/employees/suggest`) | fuzzy match over `fpe_employees` + aliases, pg_trgm scoring | Verified |
+| payroll.html (Search/Overview/Manual/Operator) | smart-search boxes | `q` (`/employees/suggest`) | fuzzy match over `fazle_employees` + aliases, pg_trgm scoring | Verified |
 | payroll.html (Cash) | "name / phone / ref…" | `q` | `employee_name_raw`, `payout_phone`, `txn_ref`, `full_name` (joined), `source_message_text` | Verified |
 | payroll.html (Cash) | Sender Phone | `sender_phone` | `payout_phone` (`LIKE`) | Verified |
 | payroll.html (Cash, staging) | "name / phone…" | `q` | `extracted_name`, `extracted_mobile`, `employee_name` (joined) | Verified |
@@ -155,8 +155,8 @@ All pages live in `/home/azim/core/app/static/*.html`, served both via dedicated
 **Draft vs. transaction.** A draft (`fazle_payment_drafts`, status starts `pending`) is created first by `payment_workflow.create_escort_payment_draft()` or `create_advance_request_draft()`. The transition draft → canonical transaction happens **only** when an admin's `PAID`/`ADVANCE`/`APPROVED` command reaches `create_transaction()`. A separate table, `fazle_draft_replies` (non-financial AI-drafted replies), has its own `pending → approved → sent` lifecycle via `APPROVE`/`REJECT`/`EDIT` and never touches money.
 
 **Ledger tables:**
-- `fpe_cash_transactions` — immutable, INSERT-only, one row per payment, idempotent via `txn_ref` (sha256), soft-delete columns, corrections via `reverse_transaction()` (counter-rows, original never mutated).
-- `fpe_employee_ledger` — running per-employee-per-month totals, updated exclusively by `_upsert_ledger()`, called only when a transaction is `final`.
+- `fazle_cash_transactions` — immutable, INSERT-only, one row per payment, idempotent via `txn_ref` (sha256), soft-delete columns, corrections via `reverse_transaction()` (counter-rows, original never mutated).
+- `fazle_employee_ledger` — running per-employee-per-month totals, updated exclusively by `_upsert_ledger()`, called only when a transaction is `final`.
 - `fpe_income_transactions` — deliberately separate from the cash ledger, **no status/state-machine column at all** — a flat immutable INSERT-only table.
 
 **No general ledger / double-entry accounting exists.** `BUSINESS-CONSTITUTION.md` Article I declares `create_transaction()` the one canonical function; Article I §1.2 prohibits direct writes outside it. This confirms a single canonical cash-transaction writer, not a chart-of-accounts/debit-credit model. Zero hits repo-wide for double-entry/chart-of-accounts/trial-balance/bank-reconciliation terminology.
@@ -168,25 +168,25 @@ All pages live in `/home/azim/core/app/static/*.html`, served both via dedicated
 ## F — Employee Creation and Linkage
 
 **Creation paths:**
-1. **Admin frontend** — `POST /api/admin/employees` writes **`wbom_employees`** first, then non-fatally pre-seeds an `fpe_employees` link via `match_or_create_employee()`.
-2. **Auto-creation via payroll parsing** — `fazle_payroll_engine.employee.match_or_create_employee()` is FPE's own canonical matcher: exact phone → alias phone → cross-lookup against `wbom_employees` → exact name → fuzzy name (rapidfuzz, threshold 96.0) → auto-create, guarded by an advisory lock. Refuses to auto-create a "phantom" employee if there's no phone evidence and the name match is ambiguous.
-3. **Escort confirmation** — two inconsistent paths: `modules.escort`'s own resolver creates/links both `wbom_employees` and `fpe_employees`; but `admin_commands._cmd_escort_confirm()` (the `ESCORTCONFIRM` command) does a direct `INSERT INTO wbom_employees` with **no** `fpe_employees` linking at all.
+1. **Admin frontend** — `POST /api/admin/employees` writes **`fazle_employees_legacy`** first, then non-fatally pre-seeds an `fazle_employees` link via `match_or_create_employee()`.
+2. **Auto-creation via payroll parsing** — `fazle_payroll_engine.employee.match_or_create_employee()` is FPE's own canonical matcher: exact phone → alias phone → cross-lookup against `fazle_employees_legacy` → exact name → fuzzy name (rapidfuzz, threshold 96.0) → auto-create, guarded by an advisory lock. Refuses to auto-create a "phantom" employee if there's no phone evidence and the name match is ambiguous.
+3. **Escort confirmation** — two inconsistent paths: `modules.escort`'s own resolver creates/links both `fazle_employees_legacy` and `fazle_employees`; but `admin_commands._cmd_escort_confirm()` (the `ESCORTCONFIRM` command) does a direct `INSERT INTO fazle_employees_legacy` with **no** `fazle_employees` linking at all.
 4. **Frontend "Add Employee" form** — same as (1).
 
-**Canonical-table claim vs. actual code.** `database_rules.md` states `fpe_employees` is now the single canonical table with all creation paths linking to it. **This is only partially true**: the FPE-native matcher genuinely treats it as canonical, but the admin-facing creation path and the `ESCORTCONFIRM` command both still write `wbom_employees` as primary, with `fpe_employees` linking either non-fatal-best-effort or entirely absent. **Not verified** whether this is intentional (KB describing an *intended* end state) or documentation/code drift.
+**Canonical-table claim vs. actual code.** `database_rules.md` states `fazle_employees` is now the single canonical table with all creation paths linking to it. **This is only partially true**: the FPE-native matcher genuinely treats it as canonical, but the admin-facing creation path and the `ESCORTCONFIRM` command both still write `fazle_employees_legacy` as primary, with `fazle_employees` linking either non-fatal-best-effort or entirely absent. **Not verified** whether this is intentional (KB describing an *intended* end state) or documentation/code drift.
 
 **Phone normalization — a documented 3-way situation, not accidental sprawl.** `PHONE_NORMALIZER_CONVENTION.md` deliberately defines: `modules.phone_normalizer` (canonical 13-digit `8801XXXXXXXXX`), `modules.number_identity` (3-variant helper), and `fazle_payroll_engine.normalizer.normalize_bd_phone()` (an explicitly-documented 11-digit `01XXXXXXXXX` FPE-only exception — which also confusingly self-declares itself "the single source of truth," a naming collision with `phone_normalizer`'s own claim). One genuine inversion exists: `shared/phone.py` imports *upward* from `modules.fazle_payroll_engine.normalizer` while also claiming to be canonical.
 
 **Main inter-linking keys (verified):**
-- `fpe_employees.wbom_employee_id` → `wbom_employees.employee_id` (nullable soft-link)
-- `fpe_employees.primary_phone` / `employee_id_phone` (11-digit)
-- `wbom_employees.employee_mobile` (13-digit), with `bkash_number`/`nagad_number` fallback anchors
+- `fazle_employees.wbom_employee_id` → `fazle_employees_legacy.employee_id` (nullable soft-link)
+- `fazle_employees.primary_phone` / `employee_id_phone` (11-digit)
+- `fazle_employees_legacy.employee_mobile` (13-digit), with `bkash_number`/`nagad_number` fallback anchors
 - `fpe_employee_aliases (employee_id, alias_type, alias_value)` — multi-phone/multi-name aliases
-- `fpe_cash_transactions.employee_id` → `fpe_employees.id` (never `wbom_employees.employee_id` directly)
-- `wbom_escort_programs.escort_employee_id` / `escort_roster_entries.escort_employee_id` → `wbom_employees.employee_id` (HR-domain anchor, not FPE)
-- `fazle_payment_drafts.employee_id` → resolved to an `fpe_employees.id` at transaction-creation time
+- `fazle_cash_transactions.employee_id` → `fazle_employees.id` (never `fazle_employees_legacy.employee_id` directly)
+- `wbom_escort_programs.escort_employee_id` / `escort_roster_entries.escort_employee_id` → `fazle_employees_legacy.employee_id` (HR-domain anchor, not FPE)
+- `fazle_payment_drafts.employee_id` → resolved to an `fazle_employees.id` at transaction-creation time
 
-**Known risk.** `wbom_employees` is referenced in 29 Python files, `fpe_employees` in 14 — both live simultaneously. This is an already-documented risk (see `SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md` Report 8, Risk #8), not a new finding.
+**Known risk.** `fazle_employees_legacy` is referenced in 29 Python files, `fazle_employees` in 14 — both live simultaneously. This is an already-documented risk (see `SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md` Report 8, Risk #8), not a new finding.
 
 ---
 
@@ -240,7 +240,7 @@ All pages live in `/home/azim/core/app/static/*.html`, served both via dedicated
 ## J — Known Strengths / Weaknesses / Roadmap
 
 **Strengths:**
-- The payroll ledger (`fpe_cash_transactions`/`fpe_employee_ledger`) is genuinely production-grade: immutable, idempotent (`txn_ref` sha256 + DB `UNIQUE` constraint), audited, with a documented single-canonical-writer rule (`BUSINESS-CONSTITUTION.md`).
+- The payroll ledger (`fazle_cash_transactions`/`fazle_employee_ledger`) is genuinely production-grade: immutable, idempotent (`txn_ref` sha256 + DB `UNIQUE` constraint), audited, with a documented single-canonical-writer rule (`BUSINESS-CONSTITUTION.md`).
 - RBAC is real and enforced consistently across ~12 route modules, not decorative.
 - The outbound message queue has genuine production-grade engineering — durable, idempotent, DLQ, circuit-breaker with admin alerting.
 - Identity resolution (`identity_brain`) and message routing (`message_router`) are carefully layered, single-choke-point designs that don't duplicate logic elsewhere.
@@ -250,7 +250,7 @@ All pages live in `/home/azim/core/app/static/*.html`, served both via dedicated
 **Weaknesses (see `SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md` for full evidence on all of these):**
 - No CI/build gate between a code edit and it running in production — the service runs directly off the working tree.
 - Schema governance is fragmented across 3+ migration mechanisms with real cross-directory collisions; 27 production tables had zero schema source of truth until 2026-07-08's bootstrap migration.
-- Two employee-creation paths still write `wbom_employees` as primary despite `fpe_employees` being documented as canonical (§F above).
+- Two employee-creation paths still write `fazle_employees_legacy` as primary despite `fazle_employees` being documented as canonical (§F above).
 - `escort_lifecycle` bypasses `escort_roster`'s own sync API, and two independent pay-calculation formulas feed the same table with no resolved precedence (§G above).
 - `knowledge_base` (exact-match) and `rag` (semantic) retrieval run independently with no coordination (§H above).
 - No general ledger, no client billing/invoicing/accounts-receivable, no dispatch/scheduling conflict-detection — the three biggest gaps against the "complete operating system" goal.
@@ -295,11 +295,11 @@ Both set `asyncio_mode = auto` (pytest-asyncio) — without it, every bare `asyn
 
 **New module — `modules.admin_directives`:**
 - `__init__.py` — CRUD (`save_directive`/`list_directives`/`get_directive`/`revoke_directive`) against a new table, `fazle_admin_directives` (`db/migrations/059_admin_directives.sql`). Deliberately separate from `modules.ollama_memory` — see §H's AI read/write boundary discussion above; this module stores admin-authored instructions, not AI-inferred facts, and only humans (via WhatsApp or the web REST routes) ever write to it.
-- `router.py` — WhatsApp command dispatch (`is_admin_ai_command`/`process_admin_ai_command`), the in-process AI-query rate limiter, output sanitizer, and phone normalizer. Kept as a separate module from `modules.admin_commands.nl_router` deliberately — that module's own docstring is a hard "NO LLM" contract, and this one's `AI` command does call an LLM.
+- `router.py` — WhatsApp command dispatch (`is_admin_ai_command`/`process_admin_ai_command`), the in-process AI-query rate limiter, output sanitizer, and phone normalizer. Kept as a separate module from `modules.fazle_admin_commands.nl_router` deliberately — that module's own docstring is a hard "NO LLM" contract, and this one's `AI` command does call an LLM.
 - This module is **write-capable**, unlike almost every other AI-Console-adjacent tool in this codebase (see §J's note that "the AI layer's read/write boundary is one of the best-enforced parts of the system") — but the write path is always human-triggered (an admin's own typed `REMEMBER`/`FORGET`/`AUTOREPLY` command, or an authenticated web POST), never something the LLM decides to do on its own. `BUS-016` (`admin_directive_write`) is the first `ai_console` business-family tool that writes anything — see the registry note in `docs/MODULE_MAP.md`.
 
 **New file — `modules/observability/db_queries.py`:** one function, `get_recent_errors(limit=50)`, a read-only `SELECT` against `fazle_error_log` — the same query `GET /observability/errors` (`app/main.py`) already ran inline in its route handler, duplicated here deliberately so `modules.ai_console.live_adapters`'s new `RT-015` tool has something importable to call (a FastAPI route handler function isn't cleanly importable/reusable the way a plain module function is). Kept out of `modules/observability/__init__.py` on purpose — that module is a pure in-memory Prometheus-style counter store with no DB access at all; adding a DB query there would have been a scope mismatch for that module, not just an unrelated addition.
 
-**`modules.bridge_poller._is_draft_always()` is now `async def`** (was sync) — it needs to `await` a DB read (`modules.wa_chat_frontend.get_runtime_setting()`) to check the new `phone_block.{phone}` flag before falling through to its pre-existing static list checks. If you are tracing behavior in this function, remember it is now a coroutine — every caller must `await` it.
+**`modules.fazle_bridge_poller._is_draft_always()` is now `async def`** (was sync) — it needs to `await` a DB read (`modules.wa_chat_frontend.get_runtime_setting()`) to check the new `phone_block.{phone}` flag before falling through to its pre-existing static list checks. If you are tracing behavior in this function, remember it is now a coroutine — every caller must `await` it.
 
 **Process note — the `planner_worker.py` regression, and the lesson from it:** when `_is_draft_always()` was converted to async, the only call site found via a `bridge_poller/__init__.py`-local grep was updated to `await` it. A second, legitimate call site existed in `modules.social_auto_reply.planner_worker._is_draft_always_sender()` (which deliberately reuses `bridge_poller`'s function rather than reimplementing the match rules, per that function's own docstring) and was missed — calling an async function without `await` returns a truthy coroutine object rather than raising, so this was a **silent** bug: it made that function always return `True`, forcing every social-auto-reply message into draft-only mode. It was caught only when the *full* `tests/unit/` suite was run and diffed against a clean baseline (`git stash -u`), not by the smaller targeted suites used after the change that introduced it. Fixed with one added `await`. **Rule for any future sync→async conversion in this codebase: `grep -rn "function_name(" --include="*.py" .` across the whole repo, never just the file you're editing** — an underscore-prefixed "private" name is not a reliable signal that nothing outside the module calls it.

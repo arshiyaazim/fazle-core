@@ -35,7 +35,7 @@ USAGE
 
     async def _do_salary_update(ctx: WriteContext) -> dict:
         await ctx.conn.execute(
-            "UPDATE wbom_employees SET salary=$1 WHERE employee_id=$2",
+            "UPDATE fazle_employees_legacy SET salary=$1 WHERE employee_id=$2",
             new_salary, employee_id
         )
         return {"employee_id": employee_id, "salary": new_salary}

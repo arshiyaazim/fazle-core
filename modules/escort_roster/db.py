@@ -235,7 +235,7 @@ async def sync_program_to_roster(program_id: int, actor: str = "system", conn=No
         """
         SELECT p.*, e.employee_name AS _escort_name
         FROM wbom_escort_programs p
-        LEFT JOIN wbom_employees e ON e.employee_id = p.escort_employee_id
+        LEFT JOIN fazle_employees_legacy e ON e.employee_id = p.escort_employee_id
         WHERE p.program_id = $1
         """,
         program_id,
@@ -1822,8 +1822,8 @@ async def _duplicate_has_dependencies(program_id: int) -> bool:
           + (SELECT COUNT(*) FROM fazle_payment_drafts WHERE escort_program_id = $1)
           + (SELECT COUNT(*) FROM wbom_billing_records WHERE program_id = $1)
           + (SELECT COUNT(*) FROM wbom_cases WHERE related_program_id = $1)
-          + (SELECT COUNT(*) FROM wbom_cash_transactions WHERE program_id = $1)
-          + (SELECT COUNT(*) FROM wbom_whatsapp_messages WHERE related_program_id = $1)
+          + (SELECT COUNT(*) FROM fazle_cash_transactions_archive WHERE program_id = $1)
+          + (SELECT COUNT(*) FROM fazle_whatsapp_messages WHERE related_program_id = $1)
         )
         """,
         program_id,

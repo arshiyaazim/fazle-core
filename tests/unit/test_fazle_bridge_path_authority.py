@@ -5,7 +5,7 @@ Verified defect: modules/fazle_payroll_engine/historical_sync.py hardcoded
 frozen pre-2026-08-24-re-pair store, while the live authoritative bridge1 store
 is `/home/azim/bridges/bridge1/store/messages.db` (exposed centrally as
 `settings.bridge1_db_path`, .env-overridable, and already used by
-modules.bridge_poller). historical_sync / gap_scan therefore scanned a dead
+modules.fazle_bridge_poller). historical_sync / gap_scan therefore scanned a dead
 store for bridge1.
 
 Fix: `_bridge_configs()` resolves every path from central settings on each call.

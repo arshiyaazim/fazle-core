@@ -106,9 +106,9 @@ docker exec ai-postgres pg_restore \
 
 # Step 5: Verify row counts in restored database
 docker exec ai-postgres psql -U postgres -d postgres_restore -c "
-  SELECT 'wbom_employees' AS t, COUNT(*) AS n FROM wbom_employees
+  SELECT 'fazle_employees_legacy' AS t, COUNT(*) AS n FROM fazle_employees_legacy
   UNION ALL SELECT 'fazle_payment_drafts', COUNT(*) FROM fazle_payment_drafts
-  UNION ALL SELECT 'wbom_cash_transactions', COUNT(*) FROM wbom_cash_transactions
+  UNION ALL SELECT 'fazle_cash_transactions_archive', COUNT(*) FROM fazle_cash_transactions_archive
   UNION ALL SELECT 'wbom_escort_programs', COUNT(*) FROM wbom_escort_programs;
 "
 
@@ -228,7 +228,7 @@ docker exec ai-postgres pg_restore \
 
 # Step 5: Verify DB
 docker exec ai-postgres psql -U postgres -c "
-  SELECT COUNT(*) FROM wbom_employees;
+  SELECT COUNT(*) FROM fazle_employees_legacy;
 "
 
 # Step 6: Start fazle-core service
@@ -371,7 +371,7 @@ LIMIT 20;
 
 -- Cash transactions without payment draft
 SELECT wct.id, wct.employee_id, wct.amount, wct.transaction_date
-FROM wbom_cash_transactions wct
+FROM fazle_cash_transactions_archive wct
 LEFT JOIN fazle_payment_drafts fpd ON fpd.id = wct.draft_id
 WHERE wct.draft_id IS NOT NULL AND fpd.id IS NULL
 LIMIT 20;
@@ -385,7 +385,7 @@ docker exec ai-postgres psql -U postgres -d postgres << 'SQL'
 -- Find drafts with multiple cash transactions
 SELECT fpd.id, fpd.employee_id, fpd.expected_amount, COUNT(wct.id) AS txn_count
 FROM fazle_payment_drafts fpd
-JOIN wbom_cash_transactions wct ON wct.draft_id = fpd.id
+JOIN fazle_cash_transactions_archive wct ON wct.draft_id = fpd.id
 WHERE wct.is_reversed = false
 GROUP BY fpd.id, fpd.employee_id, fpd.expected_amount
 HAVING COUNT(wct.id) > 1
@@ -427,7 +427,7 @@ curl -sf -H "X-Internal-Key: $INTERNAL_KEY" http://localhost:8200/health/deep \
 # 3. DB row counts
 echo "DB row counts:"
 docker exec ai-postgres psql -U postgres -d postgres -t -c "
-  SELECT '  employees: ' || COUNT(*) FROM wbom_employees;
+  SELECT '  employees: ' || COUNT(*) FROM fazle_employees_legacy;
 " 2>&1
 
 # 4. Pending drafts

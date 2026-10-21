@@ -1,5 +1,8 @@
 # Fazle Core — Web UI / Workflow Audit Report (2026-08-31)
 
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 > **READ-ONLY audit. No production changes were made in producing this document.**
 >
 > **Companion reference:** `docs/PRODUCTION_SYSTEM_STATUS_2026-08-31.md` (live/degraded/frozen state flags).

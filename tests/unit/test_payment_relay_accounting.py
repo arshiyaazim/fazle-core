@@ -25,7 +25,7 @@ def _enable_relay_accounting(monkeypatch):
 
 async def _seed_employee(conn, *, phone, name, status="active", id_phone=None):
     row = await conn.fetchrow(
-        """INSERT INTO fpe_employees
+        """INSERT INTO fazle_employees
                (full_name, name_normalized, primary_phone, employee_id_phone,
                 status, created_source, resolution_status, basic_salary)
            VALUES ($1, $2, $3, $4, $5, 'whatsapp_auto_create', 'resolved', 10000)
@@ -49,7 +49,7 @@ def _queue_row(qid, body, meta=None):
 
 async def _count_txns(conn, source_msg_prefix):
     return await conn.fetchval(
-        "SELECT count(*) FROM fpe_cash_transactions WHERE source_message_id LIKE $1",
+        "SELECT count(*) FROM fazle_cash_transactions WHERE source_message_id LIKE $1",
         source_msg_prefix + "%",
     )
 
@@ -63,7 +63,7 @@ async def test_inactive_employee_paid_matched_activated_no_duplicate(test_db_poo
 
     async with test_db_pool.acquire() as conn:
         emp_id = await _seed_employee(conn, phone="01849258074", name="Saiful Islam", status="inactive")
-        emp_count_before = await conn.fetchval("SELECT count(*) FROM fpe_employees WHERE primary_phone='01849258074'")
+        emp_count_before = await conn.fetchval("SELECT count(*) FROM fazle_employees WHERE primary_phone='01849258074'")
 
     res = await on_relay_send_success(
         _queue_row(90001, "ID: 01849258074 Saiful Operation 01849258074(N) 300/-")
@@ -71,20 +71,20 @@ async def test_inactive_employee_paid_matched_activated_no_duplicate(test_db_poo
     assert res["ok"] is True and res["booked"] == 1
 
     async with test_db_pool.acquire() as conn:
-        # NO new employee row (the crash that idx_fpe_emp_phone_unique used to raise)
-        emp_count_after = await conn.fetchval("SELECT count(*) FROM fpe_employees WHERE primary_phone='01849258074'")
+        # NO new employee row (the crash that idx_fazle_emp_phone_unique used to raise)
+        emp_count_after = await conn.fetchval("SELECT count(*) FROM fazle_employees WHERE primary_phone='01849258074'")
         assert emp_count_after == emp_count_before == 1
-        emp = await conn.fetchrow("SELECT id, status FROM fpe_employees WHERE id=$1", emp_id)
+        emp = await conn.fetchrow("SELECT id, status FROM fazle_employees WHERE id=$1", emp_id)
         assert emp["status"] == "active"                              # activated
         txns = await conn.fetch(
             "SELECT id, employee_id, amount, source_channel, txn_category, transaction_status "
-            "FROM fpe_cash_transactions WHERE source_message_id='payment-relay-send:90001:0'")
+            "FROM fazle_cash_transactions WHERE source_message_id='payment-relay-send:90001:0'")
         assert len(txns) == 1                                        # exactly one txn
         assert txns[0]["employee_id"] == emp_id
         assert txns[0]["amount"] == Decimal("300.00")
         assert txns[0]["source_channel"] == RELAY_PURPOSE
         ledgers = await conn.fetch(
-            "SELECT total_paid, txn_count FROM fpe_employee_ledger WHERE employee_id=$1", emp_id)
+            "SELECT total_paid, txn_count FROM fazle_employee_ledger WHERE employee_id=$1", emp_id)
         assert len(ledgers) == 1 and ledgers[0]["txn_count"] == 1    # ledger updated once
         acts = await conn.fetchval(
             "SELECT count(*) FROM fpe_accounting_audit_logs "
@@ -105,10 +105,10 @@ async def test_active_employee_paid_stays_active_txn_and_ledger(test_db_pool):
     res = await on_relay_send_success(_queue_row(90002, "ID: 01711000002 Active Worker 01711000002(B) 500/-"))
     assert res["booked"] == 1
     async with test_db_pool.acquire() as conn:
-        emp = await conn.fetchrow("SELECT status FROM fpe_employees WHERE id=$1", emp_id)
+        emp = await conn.fetchrow("SELECT status FROM fazle_employees WHERE id=$1", emp_id)
         assert emp["status"] == "active"
         assert await _count_txns(conn, "payment-relay-send:90002:") == 1
-        assert await conn.fetchval("SELECT total_paid FROM fpe_employee_ledger WHERE employee_id=$1", emp_id) == Decimal("500.00")
+        assert await conn.fetchval("SELECT total_paid FROM fazle_employee_ledger WHERE employee_id=$1", emp_id) == Decimal("500.00")
         # no activation audit for an already-active employee
         assert await conn.fetchval(
             "SELECT count(*) FROM fpe_accounting_audit_logs WHERE entity_id=$1 AND action='activate_on_payment'", emp_id) == 0
@@ -124,7 +124,7 @@ async def test_unknown_phone_autocreates_per_existing_policy(test_db_pool):
     res = await on_relay_send_success(_queue_row(90003, "ID: 01911000003 Brand New Guy 01911000003(N) 200/-"))
     assert res["booked"] == 1
     async with test_db_pool.acquire() as conn:
-        emp = await conn.fetchrow("SELECT id, status, created_source FROM fpe_employees WHERE primary_phone='01911000003'")
+        emp = await conn.fetchrow("SELECT id, status, created_source FROM fazle_employees WHERE primary_phone='01911000003'")
         assert emp is not None
         assert emp["status"] == "active"
         assert emp["created_source"] == "whatsapp_auto_create"
@@ -144,8 +144,8 @@ async def test_send_failure_no_accounting(test_db_pool):
     # (no on_relay_send_success call)
     async with test_db_pool.acquire() as conn:
         assert await _count_txns(conn, "payment-relay-send:90004:") == 0
-        assert (await conn.fetchrow("SELECT status FROM fpe_employees WHERE id=$1", emp_id))["status"] == "inactive"
-        assert await conn.fetchval("SELECT count(*) FROM fpe_employee_ledger WHERE employee_id=$1", emp_id) == 0
+        assert (await conn.fetchrow("SELECT status FROM fazle_employees WHERE id=$1", emp_id))["status"] == "inactive"
+        assert await conn.fetchval("SELECT count(*) FROM fazle_employee_ledger WHERE employee_id=$1", emp_id) == 0
 
 
 # ── 5. replayed OUTBOUND_SEND_SUCCESS → exactly once ───────────────────────
@@ -168,7 +168,7 @@ async def test_replayed_send_success_is_exactly_once(test_db_pool):
     assert r3["results"][0]["status"] == "already_accounted"
     async with test_db_pool.acquire() as conn:
         assert await _count_txns(conn, "payment-relay-send:90005:") == 1
-        assert (await conn.fetchrow("SELECT txn_count FROM fpe_employee_ledger WHERE employee_id=$1", emp_id))["txn_count"] == 1
+        assert (await conn.fetchrow("SELECT txn_count FROM fazle_employee_ledger WHERE employee_id=$1", emp_id))["txn_count"] == 1
 
 
 # ── 6. later bridge self-echo / history-sync → no duplicate accounting ─────
@@ -198,7 +198,7 @@ async def test_bridge_echo_is_not_double_accounted(test_db_pool):
 
 async def _seed_txn(conn, emp_id, txn_date, amount="100.00", ref_suffix="x"):
     await conn.execute(
-        """INSERT INTO fpe_cash_transactions
+        """INSERT INTO fazle_cash_transactions
                (txn_ref, employee_id, amount, payout_method, txn_date, txn_category,
                 accounting_period, source, transaction_status)
            VALUES ($1, $2, $3, 'nagad', $4, 'salary', $5, 'whatsapp', 'final')""",
@@ -227,21 +227,21 @@ async def test_sweep_keeps_recent_deactivates_stale_reactivates_on_payment(test_
     assert nohist_id not in out["employee_ids"]           # no payment history → untouched
 
     async with test_db_pool.acquire() as conn:
-        assert (await conn.fetchrow("SELECT status FROM fpe_employees WHERE id=$1", recent_id))["status"] == "active"
-        assert (await conn.fetchrow("SELECT status FROM fpe_employees WHERE id=$1", stale_id))["status"] == "inactive"
-        assert (await conn.fetchrow("SELECT status FROM fpe_employees WHERE id=$1", nohist_id))["status"] == "active"
+        assert (await conn.fetchrow("SELECT status FROM fazle_employees WHERE id=$1", recent_id))["status"] == "active"
+        assert (await conn.fetchrow("SELECT status FROM fazle_employees WHERE id=$1", stale_id))["status"] == "inactive"
+        assert (await conn.fetchrow("SELECT status FROM fazle_employees WHERE id=$1", nohist_id))["status"] == "active"
 
     # 9. a new successful payment immediately reactivates the stale employee
     r = await on_relay_send_success(_queue_row(90079, "ID: 01711000072 Stale Pay 01711000072(N) 250/-"))
     assert r["booked"] == 1
     async with test_db_pool.acquire() as conn:
-        assert (await conn.fetchrow("SELECT status FROM fpe_employees WHERE id=$1", stale_id))["status"] == "active"
+        assert (await conn.fetchrow("SELECT status FROM fazle_employees WHERE id=$1", stale_id))["status"] == "active"
         # and the clock is reset — the sweep no longer targets them
         out2 = await run_payment_inactivity_sweep()
         assert stale_id not in out2["employee_ids"]
 
 
-# ── 10. the proven live example never raises idx_fpe_emp_phone_unique ──────
+# ── 10. the proven live example never raises idx_fazle_emp_phone_unique ──────
 
 async def test_proven_saiful_example_no_unique_violation(test_db_pool):
     import app.database as db_module
@@ -256,7 +256,7 @@ async def test_proven_saiful_example_no_unique_violation(test_db_pool):
     assert emp is not None
     assert emp.employee_id == emp_id                      # matched the inactive row, no crash
     async with test_db_pool.acquire() as conn:
-        assert await conn.fetchval("SELECT count(*) FROM fpe_employees WHERE primary_phone='01849258074'") == 1
+        assert await conn.fetchval("SELECT count(*) FROM fazle_employees WHERE primary_phone='01849258074'") == 1
 
 
 # ── worker path: match_or_create_employee still returns for active + auto-create ──

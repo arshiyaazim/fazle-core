@@ -2,7 +2,7 @@
 --
 -- Owner directive (2026-08-29, "Final recruitment lifecycle closure",
 -- GAP 1): current candidate->employee continuity is derived purely from
--- the canonical phone (wbom_candidates.phone == wbom_employees.
+-- the canonical phone (wbom_candidates.phone == fazle_employees_legacy.
 -- employee_mobile). That is useful but breaks if the person's phone
 -- changes after joining. This adds the smallest durable link: one
 -- nullable FK on the candidate row pointing at the authoritative
@@ -14,7 +14,7 @@
 --   wbom_candidate_conversations -- append-only audit, no employee ref
 --   fazle_recruitment_sessions -- FK to wbom_candidates only
 --   wbom_recruitment_reminders -- FK to wbom_candidates only
---   fpe_employees.wbom_employee_id -- links FPE<->WBOM employee, NOT candidate
+--   fazle_employees.wbom_employee_id -- links FPE<->WBOM employee, NOT candidate
 -- So this is a genuine gap, not a naming mismatch.
 --
 -- Semantics:
@@ -45,9 +45,9 @@ BEGIN;
 
 ALTER TABLE wbom_candidates
     ADD COLUMN IF NOT EXISTS linked_employee_id BIGINT
-        REFERENCES wbom_employees(employee_id) ON DELETE SET NULL;
+        REFERENCES fazle_employees_legacy(employee_id) ON DELETE SET NULL;
 
-CREATE UNIQUE INDEX IF NOT EXISTS uq_wbom_candidates_linked_employee
+CREATE UNIQUE INDEX IF NOT EXISTS uq_fazle_candidates_linked_employee
     ON wbom_candidates (linked_employee_id)
     WHERE linked_employee_id IS NOT NULL;
 
@@ -56,6 +56,6 @@ COMMIT;
 -- Downgrade (manual, run only after confirming no code path reads
 -- wbom_candidates.linked_employee_id):
 --   BEGIN;
---   DROP INDEX IF EXISTS uq_wbom_candidates_linked_employee;
+--   DROP INDEX IF EXISTS uq_fazle_candidates_linked_employee;
 --   ALTER TABLE wbom_candidates DROP COLUMN IF EXISTS linked_employee_id;
 --   COMMIT;

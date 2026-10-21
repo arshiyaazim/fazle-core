@@ -35,7 +35,7 @@ These are responsibilities, not five new independent runtime services.
 
 | Responsibility | Authority | Must not do |
 |---|---|---|
-| Identity resolver | `modules.identity_brain.detect_identity()` and verified identity data | Guess a trusted role from message text alone |
+| Identity resolver | `modules.fazle_identity_brain.detect_identity()` and verified identity data | Guess a trusted role from message text alone |
 | Intent/domain resolver | Existing deterministic parsers first; Hermes semantic fallback; local Ollama fallback | Write payroll, cash, roster, or identity records |
 | Policy/visibility guard | Role permissions, response rules, disclosure boundary, confidence, holds | Let an LLM override a code gate |
 | Response composer | Existing templates/workflows, then Hermes, then local Ollama Hermes | Invent business facts or bypass a workflow |

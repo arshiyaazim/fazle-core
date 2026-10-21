@@ -1,11 +1,11 @@
--- Migration 066: extend ai_read_employees to include fpe_employees-linked
+-- Migration 066: extend ai_read_employees to include fazle_employees-linked
 -- employees (Hermes Identity/Role/Intent Capability Audit — 2026-08-18)
 --
 -- HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md found
--- that ai_read_employees (migration 012) selects only from wbom_employees,
--- while modules.identity_brain._lookup_employee() (the live resolver every
+-- that ai_read_employees (migration 012) selects only from fazle_employees_legacy,
+-- while modules.fazle_identity_brain._lookup_employee() (the live resolver every
 -- real WhatsApp message goes through) additionally falls back to
--- fpe_employees for employees who exist only via the payroll/cash/escort
+-- fazle_employees for employees who exist only via the payroll/cash/escort
 -- auto-create path. An employee identity_brain can resolve was therefore
 -- invisible to Hermes's get_employees tool. This migration mirrors
 -- identity_brain's exact fallback query (identity_brain/__init__.py:386-401)
@@ -44,7 +44,7 @@
 --       e.joining_date,
 --       e.status,
 --       e.basic_salary
---   FROM wbom_employees e
+--   FROM fazle_employees_legacy e
 --   ORDER BY e.employee_name;
 
 CREATE OR REPLACE VIEW ai_read_employees AS
@@ -56,11 +56,11 @@ SELECT
     e.joining_date,
     e.status,
     e.basic_salary
-FROM wbom_employees e
+FROM fazle_employees_legacy e
 UNION ALL
 -- Explicit CASTs below (2026-08-18 correction, first execution attempt):
--- fpe_employees stores full_name/primary_phone/status as unbounded text,
--- while wbom_employees' equivalents are varchar(100)/varchar(20)/varchar(20).
+-- fazle_employees stores full_name/primary_phone/status as unbounded text,
+-- while fazle_employees_legacy' equivalents are varchar(100)/varchar(20)/varchar(20).
 -- CREATE OR REPLACE VIEW requires exact output-type equality with the
 -- current live view, not just a compatible/wider type -- without these
 -- casts, Postgres's UNION ALL type-unification widens the result to
@@ -82,10 +82,10 @@ SELECT
     NULL::date                                                      AS joining_date,
     CAST(COALESCE(w.status, CASE WHEN fe.status = 'active' THEN 'Active' ELSE 'Inactive' END) AS character varying(20)) AS status,
     w.basic_salary
-FROM fpe_employees fe
-LEFT JOIN wbom_employees w ON w.employee_id = fe.wbom_employee_id
+FROM fazle_employees fe
+LEFT JOIN fazle_employees_legacy w ON w.employee_id = fe.wbom_employee_id
 WHERE fe.status = 'active'
   AND NOT EXISTS (
-      SELECT 1 FROM wbom_employees w2 WHERE w2.employee_id = fe.wbom_employee_id
+      SELECT 1 FROM fazle_employees_legacy w2 WHERE w2.employee_id = fe.wbom_employee_id
   )
 ORDER BY employee_name;

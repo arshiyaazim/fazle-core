@@ -1,11 +1,11 @@
 -- 073_wbom_whatsapp_messages_actor_attribution.sql
 -- Stage B1 (2026-08-28, canonical-history baseline plan): minimum
--- backward-compatible attribution fields for wbom_whatsapp_messages.
+-- backward-compatible attribution fields for fazle_whatsapp_messages.
 --
 -- Existing writer inventory (every current writer of this table, and what
 -- actor_type each can reliably know without inference from message text):
 --
---   modules.bridge_poller._save_raw_core_copy()   -- WhatsApp bridge1/2/3
+--   modules.fazle_bridge_poller._save_raw_core_copy()   -- WhatsApp bridge1/2/3
 --     genuine inbound (is_from_me=0). actor_type='external_user'. One
 --     known, disclosed exception: a Hermes admin-relay reply sent via
 --     bridge1 can land as a genuine is_from_me=0 inbound row on bridge2
@@ -18,7 +18,7 @@
 --     away; closing it would require duplicating the echo guard's own
 --     signature check at persistence time, out of this stage's scope.
 --
---   modules.bridge_poller._save_message(), 2 call sites (customer-reply
+--   modules.fazle_bridge_poller._save_message(), 2 call sites (customer-reply
 --     and the internal "admin-hermes-reply" AI-console cascade -- NOT the
 --     real external Hermes agent, see modules.admin_directives.router's
 --     own 2026-08-04 docstring correction of this exact naming
@@ -44,7 +44,7 @@
 --     record. actor_type='automation' (reconciling automation-generated
 --     sends).
 --
---   modules.message_archive.save_message() -- used only by two offline,
+--   modules.fazle_message_archive.save_message() -- used only by two offline,
 --     one-off disaster-recovery scripts (recover_from_backup.py,
 --     recover_critical_numbers.py), not live runtime traffic. Out of
 --     live-attribution scope; not touched here.
@@ -60,16 +60,16 @@
 -- generated THIS row's own content.
 BEGIN;
 
-ALTER TABLE public.wbom_whatsapp_messages
+ALTER TABLE public.fazle_whatsapp_messages
     ADD COLUMN IF NOT EXISTS actor_type text,
     ADD COLUMN IF NOT EXISTS actor_id text;
 
-COMMENT ON COLUMN public.wbom_whatsapp_messages.actor_type IS
+COMMENT ON COLUMN public.fazle_whatsapp_messages.actor_type IS
     'Who/what produced this row''s content (never inferred from message '
     'text): external_user, human_device, human_operator, hermes, '
     'automation, system. NULL where the writing code path cannot state '
     'this with certainty -- left NULL rather than guessed.';
-COMMENT ON COLUMN public.wbom_whatsapp_messages.actor_id IS
+COMMENT ON COLUMN public.fazle_whatsapp_messages.actor_id IS
     'Stable identifier for the actor when one is reliably known at write '
     'time (e.g. the admin phone for human_device, "hermes-runner" for '
     'hermes) -- optional, NULL when no accurate stable value exists.';

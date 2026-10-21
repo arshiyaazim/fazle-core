@@ -1,6 +1,6 @@
 Source: knowledge_base/04_business_rules/escort_business_rules.md
-SHA256: afcadb1a48f1b998204721143c6b766fa04fd6122bbcb701ea4e9b0a2ea3d3b6
-Version: afcadb1a48f1
+SHA256: f04bf5a91390d8a8ff8a7cc226ed25ddc3859cdac18ade7efc81988967a0ba23
+Version: f04bf5a91390
 
 # Escort Business Rules
 
@@ -32,6 +32,15 @@ If any minimum field cannot be identified with reasonable confidence:
 - Create no draft
 - Create no roster side effect
 
+> **Still accurate for the production single-message parser** (this rule
+> governs real draft creation and is unchanged). As of 2026-07-19, an
+> authorized-but-incomplete message is *additionally* held in the Phase B
+> Conversation Memory Engine (shadow mode, non-authoritative) instead of
+> being discarded with no trace — see "Multi-Message Intake (Phase B,
+> Shadow Mode)" below. It still creates no draft and no roster side
+> effect; only the deterministic single-message parser above may do that,
+> and only while its own gate is satisfied by one message.
+
 If the minimum fields are present:
 - Parse with best effort
 - Create one draft order only
@@ -56,18 +65,51 @@ Required confirmation fields:
 - Lighter Vessel
 - Escort Name
 - Escort Mobile
-- Start Date
+- Start Date (Shift D/N also expected when present)
 
-If any required confirmation field is missing:
-- Ignore the message as escort confirmation
-- Do not update a draft
-- Do not create a confirmed row
+**Multi-entry confirmations (2026-08-01):** one confirmation message has
+exactly one Mother Vessel, but may assign multiple escorts across multiple
+numbered lighter-vessel blocks ("1. Lighter Vessel: ...", "2. Lighter
+Vessel: ...") — one escort per lighter. Every numbered block is its own
+independent entry: matched, updated, and synced to the roster separately.
+One entry failing (see below) never blocks the others in the same message.
+`modules/escort/parse_completed_draft_entries()` is the parser; a message
+with no numbered blocks (the normal single-lighter case) is unaffected.
 
-If all required confirmation fields are present:
+Vessel-name prefixes — `MV`, `M.V.`, `M.v.`, `M V`, `M v` (any casing,
+periods, spacing) — all normalize to the same canonical form before
+matching or storage.
+
+If a required field is missing entirely for a given entry:
+- Ignore that entry as an escort confirmation (unaffected — unchanged rule)
+- Do not update a draft for that entry, do not create a confirmed row
+
+**If a mobile number (Master Mobile or Escort Mobile) is present but
+malformed** (digits found, but not a valid 11-digit BD number) for a given
+entry — as opposed to genuinely absent — that entry is **not** silently
+ignored and not silently guessed: an "Admin REMINDER" is pushed to
+`ADMIN_NUMBERS` immediately with the entry's full text, and the admin
+replies `<id> Type: APPROVE` (save exactly as sent), `<id> Type: REJECT`
+(discard), or `<id> Type: EDIT <complete corrected message>` (re-parsed and
+saved). See `05_workflows/escort_source_of_truth_workflow.md` "Enforcement"
+section for the exact mechanism.
+
+If all required fields are present for a given entry:
 - Match an existing draft by client phone, master mobile, mother vessel, and start date
-- Update the existing row when matched
-- Overwrite incorrect draft values with confirmation values
-- Create one confirmed row only when no draft exists
+- An **exact match on the lighter's master mobile number alone** is treated
+  as proof of the same order (not just a fuzzy-scoring signal) when the
+  normal match score is inconclusive — but only as a fallback (the normal
+  scoring path always runs first) and only among drafts from the last 7
+  days; two or more drafts sharing that same master mobile stays genuinely
+  ambiguous and is not auto-resolved.
+- Update the existing row when matched; overwrite incorrect draft values
+  with confirmation values
+- **When no draft matches at all: queue for admin review, never
+  auto-create a confirmed row from the confirmation alone** (Owner
+  decision, reaffirmed 2026-08-01 — see "Source Of Truth Policy" below for
+  why). A missed *order* that never produced a draft in the first place is
+  instead caught by a separate daily gap-scan job, not by auto-creating
+  here.
 - Never create duplicate rows
 
 ## Source Of Truth Policy
@@ -83,6 +125,18 @@ Source of truth:
 Conflict rule:
 - If draft data conflicts with confirmation data, confirmation always wins
 
+**History note (this doc was stale on this exact point from 2026-07-19 to
+2026-08-01):** this doc previously said "create one confirmed row only
+when no draft exists," matching the *original* design. Commit for
+Workstream 2 Stage 2 (2026-07-19) deliberately removed that behavior after
+finding it silently created a second, unlinked confirmed row whenever a
+confirmation's fuzzy match missed an *existing-but-different* draft — a
+real, confirmed bug, not a hypothetical one. This doc was never updated to
+match at the time. Reconciled 2026-08-01: the no-draft-match case now
+always queues for review (2026-07-19's fix, kept), and a *separate* daily
+gap-scan job (not confirmation-time auto-create) catches genuinely missed
+orders instead — see `05_workflows/escort_source_of_truth_workflow.md`.
+
 ## Parsing Rules
 
 Primary signal:
@@ -95,6 +149,14 @@ Secondary signals:
 - Cargo
 - Destination
 - Capacity
+
+This is a list of signal types, not the order they appear in a message.
+Destination is recognized by content (a Bangladeshi place name, full or
+short-hand), not position. Capacity commonly trails the lighter vessel name.
+Importer/cargo commonly sits after the mother vessel name or before the
+lighter vessel name, and may be wrapped in WhatsApp `*bold*` markup — see
+`../06_developer_system/escort_order_parser.md` Parser Philosophy for the
+full positional notes.
 
 Rules:
 - Every valid Bangladesh mobile belongs to one lighter block
@@ -136,6 +198,11 @@ Before saving any escort order row, the parser must have:
 If any of the three are missing:
 - Discard the message
 - Do not save draft data
+
+> As of 2026-07-19: "discard" means the deterministic single-message
+> parser takes no action on that one message, as always. It does not mean
+> the message leaves no trace anywhere in the system — see "Multi-Message
+> Intake (Phase B, Shadow Mode)" below for what else may observe it.
 
 Duplicate-prevention match priority:
 1. Master Mobile
@@ -201,6 +268,74 @@ net_payable = max(gross_amount − food_bill − conveyance − advances, 0)
 - যাতায়াত কর্তন (`conveyance`): প্রোগ্রাম টেবিল থেকে, ডিফল্ট ০
 - অ্যাডভান্স কর্তন: ওই এসকর্ট প্রোগ্রাম ও চলতি মাসের `final` স্ট্যাটাস অ্যাডভান্স মাত্র
 - ডিউটি দিন: রোস্টারে দিন গণনা; না থাকলে প্রোগ্রামের তারিখের পার্থক্য + 1
+
+## Multi-Message Intake (Phase B, Shadow Mode) — added 2026-07-19
+
+A second, entirely separate layer sits alongside the deterministic
+single-message parser above: `modules/conversation_memory` (Phase B,
+Stages 1-3). It does not replace or relax any rule above — every rule in
+this document still governs the *only* code path that may create a real
+`wbom_escort_programs` row. This layer exists to stop losing information
+when a genuine order legitimately spans more than one WhatsApp message
+(e.g. lighter/mobile in one message, mother vessel named in a
+follow-up), which the single-message parser above has no way to see.
+
+**Core rules:**
+
+- **Multi-message spanning.** An authorized client's messages within a
+  TTL window (`CONVERSATION_TTL_ESCORT_MINUTES`, default 30) may be
+  accumulated into one "conversation thread," field by field, instead of
+  each message being judged in isolation.
+- **Authorized-incomplete is held, not discarded.** A message from an
+  authorized escort client (`ESCORT_CLIENT_PHONES`, correct bridge
+  direction) that is individually incomplete is retained in the thread
+  (as a *shadow candidate*) rather than vanishing with no trace, once
+  Stage 2 (`MULTI_MESSAGE_ESCORT_PARSER_ENABLED`) is on.
+- **Only a combined-complete thread ever qualifies as a candidate.**
+  Completeness is still exactly Mother Vessel + Lighter Vessel + Master
+  Mobile (Part 6.4) — spanning messages changes *where* those three
+  values may come from, never *what* is required.
+- **Conversation memory grants no authority.** Accumulating messages into
+  a thread never creates a draft, program, roster entry, or client/admin
+  reply by itself — see "Shadow-Mode Rollout" below. The authorization
+  gates above (`ESCORT_CLIENT_PHONES`, bridge direction) are re-checked
+  independently inside this layer too, not assumed from the caller.
+- **System-generated messages never contribute.** Any inbound text
+  carrying the `_AUTOMATED_SUFFIX_ANCHOR` marker (`app/bridge.py`) or
+  matching `SYSTEM_NOTIFICATION_TITLE_PREFIXES` is refused before it can
+  affect a thread — the same class of incident this fixed for the
+  outgoing scan (`escort_source_of_truth_workflow.md`, Root Cause 7).
+- **Interleaving protection.** The same client phone can have more than
+  one order in flight. Two messages with *different* lighter vessels or
+  master mobiles are treated as two separate candidate threads, never
+  silently merged into one order. A message that can't be confidently
+  attributed to any open thread is held as `needs_review`, never guessed.
+- **Conflicts are flagged, not silently overwritten.** A later message
+  giving a different high-confidence value for a field already set stays
+  a recorded conflict on the thread; the original value is preserved.
+  Values that are the same after normalization (digit forms, phone
+  formats, whitespace/case) are never treated as conflicts.
+- **TTL / expiry.** A thread past its TTL is marked `expired`, not
+  deleted, and a later related message opens a fresh thread rather than
+  silently reopening the old one.
+- **Bangla / mixed-language labels.** Stage 3
+  (`BANGLA_SEMANTIC_PARSER_ENABLED`) adds label-aware extraction for
+  Bangla vessel/lighter/mobile/destination/trip/capacity labels (see
+  `escort_order_parser.md` for the full label list and normalization
+  rules) — fixing a real gap where the old single-message parser read a
+  Bangla label as literal vessel-name text.
+- **Provenance and idempotency.** Every accumulated field records which
+  message set it, at what confidence, and by what extraction method.
+  Replaying the same `message_id` is a guaranteed no-op.
+
+**Shadow-mode rollout:** `CONVERSATION_MEMORY_ENABLED` and
+`WHATSAPP_THREAD_RECONSTRUCTION_ENABLED` are on in production
+(2026-07-19 checkpoint). `MULTI_MESSAGE_ESCORT_PARSER_ENABLED` and
+`BANGLA_SEMANTIC_PARSER_ENABLED` remain off pending a separate
+Owner-approved checkpoint. In every combination of these flags, this
+layer never writes to `wbom_escort_programs` or any other business
+table — see `modules/conversation_memory/thread_reconstruction.py` and
+`management_decisions.md` → "Phase B" entries for full detail.
 
 ## Cross References
 

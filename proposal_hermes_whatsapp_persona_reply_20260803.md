@@ -56,7 +56,7 @@ sender.** Confirmed live with a direct prompt-build test (see below).
 | `modules/social_auto_reply/reply_rules.py` | New `SOCIAL_PERSONAS` dict (recruitment_officer, hr_admin_officer, client_relations, funny, lawyer) + `SOCIAL_ROLE_TO_PERSONA` mapping + `persona_for_role()` |
 | `modules/social_auto_reply/intelligent_generator.py` | `plan_reply()` now calls `identity_brain.detect_identity()` (Phase 1 — this channel was completely identity-blind before); `_polish_with_ai()` now takes the resolved persona text and a compatible `role=` value instead of the hardcoded `role="new_lead"`; **Phase 3 (2026-08-03): `_polish_with_ai()` now also calls `modules.rag.safe_search()` additively, same call `message_router` already uses — see below** |
 | `knowledge_base/06_developer_system/automation_pipeline.md` | Corrected the stale footer section (Phase 0) |
-| `modules/identity_brain/__init__.py` | **Real bug fix (2026-08-03, found via dry-run before shipping, not after): `_lookup_seed()` did an exact-match phone lookup that could never match either real `vip_client` row (stored raw `01XXXXXXXXX`, queried as canonical `8801XXXXXXXXX`) — fixed via `_phone_variants()`/`= ANY($1)`, same pattern as the 2026-07-20/08-01 `ESCORT_CLIENT_PHONES` incident already documented in `identity_brain.md`.** |
+| `modules/fazle_identity_brain/__init__.py` | **Real bug fix (2026-08-03, found via dry-run before shipping, not after): `_lookup_seed()` did an exact-match phone lookup that could never match either real `vip_client` row (stored raw `01XXXXXXXXX`, queried as canonical `8801XXXXXXXXX`) — fixed via `_phone_variants()`/`= ANY($1)`, same pattern as the 2026-07-20/08-01 `ESCORT_CLIENT_PHONES` incident already documented in `identity_brain.md`.** |
 | `knowledge_base/06_developer_system/identity_brain.md` | Documents the VIP phone-matching incident + a new standing rule: phone comparisons must normalize on both sides, not assume canonical storage. |
 
 **Related, found but not fixed (documented only):** `modules/contact_roles/routes.py`'s list/delete handlers have the same exact-match phone bug against the same table — a separate decision, not part of this work.
@@ -230,7 +230,7 @@ based on `ai_read_contacts.relation` having only 3 values
 (`unknown`/`accountant`/`meta_business`) in the narrow read-only view
 assistant-platform uses. **That was a wrong conclusion from looking at the
 wrong system.** Reading `knowledge_base/06_developer_system/identity_brain.md`
-directly (source: `modules/identity_brain/__init__.py`, 393 lines) shows
+directly (source: `modules/fazle_identity_brain/__init__.py`, 393 lines) shows
 fazle-core already has a **much richer, already-in-production identity
 resolution system** that `ai_read_contacts` was never meant to expose:
 
@@ -238,8 +238,8 @@ resolution system** that `ai_read_contacts` was never meant to expose:
   to exactly one role via an ordered, priority-based algorithm reading 7+
   real evidence sources: `admin` (env settings), `family`/`accountant`/
   `vip_client`/`client_escort_buyer`/`vendor`/`supervisor` (`fazle_contact_roles`
-  seed table), `repeat_client` (`fpe_cash_transactions` history), `employee`
-  (`wbom_employees` phone match, with 4 secondary evidence sources),
+  seed table), `repeat_client` (`fazle_cash_transactions` history), `employee`
+  (`fazle_employees_legacy` phone match, with 4 secondary evidence sources),
   `candidate` (recruitment keyword match), `unknown` (fallback). Each
   resolution carries a numeric confidence score (0–100).
 - **`role_classifier.get_user_context(phone)`** then answers *how should

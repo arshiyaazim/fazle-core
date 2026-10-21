@@ -71,7 +71,7 @@ async def create_transaction(
         "is_reversal, source, source_channel, source_message_id, transaction_status, "
         "approval_status, approved_by, approved_at, review_status, submitted_by, submitted_at, "
         "program_id, legacy_wbom_transaction_id, original_payload, metadata, created_at "
-        "FROM fpe_cash_transactions WHERE txn_ref = $1",
+        "FROM fazle_cash_transactions WHERE txn_ref = $1",
         txn_ref,
         conn=conn,
     )
@@ -84,7 +84,7 @@ async def create_transaction(
     async with _cm as conn:
         new_id: int = await conn.fetchval(
             """
-            INSERT INTO fpe_cash_transactions
+            INSERT INTO fazle_cash_transactions
                 (txn_ref, fpe_wa_message_id, employee_id, employee_name_raw,
                  employee_id_phone, employee_phone,
                  amount, payout_phone, payout_method, txn_date, txn_category,
@@ -148,7 +148,7 @@ async def create_transaction(
             and req.amount > 0
         ):
             _act = await conn.execute(
-                "UPDATE fpe_employees SET status = 'active', updated_at = NOW() "
+                "UPDATE fazle_employees SET status = 'active', updated_at = NOW() "
                 "WHERE id = $1 AND status <> 'active'",
                 req.employee_id,
             )
@@ -188,7 +188,7 @@ async def create_transaction(
         "is_reversal, source, source_channel, source_message_id, transaction_status, "
         "approval_status, approved_by, approved_at, review_status, submitted_by, submitted_at, "
         "program_id, legacy_wbom_transaction_id, original_payload, metadata, created_at "
-        "FROM fpe_cash_transactions WHERE id = $1",
+        "FROM fazle_cash_transactions WHERE id = $1",
         new_id,
         conn=(None if _own_conn else conn),
     )
@@ -201,7 +201,7 @@ async def reverse_transaction(txn_id: int, reason: str, created_by: str = "admin
     The original row is NEVER mutated.
     """
     orig = await fetch_one(
-        "SELECT * FROM fpe_cash_transactions WHERE id = $1",
+        "SELECT * FROM fazle_cash_transactions WHERE id = $1",
         txn_id,
     )
     if not orig:
@@ -213,7 +213,7 @@ async def reverse_transaction(txn_id: int, reason: str, created_by: str = "admin
 
     # Check idempotency for reversal
     existing_rev = await fetch_one(
-        "SELECT id FROM fpe_cash_transactions WHERE txn_ref = $1",
+        "SELECT id FROM fazle_cash_transactions WHERE txn_ref = $1",
         reversal_ref,
     )
     if existing_rev:
@@ -222,7 +222,7 @@ async def reverse_transaction(txn_id: int, reason: str, created_by: str = "admin
     async with db_conn() as conn:
         new_id: int = await conn.fetchval(
             """
-            INSERT INTO fpe_cash_transactions
+            INSERT INTO fazle_cash_transactions
                 (txn_ref, fpe_wa_message_id, employee_id, employee_name_raw,
                  employee_id_phone, employee_phone,
                  amount, payout_phone, payout_method, txn_date, txn_category,
@@ -294,7 +294,7 @@ async def reverse_transaction(txn_id: int, reason: str, created_by: str = "admin
         "is_reversal, source, source_channel, source_message_id, transaction_status, "
         "approval_status, approved_by, approved_at, review_status, submitted_by, submitted_at, "
         "program_id, legacy_wbom_transaction_id, original_payload, metadata, created_at "
-        "FROM fpe_cash_transactions WHERE id = $1",
+        "FROM fazle_cash_transactions WHERE id = $1",
         new_id,
     )
     return _row_to_model(row)
@@ -333,7 +333,7 @@ async def _upsert_ledger(
     opening_balance = await fetch_val(
         """
         SELECT closing_balance
-        FROM fpe_employee_ledger
+        FROM fazle_employee_ledger
         WHERE employee_id = $1
           AND accounting_period < $2
         ORDER BY accounting_period DESC
@@ -347,7 +347,7 @@ async def _upsert_ledger(
 
     await execute(
         """
-        INSERT INTO fpe_employee_ledger
+        INSERT INTO fazle_employee_ledger
             (employee_id, accounting_period, opening_balance,
              total_earned, total_paid, total_advance,
              closing_balance, txn_count, last_updated)
@@ -358,14 +358,14 @@ async def _upsert_ledger(
             NOW()
         )
         ON CONFLICT (employee_id, accounting_period) DO UPDATE
-        SET total_earned = fpe_employee_ledger.total_earned + EXCLUDED.total_earned,
-            total_paid = fpe_employee_ledger.total_paid + EXCLUDED.total_paid,
-            total_advance = fpe_employee_ledger.total_advance + EXCLUDED.total_advance,
-            txn_count = fpe_employee_ledger.txn_count + 1,
-            closing_balance = fpe_employee_ledger.opening_balance
-                            + (fpe_employee_ledger.total_earned + EXCLUDED.total_earned)
-                            - (fpe_employee_ledger.total_paid + EXCLUDED.total_paid)
-                            - (fpe_employee_ledger.total_advance + EXCLUDED.total_advance),
+        SET total_earned = fazle_employee_ledger.total_earned + EXCLUDED.total_earned,
+            total_paid = fazle_employee_ledger.total_paid + EXCLUDED.total_paid,
+            total_advance = fazle_employee_ledger.total_advance + EXCLUDED.total_advance,
+            txn_count = fazle_employee_ledger.txn_count + 1,
+            closing_balance = fazle_employee_ledger.opening_balance
+                            + (fazle_employee_ledger.total_earned + EXCLUDED.total_earned)
+                            - (fazle_employee_ledger.total_paid + EXCLUDED.total_paid)
+                            - (fazle_employee_ledger.total_advance + EXCLUDED.total_advance),
             last_updated = NOW()
         """,
         employee_id,
@@ -460,7 +460,7 @@ async def create_income_transaction(
 ) -> int:
     """
     Insert one income transaction into fpe_income_transactions.
-    Does NOT touch fpe_employee_ledger or fpe_cash_transactions.
+    Does NOT touch fazle_employee_ledger or fazle_cash_transactions.
 
     Idempotency: sha256(wa_message_id | employee_id | amount | period).
     Returns the new (or existing) row id.

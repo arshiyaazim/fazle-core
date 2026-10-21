@@ -9,10 +9,10 @@ feature flag:
   * accountant: ACCOUNTANT_PHONE resolves deterministically to
     role="accountant" via a settings tier (not a deletable DB seed row),
     even when the number is also an active employee.
-  * wbom_contacts / fazle_contact_roles identity lookups are scoped to
+  * fazle_contacts / fazle_contact_roles identity lookups are scoped to
     platform='whatsapp' — a same-number row on another platform never
     becomes WhatsApp identity authority.
-  * an INACTIVE employee that exists only via fpe_employees still resolves
+  * an INACTIVE employee that exists only via fazle_employees still resolves
     by phone (no more `e.status='active'` filter on the fallback).
   * no duplicate identity is ever created (resolvers are read-only).
 """
@@ -21,7 +21,7 @@ from __future__ import annotations
 import pytest
 import pytest_asyncio
 
-from modules.identity_brain import detect_identity
+from modules.fazle_identity_brain import detect_identity
 
 
 @pytest_asyncio.fixture(autouse=True)
@@ -71,7 +71,7 @@ async def test_accountant_still_works_without_seed_row(_settings_env, test_db_po
 async def test_wbom_contacts_platform_filter(test_db_pool):
     async with test_db_pool.acquire() as conn:
         await conn.execute(
-            "INSERT INTO wbom_contacts (whatsapp_number, display_name, platform, relation, is_active) "
+            "INSERT INTO fazle_contacts (whatsapp_number, display_name, platform, relation, is_active) "
             "VALUES ('8801755550001', 'FB Only Person', 'facebook', 'vip', true)")
     res = await detect_identity("8801755550001")
     # a facebook-platform contact must NOT drive WhatsApp identity
@@ -83,7 +83,7 @@ async def test_wbom_contacts_platform_filter(test_db_pool):
 async def test_wbom_contacts_whatsapp_row_still_resolves(test_db_pool):
     async with test_db_pool.acquire() as conn:
         await conn.execute(
-            "INSERT INTO wbom_contacts (whatsapp_number, display_name, platform, relation, is_active) "
+            "INSERT INTO fazle_contacts (whatsapp_number, display_name, platform, relation, is_active) "
             "VALUES ('8801755550002', 'Real WA Contact', 'whatsapp', 'vip', true)")
     res = await detect_identity("8801755550002")
     assert res.get("display_name") == "Real WA Contact"
@@ -93,22 +93,22 @@ async def test_wbom_contacts_whatsapp_row_still_resolves(test_db_pool):
 async def test_inactive_fpe_only_employee_still_resolves(test_db_pool):
     async with test_db_pool.acquire() as conn:
         emp_id = await conn.fetchval(
-            "INSERT INTO wbom_employees (employee_mobile, employee_name, designation, status, basic_salary) "
+            "INSERT INTO fazle_employees_legacy (employee_mobile, employee_name, designation, status, basic_salary) "
             "VALUES ('8801833330001', 'Dormant Boatman', 'Security Guard', 'Inactive', 9000) "
             "RETURNING employee_id")
         # fpe row keyed on a DIFFERENT phone than employee_mobile, status inactive,
         # linked back to the wbom row via wbom_employee_id
         await conn.execute(
-            "INSERT INTO fpe_employees "
+            "INSERT INTO fazle_employees "
             "(full_name, name_normalized, primary_phone, employee_id_phone, status, wbom_employee_id) "
             "VALUES ('Dormant Boatman', 'dormant boatman', '8801833339999', '8801833339999', "
             "        'inactive', $1)", emp_id)
-        before = await conn.fetchval("SELECT count(*) FROM wbom_employees")
+        before = await conn.fetchval("SELECT count(*) FROM fazle_employees_legacy")
 
     res = await detect_identity("8801833339999")   # the fpe-only phone
     assert res.get("employee_id") == emp_id
     assert res["identity_role"] in ("employee", "security_guard")
 
     async with test_db_pool.acquire() as conn:
-        after = await conn.fetchval("SELECT count(*) FROM wbom_employees")
+        after = await conn.fetchval("SELECT count(*) FROM fazle_employees_legacy")
     assert after == before   # never creates a duplicate

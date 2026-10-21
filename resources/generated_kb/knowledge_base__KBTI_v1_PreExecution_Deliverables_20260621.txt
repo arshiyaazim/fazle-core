@@ -1,6 +1,6 @@
 Source: knowledge_base/KBTI_v1_PreExecution_Deliverables_20260621.md
-SHA256: b63ab815fd13192b493998cbaeca638d6d4df8d2678034aacd2d32243cbb1178
-Version: b63ab815fd13
+SHA256: 0d2d8ec7d53f30d7dfd20b96c26e2d8b1fd32a5b535c738659ecd811870d74e2
+Version: 0d2d8ec7d53f
 
 # FAZLE AI PLATFORM
 # Knowledge Base Transformation & Integration Program (KBTI)
@@ -93,7 +93,7 @@ For each knowledge domain, this matrix shows how the four layers converge into t
 | Scheduler Jobs (14 jobs) | N/A | `scheduler/__init__.py` | Missing from KB | Missing | CREATE `scheduler_engine.md` |
 | Social Auto-Reply (Facebook/Messenger) | DUP-07: salary_structure.txt is source of truth | `modules/social_auto_reply/` | Missing from KB | Missing | CREATE `social_engine.md` |
 | Bridge Poller Architecture | N/A | `bridge_poller/__init__.py` | Missing from KB | Missing | CREATE `bridge_engine.md` |
-| Accountant Payment Ingest | N/A | `modules/payment_ingest` | Missing from KB | `admin_payment_handling.md` — partial | CREATE `accountant_payment_ingest.md` |
+| Accountant Payment Ingest | N/A | `modules/fazle_payment_ingest` | Missing from KB | `admin_payment_handling.md` — partial | CREATE `accountant_payment_ingest.md` |
 | Advance Payment Triggers | N/A | `payment_workflow.ADVANCE_KEYWORDS` | Missing from KB | `cash_workflow.md` — partial | UPDATE + CREATE `advance_payment_rules.md` |
 | OCR Release Slip Confidence | N/A | `escort_lifecycle.build_release_draft` | Missing from KB | `ocr_pipeline.md` — partial | UPDATE with confidence rules |
 | Voice Processing | N/A | `modules/voice_processor` | Missing from KB | Missing | CREATE `voice_processing.md` |
@@ -600,22 +600,22 @@ Every new and updated article must trace to production, PKM report, and manageme
 | Article | Production Module | Function/Constant | PKM Report | PKVC Report | Management Decision |
 |---|---|---|---|---|---|
 | `silent_skip_rules.md` | `modules/message_router` | `_should_silent_skip()` | REPORT 3 HK-01, HK-02 | PKVC-17 (missing) | HK-01 approved |
-| `draft_always_gate.md` | `modules/bridge_poller` | `_is_draft_always()` | REPORT 3 HK-09 | PKVC-17 (missing) | HK-09 approved |
-| `complaint_protection_rules.md` | `modules/bridge_poller` | `_COMPLAINT_PHRASES`, `_ADVANCE_REQUEST_PHRASES` | REPORT 3 HK-10, HK-11 | PKVC-17 (missing) | N/A (developer scope) |
-| `loop_flood_protection.md` | `modules/bridge_poller` | `_LOOP_*`, `_KW_FLOOD_*` | REPORT 3 HK-13, HK-14 | PKVC-17 (missing) | HK-13 approved |
+| `draft_always_gate.md` | `modules/fazle_bridge_poller` | `_is_draft_always()` | REPORT 3 HK-09 | PKVC-17 (missing) | HK-09 approved |
+| `complaint_protection_rules.md` | `modules/fazle_bridge_poller` | `_COMPLAINT_PHRASES`, `_ADVANCE_REQUEST_PHRASES` | REPORT 3 HK-10, HK-11 | PKVC-17 (missing) | N/A (developer scope) |
+| `loop_flood_protection.md` | `modules/fazle_bridge_poller` | `_LOOP_*`, `_KW_FLOOD_*` | REPORT 3 HK-13, HK-14 | PKVC-17 (missing) | HK-13 approved |
 | `transport_allowance.md` (UPDATE) | `modules/escort_lifecycle` | `_TRANSPORT_RATES` | REPORT 3 HK-19 | PKVC-16 CON-03 | CON-03: Mongla=800 approved |
-| `payment_business_rules.md` (UPDATE) | `modules/payment_workflow` | `create_escort_payment_draft()` | REPORT 3 HK-25; REPORT 14 BR-08 | PKVC-16 CON-01 | CON-01: 12000/30×days approved |
+| `payment_business_rules.md` (UPDATE) | `modules/fazle_payment_workflow` | `create_escort_payment_draft()` | REPORT 3 HK-25; REPORT 14 BR-08 | PKVC-16 CON-01 | CON-01: 12000/30×days approved |
 | `payroll_state_machine.md` (NEW) | `modules/payroll` | `ALLOWED_TRANSITIONS` | REPORT 10 SM-01 | PKVC-13 | CON-02 approved |
 | `food_cost_policy.md` (NEW) | `modules/escort_lifecycle` | `_calc_duty_days()`, hardcoded ৳150 | REPORT 3 HK-20 | PKVC-16 CON-04 | CON-04: 150/day+exceptions approved |
-| `admin_command_engine.md` [KB-06] | `modules/admin_commands` | All 38 commands | REPORT 13 | PKVC-12 | N/A |
+| `admin_command_engine.md` [KB-06] | `modules/fazle_admin_commands` | All 38 commands | REPORT 13 | PKVC-12 | N/A |
 | `rbac_engine.md` [KB-14] | `modules/rbac` | `COMMAND_ROLE`, `ensure_bootstrap_admins()` | REPORT 3 HK-40 to HK-42 | PKVC-09 | HK-41 bootstrap approved |
 | `scheduler_engine.md` [KB-07] | `modules/scheduler` | All 14 APScheduler jobs | REPORT 20 | PKVC-11 | N/A |
 | `message_router_engine.md` [KB-01] | `modules/message_router` | 15-step routing priority | REPORT 9 WF-01 | PKVC-04 | HK-01 to HK-09 approved |
-| `identity_engine.md` [KB-02] | `modules/identity_brain` | `_ROLE_PRIORITY`, 6 evidence sources | REPORT 15 | PKVC-09 | N/A |
-| `bridge_engine.md` [KB-10] | `modules/bridge_poller` | `_fetch_new_messages()`, cursor logic | REPORT 9 WF-01 | PKVC-04 | HK-44, HK-45, HK-46 approved |
+| `identity_engine.md` [KB-02] | `modules/fazle_identity_brain` | `_ROLE_PRIORITY`, 6 evidence sources | REPORT 15 | PKVC-09 | N/A |
+| `bridge_engine.md` [KB-10] | `modules/fazle_bridge_poller` | `_fetch_new_messages()`, cursor logic | REPORT 9 WF-01 | PKVC-04 | HK-44, HK-45, HK-46 approved |
 | `rag_engine.md` [KB-08] | `modules/rag` | BM25 index, safety filters | REPORT 21 | PKVC-08 | N/A |
 | `escort_engine.md` [KB-03] | `modules/escort`, `escort_lifecycle` | Multiple parsers, close_program() | REPORT 9 WF-02, WF-03 | PKVC-04 | CON-03, CON-04 |
-| `payment_engine.md` [KB-04] | `modules/payment_workflow` | `create_escort_payment_draft()` | REPORT 9 WF-03 | PKVC-05 | CON-01 |
+| `payment_engine.md` [KB-04] | `modules/fazle_payment_workflow` | `create_escort_payment_draft()` | REPORT 9 WF-03 | PKVC-05 | CON-01 |
 | `payroll_engine.md` [KB-05] | `modules/payroll` | `compute_run()` | REPORT 9 WF-07 | PKVC-05 | CON-02 |
 | `database_engine.md` [KB-13] | All modules | All 30+ tables | REPORT 16 | PKVC-07 | N/A |
 | `llm_provider_chain.md` (NEW) | `config.py`, all modules | LLM provider chain config | REPORT 17 | PKVC-08 | N/A |

@@ -48,7 +48,7 @@ pytestmark = pytest.mark.workflow
 async def croster_employee(test_db_pool):
     async with test_db_pool.acquire() as conn:
         row = await conn.fetchrow("""
-            INSERT INTO wbom_employees
+            INSERT INTO fazle_employees_legacy
                 (employee_mobile, employee_name, designation, status, basic_salary)
             VALUES ('8801811111111', 'Karim Guard', 'Security Guard', 'Active', 9000.00)
             RETURNING *

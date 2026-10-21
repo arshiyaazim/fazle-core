@@ -247,10 +247,10 @@ async def list_contacts(
         FROM (
             SELECT DISTINCT ON (sender_number)
                 sender_number, platform, message_body, received_at, direction, identity_role
-            FROM wbom_whatsapp_messages
+            FROM fazle_whatsapp_messages
             ORDER BY sender_number, received_at DESC
         ) m
-        LEFT JOIN wbom_contacts c ON c.whatsapp_number = m.sender_number
+        LEFT JOIN fazle_contacts c ON c.whatsapp_number = m.sender_number
         WHERE (
             $3 = ''
             OR m.sender_number ILIKE '%' || $3 || '%'
@@ -268,12 +268,12 @@ async def list_contacts(
         unread_rows = await fetch_all(
             """
             SELECT m.sender_number AS phone, COUNT(*) AS cnt
-            FROM wbom_whatsapp_messages m
+            FROM fazle_whatsapp_messages m
             WHERE m.sender_number = ANY($1::text[])
               AND m.direction = 'inbound'
               AND m.received_at > COALESCE((
                   SELECT MAX(m2.received_at)
-                  FROM wbom_whatsapp_messages m2
+                  FROM fazle_whatsapp_messages m2
                   WHERE m2.direction = 'outbound'
                     AND m2.receiver_number = m.sender_number
               ), '1970-01-01'::timestamptz)
@@ -285,8 +285,8 @@ async def list_contacts(
 
     total = await fetch_val(
         """SELECT COUNT(DISTINCT m.sender_number)
-           FROM wbom_whatsapp_messages m
-           LEFT JOIN wbom_contacts c ON c.whatsapp_number = m.sender_number
+           FROM fazle_whatsapp_messages m
+           LEFT JOIN fazle_contacts c ON c.whatsapp_number = m.sender_number
            WHERE ($1 = '' OR m.sender_number ILIKE '%'||$1||'%' OR c.display_name ILIKE '%'||$1||'%')""",
         search,
     ) or 0
@@ -301,7 +301,7 @@ async def list_contacts(
 
     # Return the global max message_id so the frontend can seed its SSE cursor
     # and avoid replaying all historical messages on every page load.
-    max_message_id = int(await fetch_val("SELECT COALESCE(MAX(message_id), 0) FROM wbom_whatsapp_messages") or 0)
+    max_message_id = int(await fetch_val("SELECT COALESCE(MAX(message_id), 0) FROM fazle_whatsapp_messages") or 0)
     max_draft_id = int(await fetch_val("SELECT COALESCE(MAX(id), 0) FROM fazle_draft_replies") or 0)
 
     return {
@@ -316,9 +316,9 @@ async def list_contacts(
 
 @router.get("/api/wa/contacts/sync-status")
 async def contact_sync_status(_: None = Depends(_require_api_key)):
-    total = int(await fetch_val("SELECT COUNT(*) FROM wbom_contacts") or 0)
+    total = int(await fetch_val("SELECT COUNT(*) FROM fazle_contacts") or 0)
     with_name = int(await fetch_val(
-        "SELECT COUNT(*) FROM wbom_contacts WHERE display_name IS NOT NULL AND display_name != whatsapp_number"
+        "SELECT COUNT(*) FROM fazle_contacts WHERE display_name IS NOT NULL AND display_name != whatsapp_number"
     ) or 0)
     last_sync = await get_runtime_setting("contact_sync.last_run", "never")
     return {
@@ -347,7 +347,7 @@ async def trigger_contact_sync(_: None = Depends(_require_api_key)):
 @router.get("/api/wa/contacts/{phone}")
 async def get_contact(phone: str, _: None = Depends(_require_api_key)):
     row = await fetch_one(
-        "SELECT whatsapp_number AS phone, display_name, platform, last_seen, updated_at FROM wbom_contacts WHERE whatsapp_number=$1",
+        "SELECT whatsapp_number AS phone, display_name, platform, last_seen, updated_at FROM fazle_contacts WHERE whatsapp_number=$1",
         phone,
     )
     if not row:
@@ -369,7 +369,7 @@ class ContactPatch(BaseModel):
 async def update_contact(phone: str, body: ContactPatch, _: None = Depends(_require_api_key)):
     if body.display_name is not None:
         await execute(
-            "UPDATE wbom_contacts SET display_name=$1, updated_at=NOW() WHERE whatsapp_number=$2",
+            "UPDATE fazle_contacts SET display_name=$1, updated_at=NOW() WHERE whatsapp_number=$2",
             body.display_name, phone,
         )
     return {"updated": True}
@@ -377,7 +377,7 @@ async def update_contact(phone: str, body: ContactPatch, _: None = Depends(_requ
 
 @router.delete("/api/wa/contacts/{phone}")
 async def delete_contact(phone: str, _: None = Depends(_require_api_key)):
-    await execute("DELETE FROM wbom_contacts WHERE whatsapp_number=$1", phone)
+    await execute("DELETE FROM fazle_contacts WHERE whatsapp_number=$1", phone)
     return {"deleted": True}
 
 
@@ -399,7 +399,7 @@ async def unblock_contact_autoreply(phone: str, _: None = Depends(_require_api_k
 # ever auto-authorises sending: the bridge routes inbound and may send outbound
 # ONLY in OUTBOUND_OWNER_APPROVED. Every transition here is an explicit
 # api-key-gated (owner/superadmin) action. Consumed by
-# modules.bridge_poller._bridge_outbound_held and the recruitment recovery sweep.
+# modules.fazle_bridge_poller._bridge_outbound_held and the recruitment recovery sweep.
 
 _BRIDGE_PAIRING_STATES = (
     "UNPAIRED",
@@ -411,12 +411,12 @@ _BRIDGE_PAIRING_BRIDGES = ("bridge1", "bridge2", "bridge3")
 
 
 async def _pairing_outbound_allowed(bridge: str) -> bool:
-    """Authoritative — asks modules.bridge_poller._bridge_outbound_held (the
+    """Authoritative — asks modules.fazle_bridge_poller._bridge_outbound_held (the
     SAME function the poller / outbound queue / recovery sweep consult), so the
     API answer can never disagree with runtime behaviour. For a FAIL-CLOSED
     bridge (bridge3) an unset / ambiguous state reports allowed=False."""
     try:
-        from modules.bridge_poller import _bridge_outbound_held
+        from modules.fazle_bridge_poller import _bridge_outbound_held
         held, _ = await _bridge_outbound_held(bridge)
         return not held
     except Exception:
@@ -492,7 +492,7 @@ async def get_messages(
         SELECT message_id AS id, sender_number, message_body AS body,
                direction, platform, received_at, identity_role, intent_detected,
                receiver_number, metadata_json->'provenance' AS provenance
-        FROM wbom_whatsapp_messages
+        FROM fazle_whatsapp_messages
         WHERE (
             sender_number = ANY($2::text[])
             OR (direction='outbound' AND receiver_number = ANY($2::text[]))
@@ -530,7 +530,7 @@ async def send_message(body: SendRequest, _: None = Depends(_require_api_key)):
     platform = body.platform
     if not platform:
         row = await fetch_one(
-            "SELECT platform FROM wbom_whatsapp_messages WHERE sender_number=$1 ORDER BY received_at DESC LIMIT 1",
+            "SELECT platform FROM fazle_whatsapp_messages WHERE sender_number=$1 ORDER BY received_at DESC LIMIT 1",
             body.phone,
         )
         platform = row["platform"] if row else "bridge2"
@@ -602,10 +602,10 @@ async def list_drafts(
             orig.message_body                                      AS original_message,
             orig.received_at                                       AS original_received_at
         FROM fazle_draft_replies d
-        LEFT JOIN wbom_contacts c ON c.whatsapp_number = d.recipient
+        LEFT JOIN fazle_contacts c ON c.whatsapp_number = d.recipient
         LEFT JOIN LATERAL (
             SELECT message_body, received_at
-            FROM wbom_whatsapp_messages
+            FROM fazle_whatsapp_messages
             WHERE message_id::text = d.meta->>'core_message_id'
             LIMIT 1
         ) orig ON true
@@ -821,7 +821,7 @@ async def sse_stream(
                     SELECT message_id AS id, sender_number AS phone,
                            message_body AS body, direction, platform,
                            received_at, identity_role, intent_detected
-                    FROM wbom_whatsapp_messages
+                    FROM fazle_whatsapp_messages
                     WHERE message_id > $1
                     ORDER BY message_id ASC
                     LIMIT 50
@@ -859,9 +859,9 @@ async def sse_stream(
                            d.created_at,
                            orig.message_body                       AS original_message
                     FROM fazle_draft_replies d
-                    LEFT JOIN wbom_contacts c ON c.whatsapp_number = d.recipient
+                    LEFT JOIN fazle_contacts c ON c.whatsapp_number = d.recipient
                     LEFT JOIN LATERAL (
-                        SELECT message_body FROM wbom_whatsapp_messages
+                        SELECT message_body FROM fazle_whatsapp_messages
                         WHERE message_id::text = d.meta->>'core_message_id'
                         LIMIT 1
                     ) orig ON true

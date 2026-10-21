@@ -113,7 +113,7 @@ async def list_drafts(
           d.admin_phone,
           c.display_name AS contact_name
         FROM fazle_draft_replies d
-        LEFT JOIN wbom_contacts c
+        LEFT JOIN fazle_contacts c
           ON c.whatsapp_number = d.recipient
          AND c.is_active = true
         WHERE d.status = ANY(ARRAY[{placeholders}])
@@ -205,7 +205,7 @@ async def approve_draft(
 
     Attendance-intent drafts (Owner decision, 2026-07-11) are handled by the
     shared modules.attendance.finalize_attendance_draft() service instead --
-    the same function modules.admin_commands._cmd_approve uses for the
+    the same function modules.fazle_admin_commands._cmd_approve uses for the
     WhatsApp APPROVE <id> channel, so the two approval paths cannot drift.
     Every other intent keeps this endpoint's original behavior unchanged.
     """

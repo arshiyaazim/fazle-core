@@ -1,8 +1,8 @@
-"""Unit tests -- POST/GET /api/payment-drafts/* (modules/draft_approval/routes.py).
+"""Unit tests -- POST/GET /api/payment-drafts/* (modules/fazle_draft_approval/routes.py).
 
 2026-08-19, Task 2 of HERMES_BUSINESS_EXECUTION_CAPABILITY_PROVENANCE_
 AUDIT_2026-08-19.md's approved plan: new routes wrapping the existing,
-unmodified modules.draft_approval.approve_draft/edit_draft/reject_draft --
+unmodified modules.fazle_draft_approval.approve_draft/edit_draft/reject_draft --
 the same functions the WhatsApp APPROVED/DREDIT/DREJECT admin commands
 already call. No new business logic -- these tests mock draft_approval.*
 directly and assert delegation + RBAC + actor-identity resolution, same
@@ -54,7 +54,7 @@ class TestApproveRoute:
             "transaction_id": 55, "txn_ref": "TXN-ABC", "employee_name": "Sumon",
             "amount": 3000.0, "method": "bkash", "accountant_msg": "...",
         })
-        with patch("modules.draft_approval.approve_draft", new=mock_approve):
+        with patch("modules.fazle_draft_approval.approve_draft", new=mock_approve):
             async with await _client() as ac:
                 response = await ac.post(
                     "/api/payment-drafts/1/approve",
@@ -84,7 +84,7 @@ class TestApproveRoute:
 
     async def test_draft_approval_failure_maps_to_400(self, internal_key_headers):
         mock_approve = AsyncMock(return_value={"ok": False, "error": "Draft #1 already completed", "draft_id": 1})
-        with patch("modules.draft_approval.approve_draft", new=mock_approve):
+        with patch("modules.fazle_draft_approval.approve_draft", new=mock_approve):
             async with await _client() as ac:
                 response = await ac.post(
                     "/api/payment-drafts/1/approve",
@@ -107,7 +107,7 @@ class TestApproveRoute:
 class TestEditRoute:
     async def test_delegates_with_all_fields(self, internal_key_headers):
         mock_edit = AsyncMock(return_value={"ok": True, "draft_id": 1, "version": 2})
-        with patch("modules.draft_approval.edit_draft", new=mock_edit):
+        with patch("modules.fazle_draft_approval.edit_draft", new=mock_edit):
             async with await _client() as ac:
                 response = await ac.post(
                     "/api/payment-drafts/1/edit",
@@ -119,7 +119,7 @@ class TestEditRoute:
 
     async def test_all_fields_optional(self, internal_key_headers):
         mock_edit = AsyncMock(return_value={"ok": True, "draft_id": 1, "version": 2})
-        with patch("modules.draft_approval.edit_draft", new=mock_edit):
+        with patch("modules.fazle_draft_approval.edit_draft", new=mock_edit):
             async with await _client() as ac:
                 response = await ac.post(
                     "/api/payment-drafts/1/edit", json={}, headers=internal_key_headers,
@@ -131,7 +131,7 @@ class TestEditRoute:
 class TestRejectRoute:
     async def test_delegates(self, internal_key_headers):
         mock_reject = AsyncMock(return_value={"ok": True, "draft_id": 1, "status": "rejected", "reason": "dup"})
-        with patch("modules.draft_approval.reject_draft", new=mock_reject):
+        with patch("modules.fazle_draft_approval.reject_draft", new=mock_reject):
             async with await _client() as ac:
                 response = await ac.post(
                     "/api/payment-drafts/1/reject", json={"reason": "dup"}, headers=internal_key_headers,
@@ -143,7 +143,7 @@ class TestRejectRoute:
 class TestAuditAndBalanceRoutes:
     async def test_get_draft_audit(self, internal_key_headers):
         mock_events = AsyncMock(return_value=[{"id": 1, "event": "approved"}])
-        with patch("modules.draft_approval.get_draft_audit_events", new=mock_events):
+        with patch("modules.fazle_draft_approval.get_draft_audit_events", new=mock_events):
             async with await _client() as ac:
                 response = await ac.get(
                     "/api/payment-drafts/1/audit", headers=internal_key_headers,
@@ -153,7 +153,7 @@ class TestAuditAndBalanceRoutes:
 
     async def test_get_employee_balance(self, internal_key_headers):
         mock_balance = AsyncMock(return_value={"employee_id": 5, "period": "2026-08", "closing_balance": 100})
-        with patch("modules.draft_approval.get_employee_balance", new=mock_balance):
+        with patch("modules.fazle_draft_approval.get_employee_balance", new=mock_balance):
             async with await _client() as ac:
                 response = await ac.get(
                     "/api/payment-drafts/employee/5/balance", headers=internal_key_headers,

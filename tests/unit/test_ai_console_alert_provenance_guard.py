@@ -1,3 +1,4 @@
+
 """
 P1b (2026-08-19, reliability-hardening pass) — internal/system message
 provenance guard.

@@ -368,8 +368,8 @@ class TestCreateEmployeeManual:
             status="active",
         )
         assert emp["id"] == 1
-        # INSERT INTO fpe_employees is done via con.fetchval (RETURNING id)
-        assert any("INSERT INTO fpe_employees" in sql for sql in fake_conn.fetchval_calls)
+        # INSERT INTO fazle_employees is done via con.fetchval (RETURNING id)
+        assert any("INSERT INTO fazle_employees" in sql for sql in fake_conn.fetchval_calls)
         # No ALTER TABLE should ever be issued
         assert not any("ALTER TABLE" in sql for sql in fake_conn.execute_calls)
         assert not any("ALTER TABLE" in sql for sql in fake_conn.fetchval_calls)
@@ -423,7 +423,7 @@ class TestReviewQueueCleanup:
         sqls = [c.args[0] for c in mock_execute.call_args_list]
         assert any("DELETE FROM fpe_unmatched_messages" in str(s) for s in sqls)
         assert any("DELETE FROM fpe_review_audit_logs" in str(s) for s in sqls)
-        assert not any("fpe_cash_transactions" in str(s) for s in sqls)
+        assert not any("fazle_cash_transactions" in str(s) for s in sqls)
 
     @patch("modules.fazle_payroll_engine.routes.fetch_all", new_callable=AsyncMock)
     async def test_noop_when_nothing_stale(self, mock_fetch_all):
@@ -450,7 +450,7 @@ class TestMarkStaleEmployeesInactive:
         count = await _mark_stale_employees_inactive()
         assert count == 2
         update_sql = mock_execute.call_args[0][0]
-        assert "UPDATE fpe_employees SET status = 'inactive'" in update_sql
+        assert "UPDATE fazle_employees SET status = 'inactive'" in update_sql
 
     @patch("modules.fazle_payroll_engine.routes.fetch_all", new_callable=AsyncMock)
     @patch("modules.fazle_payroll_engine.routes.execute", new_callable=AsyncMock)
@@ -612,7 +612,7 @@ class TestFazlePayrollEngineTierGates:
 class TestWbomCrossLookupStatusCase:
     """
     2026-07-15 fix: the WBOM cross-lookup in match_or_create_employee() compared
-    `status != 'inactive'` (lowercase literal) against wbom_employees.status,
+    `status != 'inactive'` (lowercase literal) against fazle_employees_legacy.status,
     which is stored Title-case ('Active'/'Inactive'). Postgres text comparison
     is case-sensitive, so the filter was a permanent no-op -- Inactive WBOM
     employees were never excluded. Fixed to `LOWER(status) != 'inactive'`.
@@ -626,12 +626,12 @@ class TestWbomCrossLookupStatusCase:
 
         async with test_db_pool.acquire() as conn:
             await conn.execute(
-                "UPDATE wbom_employees SET status='Inactive' WHERE employee_id=$1",
+                "UPDATE fazle_employees_legacy SET status='Inactive' WHERE employee_id=$1",
                 seed_employee["employee_id"],
             )
             fpe_row = await conn.fetchrow(
                 """
-                INSERT INTO fpe_employees
+                INSERT INTO fazle_employees
                     (employee_code, full_name, name_normalized, primary_phone,
                      status)
                 VALUES ('EMP-CROSSLOOKUP', $1, $2, $3, 'active')

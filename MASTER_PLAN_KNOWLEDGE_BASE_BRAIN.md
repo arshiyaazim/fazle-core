@@ -1,5 +1,9 @@
 # Fazle Core Master Plan — Knowledge Base as the System Brain
 
+
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **Created:** 2026-06-24  
 **Location:** `/home/azim/core/MASTER_PLAN_KNOWLEDGE_BASE_BRAIN.md`  
 **Primary repo:** `git@github.com:arshiyaazim/fazle-core.git`  
@@ -123,7 +127,7 @@ Key modules:
   - `/webhook/mcp2`
   - `/send/meta`, `/send/mcp1`, `/send/mcp2`
   - health/admin/dashboard routes
-- `modules/bridge_poller`
+- `modules/fazle_bridge_poller`
   - SQLite read-only polling from bridge DBs
   - LID to phone resolution
   - inbound dedup
@@ -206,7 +210,7 @@ Key modules:
 - `modules/recruitment_flow`
 - `modules/recruitment_ai`
 - `modules/conversation_layer`
-- `modules/intent`
+- `modules/fazle_intent`
 - `modules/message_router`
 - `modules/social_auto_reply`
 
@@ -223,14 +227,14 @@ Sub-features:
 Key modules:
 
 - `modules/fazle_payroll_engine`
-- `modules/payment_workflow`
+- `modules/fazle_payment_workflow`
 - `modules/payment_correction`
-- `modules/payment_ingest`
+- `modules/fazle_payment_ingest`
 - `modules/payroll`
 - `modules/payroll_logic`
 - `modules/accountant_summary`
 - `modules/admin_transactions`
-- `modules/admin_commands`
+- `modules/fazle_admin_commands`
 
 Sub-features:
 
@@ -270,7 +274,7 @@ Sub-features:
 
 Key modules:
 
-- `modules/identity_brain`
+- `modules/fazle_identity_brain`
 - `modules/role_classifier`
 - `modules/rbac`
 - `modules/contact_roles`
@@ -611,7 +615,7 @@ title: Bridge Poller
 status: active
 visibility: developer
 source_modules:
-  - modules/bridge_poller/__init__.py
+  - modules/fazle_bridge_poller/__init__.py
 source_tables:
   - bridge_poller_cursor
   - processed_bridge_messages
@@ -933,12 +937,12 @@ P0 modules:
 
 - `app/main.py`
 - `modules/message_router`
-- `modules/bridge_poller`
+- `modules/fazle_bridge_poller`
 - `modules/outbound`
 - `modules/rag`
 - `modules/knowledge_base`
-- `modules/identity_brain`
-- `modules/payment_workflow`
+- `modules/fazle_identity_brain`
+- `modules/fazle_payment_workflow`
 - `modules/fazle_payroll_engine`
 - `modules/escort_lifecycle`
 - `modules/social_auto_reply`

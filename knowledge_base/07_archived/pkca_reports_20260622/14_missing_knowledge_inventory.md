@@ -127,9 +127,9 @@ The FPE is a completely separate background engine from the core payroll module:
 2. **FPE processing state machine** — pending→parsing→parsed→accounting→done/failed/skipped
 3. **MessageType enum** — payment, balance_summary, cash_command, income_command, escort_payment, other
 4. **TxnCategory enum** — transaction categories for FPE
-5. **FPE database tables** — fpe_wa_messages, fpe_message_processing_state, fpe_cash_transactions, fpe_employees
+5. **FPE database tables** — fpe_wa_messages, fpe_message_processing_state, fazle_cash_transactions, fazle_employees
 6. **FPE API routes** — /api/fpe/* endpoints
-7. **FPE vs core payroll distinction** — FPE uses fpe_cash_transactions (separate from wbom_cash_transactions)
+7. **FPE vs core payroll distinction** — FPE uses fazle_cash_transactions (separate from fazle_cash_transactions_archive)
 
 ---
 
@@ -169,8 +169,8 @@ The FPE is a completely separate background engine from the core payroll module:
 
 1. **43 production tables** — none named in KB
 2. **Advisory locks** — concurrent payment writes use Postgres advisory locks
-3. **Soft-delete** — wbom_employees uses status='Inactive' never hard-delete
-4. **Message hash dedup** — UNIQUE INDEX on message_hash in wbom_whatsapp_messages
+3. **Soft-delete** — fazle_employees_legacy uses status='Inactive' never hard-delete
+4. **Message hash dedup** — UNIQUE INDEX on message_hash in fazle_whatsapp_messages
 5. **Attendance dedup** — UNIQUE(employee_id, attendance_date) with ON CONFLICT UPDATE
 6. **Backup rotation** — 14 daily + 8 weekly; SHA-256 hash verification
 

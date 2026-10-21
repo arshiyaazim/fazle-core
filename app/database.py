@@ -171,7 +171,7 @@ def _observe_inbound_write(sql: str, result) -> None:
     if not match:
         return
     table = match.group(1).lower()
-    if table in {"wbom_whatsapp_messages", "fazle_outbound_queue", "fazle_draft_replies"}:
+    if table in {"fazle_whatsapp_messages", "fazle_outbound_queue", "fazle_draft_replies"}:
         return  # these have explicit, durable relationships
     fields = {}
     if isinstance(result, dict):

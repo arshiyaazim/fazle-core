@@ -1,5 +1,9 @@
 # C1B Final Owner Report — `fpe_cash_transactions` as Only Canonical Cash Transaction Table
 
+
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **Date:** 2026-06-29  
 **Directive:** Owner Final Directive (2026-06-29) — C1B Implementation  
 **Status:** ✅ COMPLETE — All 9 Phases Delivered
@@ -50,7 +54,7 @@ The Owner Final Directive has been fully implemented. `fpe_cash_transactions` is
 - **Bug fixed:** Event was created with `transaction_status=pending` but admin approval means it should be `final`. Now overrides to `final` + `approved` after building event.
 
 ### Phase 7: WBOM Historical Migration
-- [`payment_ingest/wbom_fpe_sync.py`](core/modules/payment_ingest/wbom_fpe_sync.py:72): `sync_wbom_transaction()` reads from `wbom_cash_transactions` and creates FPE transaction
+- [`payment_ingest/wbom_fpe_sync.py`](core/modules/fazle_data_sync/__init__.py:72): `sync_wbom_transaction()` reads from `wbom_cash_transactions` and creates FPE transaction
 - `backfill_wbom_to_fpe()` for bulk historical migration
 - WBOM table preserved as read-only archive — no data deleted
 
@@ -72,7 +76,7 @@ All runtime read paths migrated from `wbom_cash_transactions` to `fpe_cash_trans
 | [`nl_advance_record.py`](core/modules/admin_commands/nl_advance_record.py:1) | Docstring updated; `_cumulative_advance()` reads from `fpe_cash_transactions` |
 
 **Remaining legitimate WBOM references:**
-- [`wbom_fpe_sync.py`](core/modules/payment_ingest/wbom_fpe_sync.py:1) — Migration reader (reads WBOM to copy to FPE)
+- [`wbom_fpe_sync.py`](core/modules/fazle_data_sync/__init__.py:1) — Migration reader (reads WBOM to copy to FPE)
 - [`fpe_bridge.py`](core/modules/payment_ingest/fpe_bridge.py:1) — Comment reference
 - [`payment_ingest/__init__.py`](core/modules/payment_ingest/__init__.py:1) — Comments saying "no new rows written to wbom"
 

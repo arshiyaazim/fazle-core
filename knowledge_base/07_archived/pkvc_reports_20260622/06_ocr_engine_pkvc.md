@@ -22,7 +22,7 @@ runtime_index: false
 | 2 | DocResult TypedDict has exactly 6 fields | VERIFIED | `modules/ocr_processor/__init__.py` `class DocResult(TypedDict)`: extracted_text, doc_type, filename, confidence_score, reply, auto_send_safe — 6 fields confirmed |
 | 3 | 3 slip types in `_classify_slip()` + unknown + duplicate | VERIFIED | `modules/ocr_processor/__init__.py` `_classify_slip()`: escort_slip, release_slip, payment_slip; defaults to unknown; is_duplicate checked before classification |
 | 4 | 7 document types in `_classify_candidate_doc()` | VERIFIED | cv, nid, certificate, chairman_cert, handwritten, passport_photo, passport — 7 confirmed |
-| 5 | SHA-256 duplicate detection via `check_and_register()` | VERIFIED | `modules/image_hash/` module called at top of `process_image()` |
+| 5 | SHA-256 duplicate detection via `check_and_register()` | VERIFIED | `modules/fazle_image_hash/` module called at top of `process_image()` |
 | 6 | `auto_send_safe = True` for all 7 recognized doc types; `False` for unknown | VERIFIED | `modules/ocr_processor/__init__.py` DocResult construction |
 | 7 | Confidence < 40 → warning suffix in reply | VERIFIED | `_build_reply()` — `[⚠️ কম নির্ভরযোগ্য — যাচাই করুন]` appended when `confidence_score < 40` |
 | 8 | Document confidence = word-count proxy | VERIFIED | `min(100, max(10, len(extracted_text.split()) * 2))` formula confirmed |

@@ -215,7 +215,7 @@ CREATE TABLE IF NOT EXISTS wbom_recruitment_reminders (
 );
 
 -- WBOM core tables (pre-date all migrations)
-CREATE TABLE IF NOT EXISTS wbom_employees (
+CREATE TABLE IF NOT EXISTS fazle_employees_legacy (
     employee_id   SERIAL PRIMARY KEY,
     employee_mobile VARCHAR(20) UNIQUE NOT NULL,
     employee_name VARCHAR(100) NOT NULL,
@@ -239,7 +239,7 @@ CREATE TABLE IF NOT EXISTS wbom_employees (
 -- _lookup_contact() on 2026-07-11; it shadows 029's CREATE TABLE IF NOT
 -- EXISTS since this bootstrap runs first, so keeping it wrong here means
 -- every test silently ran against a schema production never had).
-CREATE TABLE IF NOT EXISTS wbom_contacts (
+CREATE TABLE IF NOT EXISTS fazle_contacts (
     contact_id      SERIAL PRIMARY KEY,
     whatsapp_number VARCHAR(50) NOT NULL,
     display_name    VARCHAR(200) NOT NULL DEFAULT '',
@@ -263,7 +263,7 @@ CREATE TABLE IF NOT EXISTS wbom_escort_programs (
     cargo_type    VARCHAR(100),
     importer      VARCHAR(100),
     escort_name   VARCHAR(100),
-    escort_employee_id INT REFERENCES wbom_employees(employee_id),
+    escort_employee_id INT REFERENCES fazle_employees_legacy(employee_id),
     escort_mobile VARCHAR(20),
     program_date  DATE,
     shift         VARCHAR(1) DEFAULT 'D',
@@ -281,7 +281,7 @@ CREATE TABLE IF NOT EXISTS wbom_escort_programs (
     completion_time TIMESTAMPTZ,
     total_payment DECIMAL(10,2) DEFAULT 0,
     release_location VARCHAR(100),
-    contact_id    INT REFERENCES wbom_contacts(contact_id),
+    contact_id    INT REFERENCES fazle_contacts(contact_id),
     remarks       TEXT,
     whatsapp_message_id INT,
     created_at    TIMESTAMPTZ DEFAULT NOW()
@@ -296,7 +296,7 @@ CREATE TABLE IF NOT EXISTS wbom_escort_programs (
 
 CREATE TABLE IF NOT EXISTS wbom_attendance (
     attendance_id SERIAL PRIMARY KEY,
-    employee_id   INT REFERENCES wbom_employees(employee_id) ON DELETE CASCADE,
+    employee_id   INT REFERENCES fazle_employees_legacy(employee_id) ON DELETE CASCADE,
     attendance_date DATE NOT NULL,
     status        VARCHAR(20) DEFAULT 'Present',
     location      VARCHAR(100),
@@ -308,9 +308,9 @@ CREATE TABLE IF NOT EXISTS wbom_attendance (
     UNIQUE (employee_id, attendance_date)
 );
 
-CREATE TABLE IF NOT EXISTS wbom_cash_transactions (
+CREATE TABLE IF NOT EXISTS fazle_cash_transactions_archive (
     transaction_id SERIAL PRIMARY KEY,
-    employee_id   INT REFERENCES wbom_employees(employee_id) ON DELETE CASCADE,
+    employee_id   INT REFERENCES fazle_employees_legacy(employee_id) ON DELETE CASCADE,
     program_id    INT REFERENCES wbom_escort_programs(program_id),
     transaction_type VARCHAR(20) NOT NULL,
     amount        DECIMAL(10,2) NOT NULL,
@@ -331,7 +331,7 @@ CREATE TABLE IF NOT EXISTS wbom_cash_transactions (
     approved_at   TIMESTAMPTZ
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_test_txn_idempotency
-    ON wbom_cash_transactions (idempotency_key)
+    ON fazle_cash_transactions_archive (idempotency_key)
     WHERE idempotency_key IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS wbom_staging_payments (
@@ -343,13 +343,13 @@ CREATE TABLE IF NOT EXISTS wbom_staging_payments (
     amount          DECIMAL(12,2),
     payment_method  VARCHAR(20),
     transaction_type VARCHAR(30),
-    matched_employee_id INT REFERENCES wbom_employees(employee_id),
+    matched_employee_id INT REFERENCES fazle_employees_legacy(employee_id),
     name_match_ratio NUMERIC(4,2),
     status          VARCHAR(20) DEFAULT 'pending',
     approved_by     VARCHAR(100),
     approved_at     TIMESTAMP,
     created_at      TIMESTAMP DEFAULT NOW(),
-    final_transaction_id INT REFERENCES wbom_cash_transactions(transaction_id),
+    final_transaction_id INT REFERENCES fazle_cash_transactions_archive(transaction_id),
     idempotency_key VARCHAR(64)
 );
 CREATE INDEX IF NOT EXISTS idx_staging_payments_status
@@ -357,7 +357,7 @@ CREATE INDEX IF NOT EXISTS idx_staging_payments_status
 
 CREATE TABLE IF NOT EXISTS wbom_payroll_runs (
     run_id        SERIAL PRIMARY KEY,
-    employee_id   INT REFERENCES wbom_employees(employee_id),
+    employee_id   INT REFERENCES fazle_employees_legacy(employee_id),
     period_year   INT,
     period_month  INT,
     status        VARCHAR(20) DEFAULT 'draft',
@@ -412,7 +412,7 @@ CREATE TABLE IF NOT EXISTS wbom_payroll_approval_log (
 
 CREATE TABLE IF NOT EXISTS wbom_salary_records (
     record_id     SERIAL PRIMARY KEY,
-    employee_id   INT REFERENCES wbom_employees(employee_id),
+    employee_id   INT REFERENCES fazle_employees_legacy(employee_id),
     salary_month  VARCHAR(7),
     amount        DECIMAL(10,2),
     status        VARCHAR(20) DEFAULT 'Pending',
@@ -422,7 +422,7 @@ CREATE TABLE IF NOT EXISTS wbom_salary_records (
 
 CREATE TABLE IF NOT EXISTS wbom_employee_requests (
     request_id    SERIAL PRIMARY KEY,
-    employee_id   INT REFERENCES wbom_employees(employee_id),
+    employee_id   INT REFERENCES fazle_employees_legacy(employee_id),
     request_type  VARCHAR(30),
     amount        DECIMAL(10,2),
     status        VARCHAR(20) DEFAULT 'pending',
@@ -431,14 +431,14 @@ CREATE TABLE IF NOT EXISTS wbom_employee_requests (
 
 CREATE TABLE IF NOT EXISTS wbom_cases (
     case_id       SERIAL PRIMARY KEY,
-    employee_id   INT REFERENCES wbom_employees(employee_id),
+    employee_id   INT REFERENCES fazle_employees_legacy(employee_id),
     case_type     VARCHAR(30),
     description   TEXT,
     status        VARCHAR(20) DEFAULT 'open',
     created_at    TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS wbom_whatsapp_messages (
+CREATE TABLE IF NOT EXISTS fazle_whatsapp_messages (
     message_id          SERIAL PRIMARY KEY,
     sender_number       TEXT,
     message_body        TEXT,
@@ -750,25 +750,25 @@ async def _run_all_migrations(conn: asyncpg.Connection) -> list[str]:
 _RUNTIME_SCHEMA_SQL = """
 -- Post-migration fixup: add columns that migrations fail to add due to
 -- file corruption in migration 010 or BEGIN/COMMIT transaction rollback issues.
-ALTER TABLE fpe_cash_transactions ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'whatsapp';
-ALTER TABLE fpe_cash_transactions ADD COLUMN IF NOT EXISTS source_channel TEXT;
-ALTER TABLE fpe_cash_transactions ADD COLUMN IF NOT EXISTS source_message_id TEXT;
-ALTER TABLE fpe_cash_transactions ADD COLUMN IF NOT EXISTS employee_id_phone TEXT;
-ALTER TABLE fpe_cash_transactions ADD COLUMN IF NOT EXISTS employee_phone TEXT;
-ALTER TABLE fpe_cash_transactions ADD COLUMN IF NOT EXISTS program_id BIGINT;
-ALTER TABLE fpe_cash_transactions ADD COLUMN IF NOT EXISTS original_payload JSONB;
-ALTER TABLE fpe_cash_transactions ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
-ALTER TABLE fpe_cash_transactions ADD COLUMN IF NOT EXISTS transaction_status TEXT NOT NULL DEFAULT 'final';
-ALTER TABLE fpe_cash_transactions ADD COLUMN IF NOT EXISTS approval_status TEXT;
-ALTER TABLE fpe_cash_transactions ADD COLUMN IF NOT EXISTS approved_by TEXT;
-ALTER TABLE fpe_cash_transactions ADD COLUMN IF NOT EXISTS approved_at TIMESTAMPTZ;
-ALTER TABLE fpe_cash_transactions ADD COLUMN IF NOT EXISTS review_status TEXT;
-ALTER TABLE fpe_cash_transactions ADD COLUMN IF NOT EXISTS submitted_by TEXT;
-ALTER TABLE fpe_cash_transactions ADD COLUMN IF NOT EXISTS submitted_at TIMESTAMPTZ;
-ALTER TABLE fpe_cash_transactions ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
-ALTER TABLE fpe_cash_transactions ADD COLUMN IF NOT EXISTS deleted_by TEXT;
-ALTER TABLE fpe_cash_transactions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE fpe_cash_transactions ADD COLUMN IF NOT EXISTS legacy_wbom_transaction_id BIGINT;
+ALTER TABLE fazle_cash_transactions ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'whatsapp';
+ALTER TABLE fazle_cash_transactions ADD COLUMN IF NOT EXISTS source_channel TEXT;
+ALTER TABLE fazle_cash_transactions ADD COLUMN IF NOT EXISTS source_message_id TEXT;
+ALTER TABLE fazle_cash_transactions ADD COLUMN IF NOT EXISTS employee_id_phone TEXT;
+ALTER TABLE fazle_cash_transactions ADD COLUMN IF NOT EXISTS employee_phone TEXT;
+ALTER TABLE fazle_cash_transactions ADD COLUMN IF NOT EXISTS program_id BIGINT;
+ALTER TABLE fazle_cash_transactions ADD COLUMN IF NOT EXISTS original_payload JSONB;
+ALTER TABLE fazle_cash_transactions ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE fazle_cash_transactions ADD COLUMN IF NOT EXISTS transaction_status TEXT NOT NULL DEFAULT 'final';
+ALTER TABLE fazle_cash_transactions ADD COLUMN IF NOT EXISTS approval_status TEXT;
+ALTER TABLE fazle_cash_transactions ADD COLUMN IF NOT EXISTS approved_by TEXT;
+ALTER TABLE fazle_cash_transactions ADD COLUMN IF NOT EXISTS approved_at TIMESTAMPTZ;
+ALTER TABLE fazle_cash_transactions ADD COLUMN IF NOT EXISTS review_status TEXT;
+ALTER TABLE fazle_cash_transactions ADD COLUMN IF NOT EXISTS submitted_by TEXT;
+ALTER TABLE fazle_cash_transactions ADD COLUMN IF NOT EXISTS submitted_at TIMESTAMPTZ;
+ALTER TABLE fazle_cash_transactions ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+ALTER TABLE fazle_cash_transactions ADD COLUMN IF NOT EXISTS deleted_by TEXT;
+ALTER TABLE fazle_cash_transactions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE fazle_cash_transactions ADD COLUMN IF NOT EXISTS legacy_wbom_transaction_id BIGINT;
 
 -- Bridge poller dedup tables (created at runtime by bridge_poller.init_tables)
 CREATE TABLE IF NOT EXISTS bridge_poller_cursor (
@@ -1124,7 +1124,7 @@ def _disable_shadow_logger_real_writes(request):
 
 @pytest.fixture(autouse=True)
 def _default_bridge3_pairing_state_released(request):
-    """BRIDGE3_FIRST_REPAIR_INCIDENT_2026-09-02: modules.bridge_poller now
+    """BRIDGE3_FIRST_REPAIR_INCIDENT_2026-09-02: modules.fazle_bridge_poller now
     FAIL-CLOSES bridge3 whenever `bridge3.pairing_state` is not exactly
     `OUTBOUND_OWNER_APPROVED` — an unset key holds all bridge3 routing and
     refuses every bridge3 outbound enqueue/dispatch. The isolated test DB's
@@ -1156,7 +1156,7 @@ def _default_bridge3_pairing_state_released(request):
 
 @pytest.fixture(autouse=True)
 def _reset_admin_command_dedup_cache():
-    """Clear modules.admin_commands' in-process dedup LRU before each test.
+    """Clear modules.fazle_admin_commands' in-process dedup LRU before each test.
 
     That cache is a module-level OrderedDict keyed by sha1(admin_phone+text)
     with a 30s TTL — correct for production (single-worker duplicate-send
@@ -1164,7 +1164,7 @@ def _reset_admin_command_dedup_cache():
     that send the same admin command text within 30s of each other collide
     and the second is silently treated as a duplicate.
     """
-    from modules.admin_commands import _dedup_cache
+    from modules.fazle_admin_commands import _dedup_cache
     _dedup_cache.clear()
     yield
     _dedup_cache.clear()
@@ -1272,7 +1272,7 @@ async def seed_employee(test_db_pool) -> dict:
     """Insert one employee row and return it."""
     async with test_db_pool.acquire() as conn:
         row = await conn.fetchrow("""
-            INSERT INTO wbom_employees
+            INSERT INTO fazle_employees_legacy
                 (employee_mobile, employee_name, designation, status,
                  basic_salary, bkash_number, nagad_number)
             VALUES
@@ -1288,7 +1288,7 @@ async def seed_employee2(test_db_pool) -> dict:
     """A second employee for multi-employee tests."""
     async with test_db_pool.acquire() as conn:
         row = await conn.fetchrow("""
-            INSERT INTO wbom_employees
+            INSERT INTO fazle_employees_legacy
                 (employee_mobile, employee_name, designation, status,
                  basic_salary, bkash_number)
             VALUES
@@ -1372,10 +1372,10 @@ async def seed_payment_draft(test_db_pool, seed_employee, seed_escort_program) -
 
 @pytest_asyncio.fixture
 async def seed_fpe_employee(test_db_pool, seed_employee) -> dict:
-    """Insert an fpe_employees row matching the seeded wbom_employees row."""
+    """Insert an fazle_employees row matching the seeded fazle_employees_legacy row."""
     async with test_db_pool.acquire() as conn:
         row = await conn.fetchrow("""
-            INSERT INTO fpe_employees
+            INSERT INTO fazle_employees
                 (employee_code, full_name, name_normalized, primary_phone,
                  employee_id_phone, status, canonical_employee_id)
             VALUES
@@ -1392,13 +1392,13 @@ async def seed_fpe_employee(test_db_pool, seed_employee) -> dict:
 
 @pytest_asyncio.fixture
 async def seed_fpe_karim_supervisor(test_db_pool) -> dict:
-    """A standalone fpe_employees row (no wbom_employees link needed) with
-    a designation, for modules.identity_brain.claim_verification tests.
+    """A standalone fazle_employees row (no fazle_employees_legacy link needed) with
+    a designation, for modules.fazle_identity_brain.claim_verification tests.
     Named distinctly from the pre-existing seed_fpe_employee fixture above
     (which is wbom-linked and has no designation) to avoid collision."""
     async with test_db_pool.acquire() as conn:
         row = await conn.fetchrow("""
-            INSERT INTO fpe_employees
+            INSERT INTO fazle_employees
                 (full_name, name_normalized, primary_phone, designation, status)
             VALUES
                 ('Karim Uddin', 'karim uddin', '01811111199', 'Ghat Supervisor', 'active')
@@ -1413,7 +1413,7 @@ async def seed_fpe_karim_duplicate(test_db_pool) -> dict:
     seed_fpe_karim_supervisor -- for the ambiguous-claim regression test."""
     async with test_db_pool.acquire() as conn:
         row = await conn.fetchrow("""
-            INSERT INTO fpe_employees
+            INSERT INTO fazle_employees
                 (full_name, name_normalized, primary_phone, designation, status)
             VALUES
                 ('Karim Uddin', 'karim uddin', '01822222299', 'Security Guard', 'active')

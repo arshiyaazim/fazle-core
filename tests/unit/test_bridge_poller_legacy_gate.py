@@ -1,4 +1,4 @@
-"""Unit tests — modules/bridge_poller._requires_legacy_workflow
+"""Unit tests — modules/fazle_bridge_poller._requires_legacy_workflow
 
 Regression coverage for the 2026-07-14 silent-drop incident: two real
 escort-order messages from an ESCORT_CLIENT_PHONES-listed number
@@ -20,13 +20,13 @@ pytestmark = pytest.mark.unit
 
 class TestRequiresLegacyWorkflow:
     def test_dropped_message_1_now_routes_to_legacy(self):
-        from modules.bridge_poller import _requires_legacy_workflow
+        from modules.fazle_bridge_poller import _requires_legacy_workflow
 
         text = "Mv.Wan minh 01/soyabean ext\n*A/c.kazi firm*\n1.Ak Sarkar 5-01730840247 local 800 "
         assert _requires_legacy_workflow(text, {}) is True
 
     def test_dropped_message_2_now_routes_to_legacy(self):
-        from modules.bridge_poller import _requires_legacy_workflow
+        from modules.fazle_bridge_poller import _requires_legacy_workflow
 
         text = "Mv.Alondra/soyabean ext\n*For oute\n*A/c.Aci godrej*\n1.Abdullah sayad-01725964055 "
         assert _requires_legacy_workflow(text, {}) is True
@@ -38,22 +38,22 @@ class TestRequiresLegacyWorkflow:
         "no. 01712-345678 thanks",
     ])
     def test_any_bd_mobile_format_routes_to_legacy(self, text):
-        from modules.bridge_poller import _requires_legacy_workflow
+        from modules.fazle_bridge_poller import _requires_legacy_workflow
 
         assert _requires_legacy_workflow(text, {}) is True
 
     def test_existing_keyword_tokens_still_route_to_legacy(self):
-        from modules.bridge_poller import _requires_legacy_workflow
+        from modules.fazle_bridge_poller import _requires_legacy_workflow
 
         assert _requires_legacy_workflow("Mother Vessel: MV GOLDEN STAR", {}) is True
         assert _requires_legacy_workflow("release confirmed for the escort", {}) is True
 
     def test_message_with_no_mobile_and_no_keyword_does_not_route_to_legacy(self):
-        from modules.bridge_poller import _requires_legacy_workflow
+        from modules.fazle_bridge_poller import _requires_legacy_workflow
 
         assert _requires_legacy_workflow("Hello, how are you today?", {}) is False
 
     def test_image_message_still_routes_to_legacy(self):
-        from modules.bridge_poller import _requires_legacy_workflow
+        from modules.fazle_bridge_poller import _requires_legacy_workflow
 
         assert _requires_legacy_workflow("", {"media_type": "image"}) is True
