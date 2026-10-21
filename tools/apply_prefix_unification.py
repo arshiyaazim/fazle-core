@@ -478,7 +478,7 @@ def phase_f(dry: bool) -> None:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry-run", action="store_true")
-    ap.add_argument("--objects", default="/tmp/prefix_work/merged_objects.json")
+    ap.add_argument("--objects", default=str(ROOT / "tools" / "prefix_objects.json"))
     ap.add_argument("--phase", default="all")
     args = ap.parse_args()
 

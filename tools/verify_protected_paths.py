@@ -109,7 +109,7 @@ def apply_subs(text: str, subs: list[tuple[str, str]]) -> str:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", default="HEAD")
-    ap.add_argument("--objects", default="/tmp/prefix_work/merged_objects.json")
+    ap.add_argument("--objects", default=str(ROOT / "tools" / "prefix_objects.json"))
     args = ap.parse_args()
 
     objects = {}

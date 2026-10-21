@@ -223,7 +223,13 @@ change, only renames.
 
 ### 4.3 Import smoke test
 
-All 14 new module paths and all 19 old (shim) paths import cleanly.
+All **14** new module paths import cleanly, and all **23** old (shim) paths import
+cleanly and emit a `DeprecationWarning` on first attribute access.
+
+> The first generation of the shims used a slash-form module path
+> (`"modules/fazle_payment_ingest"`) inside `import_module()`, which raises
+> `ModuleNotFoundError`. The original import smoke test only exercised the *new*
+> paths, so it did not catch this. All 23 shim paths were re-verified afterwards.
 
 ### 4.4 `scripts/verify_prefix_unification.sql`
 
@@ -249,16 +255,69 @@ Verified end-to-end against the scratch database: **ALL CHECKS PASSED**.
 
 ### 4.5 `tests/test_prefix_unification.py`
 
-A dedicated regression module with 60+ checks covering the table map, the module map,
-the shims, the migration files and the live schema. It fails if any legacy table name
-reappears, if a protected column name disappears, if an old module import path is
-reintroduced, if a shim stops warning, if a migration loses its `IF EXISTS` guard, or
-if a migration gains a `DROP`/`TRUNCATE`.
+A dedicated regression module with **109 checks** covering the table map, the module
+map, the shims, the migration files and the live schema. It fails if any legacy
+table name reappears, if a protected column name disappears, if an old module import
+path is reintroduced, if a shim stops warning, if a migration loses its `IF EXISTS`
+guard, or if a migration gains a `DROP`/`TRUNCATE`.
+
+The 106 database-free checks are marked `unit` and run in the repository's offline
+CI job (`.github/workflows/ci.yml`); the 3 live-schema checks are marked `db`.
 
 ### 4.6 Test suite
 
-The full suite was run against a **clean baseline worktree** at the base commit and
-against the refactored tree, and the results compared. See §7 for the numbers.
+The full suite was run three ways and compared against a **clean baseline worktree**
+at the base commit (`1838619b644dc83f4ca723d3442d94435e6050f1`):
+
+```
+pytest tests/unit tests/integration tests/db tests/workflows tests/resilience \
+       --timeout=60 --ignore=tests/unit/test_phase_a_corpus.py -q --tb=no -rf
+```
+
+| Run | Tree | Tests | FAILED | ERROR |
+|---|---|---|---|---|
+| baseline | base commit, clean worktree | 4,127 | 336 | 42 |
+| post-change | this branch | 4,127 | 298 | 42 |
+
+Both runs collect **exactly 4,127 tests**, so the comparison is like-for-like.
+
+**The 11 failures that looked new were all accounted for, and none of them was a
+regression:**
+
+* **5** were the *same* tests under their new file names — the nine legacy-named
+  test files were renamed (`test_fpe_rules.py` → `test_fazle_rules.py`, etc.), so
+  the baseline's `FAILED tests/unit/test_fpe_rules.py::…` is the post-change run's
+  `FAILED tests/unit/test_fazle_rules.py::…`.
+* **4** were `tests/unit/test_llm_provider_order.py::TestScopeIsolation`. That
+  class asserts that the **working-tree diff** is limited to a fixed 15-file
+  allow-list, i.e. it only holds while the working tree is clean. It passed again
+  as soon as this change was committed.
+* **2** were a real bug this change introduced: rewriting
+  `from modules import admin_commands` to `from modules import fazle_admin_commands`
+  dropped the local binding that `test_phase5_t020_legacy_control_isolation.py`
+  uses (`admin_commands._dedup_cache.clear()`). Fixed by keeping the alias
+  (`from modules import fazle_admin_commands as admin_commands`) and re-verified.
+
+The 49 baseline failures that were **not** reproduced were an artifact of the
+baseline run's database, which had been left dirty by an earlier interrupted run;
+they pass on a fresh database.
+
+**A caveat worth recording.** A later whole-suite run of the same tree reported a
+*larger* failure count (455) with ~168 apparently new failures. Those were
+**cross-test interference**, not regressions: the same files
+(`test_contact_roles.py`, `test_dispatch.py`, `test_bill_generation.py`,
+`test_backup_pipeline.py`, `test_conversation_isolation.py`, …) pass **95/95** when
+run in isolation, and the repository's own `tests/conftest.py` documents this
+failure class ("e2e tests corrupt the shared asyncio event loop … cascading into
+~350 false failures in unrelated tests"). Whole-suite failure counts in this
+repository are therefore only meaningful when compared like-for-like against a
+baseline run under the same conditions.
+
+**The signal that is stable** is the targeted evidence: every protected area is
+byte-identical modulo the renames (§4.2), all 14 new module paths and all 23 shim
+paths import cleanly (§4.3), the seven migrations survive apply → re-apply →
+rollback → re-apply (§4.1), and the dedicated 109-check regression module passes
+(§4.5).
 
 ---
 
@@ -278,6 +337,7 @@ against the refactored tree, and the results compared. See §7 for the numbers.
 | `audits/prefix_unification_inventory.md` | STEP 1 discovery inventory (pre-change record) |
 | `audits/prefix_unification_2026-10-21.md` | this report |
 | `tools/prefix_unification_map.py` | shared table/module/import maps + object renamer |
+| `tools/prefix_objects.json` | the pre-unification DB object inventory the verifiers use (repo-local, so the verification is reproducible without any scratch state) |
 | `tools/gen_prefix_inventory.py` | regenerates the discovery inventory |
 | `tools/dump_prefix_db_objects.py` | dumps the live `pg_catalog` object inventory |
 | `tools/scan_sql_objects.py` | scans the SQL source for indexes/constraints/sequences/triggers/functions |
