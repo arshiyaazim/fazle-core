@@ -1,6 +1,6 @@
 Source: knowledge_base/06_developer_system/workflow_engine.md
-SHA256: 2176d341b65d9af255effe4d5f02ae4e3d94d49484d85a04226ebc6b38e06427
-Version: 2176d341b65d
+SHA256: 0eade1f398ab0a971d015f141da23ed436565903e117ede50bb1ee81baa6db83
+Version: 0eade1f398ab
 
 # Workflow Engine — Message Router
 **KB Article ID:** DEV-06-WORKFLOW

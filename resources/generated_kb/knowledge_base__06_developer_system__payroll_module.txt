@@ -1,6 +1,6 @@
 Source: knowledge_base/06_developer_system/payroll_module.md
-SHA256: b6abbcc22ec3d21c25b5c494e36d0348c0bb1d4c5ba57ee1a4bd5ea39ef6ea49
-Version: b6abbcc22ec3
+SHA256: 54359099b2232d6af3a2d9afbedf9db128371a678c824b80fd2e31ae6e02101c
+Version: 54359099b223
 
 # Core Payroll Module — Developer Reference
 **KB Article ID:** DEV-06-PAYROLL-MODULE
@@ -100,6 +100,8 @@ ALLOWED_TRANSITIONS = {
 | `PAYROLL CANCEL` | Any non-paid state → `cancelled` |
 
 All transitions write to `wbom_payroll_approval_log` (actor, from_status, to_status, reason).
+
+**`PAYROLL PAID` also posts to the canonical FPE ledger (fixed 2026-07-15):** previously `mark_paid()` only performed the `wbom_payroll_runs` status flip and audit-log write above — it never wrote a `fazle_cash_transactions` row, meaning payroll payouts never appeared in the canonical cash ledger (`daily_cash_transaction_source_of_truth.md`). It now resolves the FPE employee via `fazle_employees.wbom_employee_id` and calls `create_transaction()` (category `salary`, status `final`) in the same transition. If no active FPE employee is linked to the WBOM employee, the transition **fails closed** — `PAYROLL PAID` returns an error and the run stays `locked`, rather than being marked paid with no ledger entry.
 
 ---
 

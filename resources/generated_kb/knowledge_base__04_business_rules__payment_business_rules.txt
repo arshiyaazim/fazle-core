@@ -1,6 +1,6 @@
 Source: knowledge_base/04_business_rules/payment_business_rules.md
-SHA256: 7cbd69e7d2a66e9c289464e6f738c75870124265f001548a9d649afcb4f7bea9
-Version: 7cbd69e7d2a6
+SHA256: 0e103aec38093face3eafcdae609b071098a5439f7a4d1f95bebdf0a797f0c23
+Version: 0e103aec3809
 
 # Payment Business Rules
 
@@ -33,7 +33,8 @@ Manik Mea 01789123456(N) 200/-
 Rules:
 - `ID:` mobile is the employee lookup key.
 - Without `ID:`, payout mobile becomes the employee lookup key.
-- `(B)` = bKash, `(N)` = Nagad, `(C)` = Cash, `(Bank)` = Bank Transfer.
+- `(B)` = bKash, `(N)` = Nagad, `(C)` = Cash, `(R)` = Rocket, `(BANK)` = Bank Transfer.
+- **Updated 2026-07-13**: the parser (`modules.fazle_payment_ingest._SHORTHAND_RE`) accepts full-word variants too, case-insensitive — `(Cash)`/`(cash)`, `(Nagad)`, `(Bkash)`/`(bKash)`/`(Bikash)`, `(Rocket)`, `(Bank)` all parse identically to their single-letter codes. This is input flexibility only — every *outbound* message the system generates (`modules.fazle_draft_approval.build_accountant_message()`) always emits the canonical single-letter/`BANK` codes shown above, never a full word, so a system-authored message never depends on this leniency; it exists for admin-typed messages.
 - If employee is not found, create a minimal active employee in `fazle_employees` via `match_or_create_employee()`.
 - Write exactly one final transaction row for a distinct WhatsApp instruction.
 - Same employee/same amount can appear multiple times in one day if the WhatsApp message time/identity is different.

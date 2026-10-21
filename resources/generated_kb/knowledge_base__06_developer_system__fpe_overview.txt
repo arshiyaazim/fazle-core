@@ -1,6 +1,6 @@
 Source: knowledge_base/06_developer_system/fpe_overview.md
-SHA256: 4fca5a8aac4046dd566483d19352f1cc32e2d37855e45751bf5fad40ac042ca9
-Version: 4fca5a8aac40
+SHA256: 2f20d24096466ae43504eea0705b442c768c9c07989528a6227c5486df5e8434
+Version: 2f20d2409646
 
 # Fazle Payroll Engine (FPE) — System Overview
 

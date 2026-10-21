@@ -1,8 +1,12 @@
 Source: knowledge_base/00_governance/claude_session3_audit_report.md
-SHA256: b2d39f1438bac26838daea4fff19c7dd2d425348f677bee8daa7109d13d32a3e
-Version: b2d39f1438ba
+SHA256: 7ba2b9a8d3784a7bbdce8ac1e8ffddabf44a773d6ced47cd85bfe3552b4ebcfd
+Version: 7ba2b9a8d378
 
 # Claude Session 3 — Independent Audit Report
+
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **Report ID:** AUDIT-SESSION3-2026-06-23
 **Audit Date:** 2026-06-23
 **Auditor:** GitHub Copilot (read-only, independent)

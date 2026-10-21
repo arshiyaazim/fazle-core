@@ -1,6 +1,6 @@
 Source: knowledge_base/06_developer_system/phone_normalization_rules.md
-SHA256: 97cd0a43ce0bf02e5469132b70c8e674a73b89339424f72f48732ab4f2cb1478
-Version: 97cd0a43ce0b
+SHA256: b470d47871bbf9ea028ffcacbbad6f5176472cb027ed192960bc4adeb8e83dfb
+Version: b470d47871bb
 
 # Phone Normalization Rules — Single Source of Truth
 

@@ -1,8 +1,12 @@
 Source: knowledge_base/enrichment_report.md
-SHA256: 061db330fa4567a89002965c57e184616bd646625753e76fb09d7f7b720e3a2b
-Version: 061db330fa45
+SHA256: 7b4bfeed5ca2438ecb9453a1dea1b230b53144f4ba353cc9a6e2709becb5bf07
+Version: 7b4bfeed5ca2
 
 # Knowledge Base Enrichment Report
+
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **Date:** 2026-06-19
 **Scope:** Full production code vs knowledge_base comparison for Fazle AI Platform
 **Status:** PENDING APPROVAL — zero KB files modified, zero production code read

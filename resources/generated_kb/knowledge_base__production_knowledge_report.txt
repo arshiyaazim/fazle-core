@@ -1,8 +1,12 @@
 Source: knowledge_base/production_knowledge_report.md
-SHA256: 35829e04d798fdf9a6a428fa08f45fc646d17342233c32f272d6cf8a94b3422b
-Version: 35829e04d798
+SHA256: 49991d66eeb81d3e0e8621e0c9877368e6fb76816666941bd174c08860265739
+Version: 49991d66eeb8
 
 # PKE-KBE PRODUCTION KNOWLEDGE REPORT
+
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 ## Fazle AI Platform — Al-Aqsa Security & Logistics Services Ltd.
 **Report Date:** 2026-06-19
 **Author:** Enterprise Knowledge Engineering System (Claude AI)

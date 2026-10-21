@@ -1,6 +1,6 @@
 Source: knowledge_base/06_developer_system/daily_cash_transaction_source_of_truth.md
-SHA256: eec07dfa855d50a0e78e2bf0654566b1d620b4fdac17fc8fef4ab544e6846542
-Version: eec07dfa855d
+SHA256: 03528e16170740dbadb009cde507622d230759c5f999a71ce3872767dfde1ec8
+Version: 03528e161707
 
 # Daily Cash Transaction Source Of Truth
 
@@ -75,7 +75,8 @@ Manik Mea 01789123456(N) 200/-
 Rules:
 - `ID:` mobile is the employee lookup key.
 - Without `ID:`, payout mobile is the employee lookup key.
-- `(B)` = bkash, `(N)` = nagad, `(C)` = cash, `(Bank)` = bank.
+- `(B)` = bkash, `(N)` = nagad, `(C)` = cash, `(R)` = rocket, `(BANK)` = bank.
+- **Updated 2026-07-13**: `modules.fazle_payment_ingest._SHORTHAND_RE` also accepts full-word variants (`Cash`, `Nagad`, `Bkash`/`Bikash`, `Rocket`, `Bank`), case-insensitive, on the *input* side. `modules.fazle_draft_approval.build_accountant_message()` — the function that generates this exact format for the admin→accountant handoff — always emits the canonical single-letter/`BANK` codes above, never a full word.
 - If employee does not exist, create a minimal active employee in `fazle_employees` via `match_or_create_employee()`, using `employee_id_phone` or `primary_phone` as the lookup key.
 - Insert a final row in `fazle_cash_transactions` via `create_transaction()`.
 - Use WhatsApp message identity/timestamp for duplicate protection when available.
@@ -109,3 +110,27 @@ Rules:
 - Transaction history is traceable through `employee_id`, `employee_id_phone`, `employee_phone`, `payout_phone`, `txn_ref`, `source`, `source_message_id`, `source_message_text`, and timestamps where present.
 - Existing DB columns must be used; do not change the DB schema for this workflow.
 - All new transactions must go through `create_transaction()` in `accounting.py` to ensure ledger consistency.
+
+## Runtime Compliance Check (2026-07-05)
+
+### Working
+
+- `fazle_cash_transactions` canonical create path is active through `create_transaction()`.
+- Ledger coupling is active: `create_transaction()` updates `fazle_employee_ledger` via `_upsert_ledger()` for final transactions.
+- Reversal/create accounting path also updates ledger via `_upsert_ledger()`.
+- Admin transaction create API writes through canonical create path.
+- `fazle_cash_transactions_archive` has no active insert/update/delete writes in runtime modules.
+- `modules/payroll/__init__.py`'s `mark_paid()` (monthly payroll payout, the `wbom_payroll_runs.status → 'paid'` transition) now also posts through `create_transaction()` (fixed 2026-07-15 — previously it only flipped the run's status and wrote a `wbom_payroll_approval_log` row, with no `fazle_cash_transactions` entry at all). It resolves the payee via `fazle_employees.wbom_employee_id` (the standard WBOM↔FPE bridge) and **fails closed**: if no active FPE employee is linked, the run is not marked paid and no ledger row is written, rather than completing the status change with a missing ledger entry.
+
+### Not Fully Working / Gaps
+
+- Admin-accountant shorthand amounts with suffix variants like `3500/` or `500/+` were previously parsed as non-payment and could be routed to review queue instead of canonical transaction create. Parser has been patched and regression tests added.
+- Non-strict escort-buying client messages (free-form, mixed language, partial fields) were previously dropped when minimum required fields were missing. Runtime now sends a partial admin draft for review when sender is in escort-order prefix context.
+- Prefix gate coverage was partial: `client` and `gms` were not included in escort-order prefix detection in `message_router`; now included.
+
+### Current Status Estimate
+
+- Working: ~90%
+- Needs follow-up hardening: ~10%
+
+Follow-up scope: reconcile historical unmatched rows created before parser patch, and continue improving free-form escort data extraction confidence.

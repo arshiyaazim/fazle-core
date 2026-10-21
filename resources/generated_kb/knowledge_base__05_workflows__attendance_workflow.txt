@@ -1,6 +1,6 @@
 Source: knowledge_base/05_workflows/attendance_workflow.md
-SHA256: 752accbb196c116c512b46160e65ce3b20c7ac7c2b02d5707069ecc7ff274f7f
-Version: 752accbb196c
+SHA256: 9403963669c68dfa434011e6919086fec85bb3e7ffe7207e174d89a0606bed36
+Version: 9403963669c6
 
 # Attendance Workflow
 

@@ -1,6 +1,6 @@
 Source: knowledge_base/README.md
-SHA256: ee6013e9ff107b066bba6183e3a8ece6741e89eda29689f3816966a5f2d60e6d
-Version: ee6013e9ff10
+SHA256: 3fe2e032623d61e5039eed9853518ebc2706000d2767b079f63f5f725e129a7c
+Version: 3fe2e032623d
 
 # Fazle AI Platform Knowledge Base
 
@@ -44,3 +44,4 @@ Any frontend role, permission, employee, candidate, client, payment, attendance,
 
 ## Revision History
 - 2026-06-19: Rebuilt into role-centric AI knowledge architecture after conflict resolution and source normalization.
+- 2026-07-05: Added deterministic escort mother/lighter disambiguation and exact confirmed duplicate prevention references in business/workflow/developer articles.

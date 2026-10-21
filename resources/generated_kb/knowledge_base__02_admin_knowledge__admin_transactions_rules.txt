@@ -1,6 +1,6 @@
 Source: knowledge_base/02_admin_knowledge/admin_transactions_rules.md
-SHA256: 9ad7de489a2a4724f51cdf25ccadbaef383e019bed2d3f4974d361503ed01845
-Version: 9ad7de489a2a
+SHA256: 991c8a56f07730c3eae865e26825def038b5efe75b87bc5268c5c5b0e2c093f4
+Version: 991c8a56f077
 
 # Admin Transactions Rules
 **KB Article ID:** ADMIN-02-ADMIN-TRANSACTIONS-RULES

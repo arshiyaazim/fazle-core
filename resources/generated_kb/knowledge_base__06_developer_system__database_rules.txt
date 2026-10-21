@@ -1,6 +1,6 @@
 Source: knowledge_base/06_developer_system/database_rules.md
-SHA256: 537cb91b8c6d5ce4d6cf330ee45dea48c2378b76524b284370ad81c111475b01
-Version: 537cb91b8c6d
+SHA256: c1ddb138fc5865274472665eb26ed20def14ea0a539a0e002420ba3ca7ce0ffd
+Version: c1ddb138fc58
 
 # Database Rules — Fazle AI Platform
 
@@ -31,6 +31,66 @@ paths (WhatsApp parser, escort confirmation, frontend Add Employee) now create
 or link `fazle_employees` rows. Cross-reference with `fazle_employees_legacy` is
 maintained via `wbom_employee_id` soft-link. Migration 011 backfilled all 178
 WBOM employees into FPE.
+
+---
+
+## Migration Governance (added 2026-07-08, System Consolidation Sprint — Task 4)
+
+**Status:** first safe consolidation step per `SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md` Report 4 / Report 7 Tier 2 Task 2. This section declares policy only — **no migration files have been renamed, renumbered, dropped, or altered as part of this step**, and no production schema was changed.
+
+### Canonical path going forward
+
+**`db/migrations/` + `db/migrate.py` is the single canonical, tracked migration path for all new schema changes, effective immediately.** It is the only one of the four schema-creation mechanisms with a real tracking table (`schema_migrations`), transactional per-file apply, and dry-run support. **Every new schema change — for any domain (payroll, escort, social, AI, or otherwise) — must land as a new, sequentially-numbered `db/migrations/0NN_*.sql` file, using the next never-before-used integer.** As of 2026-07-08 that next integer is `029` (see "Known duplicate/missing numbers" below for why — do not reuse an existing number even where one looks "free").
+
+### Legacy / historical paths (do not add new files here; do not delete yet)
+
+These three remain as historical, unreconciled sources until a dedicated reconciliation pass (Report 4's recommended strategy) is scheduled and executed:
+
+1. **`/home/azim/core/migrations/`** (6 files, `002`–`005` + 2 unnumbered schema files, no `001`) — has **no automated execution path**; historically applied via manual `psql -f`. Legacy/historical. Do not add new files here.
+2. **`/home/azim/core/modules/fazle_payroll_engine/migrations/`** (14 files, own independent `001`–`014` sequence) — **re-run in full, statement-by-statement, on every app startup** (`fazle_payroll_engine/__init__.py:25-38`), with per-statement exceptions swallowed as warnings. Not tracked in `schema_migrations`. Legacy/historical. Do not add new files here.
+3. **Inline Python DDL** in `modules/contact_sync/__init__.py`, `modules/social_auto_reply/__init__.py`, `modules/fazle_bridge_poller/__init__.py`, `modules/wa_chat_frontend/__init__.py` — all `CREATE TABLE IF NOT EXISTS`, re-executed at every startup, genuinely idempotent, not tracked. Treated as a deliberate idempotent-bootstrap pattern, not a restructuring target for now. Do not add new inline DDL to new modules going forward — use `db/migrations/` instead.
+
+### Known duplicate/missing numbers in `db/migrations/` (documented, not renamed)
+
+- **Duplicate `012`**: `012_ai_readonly_views.sql` and `012_queue_arbiter.sql` both exist. **Not renamed** — `schema_migrations` keys on full filename, not numeric prefix, so there is no runtime collision; renaming either file risks orphaning or re-triggering already-applied production history.
+- **Duplicate `020`**: `020_escort_roster_employee_fk.sql` and `020_preflight_guard_tables.sql` both exist. Same reasoning — **not renamed**.
+- **Missing `009`**: no `009_*.sql` file exists in `db/migrations/`. **Intentionally left as a gap, not backfilled** — inventing content for a number retroactively risks someone assuming it must exist and re-deriving the wrong content. If you are reading this and wondering "where is 009," the answer is: it never existed or was removed before this repository's current history; there is no production impact.
+- **`023` fragmented into 5 files**: `023_c0d_001` through `023_c0d_004` plus `023_model_router_tables.sql`. This follows the same "new suffixed files, not renumbering" precedent already set by this repo's own Sprint-C0D pattern — the right approach, kept as-is.
+
+**Rule going forward:** filename is the uniqueness key, not the leading number. Never assume the numeric prefix alone identifies a migration or that gaps must be filled.
+
+### Known cross-directory schema-collision risk — re-investigated 2026-07-13, downgraded from "unknown severity" to "confirmed harmless"
+
+`SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md` Report 4 found `ALTER TABLE` touches on the same 5 tables (`fazle_cash_transactions`, `fpe_income_transactions`, `escort_roster_entries`, `wbom_escort_programs`, `fazle_payment_drafts`) from more than one of the three governed directories, plus a fully duplicated schema definition for all 8 `social_auto_reply` tables (identical in both `db/migrations/013_social_auto_reply.sql` and the inline DDL in `modules/social_auto_reply/__init__.py`).
+
+A table-by-table, file:line re-audit (2026-07-13, full detail in `db/MIGRATION_INVENTORY.md`) found **zero actually-conflicting statements** — every overlap is either the *same* column/constraint added twice, both idempotent (harmless, e.g. `fazle_payment_drafts.expires_at`, added by both `fazle_payroll_engine/migrations/009` and `db/migrations/021`, the latter's own comment already acknowledging the duplication), or *different*, non-overlapping columns added by different directories to the same table (harmless, just uncoordinated). `fazle_payroll_engine/migrations/` is confirmed live (re-run every restart via `start_fpe()`), not dead code, so these touches are real but not dangerous.
+
+**One separate, unrelated finding from the same pass**: `db/migrations/003c_schema_align.sql` itself (not a cross-directory issue) has 8 non-idempotent `DROP CONSTRAINT`/`ADD CONSTRAINT` pairs and 2 unguarded `RENAME COLUMN` statements — would error if ever replayed against a database where it already ran. Already applied to production once; this is a replay/disaster-recovery-rebuild risk, not a current-state risk. Not fixed — deliberately left as an Owner decision (retrofit old migration files for idempotency, or treat them as immutable historical record and handle replay differently) rather than unilaterally edited.
+
+**Practical takeaway: the reconciliation checklist below remains worth doing for maintainability, but is no longer an urgent correctness fire** — nothing here has been found to actually corrupt data or diverge in a way that matters, only to be messier than ideal.
+
+### Checklist for future migration reconciliation (not started — tracked here for whoever picks it up)
+
+- [ ] Port `/home/azim/core/migrations/*.sql` into `db/migrations/` under new numbers (≥029), annotated as reconciliation-only
+- [ ] Port `fazle_payroll_engine/migrations/*.sql` into `db/migrations/` under new numbers, after diffing shared-table statements (`fazle_cash_transactions`, `fpe_income_transactions`, `fazle_payment_drafts`, `wbom_escort_programs`) against actual production columns
+- [ ] Retire the FPE inline-DDL startup loop once its migrations are ported and confirmed already-applied in `schema_migrations`
+- [ ] Dedupe the `social_auto_reply` schema definition — pick one of the two identical sources as canonical, have the other reference it
+- [ ] Write one new `db/migrations/0NN_bootstrap_core_tables.sql` for the 24 tables with no schema source of truth outside `tests/conftest.py` (see `SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md` Report 4 §7 and Report 9 for the full list, including two confirmed live writers: `fazle_error_log`, `llm_conversation_log`) — use real production `\d <table>` output as the column source, **not** `conftest.py`'s guess, which is already known to disagree with production
+- [ ] Commit or explicitly abandon the 4 previously-untracked `db/migrations/` files (`020_preflight_guard_tables.sql`, `023_model_router_tables.sql`, `027_assistant_feature_flags.sql`, `028_assistant_ext_location_audit.sql`)
+- [ ] Update this document's table count and domain list once the above is complete (see "Unresolved Schema Questions" below for the existing staleness note)
+
+### Migration dry-run safety rule (added 2026-07-09, incident-driven)
+
+**Incident:** During Phase 2B preparation (`db/migrations/032_client_tier_status_model.sql`), a transaction-preview dry run against production (`BEGIN; <migration>; <inspect>; ROLLBACK;`) was used to safely inspect a migration's effect before requesting Owner approval — the same method that worked cleanly for migration 031. This time, the migration contained a `SELECT setval(...)` call (fixing a sequence desync left over from migration 031's explicit-ID insert). **The `setval()` call survived the `ROLLBACK` and permanently changed production** — PostgreSQL sequence state changes (`nextval()`, `setval()`, `currval()`, and by extension `IDENTITY`/`SERIAL` counter advances) are **not transactional in Postgres by design** (this is documented upstream behavior, not a bug in this codebase) — sequences exist specifically so concurrent transactions don't block on shared counter access, and their state is deliberately excluded from MVCC/rollback semantics. Every other statement in the same migration (the two new `CREATE TABLE`s, both `ALTER TABLE ADD COLUMN`s) rolled back correctly, confirmed by direct inspection immediately after.
+
+**Impact of this specific incident:** low/accepted — the sequence fix was itself a disclosed, beneficial correction (see migration 031/032 headers), it touches no business/client data, and the Owner explicitly accepted keeping it rather than reverting (reverting would reintroduce the exact collision risk the fix closes). It is documented here as a **process exception**, not swept under a rug: the fix reached production one step earlier than intended, without having gone through the explicit-approval gate first.
+
+**Rule going forward:**
+1. **Never include `setval()`/`nextval()`/any sequence-mutating statement inside a rollback-based production dry run.** A `ROLLBACK` will not undo it — that "preview" is actually a permanent write.
+2. **Sequence-affecting statements must be validated by one of these two paths instead, never by transaction-preview against production:**
+   - A read-only pre-check query (e.g. `SELECT last_value FROM the_seq`, compared against `SELECT MAX(id) FROM the_table`) to confirm a fix is needed and to compute the exact target value, executed and reasoned about *before* deciding whether to apply — no preview-and-rollback needed for a `setval`, since there's nothing to "try and see" that a read-only comparison doesn't already tell you.
+   - Scratch-DB-only validation (per the standard 5-step method) for confirming the *statement's syntax and effect* — the scratch DB is disposable, so a `setval()` running there is inconsequential.
+3. When a migration file mixes sequence-mutating statements with regular transactional DDL/DML, split the transaction-preview step to **only include the transactional parts** — run the sequence-mutating statement separately, after everything else has been previewed and approved, or apply it via the read-only-pre-check-then-direct-apply path above with its own explicit approval callout.
 
 ---
 
@@ -178,6 +238,8 @@ The FPE subsystem has 5 asyncio workers (all ACTIVE — see `fpe_overview.md`). 
 **Zero-Loss Invariant:** Any message that cannot be matched to an employee goes into `fpe_unmatched_messages` — a zero-loss review queue that an admin must clear. Messages are NEVER silently dropped. Every accounting action is recorded in `fpe_accounting_audit_logs` (immutable).
 
 The FPE maintains its own employee directory (`fazle_employees`) separate from the HR master (`fazle_employees_legacy`). After migration 008, these are soft-linked: `fazle_employees.wbom_employee_id → fazle_employees_legacy.employee_id` (nullable FK matched via phone last-10 normalization).
+
+**Status casing differs by table — do not assume one convention across both:** `fazle_employees_legacy.status` is Title-case (`Active`/`Inactive`); `fazle_employees.status` is lowercase (`active`/`inactive`). Any query comparing across both (e.g. `modules/fazle_payroll_engine/employee.py`'s WBOM cross-lookup) must compare case-insensitively (`LOWER(status)`) when checking `fazle_employees_legacy`, and can compare lowercase directly against `fazle_employees`. A 2026-07-15 fix corrected exactly this: a case-sensitive `!= 'inactive'` literal against `fazle_employees_legacy.status` was a permanent no-op (Postgres text comparison is case-sensitive, so `'Inactive' != 'inactive'` was always true), meaning Inactive WBOM employees were never actually excluded from that lookup.
 
 **Payment Draft Lifecycle (cross-domain):**
 Escort program completion → `fazle_payment_drafts` created (ST) → admin approves → `fazle_cash_transactions` written via `create_transaction()` + `escort_roster_entries` status updated.

@@ -1,5 +1,8 @@
 # Workspace Review — April 29, 2026
 
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 This document captures a read-only review of the active `/home/azim`
 workspace, with focus on the live Fazle Core runtime, its supporting
 services, and the operator workflows around message routing, media,

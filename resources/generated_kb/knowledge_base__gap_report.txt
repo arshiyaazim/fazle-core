@@ -1,8 +1,12 @@
 Source: knowledge_base/gap_report.md
-SHA256: babd1490986c494e798712e26ffb34340b832cf9d6736a8be13d4d316ffb9cd2
-Version: babd1490986c
+SHA256: f5d74d880b0b5a6969cd4990a31e43ea8be13083fb3b8a6ede8024f4990c3c56
+Version: f5d74d880b0b
 
 # Knowledge Base Gap Report
+
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **Date:** 2026-06-19
 **Scope:** Compare production code (`/home/azim/core/`) against knowledge_base new role-centric structure
 **Status:** PENDING APPROVAL — no knowledge_base files were modified

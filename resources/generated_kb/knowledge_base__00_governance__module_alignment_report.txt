@@ -1,8 +1,12 @@
 Source: knowledge_base/00_governance/module_alignment_report.md
-SHA256: d0260950e362bf19f31bb738db37a37a9b922bb8402e26eaf9e160ba6ef07e70
-Version: d0260950e362
+SHA256: 0217e9cd672278dd483e96feb47650ce7d4d852ea671920e1beaa29dd8aee788
+Version: 0217e9cd6722
 
 # Module Alignment Report — Phase 4 Step 5
+
+> **Pre-unification schema note.** Table names in this document refer to the
+> pre-unification schema. See `audits/prefix_unification_2026-10-21.md` for the
+> current table names.
 **Program:** Organizational Brain Validation
 **Date:** 2026-06-22
 **Mode:** READ-ONLY AUDIT — No production code changed

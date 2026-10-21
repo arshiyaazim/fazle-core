@@ -1,6 +1,6 @@
 Source: knowledge_base/06_developer_system/admin_ui.md
-SHA256: d1618908ddfb53f90c9faaa53c0e9dbe9ceb14277c19c65d82210b6dded67407
-Version: d1618908ddfb
+SHA256: 9467ae26685993ffa8dcaeb38c55eb212729b8e9787ece90d4af6ff27ba4c1f7
+Version: 9467ae266859
 
 # Admin UI — wa_chat_frontend
 **KB Article ID:** DEV-06-ADMIN-UI

@@ -1,6 +1,6 @@
 Source: knowledge_base/05_workflows/payment_workflow.md
-SHA256: 55d73c186db8e4f25a2830e694b8b2129beabaf7a92c1c508b28eafc40764fb0
-Version: 55d73c186db8
+SHA256: 70586e4f591bbc939d2d5a4114223c3a8c4c46797da5ccbf3d9131f00be55b20
+Version: 70586e4f591b
 
 # Payment Workflow
 

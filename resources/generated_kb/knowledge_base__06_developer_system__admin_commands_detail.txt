@@ -1,6 +1,6 @@
 Source: knowledge_base/06_developer_system/admin_commands_detail.md
-SHA256: 5a03929131b956dd35a0d6c68fe44adbdc64b4915b865caeb195f783254e20ec
-Version: 5a03929131b9
+SHA256: 28a6c538b353d95ea04ec6ebc4030edc9743f2e4ff454b6d91fd198809d86468
+Version: 28a6c538b353
 
 # Admin Commands — Developer Reference
 **KB Article ID:** DEV-06-ADMIN-COMMANDS-DETAIL

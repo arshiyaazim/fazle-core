@@ -1,6 +1,6 @@
 Source: knowledge_base/06_developer_system/bridge_poller.md
-SHA256: 1e76c4c19df4a279155b59e2418e9176f1294ba84c742e4ee5a2e6970b95ca78
-Version: 1e76c4c19df4
+SHA256: 3df908096cca9e7816bae69154ef9c80ea6f5c8e2206867b0fecdc030e76027b
+Version: 3df908096cca
 
 # Bridge Poller
 **KB Article ID:** DEV-06-BRIDGE-POLLER

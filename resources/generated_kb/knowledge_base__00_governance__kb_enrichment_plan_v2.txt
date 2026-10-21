@@ -1,6 +1,6 @@
 Source: knowledge_base/00_governance/kb_enrichment_plan_v2.md
-SHA256: b6e3529b4e1756fd25ddc68746248433b219dd547a27a3a4b26473472d4da2a9
-Version: b6e3529b4e17
+SHA256: c65ac9b68cab030b35321e122c4c5ce9728ec80a77afad23f33dbd79f6e62523
+Version: c65ac9b68cab
 
 # KB Enrichment Plan v2
 **Program:** Wave-3 Knowledge Base Enrichment

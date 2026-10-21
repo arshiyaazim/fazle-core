@@ -1,6 +1,6 @@
 Source: knowledge_base/02_admin_knowledge/admin_operations_overview.md
-SHA256: ad97e2f6ec207f0b7668e9e20bf705ee92308e7989716f4b12bcc88d9b176f0b
-Version: ad97e2f6ec20
+SHA256: cf43caaafa78de75ee19c8c50b7a2179d5fc77a73257ceac414608fba0048e2f
+Version: cf43caaafa78
 
 # Admin Operations Overview
 
