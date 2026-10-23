@@ -15,7 +15,8 @@ This directory is an isolated native Android application added without changing 
 - Conservative offline Bengali/English spoken punctuation cleanup.
 - Editable review plus clipboard and Android share fallback.
 - Explicit Share Sheet and `PROCESS_TEXT` capture preview. Every save gets a UUID and a separate local record.
-- Unit tests for transcript joining and faithful formatting.
+- Unit tests for transcript joining, faithful formatting, and dictation lifecycle/retry behavior.
+- GitHub Actions verification using JDK 17 and Android SDK 35.
 
 ## Build
 
@@ -59,4 +60,4 @@ The checked-in wrapper targets Gradle 8.10.2. No API key or OAuth secret is need
 - Overlay and speech behavior require a physical Android device or a suitably configured emulator for validation.
 - No release APK is produced or claimed until signing and device validation are complete.
 
-See `docs/PHASE_1_2_REPORT.md`, `docs/PRIVACY.md`, and `docs/ARCHITECTURE.md`.
+See `docs/PHASE_1_2_REPORT.md`, `docs/REVERIFICATION_2026-10-23.md`, `docs/PRIVACY.md`, and `docs/ARCHITECTURE.md`.

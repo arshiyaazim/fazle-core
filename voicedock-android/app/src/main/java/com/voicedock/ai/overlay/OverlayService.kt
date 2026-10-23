@@ -25,7 +25,6 @@ class OverlayService : Service() {
     private lateinit var windows: WindowManager
     private lateinit var params: WindowManager.LayoutParams
     private var view: View? = null
-    private var expanded = false
     private var status: TextView? = null
     private var transcript: TextView? = null
     private lateinit var controller: DictationController
@@ -33,14 +32,29 @@ class OverlayService : Service() {
     override fun onCreate() {
         super.onCreate()
         createChannel()
-        startForeground(NOTIFICATION_ID, notification())
-        if (!Settings.canDrawOverlays(this)) { stopSelf(); return }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED ||
+            !Settings.canDrawOverlays(this)
+        ) {
+            stopSelf()
+            return
+        }
+        try {
+            startForeground(NOTIFICATION_ID, notification())
+        } catch (_: SecurityException) {
+            stopSelf()
+            return
+        }
         windows = getSystemService(WINDOW_SERVICE) as WindowManager
-        controller = DictationController(AndroidSpeechEngine(this), DraftRepository(this), ::renderState)
+        controller = DictationController(
+            AndroidSpeechEngine(this),
+            DraftRepository(this),
+            AndroidRestartScheduler(),
+            ::renderState,
+        )
         showBubble()
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_NOT_STICKY
     override fun onBind(intent: Intent?): IBinder? = null
     override fun onDestroy() {
         if (::controller.isInitialized) controller.close()
@@ -49,7 +63,6 @@ class OverlayService : Service() {
     }
 
     private fun showBubble() {
-        expanded = false
         val button = TextView(this).apply {
             text = "🎙"; textSize = 24f; gravity = Gravity.CENTER
             setTextColor(0xffffffff.toInt()); setBackgroundResource(R.drawable.overlay_button)
@@ -60,7 +73,6 @@ class OverlayService : Service() {
     }
 
     private fun showPanel() {
-        expanded = true
         val panel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL; setPadding(dp(16), dp(12), dp(16), dp(12))
             setBackgroundResource(R.drawable.panel_background)
@@ -89,6 +101,7 @@ class OverlayService : Service() {
         row3.addView(action("Capture") { openApp("capture") }, weighted())
         row3.addView(action("Knowledge") { openApp("knowledge") }, weighted())
         panel.addView(row3)
+        panel.addView(action("Settings") { openApp("privacy") }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(48)))
         replaceView(panel, WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT)
     }
 
@@ -97,7 +110,10 @@ class OverlayService : Service() {
             status?.text = "Open VoiceDock and grant microphone permission"
             return
         }
-        if (resume) controller.resume() else controller.start()
+        if (resume) controller.resume() else {
+            val language = getSharedPreferences("settings", MODE_PRIVATE).getString("speech_language", "bn-BD") ?: "bn-BD"
+            controller.start(language)
+        }
     }
 
     private fun renderState(state: DictationState) {
@@ -126,12 +142,16 @@ class OverlayService : Service() {
         val prefs = getSharedPreferences("overlay", MODE_PRIVATE)
         params = WindowManager.LayoutParams(width, height,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
             PixelFormat.TRANSLUCENT).apply {
-            gravity = Gravity.TOP or Gravity.START; x = prefs.getInt("x", 24); y = prefs.getInt("y", 180)
+            gravity = Gravity.TOP or Gravity.START
+            x = prefs.getInt("x", 24)
+            y = prefs.getInt("y", 180)
         }
         attachDrag(next)
-        windows.addView(next, params); view = next
+        windows.addView(next, params)
+        view = next
+        next.post { clampToScreen(next) }
     }
 
     private fun attachDrag(target: View) {
@@ -142,7 +162,11 @@ class OverlayService : Service() {
                 MotionEvent.ACTION_MOVE -> {
                     val dx = (event.rawX - downX).toInt(); val dy = (event.rawY - downY).toInt()
                     moved = moved || abs(dx) > 8 || abs(dy) > 8
-                    if (moved) { params.x = originX + dx; params.y = originY + dy; windows.updateViewLayout(target, params) }
+                    if (moved) {
+                        params.x = originX + dx
+                        params.y = originY + dy
+                        clampToScreen(target)
+                    }
                     true
                 }
                 MotionEvent.ACTION_UP -> {
@@ -152,6 +176,13 @@ class OverlayService : Service() {
                 else -> false
             }
         }
+    }
+
+    private fun clampToScreen(target: View) {
+        val metrics = resources.displayMetrics
+        params.x = params.x.coerceIn(0, (metrics.widthPixels - target.width).coerceAtLeast(0))
+        params.y = params.y.coerceIn(0, (metrics.heightPixels - target.height).coerceAtLeast(0))
+        runCatching { windows.updateViewLayout(target, params) }
     }
 
     private fun notification(): Notification {

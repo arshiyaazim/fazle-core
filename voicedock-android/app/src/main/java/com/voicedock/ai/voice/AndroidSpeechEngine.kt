@@ -18,10 +18,18 @@ class AndroidSpeechEngine(private val context: Context) : SpeechEngine {
             listener.onFatalError("No speech recognition service is installed")
             return
         }
-        if (recognizer == null) {
-            recognizer = SpeechRecognizer.createSpeechRecognizer(context).also {
-                it.setRecognitionListener(callback)
+        try {
+            if (recognizer == null) {
+                recognizer = SpeechRecognizer.createSpeechRecognizer(context).also {
+                    it.setRecognitionListener(callback)
+                }
             }
+        } catch (_: SecurityException) {
+            listener.onFatalError("Microphone permission is required")
+            return
+        } catch (error: RuntimeException) {
+            listener.onFatalError("Unable to initialize speech recognition: ${error.javaClass.simpleName}")
+            return
         }
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
@@ -31,7 +39,13 @@ class AndroidSpeechEngine(private val context: Context) : SpeechEngine {
             putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2_000L)
             putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1_000L)
         }
-        recognizer?.startListening(intent)
+        try {
+            recognizer?.startListening(intent)
+        } catch (_: SecurityException) {
+            listener.onFatalError("Microphone permission is required")
+        } catch (error: RuntimeException) {
+            listener.onFatalError("Unable to start speech recognition: ${error.javaClass.simpleName}")
+        }
     }
 
     override fun stop() { recognizer?.stopListening() }

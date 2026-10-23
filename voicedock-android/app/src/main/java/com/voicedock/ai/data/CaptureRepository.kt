@@ -14,7 +14,10 @@ class CaptureRepository(context: Context) {
         val record = CaptureRecord(UUID.randomUUID().toString(), title.trim().ifBlank { "Untitled capture" }, text, source, System.currentTimeMillis())
         val json = JSONObject().put("id", record.id).put("title", record.title).put("text", record.text)
             .put("source", record.source ?: JSONObject.NULL).put("createdAt", record.createdAt)
-        File(directory, "${record.id}.json").writeText(json.toString())
+        val destination = File(directory, "${record.id}.json")
+        val temporary = File(directory, ".${record.id}.tmp")
+        temporary.writeText(json.toString())
+        check(temporary.renameTo(destination)) { "Unable to persist capture atomically" }
         return record
     }
     fun list(): List<CaptureRecord> = directory.listFiles { file -> file.extension == "json" }.orEmpty().mapNotNull { file ->

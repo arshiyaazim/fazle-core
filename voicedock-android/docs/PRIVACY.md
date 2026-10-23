@@ -17,6 +17,6 @@ Accessibility permission, contacts, storage-wide access, Gmail, Drive, and GitHu
 
 ## Control and deletion
 
-Users can clear the current draft and delete each local capture from Knowledge. Uninstalling the application removes private local records subject to Android backup/restore settings. Clipboard copies are controlled by Android and the destination app after copying. Share actions occur only after the user taps Share.
+Users can clear the current draft and delete each local capture from Knowledge. Android cloud backup is disabled for this MVP; uninstalling the application removes its private local records. Clipboard copies are controlled by Android and the destination app after copying. Share actions occur only after the user taps Share.
 
 A future release must add export, retention controls, encrypted credentials, disconnect-all, Room deletion/cascade tests, and a production legal privacy policy before public distribution.

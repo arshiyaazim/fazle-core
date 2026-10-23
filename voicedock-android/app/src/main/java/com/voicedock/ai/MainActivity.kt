@@ -72,7 +72,8 @@ class MainActivity : ComponentActivity() {
         Box(Modifier.padding(padding).fillMaxSize()) {
             when (screen) {
                 "write" -> EditorScreen()
-                "knowledge", "capture" -> KnowledgeScreen()
+                "knowledge" -> KnowledgeScreen()
+                "capture" -> ManualCaptureScreen { screen = "knowledge" }
                 "privacy" -> PrivacyScreen(overlayGranted, microphoneGranted, requestMicrophone, requestOverlay)
                 else -> Dashboard(overlayGranted, microphoneGranted, startOverlay, { screen = it })
             }
@@ -93,6 +94,7 @@ class MainActivity : ComponentActivity() {
             FeatureButton("Write", Icons.Default.Edit, Modifier.weight(1f)) { navigate("write") }
             FeatureButton("Knowledge", Icons.Default.Folder, Modifier.weight(1f)) { navigate("knowledge") }
         }
+        FeatureButton("New manual capture", Icons.Default.Add, Modifier.fillMaxWidth()) { navigate("capture") }
         FeatureButton("Privacy & permissions", Icons.Default.Security, Modifier.fillMaxWidth()) { navigate("privacy") }
         Text("Coming in later phases", style = MaterialTheme.typography.titleMedium)
         Text("AI providers, cloud accounts, IME keyboard, accessibility insertion, Room search, and document OCR are not enabled in this MVP.")
@@ -117,6 +119,26 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@Composable private fun ManualCaptureScreen(onSaved: () -> Unit) {
+    val context = LocalContext.current
+    var title by remember { mutableStateOf("") }
+    var text by remember { mutableStateOf("") }
+    Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("Save information explicitly", style = MaterialTheme.typography.titleLarge)
+        OutlinedTextField(title, { title = it }, Modifier.fillMaxWidth(), label = { Text("Title") })
+        OutlinedTextField(text, { text = it }, Modifier.fillMaxWidth().weight(1f), label = { Text("Content") })
+        Text("Privacy: Local only", style = MaterialTheme.typography.labelLarge)
+        Button(
+            onClick = {
+                CaptureRepository(context).save(title.ifBlank { text.lineSequence().firstOrNull().orEmpty().take(60) }, text, "manual")
+                onSaved()
+            },
+            enabled = text.isNotBlank(),
+            modifier = Modifier.fillMaxWidth(),
+        ) { Text("Save as new capture") }
+    }
+}
+
 @Composable private fun KnowledgeScreen() {
     val context = LocalContext.current
     var records by remember { mutableStateOf(CaptureRepository(context).list()) }
@@ -133,10 +155,25 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable private fun PrivacyScreen(overlay: Boolean, microphone: Boolean, requestMicrophone: () -> Unit, requestOverlay: () -> Unit) {
-    Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    val context = LocalContext.current
+    val preferences = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
+    var speechLanguage by remember { mutableStateOf(preferences.getString("speech_language", "bn-BD") ?: "bn-BD") }
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text("VoiceDock only starts recognition after you tap Voice. Captured drafts and shared text stay on this device in this MVP. No cloud AI or account connector is active.")
         PermissionCard("Microphone", microphone, "Required only while you actively dictate.", requestMicrophone)
         PermissionCard("Display over other apps", overlay, "Shows the movable assistant. It cannot read arbitrary screen content.", requestOverlay)
+        Card { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Recognition language", style = MaterialTheme.typography.titleMedium)
+            Text("Android provider language support varies. Mixed Bengali-English recognition is provider-dependent.")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(selected = speechLanguage == "bn-BD", onClick = {
+                    speechLanguage = "bn-BD"; preferences.edit().putString("speech_language", speechLanguage).apply()
+                }, label = { Text("বাংলা") })
+                FilterChip(selected = speechLanguage == "en-US", onClick = {
+                    speechLanguage = "en-US"; preferences.edit().putString("speech_language", speechLanguage).apply()
+                }, label = { Text("English") })
+            }
+        } }
     }
 }
 @Composable private fun PermissionCard(title: String, granted: Boolean, detail: String, action: () -> Unit) = Card { Column(Modifier.padding(16.dp)) {

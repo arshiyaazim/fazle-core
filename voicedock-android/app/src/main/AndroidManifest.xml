@@ -10,8 +10,9 @@
         <intent><action android:name="android.speech.RecognitionService" /></intent>
     </queries>
 
-    <application android:allowBackup="true" android:label="VoiceDock AI"
-        android:theme="@style/Theme.VoiceDock" android:usesCleartextTraffic="false">
+    <application android:allowBackup="false" android:label="VoiceDock AI"
+        android:supportsRtl="true" android:theme="@style/Theme.VoiceDock"
+        android:usesCleartextTraffic="false">
         <activity android:name=".capture.CaptureActivity" android:exported="true" android:theme="@style/Theme.VoiceDock">
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
