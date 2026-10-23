@@ -95,7 +95,7 @@ class OverlayService : Service() {
             gravity = Gravity.CENTER
             setTextColor(Color.WHITE)
             setBackgroundResource(R.drawable.overlay_button)
-            contentDescription = "Open Al-Rifa’i Assistant"
+            contentDescription = "Open VoiceDock AI"
             elevation = dp(8).toFloat()
             setOnClickListener { showPanel() }
         }
@@ -119,7 +119,7 @@ class OverlayService : Service() {
         val heading = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             addView(TextView(this@OverlayService).apply {
-                text = "Al-Rifa’i Assistant"
+                text = "VoiceDock AI"
                 textSize = 18f
                 setTextColor(Color.rgb(35, 31, 42))
             })
@@ -545,7 +545,7 @@ class OverlayService : Service() {
         )
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_btn_speak_now)
-            .setContentTitle("Al-Rifa’i Assistant")
+            .setContentTitle("VoiceDock AI")
             .setContentText(getString(R.string.overlay_active))
             .setOngoing(true)
             .setContentIntent(pending)

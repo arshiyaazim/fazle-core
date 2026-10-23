@@ -1,13 +1,13 @@
 # VoiceDock AI — Android MVP
 
-This directory is an isolated native Android application added without changing the existing Fazle Core Python service. The current increment implements **Phase 1 and a testable Phase 2 MVP**.
+VoiceDock AI is a standalone native Android application. It has its own Gradle root, application ID, Android manifest, source tree, tests, and build lifecycle; it does not import or run the surrounding repository’s backend.
 
 ## Implemented
 
 - Kotlin/Gradle Kotlin DSL Android project (minimum API 26, target/compile API 35).
 - Compose dashboard, draft editor, local captures, and privacy/permission screens.
 - User-initiated overlay and microphone permission setup.
-- Foreground-service Al-Rifa’i operational assistant with a movable launcher, persisted bounded position, expand, minimize, and dismiss behavior.
+- Foreground-service VoiceDock AI operational assistant with a movable launcher, persisted bounded position, expand, minimize, and dismiss behavior.
 - Responsive overlay: phone-width bottom sheet below 600 dp and a draggable 400 dp panel on larger displays.
 - Independent microphone, AI-processing, and local-data status indicators plus accessible live status announcements.
 - Multiline instruction composer and persistent Capture, Knowledge, AI Write, and Settings tabs; unavailable cloud/business capabilities are labeled offline rather than simulated.
@@ -19,7 +19,7 @@ This directory is an isolated native Android application added without changing 
 - Editable review plus clipboard and Android share fallback.
 - Explicit Share Sheet and `PROCESS_TEXT` capture preview. Every save gets a UUID and a separate local record.
 - Unit tests for transcript joining, faithful formatting, dictation lifecycle/retry behavior, and independent microphone/AI status presentation.
-- GitHub Actions verification using JDK 17 and Android SDK 35.
+- GitHub Actions verification workflow definition for JDK 17, Android SDK 35, tests, lint, and debug assembly; current execution is blocked before runner startup by the repository account billing lock.
 
 ## Build
 
@@ -66,4 +66,4 @@ The checked-in wrapper targets Gradle 8.10.2. No API key or OAuth secret is need
 - Overlay and speech behavior require a physical Android device or a suitably configured emulator for validation.
 - No release APK is produced or claimed until signing and device validation are complete.
 
-See `docs/PHASE_1_2_REPORT.md`, `docs/REVERIFICATION_2026-10-23.md`, `docs/AL_RIFAI_ASSISTANT_UI.md`, `docs/PRIVACY.md`, and `docs/ARCHITECTURE.md`.
+See `docs/PHASE_1_2_REPORT.md`, `docs/REVERIFICATION_2026-10-23.md`, `docs/STANDALONE_ANDROID_APP.md`, `docs/APK_BUILD_REPORT_2026-10-23.md`, `docs/PRIVACY.md`, and `docs/ARCHITECTURE.md`.

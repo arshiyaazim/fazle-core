@@ -1,6 +1,6 @@
-# Al-Rifa’i Android floating assistant UI
+# VoiceDock AI standalone Android application
 
-The VoiceDock Android shell now presents its overlay as the **Al-Rifa’i Assistant operational workspace**. This is an Android adaptation of the supplied web-panel concept; it is not a Next.js component.
+VoiceDock AI is a standalone native Android application, not a Next.js component, WebView wrapper, or feature loaded by the surrounding Python service. The supplied operational-panel concept has been adapted to Android overlay and phone interaction patterns.
 
 ## Implemented behavior
 
@@ -10,15 +10,15 @@ The VoiceDock Android shell now presents its overlay as the **Al-Rifa’i Assist
 - Microphone, AI, and local-data indicators are separate. Recognition finishing never displays as AI generation, and AI remains explicitly `offline` because no provider is configured.
 - The transcript area shows only the current local draft and its display timestamp; it does not invent sources or business data.
 - The composer accepts multiline instructions, capture selection, microphone control, and local review. Submitting opens the editor and explicitly does not send a message.
-- Pause, Resume, Finish, and Clear remain available during dictation.
+- Pause, Resume, Finish, Cancel, and Clear remain available during dictation.
 - Persistent tabs provide focused Capture, Knowledge, AI Write, and Settings summaries and route to implemented app screens.
 - Touch controls have a minimum 44 dp target. Status regions use polite accessibility live regions, and microphone errors issue an announcement.
 
-## Security boundary
+## Application boundary
 
-This MVP has no authenticated Al-Rifa’i business API connection. It cannot read Vessel Register, Accounts, Review, WhatsApp, PostgreSQL, employee, vessel, or cash records. The UI labels data as local and AI as offline rather than simulating access.
+The Android app currently uses only its private on-device draft and capture stores. It does not connect to, import, or depend on the surrounding repository’s Python modules, PostgreSQL schema, web authentication, static pages, or deployment services. No business-data capability is simulated.
 
-Any future business API adapter must reuse server-side authentication and authorization. Android UI state must never be treated as authorization. Admin, Super Admin, Supervisor, Accountant gates, and WA-02 restrictions must be enforced by the existing backend for every request. All mutations must remain draft → review → authorized approval; imported text must never authorize an action.
+Future connectors must be optional Android modules using explicit OAuth/API authorization, encrypted credentials, least-privilege scopes, and user review. Imported content must never authorize an external action.
 
 ## Still requiring device verification
 
