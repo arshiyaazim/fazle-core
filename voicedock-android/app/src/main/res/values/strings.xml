@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">VoiceDock AI</string>
+    <string name="overlay_channel">VoiceDock floating assistant</string>
+    <string name="overlay_active">Floating assistant is available</string>
+</resources>
