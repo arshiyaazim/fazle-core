@@ -102,6 +102,24 @@ class DictationController(
         emit()
     }
 
+    fun updateDraft(text: String) {
+        val wasActive = sessionActive || paused
+        sessionActive = false
+        paused = false
+        acceptFinalAfterStop = false
+        scheduler.cancel()
+        val normalized = text.trim()
+        state = state.copy(
+            phase = DictationPhase.REVIEW,
+            committedText = normalized,
+            partialText = "",
+            message = "Draft saved locally for review",
+        )
+        drafts.save(normalized)
+        emit()
+        if (wasActive) engine.cancel()
+    }
+
     fun close() {
         sessionActive = false
         paused = false

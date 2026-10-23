@@ -67,6 +67,17 @@ class DictationControllerTest {
         assertEquals(6, fixture.engine.starts)
     }
 
+    @Test fun typedInstructionStopsListeningAndRemainsLocalForReview() {
+        val fixture = Fixture(cancelEmitsError = true)
+        fixture.controller.start()
+
+        fixture.controller.updateDraft("  review this instruction  ")
+
+        assertEquals("review this instruction", fixture.store.text)
+        assertEquals(DictationPhase.REVIEW, fixture.controller.snapshot().phase)
+        assertEquals(1, fixture.engine.cancellations)
+    }
+
     @Test fun finalizedSegmentsResetConsecutiveFailureBudget() {
         val fixture = Fixture()
         fixture.controller.start()
@@ -96,12 +107,16 @@ class DictationControllerTest {
     ) : SpeechEngine {
         var listener: SpeechEngine.Listener? = null
         var starts = 0
+        var cancellations = 0
         override fun start(languageTag: String, listener: SpeechEngine.Listener) {
             this.listener = listener
             starts++
         }
         override fun stop() { stopFinal?.let { listener?.onFinal(it) } }
-        override fun cancel() { if (cancelEmitsError) listener?.onFatalError("late fatal") }
+        override fun cancel() {
+            cancellations++
+            if (cancelEmitsError) listener?.onFatalError("late fatal")
+        }
         override fun destroy() = Unit
     }
 
