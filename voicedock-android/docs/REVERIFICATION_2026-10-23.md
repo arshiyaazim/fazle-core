@@ -45,6 +45,16 @@ The current project is not the complete seven-phase product. The following remai
 
 No placeholder connector/provider modules were created, because empty modules would imply capability that does not exist.
 
+## Verification execution status
+
+- Local XML parsing and Kotlin delimiter checks: passed.
+- Gradle wrapper ZIP integrity: passed in the initial implementation pass.
+- Local Gradle execution: blocked before configuration because no Java runtime is installed.
+- Package installation: unavailable because Debian package hosts are blocked from this sandbox.
+- Direct JDK/Kotlin release download: unavailable because GitHub release-asset redirects are blocked from this sandbox.
+- GitHub Actions run `39999230437`: workflow recognized, but no step or runner started. GitHub check annotation: `The job was not started because your account is locked due to a billing issue.` This is not reported as a passing or failing Android build.
+- Compiled unit tests, Android lint, APK assembly, emulator tests, and physical-device tests therefore remain unverified.
+
 ## Remaining device risks
 
 - OEM overlay restrictions and window behavior.

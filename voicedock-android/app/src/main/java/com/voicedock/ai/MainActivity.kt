@@ -123,15 +123,18 @@ class MainActivity : ComponentActivity() {
     val context = LocalContext.current
     var title by remember { mutableStateOf("") }
     var text by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
     Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Save information explicitly", style = MaterialTheme.typography.titleLarge)
         OutlinedTextField(title, { title = it }, Modifier.fillMaxWidth(), label = { Text("Title") })
         OutlinedTextField(text, { text = it }, Modifier.fillMaxWidth().weight(1f), label = { Text("Content") })
         Text("Privacy: Local only", style = MaterialTheme.typography.labelLarge)
+        error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         Button(
             onClick = {
-                CaptureRepository(context).save(title.ifBlank { text.lineSequence().firstOrNull().orEmpty().take(60) }, text, "manual")
-                onSaved()
+                runCatching {
+                    CaptureRepository(context).save(title.ifBlank { text.lineSequence().firstOrNull().orEmpty().take(60) }, text, "manual")
+                }.onSuccess { onSaved() }.onFailure { error = "Unable to save this capture. Your text remains in the editor." }
             },
             enabled = text.isNotBlank(),
             modifier = Modifier.fillMaxWidth(),
