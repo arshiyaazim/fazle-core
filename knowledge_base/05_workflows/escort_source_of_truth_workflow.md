@@ -153,7 +153,8 @@ Added in commit `41916b0` (2026-06-27) and unchanged since:
   "Admin REMINDER `<id>`" to `ADMIN_NUMBERS`
   (`fazle_draft_replies.intent='escort_confirmation_review'`), and admin
   replies `<id> Type: APPROVE|EDIT|REJECT`
-  (`modules/fazle_admin_commands.py::approve_escort_confirmation_review` /
+  (`modules/fazle_admin_commands/__init__.py` — dispatching to
+  `modules/escort/__init__.py::approve_escort_confirmation_review` /
   `edit_escort_confirmation_review` / `reject_escort_confirmation_review`
   — a dedicated command set, not the generic `APPROVE`/`EDIT`/`REJECT`,
   whose `EDIT` sends text to the original sender instead of re-saving a

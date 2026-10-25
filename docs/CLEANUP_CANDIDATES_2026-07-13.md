@@ -18,25 +18,25 @@ Scope: `/home/azim/core` root, `docs/`, `knowledge_base/`.
 ## Category A — Stale Audit/Status Reports (root)
 
 One-time, dated snapshots superseded by `docs/SYSTEM_STATE_SUMMARY_2026-07-11.md`,
-`docs/NEXT_IMPLEMENTATION_QUEUE.md`, and `SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md`.
+`docs/NEXT_IMPLEMENTATION_QUEUE.md`, and `archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md`.
 
-- ARCHIVE: `AUDIT_REPORT.md` — 2026-07-08 audit snapshot; findings since actioned or superseded by the queue doc.
-- ARCHIVE: `audit-report-2026-06-01.md` — superseded by later audits.
-- ARCHIVE: `audit-report-2026-06-10.md` — superseded by later audits.
+- ARCHIVE: `archive/historical-reports/AUDIT_REPORT.md` — 2026-07-08 audit snapshot; findings since actioned or superseded by the queue doc.
+- ARCHIVE: `archive/historical-reports/audit-report-2026-06-01.md` — superseded by later audits.
+- ARCHIVE: `archive/historical-reports/audit-report-2026-06-10.md` — superseded by later audits.
 - ARCHIVE: `CHAOS_TEST_PLAN.md` — one-time chaos-testing exercise plan, exercise already run.
 - ARCHIVE: `PRE_CHAOS_CHECKLIST.md` — pre-check for the same completed exercise.
 - ARCHIVE: `POST_CHAOS_VALIDATION.md` — post-check for the same completed exercise.
 - ARCHIVE: `DEPLOYMENT_SUMMARY.md` — 2026-07-08 point-in-time deployment snapshot.
 - ARCHIVE: `TESTING_STATUS.md` — 2026-07-08 point-in-time snapshot; current testing conventions now live in `docs/DEVELOPER_GUIDE.md` §K.
-- ARCHIVE: `SPRINT-3A-OWNER-REPORT.md` — historical sprint report.
-- ARCHIVE: `SPRINT-3B-OWNER-REPORT.md` — historical sprint report.
+- ARCHIVE: `archive/historical-reports/SPRINT-3A-OWNER-REPORT.md` — historical sprint report.
+- ARCHIVE: `archive/historical-reports/SPRINT-3B-OWNER-REPORT.md` — historical sprint report.
 - ARCHIVE: `PHASE_1_FG4_EXECUTION_SHEET_2026-07-05.md` — one-time execution sheet, phase closed.
 - ARCHIVE: `STRICT_EXECUTION_CHECKLIST_PREFILLED_2026-07-05.md` — filled instance of a one-time checklist.
 - ARCHIVE: `STRICT_EXECUTION_CHECKLIST_TEMPLATE.md` — template only used for the above; no current consumer found via grep.
-- ARCHIVE: `payroll-escort-workflow-audit-2026-06-13.md` — superseded by 2026-07-04 version below.
-- ARCHIVE: `payroll-escort-workflow-audit-2026-07-04.md` — audit findings already actioned (Phase 2B Commit D, escort fixes this session).
-- ARCHIVE: `payroll-escort-workflow-fix-plan-2026-07-04.md` — fix plan for the above; fixes already shipped.
-- ARCHIVE: `recruitment-audit-2026-06-15.md` — one-time audit of a module now confirmed dead (see Category B).
+- ARCHIVE: `archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md` — superseded by 2026-07-04 version below.
+- ARCHIVE: `archive/historical-reports/payroll-escort-workflow-audit-2026-07-04.md` — audit findings already actioned (Phase 2B Commit D, escort fixes this session).
+- ARCHIVE: `archive/historical-reports/payroll-escort-workflow-fix-plan-2026-07-04.md` — fix plan for the above; fixes already shipped.
+- ARCHIVE: `archive/historical-reports/recruitment-audit-2026-06-15.md` — one-time audit of a module now confirmed dead (see Category B).
 - ARCHIVE: `GIT_SNAPSHOT.md` — point-in-time git state snapshot, git log is the live source of truth.
 - ARCHIVE: `RECOVERY.md` — check content before archiving: if this documents a **generic recovery procedure** (not tied to one incident), move to KEEP instead — verify manually.
 - ARCHIVE: `BACKUP.md` — check content before archiving: if this documents the **current backup procedure**, move to KEEP instead — verify manually.
@@ -102,7 +102,7 @@ Same reasoning applies to these `knowledge_base/00_governance/*.md` process/audi
 
 Root: `README.md`, `SYSTEM_ATLAS.md`, `ARCHITECTURE.md`, `BUSINESS-CONSTITUTION.md`,
 `PHONE_NORMALIZER_CONVENTION.md`, `HR_OFFICER_SETUP.md`,
-`SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md` (current, owner-approved Phase 1 roadmap
+`archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md` (current, owner-approved Phase 1 roadmap
 per [[project_fazle_core_os_roadmap]]).
 
 `docs/`: `API.md`, `docs/ARCHITECTURE.md`, `CANONICAL_CLIENT_DOMAIN.md`,

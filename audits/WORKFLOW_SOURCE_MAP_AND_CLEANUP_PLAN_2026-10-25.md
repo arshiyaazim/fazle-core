@@ -260,7 +260,7 @@ modules/identity_resolver.py      -> modules/fazle_identity_resolver.py
 
 - রুটে **৪৩টি `.md`, ১৮,৫৩৪ লাইন**; এর **২১টিই** এককালীন
   AUDIT/PLAN/REPORT (`HERMES_*.md`, `payroll-escort-workflow-audit-*.md`, …)।
-- `AUDIT_REPORT.md` (৯৬১ লাইন) নিজেই শিরোনামে লিখেছে:
+- `archive/historical-reports/AUDIT_REPORT.md` (৯৬১ লাইন) নিজেই শিরোনামে লিখেছে:
   *"⚠️ STALE — do not treat as current."*
 - মোট `.md` = **১,০০,৭০৮ লাইন** — সবচেয়ে বড় অংশ।
 

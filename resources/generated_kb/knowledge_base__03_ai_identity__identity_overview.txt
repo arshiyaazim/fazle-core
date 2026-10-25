@@ -46,7 +46,7 @@ The AI must answer by role and visibility first, then by topic. Domain-only retr
 - 2026-06-19: Created as dedicated identity domain.
 - 2026-06-22: Enriched with production resolution algorithm, evidence sources, and confidence scoring (Wave-1).
 - 2026-08-18: Re-synced against `identity_brain/__init__.py` after the
-  `HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md` audit found this section had
+  `archive/historical-reports/HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md` audit found this section had
   drifted from a real 2026-08-01 code fix (function name, confidence scale, step structure, and one
   step describing a code path that no longer exists were all corrected below).
 

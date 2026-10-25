@@ -65,7 +65,7 @@ This applies to all positions including escort, guard, supervisor, port roles.
 
 ### SR-05 — Joining Fee and Form Fee
 
-**Corrected 2026-08-19** (see `KB_SALARY_POLICY_DRIFT_CHECK_2026-08-19.md`):
+**Corrected 2026-08-19** (see `archive/historical-reports/KB_SALARY_POLICY_DRIFT_CHECK_2026-08-19.md`):
 this section previously stated an upfront ৳1,330 joining/form fee
 collected at joining time. That framing was superseded 2026-07-21 by the
 canonical text below (`recruitment_business_rules.md`'s "Approved

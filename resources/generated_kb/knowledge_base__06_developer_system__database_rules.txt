@@ -36,7 +36,7 @@ WBOM employees into FPE.
 
 ## Migration Governance (added 2026-07-08, System Consolidation Sprint — Task 4)
 
-**Status:** first safe consolidation step per `SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md` Report 4 / Report 7 Tier 2 Task 2. This section declares policy only — **no migration files have been renamed, renumbered, dropped, or altered as part of this step**, and no production schema was changed.
+**Status:** first safe consolidation step per `archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md` Report 4 / Report 7 Tier 2 Task 2. This section declares policy only — **no migration files have been renamed, renumbered, dropped, or altered as part of this step**, and no production schema was changed.
 
 ### Canonical path going forward
 
@@ -61,7 +61,7 @@ These three remain as historical, unreconciled sources until a dedicated reconci
 
 ### Known cross-directory schema-collision risk — re-investigated 2026-07-13, downgraded from "unknown severity" to "confirmed harmless"
 
-`SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md` Report 4 found `ALTER TABLE` touches on the same 5 tables (`fazle_cash_transactions`, `fpe_income_transactions`, `escort_roster_entries`, `wbom_escort_programs`, `fazle_payment_drafts`) from more than one of the three governed directories, plus a fully duplicated schema definition for all 8 `social_auto_reply` tables (identical in both `db/migrations/013_social_auto_reply.sql` and the inline DDL in `modules/social_auto_reply/__init__.py`).
+`archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md` Report 4 found `ALTER TABLE` touches on the same 5 tables (`fazle_cash_transactions`, `fpe_income_transactions`, `escort_roster_entries`, `wbom_escort_programs`, `fazle_payment_drafts`) from more than one of the three governed directories, plus a fully duplicated schema definition for all 8 `social_auto_reply` tables (identical in both `db/migrations/013_social_auto_reply.sql` and the inline DDL in `modules/social_auto_reply/__init__.py`).
 
 A table-by-table, file:line re-audit (2026-07-13, full detail in `db/MIGRATION_INVENTORY.md`) found **zero actually-conflicting statements** — every overlap is either the *same* column/constraint added twice, both idempotent (harmless, e.g. `fazle_payment_drafts.expires_at`, added by both `fazle_payroll_engine/migrations/009` and `db/migrations/021`, the latter's own comment already acknowledging the duplication), or *different*, non-overlapping columns added by different directories to the same table (harmless, just uncoordinated). `fazle_payroll_engine/migrations/` is confirmed live (re-run every restart via `start_fpe()`), not dead code, so these touches are real but not dangerous.
 
@@ -75,7 +75,7 @@ A table-by-table, file:line re-audit (2026-07-13, full detail in `db/MIGRATION_I
 - [ ] Port `fazle_payroll_engine/migrations/*.sql` into `db/migrations/` under new numbers, after diffing shared-table statements (`fazle_cash_transactions`, `fpe_income_transactions`, `fazle_payment_drafts`, `wbom_escort_programs`) against actual production columns
 - [ ] Retire the FPE inline-DDL startup loop once its migrations are ported and confirmed already-applied in `schema_migrations`
 - [ ] Dedupe the `social_auto_reply` schema definition — pick one of the two identical sources as canonical, have the other reference it
-- [ ] Write one new `db/migrations/0NN_bootstrap_core_tables.sql` for the 24 tables with no schema source of truth outside `tests/conftest.py` (see `SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md` Report 4 §7 and Report 9 for the full list, including two confirmed live writers: `fazle_error_log`, `llm_conversation_log`) — use real production `\d <table>` output as the column source, **not** `conftest.py`'s guess, which is already known to disagree with production
+- [ ] Write one new `db/migrations/0NN_bootstrap_core_tables.sql` for the 24 tables with no schema source of truth outside `tests/conftest.py` (see `archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md` Report 4 §7 and Report 9 for the full list, including two confirmed live writers: `fazle_error_log`, `llm_conversation_log`) — use real production `\d <table>` output as the column source, **not** `conftest.py`'s guess, which is already known to disagree with production
 - [ ] Commit or explicitly abandon the 4 previously-untracked `db/migrations/` files (`020_preflight_guard_tables.sql`, `023_model_router_tables.sql`, `027_assistant_feature_flags.sql`, `028_assistant_ext_location_audit.sql`)
 - [ ] Update this document's table count and domain list once the above is complete (see "Unresolved Schema Questions" below for the existing staleness note)
 

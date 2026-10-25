@@ -1,6 +1,6 @@
 """
 Draft Approval (fazle_payment_drafts) — API routes (2026-08-19, Task 2 of
-HERMES_BUSINESS_EXECUTION_CAPABILITY_PROVENANCE_AUDIT_2026-08-19.md's
+archive/historical-reports/HERMES_BUSINESS_EXECUTION_CAPABILITY_PROVENANCE_AUDIT_2026-08-19.md's
 approved 4-task plan).
 
 Closes the headline capability-exposure gap that audit found: the full

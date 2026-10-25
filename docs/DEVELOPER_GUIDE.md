@@ -1,7 +1,7 @@
 # Fazle Core — Developer Guide
 
 **Last updated:** 2026-07-09
-**Companion doc:** [`docs/MODULE_MAP.md`](MODULE_MAP.md) for module-by-module detail. See `SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md` for the full architecture/risk/gap audit this guide draws on.
+**Companion doc:** [`docs/MODULE_MAP.md`](MODULE_MAP.md) for module-by-module detail. See `archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md` for the full architecture/risk/gap audit this guide draws on.
 
 **How to read this:** sections B through J below, matching the lettered structure used when this guide was assembled. Every claim is sourced from a direct code/config/command read at the time of writing — items marked **Not verified** should be re-checked rather than trusted blindly, and this whole file should be treated as a point-in-time snapshot, not a live document.
 
@@ -186,7 +186,7 @@ All pages live in `/home/azim/core/app/static/*.html`, served both via dedicated
 - `wbom_escort_programs.escort_employee_id` / `escort_roster_entries.escort_employee_id` → `fazle_employees_legacy.employee_id` (HR-domain anchor, not FPE)
 - `fazle_payment_drafts.employee_id` → resolved to an `fazle_employees.id` at transaction-creation time
 
-**Known risk.** `fazle_employees_legacy` is referenced in 29 Python files, `fazle_employees` in 14 — both live simultaneously. This is an already-documented risk (see `SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md` Report 8, Risk #8), not a new finding.
+**Known risk.** `fazle_employees_legacy` is referenced in 29 Python files, `fazle_employees` in 14 — both live simultaneously. This is an already-documented risk (see `archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md` Report 8, Risk #8), not a new finding.
 
 ---
 
@@ -201,7 +201,7 @@ All pages live in `/home/azim/core/app/static/*.html`, served both via dedicated
 **Duty completion → payment draft.** `escort_lifecycle.close_program()` is idempotent (a no-op if already `Completed`). The top-level `handle_release_event()` requires admin confirmation, runs in one transaction, backfills `wbom_attendance` (idempotent, `entry_source='escort_release'`), then calls `payment_workflow.create_escort_payment_draft()` — computing `gross_amount = duty_days × 400tk/day` (flat shift-based rate, **fixed 2026-07-10** — was previously `basic_salary/30`, the wrong formula for escort duty) `− food_bill + conveyance − advances` (conveyance **added**, not subtracted), and upserting a `fazle_payment_drafts` row ready for a `PAID`/`APPROVED` command. Also (2026-07-11): on the first admin-approved attendance for a `confirmed`-status program, `escort_lifecycle.mark_program_running_on_attendance()` idempotently flips it to `running`.
 
 **Two known, already-documented pending issues:**
-1. `escort_lifecycle` writes `escort_roster_entries` directly via a raw `INSERT ... ON CONFLICT`, bypassing `escort_roster`'s own sync API (see `SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md` Report 3 §7).
+1. `escort_lifecycle` writes `escort_roster_entries` directly via a raw `INSERT ... ON CONFLICT`, bypassing `escort_roster`'s own sync API (see `archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md` Report 3 §7).
 2. **Formula decision made 2026-07-10, `compute_run` not yet rewritten.** The escort-duty formula question above is resolved (see the fixed formula above). A *separate* pay formula, `modules/payroll::compute_run`'s monthly rollup (full `basic_salary` + a flat escort-day allowance), is now scoped exclusively to Office Staff (`modules/payroll/eligibility.py::classify_office_staff`, escort employees explicitly excluded) via `compute_all_for_period_office_only` — but `compute_run`'s own internal calculation has **not yet** been rewritten to the new calendar-days/attendance-based formula (`docs/NEXT_IMPLEMENTATION_QUEUE.md`), so `job_daily_payroll` stays guarded behind `settings.office_payroll_authoritative_enabled` (default False) until that rewrite happens and the Owner signs off. Real production evidence, still true: all 703 `wbom_payroll_runs` sit in `status='draft'`; the `PAID <id> <amount> <method>` admin command remains the only path that actually moves money, with a free-typed amount and no cross-check.
 
 **Office Attendance & Payroll Eligibility (new, 2026-07-11).** A separate pipeline from escort attendance: `modules/attendance/crud.py` (manual CRUD, `entry_source='manual_office'`) + `modules/attendance_parser` (supervisor WhatsApp message → draft → admin approval, `entry_source='message_parser'`) feed `modules/payroll/dry_run.py`'s read-only `eligibility_preview`/`payroll_dry_run`/`reconciliation_report`, exposed at `/admin/payroll/{eligibility-preview,dry-run,reconciliation}` (`modules/attendance/routes.py`, admin+/superadmin only). Escort attendance (`whatsapp_escort`, `escort_release`) never counts toward this, regardless of approval. **Currently 0 of 188 employees are eligible** — confirmed correct against real production data, not a bug (184 are Escort-designation; the remaining 4 each fail a different structural gate).
@@ -247,7 +247,7 @@ All pages live in `/home/azim/core/app/static/*.html`, served both via dedicated
 - Backups are real and verified running (18+ consecutive daily dumps as of the 2026-07-08 audit), with a self-checking staleness alert.
 - The AI layer's read/write boundary is one of the best-enforced parts of the system — Ollama genuinely cannot reach production write paths or unrestricted SQL.
 
-**Weaknesses (see `SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md` for full evidence on all of these):**
+**Weaknesses (see `archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md` for full evidence on all of these):**
 - No CI/build gate between a code edit and it running in production — the service runs directly off the working tree.
 - Schema governance is fragmented across 3+ migration mechanisms with real cross-directory collisions; 27 production tables had zero schema source of truth until 2026-07-08's bootstrap migration.
 - Two employee-creation paths still write `fazle_employees_legacy` as primary despite `fazle_employees` being documented as canonical (§F above).
@@ -256,7 +256,7 @@ All pages live in `/home/azim/core/app/static/*.html`, served both via dedicated
 - No general ledger, no client billing/invoicing/accounts-receivable, no dispatch/scheduling conflict-detection — the three biggest gaps against the "complete operating system" goal.
 - ~54% of business modules have no dedicated test coverage, including some Critical-risk ones.
 
-**Already fixed (2026-07-08/09, see `SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md`'s "Current Consolidation State" section for full detail):** leaked credentials scrubbed from docs, RBAC fail-open→fail-closed, drafts/social-auto-reply routers remounted, migration governance documented, 27-table schema bootstrap migration, client-billing scope decided, `AUTO_REPLY_ENABLED` KB documentation reconciled, a test-harness shared-pool bug fixed.
+**Already fixed (2026-07-08/09, see `archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md`'s "Current Consolidation State" section for full detail):** leaked credentials scrubbed from docs, RBAC fail-open→fail-closed, drafts/social-auto-reply routers remounted, migration governance documented, 27-table schema bootstrap migration, client-billing scope decided, `AUTO_REPLY_ENABLED` KB documentation reconciled, a test-harness shared-pool bug fixed.
 
 **Remaining critical issues:** production credentials still need rotation (values are known-leaked even though docs are scrubbed); the dual pay-formula issue needs a runtime check before Phase 2a starts; cross-directory migration collisions are documented but not yet resolved.
 

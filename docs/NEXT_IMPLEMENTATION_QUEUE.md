@@ -19,7 +19,7 @@ Article VII). **New this revision:** a "Known Broken / Conflicting Workflows" se
 a "URL / Route-Based Functions Needing Attention" section, below, called out separately
 per request — both are pointers into the Tier 2 / Immediate-Next detail, not new items.
 
-**Source:** `SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md` (10-report audit), `docs/PRODUCTION_CERTIFICATION_v1.0.md`,
+**Source:** `archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md` (10-report audit), `docs/PRODUCTION_CERTIFICATION_v1.0.md`,
 `knowledge_base/00_governance/CANONICAL_BUSINESS_RULES.md`, and
 `knowledge_base/00_governance/management_decisions.md` Sessions 13-18 (2026-07-15/16, the
 work this revision folds in). Read those for full detail — this file is a queue, not a report.

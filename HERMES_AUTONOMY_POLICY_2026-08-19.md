@@ -2,7 +2,7 @@
 
 Produced as Sections 16-19 of the deployment → controlled live acceptance
 → autonomy-policy task, same day as
-`HERMES_BUSINESS_EXECUTION_CAPABILITY_PROVENANCE_AUDIT_2026-08-19.md` and
+`archive/historical-reports/HERMES_BUSINESS_EXECUTION_CAPABILITY_PROVENANCE_AUDIT_2026-08-19.md` and
 the 4-task implementation it authorized. This is a policy document, not
 code — it defines **when Hermes may call an already-authorized tool**, on
 top of the existing mode/RBAC/confirmation gates already enforced in
@@ -46,7 +46,7 @@ closing the exact `get_contacts`/`get_employees` no-search gap the
 agentic-behavior audit found live; `get_directives` added alongside Item 3's
 `remember_business_rule` below. All three appended here rather than
 renumbering — see that audit doc and
-`HERMES_MESSAGE_CONTEXT_REPLY_EXECUTION_GAP_AUDIT_2026-08-19.md` for
+`archive/historical-reports/HERMES_MESSAGE_CONTEXT_REPLY_EXECUTION_GAP_AUDIT_2026-08-19.md` for
 context. This doc's own "80, zero unclassified" tally from earlier the same
 day was itself stale within hours — treat any tool-count claim as a
 point-in-time snapshot, verify against the live registry before relying on

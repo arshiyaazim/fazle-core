@@ -397,7 +397,7 @@ An employee is Office Staff (and therefore eligible for Formula 3, never Formula
 
 **Owner Changeable Rules:** The entire chart-of-accounts structure, once built, is a policy the Owner will define (which accounts exist, how they roll up).
 
-**Structural Rules:** Per the Roadmap (`~/.claude/plans/now-you-are-in-squishy-chipmunk.md` and `SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md`), the GL posting hook must attach to `create_transaction()` as an extension, not a parallel writer — preserving Article I's single-source-of-truth rule. Building it before the Payroll formula question (see Payroll section) is resolved would mean posting revenue/cost entries on top of an untrusted cost-side linkage (`program_id` is NULL on every real transaction today) — this document recommends resolving Payroll's Owner decision first, consistent with `docs/PHASE2_ENTRY_GATE.md`'s Phase 2b NO-GO.
+**Structural Rules:** Per the Roadmap (`~/.claude/plans/now-you-are-in-squishy-chipmunk.md` and `archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md`), the GL posting hook must attach to `create_transaction()` as an extension, not a parallel writer — preserving Article I's single-source-of-truth rule. Building it before the Payroll formula question (see Payroll section) is resolved would mean posting revenue/cost entries on top of an untrusted cost-side linkage (`program_id` is NULL on every real transaction today) — this document recommends resolving Payroll's Owner decision first, consistent with `docs/PHASE2_ENTRY_GATE.md`'s Phase 2b NO-GO.
 
 **Validation Rules:** N/A yet.
 

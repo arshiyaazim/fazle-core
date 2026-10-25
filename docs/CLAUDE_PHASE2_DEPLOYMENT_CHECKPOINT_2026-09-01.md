@@ -106,7 +106,7 @@ vs `git stash show -p` (original combined), content-identical (only `@@` line nu
 Both `docs/PRODUCTION_SYSTEM_STATUS_2026-08-31.md` + `docs/WEB_UI_WORKFLOW_AUDIT_2026-08-31.md`:
 read-only prior-session audits, `secret_scan` PASS, WEB_UI has 0 phones, STATUS has
 5 distinct internal infra numbers **already committed** in `app/critical_numbers.py` /
-`docs/MODULE_MAP.md` / `AUDIT_REPORT.md` (no customer PII). → **committed as-is**
+`docs/MODULE_MAP.md` / `archive/historical-reports/AUDIT_REPORT.md` (no customer PII). → **committed as-is**
 (`2035641`), removing the sole restart-gate Check-1 blocker without weakening the gate.
 
 ### Post-review corrections (on top of the 6 reviewed commits)
