@@ -48,6 +48,15 @@ TABLE_RENAMES: dict[str, str] = {
 }
 
 #: old module path (repo-relative) -> new module path (repo-relative)
+#:
+#: 2026-10-25 — the backward-compatibility shims at these OLD paths were
+#: deleted. They had zero importers anywhere in the repo (no production
+#: module, no AI tool, no test), and every one of the 23 had a corrupted
+#: ``_OLD`` constant identical to ``_NEW``, so its DeprecationWarning read
+#: "modules.fazle_X is deprecated; use modules.fazle_X instead".
+#: The mapping is KEPT because test_no_old_module_import_path_remains still
+#: needs it to prove no source file imports an old path, and because it is
+#: the record of what was renamed.
 MODULE_RENAMES: dict[str, str] = {
     "modules/payment_ingest": "modules/fazle_payment_ingest",
     "modules/payment_ingest/fpe_bridge.py": "modules/fazle_payment_ingest/fpe_bridge.py",
@@ -405,23 +414,9 @@ class TestRenamedModules:
     def test_new_module_path_exists(self, old, new):
         assert (REPO_ROOT / new).exists(), f"new module path {new} is missing"
 
-    @pytest.mark.parametrize("old,new", sorted(MODULE_RENAMES.items()))
-    def test_old_module_path_still_importable(self, old, new):
-        """The old path must still import (backward compatibility)."""
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", DeprecationWarning)
-            old_mod = importlib.import_module(_dotted(old))
-            new_mod = importlib.import_module(_dotted(new))
-        assert old_mod is not None and new_mod is not None
-
-    @pytest.mark.parametrize("old,new", sorted(MODULE_RENAMES.items()))
-    def test_old_module_path_is_a_deprecation_shim(self, old, new):
-        """The old path must be a thin shim that warns on attribute access."""
-        rel = old if old.endswith(".py") else f"{old}/__init__.py"
-        text = (REPO_ROOT / rel).read_text(encoding="utf-8")
-        assert "DeprecationWarning" in text, f"{rel} does not warn"
-        assert "Backward-compatibility shim" in text
-        assert _dotted(new) in text, f"{rel} does not point at {new}"
+    # Removed 2026-10-25: test_old_module_path_still_importable and
+    # test_old_module_path_is_a_deprecation_shim. The 23 backward-compat
+    # shims they guarded were deleted — see the note on MODULE_RENAMES below.
 
     def test_no_old_module_import_path_remains(self):
         """Source must import the new module paths, not the old ones."""
