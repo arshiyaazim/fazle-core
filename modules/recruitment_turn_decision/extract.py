@@ -222,7 +222,7 @@ def propose(
         if ar:
             out.append(ar)
     elif current_step == "job_preference":
-        j = _job_preposal(text, locked_job) if False else _job_preference_proposal(text, locked_job)
+        j = _job_preference_proposal(text, locked_job)
         if j:
             out.append(j)
     elif current_step == "experience":

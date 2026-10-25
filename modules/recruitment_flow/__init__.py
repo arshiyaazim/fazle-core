@@ -13,9 +13,12 @@ Steps: name → age → area → job_preference → experience → phone_confirm
 import logging
 import re
 from datetime import date, datetime, timedelta, timezone
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from app.database import db_conn, fetch_one, execute, fetch_val
+
+if TYPE_CHECKING:  # type-only: the annotation is never evaluated at runtime
+    from modules.recruitment_turn_decision.contract import RecruitmentTurnDecision
 
 log = logging.getLogger("fazle.recruitment")
 SESSION_TTL = timedelta(hours=24)
