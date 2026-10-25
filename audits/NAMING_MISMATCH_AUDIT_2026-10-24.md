@@ -22,7 +22,7 @@
 
 | শ্রেণি | সংখ্যা | মারাত্মকতা |
 |---|---:|---|
-| 🔴 কোড যে কলাম পড়ছে/লিখছে, ডিবিতে সেই নামেই নেই (রানটাইম-ব্রেকিং) | **৭** → **৪ বাকি** | ৩টি ঠিক হয়েছে |
+| 🔴 কোড যে কলাম পড়ছে/লিখছে, ডিবিতে সেই নামেই নেই (রানটাইম-ব্রেকিং) | **৭** → **০ বাকি** | সব ৭টিই ঠিক হয়েছে |
 | 🟠 প্রোডাকশন টেবিল যার `CREATE TABLE` রিপোতেই নেই | **৪** | উচ্চ |
 | 🟡 টেস্ট-ফিক্সচার (`conftest.py`) বনাম মাইগ্রেশন কলাম-হেডার অমিল | **২১ টেবিল** | উচ্চ (টেস্ট ভ্রান্ত আশ্বাস দেয়) |
 | 🟣 টেবিল-নেমিং/মাইগ্রেশন-সিস্টেম অমিল | **৪** | মধ্যম–উচ্চ |
@@ -30,13 +30,17 @@
 
 ---
 
-## ✅ ঠিক করা হয়েছে (২০২৬-১০-২৪)
+## ✅ ঠিক করা হয়েছে (২০২৬-১০-২৪ – ২৫)
 
 | # | সমস্যা | ফিক্স |
 |---|---|---|
 | **১.১** | `wbom_salary_records` — কোড `amount`/`status`/`salary_month` পড়তো | `modules/payroll_logic/__init__.py`: `net_salary`/`payment_status`/`month`+`year`; `payment_status` তুলনা এখন case-insensitive |
 | **১.২** | `nl_payments` — `t.payment_mobile` / `e.employee_mobile` | `modules/fazle_admin_commands/nl_payments.py`: `t.payout_phone` / `e.primary_phone`; সাথে `intent_employee_totals()`-এর ক্রস-সিস্টেম ID বাগ (`e.wbom_employee_id` ব্রিজ) |
+| **১.৩** | `fazle_employees_legacy` — কোড `full_name` পড়তো (এটি আসলে `fazle_employees`-এর কলাম) | `modules/escort_lifecycle/__init__.py`: `employee_name` — SELECT-লিস্ট/WHERE ও result-dict key দুটোই |
 | **১.৪** | `fazle_knowledge_base` — `value`/`subcategory`/`language` কোথাও নেই | `db/migrations/002_align_tables.sql` (ক্যানোনিক্যাল CREATE TABLE) + `db/migrations/097_knowledge_base_missing_columns.sql` (বিদ্যমান ডিবি converge) + `db/new_tables.sql` |
+| **১.৫** | `fazle_payment_drafts` — INSERT-এ `method`, টেবিলে আছে `payment_method` | `modules/fazle_payment_ingest/__init__.py`: `payment_method` (পার্সারের `parsed["method"]` dict-key অক্ষত) |
+| **১.৬** | `fpe_sync_checkpoints` — `last_checked_at` (এটি `social_backlog_state`-এর কলাম) | `checkpoint.py` (`get_checkpoint`/`touch_checkpoint`) + `routes.py` (`/sync/status`): `last_sync_at` |
+| **১.৭** | `fpe_gap_scan_runs.skipped_no_content` — কলামটিই কোথাও ডিফাইন নেই | FPE `004` CREATE TABLE + নতুন FPE `015` (`ADD COLUMN IF NOT EXISTS`) |
 
 এই তিনটিই এখন `tests/unit/test_sql_column_conformance.py` দিয়ে সুরক্ষিত — যা
 DB ছাড়াই রিপোর সব মাইগ্রেশন রিপ্লে করে কোডের SQL যাচাই করে। উপরের ১.১/১.২/১.৪-এর
@@ -99,7 +103,7 @@ where_phone = ("AND (t.payment_mobile = $3 OR t.payment_mobile = $4 "
 প্রিফিক্স থাকায় এটি টেবিল-কলাম হিসেবে রিজল্ভ হয় → `UndefinedColumnError`।
 **ট্রিগার:** কোয়েরি টেক্সটে ফোন নাম্বার থাকলেই (`if phone:` ব্রাঞ্চ)।
 
-### ১.৩ `fazle_employees_legacy.full_name` 🔴
+### ১.৩ ✅ ঠিক হয়েছে — `fazle_employees_legacy.full_name`
 
 `modules/escort_lifecycle/__init__.py:510`
 
@@ -108,6 +112,14 @@ SELECT e.employee_id, e.full_name FROM fazle_employees_legacy e WHERE e.full_nam
 ```
 
 `fazle_employees_legacy`-তে নামের কলাম **`employee_name`**; `full_name` আছে `fazle_employees`-এ।
+`029`-এর দুটি ইনডেক্সই (`idx_fazle_employees_legacy_name`, `..._name_trgm`) `employee_name`-এর ওপর।
+
+**ফিক্স:** `modules/escort_lifecycle/__init__.py` — SELECT/WHERE-এ `e.employee_name`, আর
+result-dict key `r['employee_name']`।
+
+**কেন ধরা পড়েনি:** `_fuzzy_employee_lookup()` একটি bare `except` দিয়ে মোড়া, তাই
+`UndefinedColumnError` চাপা পড়ে যেত — প্রতিটি OCR রিলিজ-স্লিপ নীরবে 'কোনো কর্মী পাওয়া যায়নি'
+রিটার্ন করতো, ক্র্যাশ করতো না।
 
 ### ১.৪ ✅ ঠিক হয়েছে — `fazle_knowledge_base`: `value`, `subcategory`, `language`
 
@@ -152,20 +164,48 @@ SELECT e.employee_id, e.full_name FROM fazle_employees_legacy e WHERE e.full_nam
 
 **কোড বদলাতে হয়নি** — কোড যা চাইছিল তাই-ই সঠিক ছিল; স্কিমাই পিছিয়ে ছিল।
 
-### ১.৫ `fazle_payment_drafts.method` 🔴
+### ১.৫ ✅ ঠিক হয়েছে — `fazle_payment_drafts.method`
 
-`modules/fazle_payment_ingest/__init__.py:350` — INSERT-এ `method`; টেবিলে আছে **`payment_method`**।
+`modules/fazle_payment_ingest/__init__.py:350` — INSERT-এ `method`; টেবিলে আছে **`payment_method`**
+(`002_align_tables.sql` ও `db/new_tables.sql` উভয়েই)।
 
-### ১.৬ `fpe_sync_checkpoints.last_checked_at` 🔴
+**প্রমাণ যে কোডটিই ভুল ছিল:** এই টেবিলে লেখা আরও দুই জায়গা ইতিমধ্যেই `payment_method`
+ব্যবহার করে — `modules/employee_conversation/__init__.py:669` (INSERT) এবং
+`modules/fazle_admin_commands/__init__.py:1463` (SELECT)। শুধু ingest-পাথটিই ভুল ছিল।
+
+**ফিক্স:** SQL কলামের নাম `payment_method`। `parsed["method"]` — পার্সারের dict-key —
+অক্ষত রাখা হয়েছে (এটি SQL নয়); টেস্ট `test_parser_dict_key_left_alone` সেটি ধরে রাখে।
+
+### ১.৬ ✅ ঠিক হয়েছে — `fpe_sync_checkpoints.last_checked_at`
 
 `modules/fazle_payroll_engine/checkpoint.py:22` (SELECT), `:36` (UPDATE SET),
 `modules/fazle_payroll_engine/routes.py:1703` (SELECT)।
 টেবিলে আছে **`last_sync_at`** (`001_fpe_schema.sql:161`)। `last_checked_at` আছে শুধু `social_backlog_state`-এ।
 
-### ১.৭ `fpe_gap_scan_runs.skipped_no_content` 🔴
+**ফিক্স:** তিন জায়গাতেই `last_sync_at`। `get_checkpoint()`-এর SELECT-লিস্টে `last_sync_at`
+আগে থেকেই ছিল, তাই ভুল কলামটি শুধু বাদ দেওয়া হয়েছে (ডুপ্লিকেট রাখা হয়নি)।
+
+**কেন এটি বিশেষভাবে খারাপ ছিল:** `touch_checkpoint()`-এর ডকস্ট্রিং অনুযায়ী এটি
+**প্রতি সিঙ্ক পাসে** কল হয় — এমনকি ০টি নতুন মেসেজ থাকলেও। অর্থাৎ এটি একটি নীরব
+বার-বার-ব্যর্থতা ছিল, আর `/sync/status` এন্ডপয়েন্টটি সম্পূর্ণ ভাঙা ছিল।
+
+**কোথা থেকে এলো:** `last_checked_at` সঠিকভাবে ব্যবহৃত হয় `modules/social_auto_reply/`-তে
+(`social_backlog_state`-এর ওপর)। FPE কোডে এটি কপি-পেস্ট দূষণ।
+
+### ১.৭ ✅ ঠিক হয়েছে — `fpe_gap_scan_runs.skipped_no_content`
 
 `modules/fazle_payroll_engine/gap_scan.py:198` — INSERT-এ `skipped_no_content`;
 `004_fpe_zero_loss.sql:79-91`-এর সংজ্ঞায় এই কলাম নেই।
+
+**ফিক্স (additive):** FPE `004_fpe_zero_loss.sql`-এর CREATE TABLE-এ কলাম যোগ (fresh build-এর
+জন্য) + নতুন FPE `015_fpe_gap_scan_skipped_no_content.sql` (`ADD COLUMN IF NOT EXISTS`,
+বিদ্যমান ডিবির জন্য — কারণ `004`-এর `CREATE TABLE IF NOT EXISTS` বিদ্যমান টেবিলে no-op)।
+
+**কোড কেন বদলানো হয়নি:** এই INSERT-ই একমাত্র জায়গা যেখানে একটি সম্পন্ন স্ক্যান রেকর্ড হয়।
+কলামটি না থাকায় পুরো statement ব্যর্থ হতো — অর্থাৎ 'একটি ফিল্ড হারিয়েছে' নয়, বরং
+**কোনো রান-ই লগ হতো না**। আর `skipped_no_content` অলঙ্কারিক নয়: `real_gaps = missing - skipped`
+হিসাব করে অপারেটরদের অবাস্তব গ্যাপ-এলার্ম থেকে বাঁচায়। ফিল্ডটি কেটে দিলে ওই সিগন্যালই
+হারিয়ে যেত, তাই কলাম যোগ করাই সঠিক (§১.৪-এর সিদ্ধান্তের অনুরূপ)।
 
 ---
 
@@ -292,13 +332,14 @@ ALTER TABLE IF EXISTS fpe_employees        RENAME TO fazle_employees;
 
 ## সুপারিশ (প্রাধান্য অনুযায়ী)
 
-1. ~~**১.১–১.৭ নম্বর বাগগুলো ঠিক করুন**~~ — **১.১, ১.২ ও ১.৪ সম্পন্ন।**
-   বাকি: **১.৩** (`fazle_employees_legacy.full_name` → `employee_name`),
-   **১.৫** (`fazle_payment_drafts.method` → `payment_method`),
-   **১.৬** (`fpe_sync_checkpoints.last_checked_at` → `last_sync_at`, প্রতি সিঙ্ক পাসে কল হয়),
-   **১.৭** (`fpe_gap_scan_runs.skipped_no_content` কলামটিই নেই)।
-   টেস্টের `KNOWN_REMAINING` allowlist-এ এই ৪টিই এখন আছে; প্রতিটি ঠিক হলে
-   লিস্ট থেকে সরাতে হবে—নাহলে `test_repo_wide_sql_columns_exist` FAIL করবে।
+1. ~~**১.১–১.৭ নম্বর বাগগুলো ঠিক করুন**~~ — **সব ৭টিই সম্পন্ন (২০২৬-১০-২৫)।**
+   টেস্টের `KNOWN_REMAINING` allowlist **এখন খালি** — মানে রিপোর প্রতিটি SQL
+   কলাম-রেফারেন্স এমন একটি কলামে পড়ছে যা কোনো মাইগ্রেশন সত্যিই ডিফাইন করে।
+   `test_repo_wide_sql_columns_exist` এখন **শূন্য-সহনশীল**: নতুন কোনো অমিল
+   যোগ হলে সাথে সাথে FAIL করবে, আর কেউ allowlist-এ ঢুকিয়ে চাপা দিলে সেটিও
+   `stale` অ্যাসার্শনে ধরা পড়বে।
+   *মনে রাখার বিষয়:* এই ৭টির মধ্যে ৫টিই ছিল নীরব — bare `except` বা upstream
+   error-handling-এর আড়ালে। 'ক্র্যাশ করছে না' মানে 'কাজ করছে' নয়।
 2. ~~**`fazle_knowledge_base`-এ `value`/`subcategory`/`language` যোগ করুন**~~ — **সম্পন্ন** (মাইগ্রেশন `002` + `097` + `db/new_tables.sql`)।
 3. **`wbom_candidates` / `wbom_candidate_conversations` / `fazle_knowledge_governance` / `escort_evidence_event`**-এর `CREATE TABLE` যোগ করুন (`db/migrations/`)।
    *এরপর:* `fresh_build_violations()`-এর মতোই একটি টেস্ট দিয়ে ধরুন কোন টেবিল এখনো অনির্ধারিত।

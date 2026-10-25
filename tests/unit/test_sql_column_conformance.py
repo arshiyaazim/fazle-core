@@ -844,20 +844,20 @@ class TestFreshBuildsRunEndToEnd:
 # ─────────────────────────────────────────────────────────────────────────────
 
 # Known remaining mismatches, carried over from
-# audits/NAMING_MISMATCH_AUDIT_2026-10-24.md (§1.3–§1.7). They are real defects
-# that this suite now proves are the ONLY ones left of this kind; each entry
-# must be fixed and then removed from this list — never extended.
-KNOWN_REMAINING = {
-    # §1.3 — legacy table's name column is employee_name, not full_name
-    ("modules/escort_lifecycle/__init__.py", "fazle_employees_legacy", "full_name"),
-    # §1.5 — the column is payment_method
-    ("modules/fazle_payment_ingest/__init__.py", "fazle_payment_drafts", "method"),
-    # §1.6 — the column is last_sync_at (last_checked_at only exists on
-    #        social_backlog_state); this runs on every sync pass.
-    ("modules/fazle_payroll_engine/checkpoint.py", "fpe_sync_checkpoints", "last_checked_at"),
-    # §1.7 — column never defined in 004_fpe_zero_loss.sql
-    ("modules/fazle_payroll_engine/gap_scan.py", "fpe_gap_scan_runs", "skipped_no_content"),
-}
+# audits/NAMING_MISMATCH_AUDIT_2026-10-24.md (§1.3–§1.7). Entries are real
+# defects; each one must be fixed and then removed from this list — never
+# extended.
+#
+# This set is now EMPTY. Sections 1.3, 1.5, 1.6 and 1.7 were fixed on
+# 2026-10-25, which means every SQL column reference in the repository
+# resolves to a column that some migration actually defines.
+#
+# The mechanism is deliberately kept rather than deleted. An empty set keeps
+# the guard strict for anything new, and the `stale` assertion below still
+# does its job: if a future change reintroduces a mismatch it fails as a new
+# violation, and if someone "fixes" it by adding an entry here, the entry
+# starts failing as stale the moment the underlying bug goes away.
+KNOWN_REMAINING = set()
 
 # The allowlist is a baseline, not an amnesty: it is what makes the guard
 # usable (a permanently-red guard cannot detect *new* violations), and the
@@ -925,3 +925,148 @@ def test_schema_was_actually_built():
     assert "payout_phone" in SCHEMA["fazle_cash_transactions"]
     assert "primary_phone" in SCHEMA["fazle_employees"]
     assert "wbom_employee_id" in SCHEMA["fazle_employees"]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 8. Regression tests — audit §1.3, §1.5, §1.6 and §1.7
+# ─────────────────────────────────────────────────────────────────────────────
+
+ESCORT_LIFECYCLE = ROOT / "modules/escort_lifecycle/__init__.py"
+PAYMENT_INGEST = ROOT / "modules/fazle_payment_ingest/__init__.py"
+FPE_CHECKPOINT = ROOT / "modules/fazle_payroll_engine/checkpoint.py"
+FPE_ROUTES = ROOT / "modules/fazle_payroll_engine/routes.py"
+
+
+class TestEscortLifecycleLegacyNameColumn:
+    """§1.3 — `fazle_employees_legacy` keeps the name in `employee_name`.
+
+    `full_name` is a column on a *different* table (`fazle_employees`). The
+    bug was invisible because `_fuzzy_employee_lookup()` wraps the query in a
+    bare `except`, so every OCR release slip silently resolved to no employee
+    rather than raising.
+    """
+
+    def test_selects_employee_name(self):
+        _ln, sql = sql_for(
+            ESCORT_LIFECYCLE, "_fuzzy_employee_lookup", "fazle_employees_legacy"
+        )
+        assert "employee_name" in sql, (
+            "fazle_employees_legacy stores the name in `employee_name`; "
+            f"the query selected: {sql}"
+        )
+
+    def test_does_not_reference_full_name(self):
+        _ln, sql = sql_for(
+            ESCORT_LIFECYCLE, "_fuzzy_employee_lookup", "fazle_employees_legacy"
+        )
+        assert "full_name" not in sql, (
+            "`full_name` is a fazle_employees column; using it on "
+            "fazle_employees_legacy raises UndefinedColumnError"
+        )
+
+    def test_result_dict_key_followed_the_rename(self):
+        """Renaming the column but not the dict key would break the return."""
+        src = ESCORT_LIFECYCLE.read_text(encoding="utf-8")
+        assert "r['employee_name']" in src
+        assert "r['full_name']" not in src
+
+
+class TestPaymentDraftMethodColumn:
+    """§1.5 — `fazle_payment_drafts` has `payment_method`, not `method`."""
+
+    def test_insert_uses_payment_method(self):
+        # Match the statement, not the bare table name: the function's
+        # docstring also mentions fazle_payment_drafts and sql_for() would
+        # return that first.
+        _ln, sql = sql_for(
+            PAYMENT_INGEST, "_bridge_to_finalize", "INSERT INTO fazle_payment_drafts"
+        )
+        assert "payment_method" in sql, (
+            "every other writer to fazle_payment_drafts uses `payment_method`; "
+            f"this INSERT used: {sql}"
+        )
+
+    def test_insert_does_not_use_bare_method(self):
+        # Match the statement, not the bare table name: the function's
+        # docstring also mentions fazle_payment_drafts and sql_for() would
+        # return that first.
+        _ln, sql = sql_for(
+            PAYMENT_INGEST, "_bridge_to_finalize", "INSERT INTO fazle_payment_drafts"
+        )
+        assert not re.search(r"\bmethod\b", sql), (
+            "fazle_payment_drafts has no `method` column"
+        )
+
+    def test_parser_dict_key_left_alone(self):
+        """`method` is also the *parser's* dict key — only SQL changes."""
+        src = PAYMENT_INGEST.read_text(encoding="utf-8")
+        assert 'parsed["method"]' in src
+
+
+class TestSyncCheckpointColumnName:
+    """§1.6 — `fpe_sync_checkpoints` has `last_sync_at`.
+
+    `last_checked_at` is a real column, but on `social_backlog_state`; it was
+    carried into the FPE checkpoint code by copy-paste. Because
+    `touch_checkpoint()` runs on *every* sync pass, this raised on every pass.
+    """
+
+    def test_get_checkpoint_does_not_select_last_checked_at(self):
+        _ln, sql = sql_for(FPE_CHECKPOINT, "get_checkpoint", "fpe_sync_checkpoints")
+        assert "last_checked_at" not in sql
+        assert "last_sync_at" in sql
+
+    def test_touch_checkpoint_updates_last_sync_at(self):
+        _ln, sql = sql_for(FPE_CHECKPOINT, "touch_checkpoint", "fpe_sync_checkpoints")
+        assert "SET last_sync_at = NOW()" in sql
+        assert "last_checked_at" not in sql
+
+    def test_sync_status_endpoint_does_not_select_last_checked_at(self):
+        _ln, sql = sql_for(FPE_ROUTES, "sync_status", "fpe_sync_checkpoints")
+        assert "last_checked_at" not in sql
+
+    def test_last_checked_at_is_not_a_column_of_this_table(self):
+        """Documents *why* the three assertions above are correct."""
+        assert "last_sync_at" in SCHEMA["fpe_sync_checkpoints"]
+        assert "last_checked_at" not in SCHEMA["fpe_sync_checkpoints"]
+
+
+class TestGapScanRunsSkippedNoContent:
+    """§1.7 — `fpe_gap_scan_runs.skipped_no_content`.
+
+    gap_scan.py INSERTs this column on every run, but no migration ever
+    created it, so the INSERT failed and *no* scan run was ever recorded.
+    Dropping the column from the INSERT would have discarded the
+    `real_gaps = missing - skipped` signal, so the column was added instead.
+    """
+
+    def test_column_is_declared(self):
+        assert "skipped_no_content" in SCHEMA["fpe_gap_scan_runs"], (
+            "gap_scan.py INSERTs fpe_gap_scan_runs.skipped_no_content but no "
+            "migration declares it"
+        )
+
+    def test_create_table_declares_it(self):
+        body = (
+            ROOT
+            / "modules/fazle_payroll_engine/migrations/004_fpe_zero_loss.sql"
+        ).read_text(encoding="utf-8")
+        create = body[body.index("CREATE TABLE IF NOT EXISTS fpe_gap_scan_runs") :]
+        create = create[: create.index(");")]
+        assert re.search(r"^\s*skipped_no_content\s", create, re.M), (
+            "migration 004's CREATE TABLE must declare skipped_no_content for "
+            "from-scratch builds"
+        )
+
+    def test_convergence_migration_exists(self):
+        """004 uses CREATE TABLE IF NOT EXISTS, so a database that already has
+        the table would never gain the column — hence an explicit ALTER."""
+        path = (
+            ROOT
+            / "modules/fazle_payroll_engine/migrations"
+            / "015_fpe_gap_scan_skipped_no_content.sql"
+        )
+        assert path.exists(), "expected FPE migration 015 to converge existing DBs"
+        assert "ADD COLUMN IF NOT EXISTS skipped_no_content" in path.read_text(
+            encoding="utf-8"
+        )

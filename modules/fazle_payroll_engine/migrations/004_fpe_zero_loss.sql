@@ -77,17 +77,18 @@ CREATE INDEX IF NOT EXISTS idx_fazle_mps_status_attempts
 
 -- ── C. Gap-scan run log (one row per bridge sweep) ───────────────────────────
 CREATE TABLE IF NOT EXISTS fpe_gap_scan_runs (
-    id              BIGSERIAL    PRIMARY KEY,
-    source          TEXT         NOT NULL,      -- 'bridge1' | 'bridge2'
-    chat_jid        TEXT         NOT NULL,
-    sqlite_count    BIGINT       NOT NULL DEFAULT 0,
-    archive_count   BIGINT       NOT NULL DEFAULT 0,
-    missing_count   BIGINT       NOT NULL DEFAULT 0,
-    backfilled      BIGINT       NOT NULL DEFAULT 0,
-    duration_ms     INT          NOT NULL DEFAULT 0,
-    error           TEXT,
-    started_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    finished_at     TIMESTAMPTZ
+    id                  BIGSERIAL    PRIMARY KEY,
+    source              TEXT         NOT NULL,      -- 'bridge1' | 'bridge2'
+    chat_jid            TEXT         NOT NULL,
+    sqlite_count        BIGINT       NOT NULL DEFAULT 0,
+    archive_count       BIGINT       NOT NULL DEFAULT 0,
+    missing_count       BIGINT       NOT NULL DEFAULT 0,
+    backfilled          BIGINT       NOT NULL DEFAULT 0,
+    skipped_no_content  BIGINT       NOT NULL DEFAULT 0,
+    duration_ms         INT          NOT NULL DEFAULT 0,
+    error               TEXT,
+    started_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    finished_at         TIMESTAMPTZ
 );
 
 CREATE INDEX IF NOT EXISTS idx_fazle_gapscan_source_started

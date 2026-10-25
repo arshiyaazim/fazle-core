@@ -505,16 +505,21 @@ async def _fuzzy_employee_lookup(name: str) -> Optional[str]:
     if not name or len(name) < 3:
         return None
     try:
+        # `fazle_employees_legacy` keeps the name in `employee_name` —
+        # `full_name` is the column on `fazle_employees`. Selecting
+        # `e.full_name` raised UndefinedColumnError, and the bare `except`
+        # below swallowed it, so this lookup silently returned None for every
+        # OCR release slip instead of resolving the employee.
         # Use ILIKE for substring match — no fuzzy extension needed
         rows = await fetch_all(
-            """SELECT e.employee_id, e.full_name
+            """SELECT e.employee_id, e.employee_name
                FROM fazle_employees_legacy e
-               WHERE e.full_name ILIKE $1
+               WHERE e.employee_name ILIKE $1
                LIMIT 3""",
             f"%{name}%",
         )
         if rows:
-            return "; ".join(f"{r['full_name']} (id={r['employee_id']})" for r in rows)
+            return "; ".join(f"{r['employee_name']} (id={r['employee_id']})" for r in rows)
     except Exception as _e:
         log.debug(f"[release-ocr] fuzzy lookup failed: {_e}")
     return None

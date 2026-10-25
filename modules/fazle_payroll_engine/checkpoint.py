@@ -18,9 +18,13 @@ log = logging.getLogger("fazle.fpe.checkpoint")
 
 async def get_checkpoint(source: str, source_number: str, chat_jid: str) -> Optional[dict]:
     """Return checkpoint row or None if this source has never been synced."""
+    # The column is `last_sync_at`. `last_checked_at` belongs to a completely
+    # different table (`social_backlog_state`) and never existed here, so this
+    # SELECT raised UndefinedColumnError on every call. `last_sync_at` was
+    # already in the select list, so the stray column is simply dropped.
     return await fetch_one(
         """
-        SELECT last_message_id, last_timestamp, total_ingested, last_sync_at, last_checked_at
+        SELECT last_message_id, last_timestamp, total_ingested, last_sync_at
         FROM fpe_sync_checkpoints
         WHERE source = $1 AND source_number = $2 AND chat_jid = $3
         """,
@@ -29,11 +33,11 @@ async def get_checkpoint(source: str, source_number: str, chat_jid: str) -> Opti
 
 
 async def touch_checkpoint(source: str, source_number: str, chat_jid: str) -> None:
-    """Update last_checked_at to NOW() — called every sync pass even with 0 new messages."""
+    """Update last_sync_at to NOW() — called every sync pass even with 0 new messages."""
     await execute(
         """
         UPDATE fpe_sync_checkpoints
-        SET last_checked_at = NOW()
+        SET last_sync_at = NOW()
         WHERE source = $1 AND source_number = $2 AND chat_jid = $3
         """,
         source, source_number, chat_jid,
