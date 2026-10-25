@@ -7,6 +7,10 @@ cryptography==44.0.0
 python-multipart==0.0.12
 rapidfuzz==3.10.1
 python-dotenv==1.0.1
+# Required at startup: app/unified_routing.py imports yaml, and app/llm.py
+# imports unified_routing lazily on the LLM path. Without this the app fails
+# to import on a fresh install. Added 2026-10-25.
+PyYAML==6.0.3
 PyMuPDF>=1.24.0
 python-docx>=1.1.0
 Pillow>=10.0.0
