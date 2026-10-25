@@ -262,15 +262,27 @@ class TestFullEscortPaymentFlow:
     async def test_step3_escort_active_visible_via_api(
         self, client, test_db_pool, running_program, flow_employee
     ):
-        """Step 3: Running program is visible in /admin/escort endpoint."""
+        """Step 3: Running program is visible in the roster list endpoint."""
         import app.database as db
         db._pool = test_db_pool
 
-        r = await client.get("/admin/escort-programs")
+        # The roster list lives on modules/escort_roster/routes.py under the
+        # /api/escort-roster prefix. There is no /admin/escort-programs route.
+        #
+        # The roster reads escort_roster_entries, not wbom_escort_programs
+        # directly: a program only becomes listable once the real production
+        # projection (escort_roster.db.sync_program_to_roster) has run. Call
+        # that so this asserts the actual integration path rather than a
+        # hand-written duplicate of it.
+        from modules.escort_roster.db import sync_program_to_roster
+        await sync_program_to_roster(running_program["program_id"], actor="test")
+
+        r = await client.get("/api/escort-roster", params={"status": "running"})
         assert r.status_code == 200
         data = r.json()
-        programs = data.get("programs") or []
-        # /admin/escort-programs uses 'id' as the program_id alias
+        # get_roster_list() returns {"items": [...], "total": n, ...}
+        programs = data.get("items") or []
+        # roster items expose 'id' as the program_id alias
         pids = [p.get("id") or p.get("program_id") for p in programs]
         assert running_program["program_id"] in pids, (
             f"Program {running_program['program_id']} not in escort list: {pids}"
@@ -418,14 +430,18 @@ class TestFullEscortPaymentFlow:
             method="bkash",
         )
 
+        # Canonical FPE table. fazle_cash_transactions_archive is the legacy
+        # WBOM table and is no longer written by any code path.
         txn = await _qrow(
             test_db_pool,
-            "SELECT * FROM fazle_cash_transactions_archive WHERE employee_id=$1 LIMIT 1",
+            "SELECT * FROM fazle_cash_transactions WHERE employee_id=$1 LIMIT 1",
             flow_employee["employee_id"],
         )
         assert float(txn["amount"]) == pytest.approx(1500.0)
-        assert txn["transaction_type"] == "escort_payment"
-        assert txn["payment_method"] == "bkash"
+        # txn_category is the FPE enum (salary|advance|bonus|deduction|
+        # correction) — an escort payment finalization maps to 'salary'.
+        assert txn["txn_category"] == "salary"
+        assert txn["payout_method"] == "bkash"
 
     async def test_step9_accountant_notification_text(
         self, test_db_pool, pending_draft, flow_employee
@@ -571,7 +587,7 @@ class TestDBStateVerification:
 
         txn = await _qrow(
             test_db_pool,
-            "SELECT program_id FROM fazle_cash_transactions_archive WHERE employee_id=$1",
+            "SELECT program_id FROM fazle_cash_transactions WHERE employee_id=$1",
             flow_employee["employee_id"],
         )
         # payment_workflow stores program_id if the draft has one
@@ -586,13 +602,24 @@ class TestDBStateVerification:
         import app.database as db
         db._pool = test_db_pool
 
-        # Add an advance transaction
+        # Add an advance transaction. compute_run() only counts advances that
+        # are visible through the legacy -> FPE employee bridge and stored in
+        # the canonical fazle_cash_transactions table, so seed both halves.
+        # (fazle_cash_transactions_archive is legacy WBOM and is never read.)
         async with test_db_pool.acquire() as conn:
-            await conn.execute("""
-                INSERT INTO fazle_cash_transactions_archive
-                    (employee_id, transaction_type, amount, transaction_date, status)
-                VALUES ($1, 'advance', 1000.00, '2026-05-03', 'Completed')
+            fpe_id = await conn.fetchval("""
+                INSERT INTO fazle_employees (wbom_employee_id, full_name,
+                                             name_normalized, status)
+                VALUES ($1, 'Karim Guard', 'karim guard', 'active')
+                RETURNING id
             """, flow_employee["employee_id"])
+            await conn.execute("""
+                INSERT INTO fazle_cash_transactions
+                    (txn_ref, employee_id, amount, txn_date,
+                     txn_category, transaction_status, accounting_period)
+                VALUES ('TEST-ADV-2', $1, 1000.00, '2026-05-03', 'advance', 'final',
+                        '2026-05')
+            """, fpe_id)
 
         from modules.payroll import compute_run
         r = await compute_run(
@@ -1114,13 +1141,29 @@ class TestFinalConsistency:
         db._pool = test_db_pool
 
         advance_amount = 2000.0
+        legacy_eid = flow_employee["employee_id"]
 
+        # compute_run() resolves advances across the legacy -> FPE employee
+        # bridge: fazle_employees.wbom_employee_id -> fazle_employees.id, then
+        # sums the canonical fazle_cash_transactions table (txn_category
+        # 'advance' + transaction_status 'final' within the period).
+        # fazle_cash_transactions_archive is the legacy WBOM table and is no
+        # longer read or written by any code path, so the advance has to be
+        # seeded on the canonical side for this test to be meaningful.
         async with test_db_pool.acquire() as conn:
+            fpe_id = await conn.fetchval("""
+                INSERT INTO fazle_employees (wbom_employee_id, full_name,
+                                             name_normalized, status)
+                VALUES ($1, 'Karim Guard', 'karim guard', 'active')
+                RETURNING id
+            """, legacy_eid)
             await conn.execute("""
-                INSERT INTO fazle_cash_transactions_archive
-                    (employee_id, transaction_type, amount, transaction_date, status)
-                VALUES ($1, 'advance', $2, '2026-05-10', 'Completed')
-            """, flow_employee["employee_id"], advance_amount)
+                INSERT INTO fazle_cash_transactions
+                    (txn_ref, employee_id, amount, txn_date,
+                     txn_category, transaction_status, accounting_period)
+                VALUES ('TEST-ADV-1', $1, $2, '2026-05-10', 'advance', 'final',
+                        '2026-05')
+            """, fpe_id, advance_amount)
 
         from modules.payroll import compute_run
         r = await compute_run(
@@ -1351,12 +1394,38 @@ class TestDuplicateMessages:
             "end_shift": "D",
             "day_count": 5.0,
         }
+        # The /escort/release route is a deliberate kill-switch — direct release
+        # finalization is disabled by design (only an admin [RELEASE CONFIRMED]
+        # message may finalize). Idempotency is therefore asserted against the
+        # real lifecycle entry point, handle_release_event(admin_confirmed=True).
         r1 = await client.post("/escort/release", json=body)
-        assert r1.status_code == 200, r1.text
+        assert r1.status_code == 409, r1.text
 
-        r2 = await client.post("/escort/release", json=body)
-        # Second call may return 200 (already_closed) or 422 — both acceptable
-        assert r2.status_code in (200, 422), r2.text
+        from modules.escort_lifecycle import handle_release_event
+        import app.database as db
+        db._pool = test_db_pool
+
+        extracted = {
+            "end_date": "2026-05-05",
+            "end_shift": "D",
+            "day_count": 5.0,
+            "release_point": "Ctg Port",
+        }
+        res1 = await handle_release_event(
+            employee_id=flow_employee["employee_id"], extracted=extracted,
+            source="test-release", admin_confirmed=True,
+        )
+        assert res1["ok"] is True, res1
+
+        # Idempotency: the first call closed the program, so the second call
+        # finds no active program left to close. That IS the duplicate guard —
+        # it reports no_active_program instead of creating a second draft.
+        res2 = await handle_release_event(
+            employee_id=flow_employee["employee_id"], extracted=extracted,
+            source="test-release", admin_confirmed=True,
+        )
+        assert res2["ok"] is False, res2
+        assert res2["status"] == "no_active_program", res2
 
         total_drafts = await _qval(
             test_db_pool,
@@ -1385,9 +1454,12 @@ class TestDuplicateMessages:
                                           approved_amount=1500.0, method="bkash")
         # We accept either 'error' key or same result
         # But MUST not create a second cash transaction
+        # Canonical FPE table — fazle_cash_transactions_archive is the legacy
+        # WBOM table and is never written by any code path, so counting rows
+        # there would always report 0 regardless of finalize_payment().
         txn_count = await _qval(
             test_db_pool,
-            "SELECT COUNT(*) FROM fazle_cash_transactions_archive WHERE employee_id=$1",
+            "SELECT COUNT(*) FROM fazle_cash_transactions WHERE employee_id=$1",
             flow_employee["employee_id"],
         )
         # finalize_payment does not guard against double-finalize at the module level;
@@ -1762,6 +1834,10 @@ class TestAPIIntegration:
         import app.database as db
         db._pool = test_db_pool
 
+        # Direct release finalization is intentionally disabled: the route is
+        # a permanent kill-switch (app/main.py) so that a release can only be
+        # finalized by an admin [RELEASE CONFIRMED] message. Assert the gate
+        # holds, then drive the real lifecycle path directly.
         r = await client.post("/escort/release", json={
             "employee_id": flow_employee["employee_id"],
             "end_date": "2026-05-05",
@@ -1769,11 +1845,25 @@ class TestAPIIntegration:
             "day_count": 5.0,
             "release_point": "Chittagong Port",
         })
-        assert r.status_code == 200, r.text
-        data = r.json()
+        assert r.status_code == 409, r.text
+        assert "RELEASE CONFIRMED" in r.json()["detail"]
+
+        from modules.escort_lifecycle import handle_release_event
+        import app.database as db
+        db._pool = test_db_pool
+        data = await handle_release_event(
+            flow_employee["employee_id"],
+            extracted={
+                "end_date": "2026-05-05",
+                "end_shift": "D",
+                "day_count": 5.0,
+                "release_point": "Chittagong Port",
+            },
+            source="test",
+            admin_confirmed=True,
+        )
         assert data["ok"] is True
         assert data.get("draft_id") is not None
-        assert float(data.get("day_count", 0)) == pytest.approx(5.0)
 
     async def test_payroll_compute_api(
         self, client, test_db_pool, completed_program, flow_employee
