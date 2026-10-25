@@ -33,21 +33,11 @@ class TestH1TransportBoundIdentity:
         # And get_payroll_summary is only ever called with that emp_id.
         assert "get_payroll_summary(emp_id)" in src
 
-    def test_resolve_requester_employee_id_takes_only_a_phone(self):
-        """modules.employee_privacy.resolve_requester_employee_id has a
-        single-parameter signature (phone) -- structurally, there is no
-        second parameter (e.g. employee_id/name) a caller could use to
-        ask for someone else's record."""
-        import inspect
-        from modules.employee_privacy import resolve_requester_employee_id
-        sig = inspect.signature(resolve_requester_employee_id)
-        assert list(sig.parameters.keys()) == ["phone"]
-
-    def test_get_own_payroll_summary_takes_only_a_phone(self):
-        import inspect
-        from modules.employee_privacy import get_own_payroll_summary
-        sig = inspect.signature(get_own_payroll_summary)
-        assert list(sig.parameters.keys()) == ["requester_phone"]
+    # Removed 2026-10-25: two structural tests asserted the signatures of
+    # modules.employee_privacy.resolve_requester_employee_id /
+    # .get_own_payroll_summary. That module was deleted as abandoned work —
+    # it had zero callers anywhere in app/, modules/ or shared/, so nothing
+    # could reach those functions at runtime.
 
     def test_customer_mode_toolset_excludes_fazle_core_mcp_tools(self):
         """The one Hermes-reachable path for an employee-scoped
@@ -71,35 +61,11 @@ class TestH1TransportBoundIdentity:
 
 # ── H2/H3: payroll privacy / applicant isolation ─────────────────────────────
 
-class TestH2H3PayrollPrivacyAndApplicantIsolation:
-    async def test_own_payroll_summary_refuses_unresolved_identity(self):
-        from modules.employee_privacy import get_own_payroll_summary
-        with patch("modules.fazle_identity_brain._lookup_employee", new=AsyncMock(return_value=None)):
-            result = await get_own_payroll_summary("01700000000")
-        assert result["ok"] is False
-        assert "unverified" in result["error"]
-
-    async def test_own_payroll_summary_returns_only_own_fields_no_raw_dump(self):
-        from modules.employee_privacy import get_own_payroll_summary
-        emp = {"employee_id": 42, "employee_name": "X", "designation": "Guard", "basic_salary": 15000, "status": "active"}
-        with patch("modules.fazle_identity_brain._lookup_employee", new=AsyncMock(return_value=emp)):
-            result = await get_own_payroll_summary("01700000000")
-        assert result["ok"] is True
-        assert result["employee_id"] == 42
-        assert set(result.keys()) <= {"ok", "employee_id", "employee_name", "designation", "basic_salary", "status", "note"}
-
-    def test_is_authorized_for_employee_data_never_true_for_unresolved_requester(self):
-        from modules.employee_privacy import is_authorized_for_employee_data
-        assert is_authorized_for_employee_data(None, "employee", 42) is False
-
-    def test_is_authorized_for_employee_data_own_record_only(self):
-        from modules.employee_privacy import is_authorized_for_employee_data
-        assert is_authorized_for_employee_data(42, "employee", 42) is True
-        assert is_authorized_for_employee_data(42, "employee", 99) is False
-
-    def test_is_authorized_for_employee_data_admin_carve_out_unchanged(self):
-        from modules.employee_privacy import is_authorized_for_employee_data
-        assert is_authorized_for_employee_data(None, "admin", 99) is True
+# Removed 2026-10-25: TestH2H3PayrollPrivacyAndApplicantIsolation covered
+# modules.employee_privacy.get_own_payroll_summary /
+# .is_authorized_for_employee_data. That module is deleted as abandoned work
+# (zero callers in app/, modules/, shared/), so these assertions can no
+# longer run. The H5-H9 financial-operations coverage below is unaffected.
 
 
 # ── H5-H9: financial operation adapter ───────────────────────────────────────
