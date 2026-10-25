@@ -9,6 +9,24 @@
 
 ---
 
+**Updated 2026-10-24** (`fazle_knowledge_base` missing columns): added
+`097_knowledge_base_missing_columns.sql`. `fazle_knowledge_base.value`,
+`.subcategory` and `.language` are live production columns that no migration in
+this repository ever declared — they appeared only in application code and in
+other migrations' statements. `value` is documented as pre-existing by migration
+003 itself ("DB had: key, value, tags", then `reply_text = value`);
+`subcategory` is selected by migration 012's `ai_read_kb_articles` view;
+`language` is inserted by `scripts/seed_recruitment_kb.sql`. A from-scratch
+build therefore failed twice: at `012` (`CREATE VIEW` on an undefined column)
+and at `021` (`INSERT` into an undefined column). Fixed additively in two
+places — migration `002`'s canonical `CREATE TABLE` now declares all three
+(it runs before 012 and 021, so a clean build gets them in time), and `097`
+`ADD COLUMN IF NOT EXISTS`-es them so already-deployed databases converge and
+so the schema is finally reproducible from this repository. Purely additive and
+idempotent; no row is read, rewritten or dropped. Found by
+`audits/NAMING_MISMATCH_AUDIT_2026-10-24.md` section 1.4 and covered by
+`tests/unit/test_sql_column_conformance.py`.
+
 **Updated 2026-10-21** (`fazle_` prefix unification): added `090`-`096` — seven
 idempotent RENAME migrations that move the last legacy-prefixed tables onto the
 `fazle_` prefix: `090_unify_rename_wbom_whatsapp_messages.sql`,
@@ -160,6 +178,7 @@ approval and the activation gate.
 094_unify_rename_fpe_cash_transactions.sql
 095_unify_rename_fpe_employee_ledger.sql
 096_unify_rename_fpe_employees.sql
+097_knowledge_base_missing_columns.sql
 ```
 
 **Note — no `009`**: never existed in this directory's history, or was removed before it. Intentionally left as a documented gap (see governance section) — do not backfill.
@@ -435,7 +454,7 @@ because it is additive-nullable. `canonical_message_key` is FORENSIC /
 OBSERVABILITY only: nothing reads it to gate a business action and it must
 never be wired into `process_bridge_inbound` or any idempotency check.
 
-**Next available number for new work: `097`.**
+**Next available number for new work: `098`.**
 
 **Known cross-directory `ALTER TABLE` touches into these tables from outside `db/migrations/`** (see Report 4 for full evidence): `fazle_cash_transactions`, `fpe_income_transactions`, `escort_roster_entries`, `wbom_escort_programs`, `fazle_payment_drafts` are each also touched by `fazle_payroll_engine/migrations/` and/or the legacy `migrations/` directory.
 

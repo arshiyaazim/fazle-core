@@ -206,62 +206,72 @@ def _parse_column_defs(body: str) -> list[str]:
     return cols
 
 
+def _apply_statement(schema: dict[str, list[str]], stmt: str) -> None:
+    """Fold one DDL statement into `schema`. Non-DDL statements are ignored."""
+    m = _CREATE_RE.match(stmt)
+    if m:
+        table = _norm_ident(m.group(1))
+        body = stmt[m.end() :]
+        body = body[: body.rfind(")")]
+        schema.setdefault(table, [])
+        for col in _parse_column_defs(body):
+            if col not in schema[table]:
+                schema[table].append(col)
+        return
+
+    m = _ALTER_RE.match(stmt)
+    if m:
+        table = _norm_ident(m.group(1))
+        for action in _split_top_level(m.group(2)):
+            a = action.strip()
+            if not a:
+                continue
+            rm = re.match(r"^RENAME\s+TO\s+([\w.]+)\s*$", a, re.I)
+            if rm:
+                new_name = _norm_ident(rm.group(1))
+                if table in schema and new_name not in schema:
+                    schema[new_name] = schema.pop(table)
+                continue
+            am = re.match(
+                r"^ADD\s+(?:COLUMN\s+)?(?:IF\s+NOT\s+EXISTS\s+)?([\w\"]+)\s",
+                a,
+                re.I,
+            )
+            if am and table in schema:
+                col = am.group(1).strip('"').lower()
+                if col not in schema[table]:
+                    schema[table].append(col)
+                continue
+            am = re.match(
+                r"^DROP\s+(?:COLUMN\s+)?(?:IF\s+EXISTS\s+)?([\w\"]+)\s*$", a, re.I
+            )
+            if am and table in schema:
+                col = am.group(1).strip('"').lower()
+                if col in schema[table]:
+                    schema[table].remove(col)
+                continue
+            am = re.match(
+                r"^RENAME\s+(?:COLUMN\s+)?([\w\"]+)\s+TO\s+([\w\"]+)\s*$", a, re.I
+            )
+            if am and table in schema:
+                old, new_col = (
+                    am.group(1).strip('"').lower(),
+                    am.group(2).strip('"').lower(),
+                )
+                if old in schema[table]:
+                    schema[table][schema[table].index(old)] = new_col
+
+        return
+
+    m = _DROP_RE.match(stmt)
+    if m:
+        schema.pop(_norm_ident(m.group(1)), None)
+
+
 def _apply(path: Path, schema: dict[str, list[str]]) -> None:
     sql = _strip_sql_comments(path.read_text(encoding="utf-8", errors="replace"))
     for stmt in _split_statements(sql):
-        m = _CREATE_RE.match(stmt)
-        if m:
-            table = _norm_ident(m.group(1))
-            body = stmt[m.end() :]
-            body = body[: body.rfind(")")]
-            schema.setdefault(table, [])
-            for col in _parse_column_defs(body):
-                if col not in schema[table]:
-                    schema[table].append(col)
-            continue
-        m = _ALTER_RE.match(stmt)
-        if m:
-            table = _norm_ident(m.group(1))
-            for action in _split_top_level(m.group(2)):
-                a = action.strip()
-                if not a:
-                    continue
-                rm = re.match(r"^RENAME\s+TO\s+([\w.]+)\s*$", a, re.I)
-                if rm:
-                    new = _norm_ident(rm.group(1))
-                    if table in schema and new not in schema:
-                        schema[new] = schema.pop(table)
-                    continue
-                am = re.match(
-                    r"^ADD\s+(?:COLUMN\s+)?(?:IF\s+NOT\s+EXISTS\s+)?([\w\"]+)\s", a, re.I
-                )
-                if am and table in schema:
-                    col = am.group(1).strip('"').lower()
-                    if col not in schema[table]:
-                        schema[table].append(col)
-                    continue
-                am = re.match(
-                    r"^DROP\s+(?:COLUMN\s+)?(?:IF\s+EXISTS\s+)?([\w\"]+)\s*$", a, re.I
-                )
-                if am and table in schema:
-                    col = am.group(1).strip('"').lower()
-                    if col in schema[table]:
-                        schema[table].remove(col)
-                    continue
-                am = re.match(
-                    r"^RENAME\s+(?:COLUMN\s+)?([\w\"]+)\s+TO\s+([\w\"]+)\s*$", a, re.I
-                )
-                if am and table in schema:
-                    old, new = (
-                        am.group(1).strip('"').lower(),
-                        am.group(2).strip('"').lower(),
-                    )
-                    if old in schema[table]:
-                        schema[table][schema[table].index(old)] = new
-            continue
-        m = _DROP_RE.match(stmt)
-        if m:
-            schema.pop(_norm_ident(m.group(1)), None)
+        _apply_statement(schema, stmt)
 
 
 def build_schema() -> dict[str, list[str]]:
@@ -678,7 +688,159 @@ class TestNlPaymentsPhoneFilterColumnsExist:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 6. Repo-wide guard — the same class of bug, anywhere.
+# 6. Regression tests — bug 3: fazle_knowledge_base columns
+# ─────────────────────────────────────────────────────────────────────────────
+
+_VIEW_RE = re.compile(
+    r"CREATE\s+(?:OR\s+REPLACE\s+)?VIEW\s+(?:IF\s+NOT\s+EXISTS\s+)?([\w.]+)\s+AS\s+(.*?)(?=;|$)",
+    re.I | re.S,
+)
+
+
+def fresh_build_violations(files: list[Path]) -> list[tuple[str, str, str, str]]:
+    """Replay `files` against an EMPTY schema, checking statements as they come.
+
+    Unlike the checks above, which compare against the FINAL schema, this one
+    is order-sensitive: a column that exists by the end of the chain but is
+    used before anything creates it is still a broken build. That is exactly
+    the knowledge_base bug — migration 012's view and migration 021's INSERTs
+    needed `subcategory` / `value` / `language` long before any migration
+    created them.
+    """
+    schema: dict[str, list[str]] = {}
+    found: list[tuple[str, str, str, str]] = []
+    seen: set[tuple[str, str, str]] = set()
+
+    def note(table: str, col: str, kind: str, path: Path) -> None:
+        key = (path.name, table, col)
+        if key in seen:
+            return
+        seen.add(key)
+        found.append((path.name, table, col, kind))
+
+    for path in files:
+        sql = _strip_sql_comments(path.read_text(encoding="utf-8", errors="replace"))
+        for stmt in _split_statements(sql):
+            flat = _STRIP_LITERALS.sub(" '' ", stmt)
+            for m in _INSERT_RE.finditer(flat):
+                table = m.group(1).lower()
+                if table not in schema:
+                    continue
+                for col in m.group(2).split(","):
+                    col = col.strip().lower()
+                    if not col or col.isdigit() or col.startswith("{"):
+                        continue
+                    if col not in schema[table]:
+                        note(table, col, "INSERT", path)
+            vm = _VIEW_RE.match(stmt)
+            if vm:
+                body = flat[vm.start(2) :]
+                aliases: dict[str, str] = {}
+                for am in _ALIAS_DECL.finditer(body):
+                    table = am.group(1).lower()
+                    alias = am.group(2)
+                    if alias and alias.lower() not in _ALIAS_STOP:
+                        aliases[alias.lower()] = table
+                    elif not alias:
+                        aliases[table] = table
+                for qm in _QUALIFIED.finditer(body):
+                    alias, col = qm.group(1).lower(), qm.group(2).lower()
+                    table = aliases.get(alias)
+                    if not table or table not in schema:
+                        continue
+                    if col not in schema[table]:
+                        note(table, col, f"VIEW {vm.group(1)}", path)
+            _apply_statement(schema, stmt)
+    return found
+
+
+CANONICAL_MIGRATIONS = sorted((ROOT / "db/migrations").glob("*.sql"), key=lambda p: p.name)
+FULL_BUILD_ORDER = (
+    sorted(
+        (ROOT / "modules/fazle_payroll_engine/migrations").glob("*.sql"),
+        key=lambda p: p.name,
+    )
+    + sorted((ROOT / "migrations").glob("*.sql"), key=lambda p: p.name)
+    + [ROOT / "db/new_tables.sql"]
+    + CANONICAL_MIGRATIONS
+)
+
+
+class TestKnowledgeBaseColumnsExist:
+    """`value`, `subcategory` and `language` are live production columns that
+    no migration declared until now (audit §1.4).
+
+    `value` is documented by migration 003 itself ("DB had: key, value, tags",
+    then `reply_text = value`); `subcategory` is selected by migration 012's
+    `ai_read_kb_articles` view; `language` is inserted by
+    scripts/seed_recruitment_kb.sql and modules/kb_upload/routes.py.
+    """
+
+    def test_three_columns_are_declared(self):
+        for col in ("subcategory", "value", "language"):
+            assert col in SCHEMA["fazle_knowledge_base"], (
+                f"fazle_knowledge_base.{col} is used by migrations 012 / 021 and "
+                "by five code sites but no migration declares it"
+            )
+
+    def test_canonical_create_table_declares_them_before_012_and_021(self):
+        """Migration 002 is the canonical CREATE TABLE and runs BEFORE the
+        migrations that need these columns, so a from-scratch build must get
+        them from there — migration 097 alone is too late."""
+        body = (ROOT / "db/migrations/002_align_tables.sql").read_text(
+            encoding="utf-8"
+        )
+        create = body[body.index("CREATE TABLE IF NOT EXISTS fazle_knowledge_base") :]
+        create = create[: create.index(");")]
+        for col in ("subcategory", "value", "language"):
+            assert re.search(rf"^\s*{col}\s", create, re.M), (
+                f"migration 002's CREATE TABLE must declare {col}"
+            )
+
+    def test_convergence_migration_exists(self):
+        path = ROOT / "db/migrations/097_knowledge_base_missing_columns.sql"
+        assert path.exists(), "expected migration 097 to converge existing databases"
+        text = path.read_text(encoding="utf-8")
+        for col in ("subcategory", "value", "language"):
+            assert f"ADD COLUMN IF NOT EXISTS {col}" in text
+
+    def test_ai_read_kb_articles_columns_exist(self):
+        """Migration 012's view — the statement that actually broke a clean
+        build — must only reference columns that exist by then."""
+        bad = [
+            v
+            for v in fresh_build_violations(CANONICAL_MIGRATIONS)
+            if "ai_read_kb_articles" in v[3]
+        ]
+        assert not bad, f"ai_read_kb_articles references missing columns: {bad}"
+
+
+class TestFreshBuildsRunEndToEnd:
+    """Simulate rebuilding an empty database from this repository.
+
+    Order-sensitive: a column created by a later migration cannot be used by an
+    earlier one, so this fails where a final-schema check would pass.
+    """
+
+    def test_canonical_runner_reaches_the_end(self):
+        violations = fresh_build_violations(CANONICAL_MIGRATIONS)
+        assert not violations, (
+            "a from-scratch `db/migrate.py` run references columns that do not "
+            "exist yet at that point in the chain:\n"
+            + "\n".join(f"  {f}: {t}.{c}  [{k}]" for f, t, c, k in violations[:30])
+        )
+
+    def test_full_repository_build_order_reaches_the_end(self):
+        violations = fresh_build_violations(FULL_BUILD_ORDER)
+        assert not violations, (
+            "replaying every migration directory in order references columns "
+            "that do not exist yet at that point:\n"
+            + "\n".join(f"  {f}: {t}.{c}  [{k}]" for f, t, c, k in violations[:30])
+        )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 7. Repo-wide guard — the same class of bug, anywhere.
 # ─────────────────────────────────────────────────────────────────────────────
 
 # Known remaining mismatches, carried over from
@@ -688,14 +850,6 @@ class TestNlPaymentsPhoneFilterColumnsExist:
 KNOWN_REMAINING = {
     # §1.3 — legacy table's name column is employee_name, not full_name
     ("modules/escort_lifecycle/__init__.py", "fazle_employees_legacy", "full_name"),
-    # §1.4 — fazle_knowledge_base has no value / subcategory / language column
-    #        in ANY migration, yet migration 012's ai_read_kb_articles view and
-    #        five code sites use them.
-    ("modules/kb_upload/routes.py", "fazle_knowledge_base", "subcategory"),
-    ("modules/kb_upload/routes.py", "fazle_knowledge_base", "value"),
-    ("modules/kb_upload/routes.py", "fazle_knowledge_base", "language"),
-    ("scripts/sync_knowledge_base_to_runtime.py", "fazle_knowledge_base", "subcategory"),
-    ("scripts/sync_knowledge_base_to_runtime.py", "fazle_knowledge_base", "value"),
     # §1.5 — the column is payment_method
     ("modules/fazle_payment_ingest/__init__.py", "fazle_payment_drafts", "method"),
     # §1.6 — the column is last_sync_at (last_checked_at only exists on

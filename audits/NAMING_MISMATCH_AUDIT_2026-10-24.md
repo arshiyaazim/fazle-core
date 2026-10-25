@@ -22,11 +22,25 @@
 
 | শ্রেণি | সংখ্যা | মারাত্মকতা |
 |---|---:|---|
-| 🔴 কোড যে কলাম পড়ছে/লিখছে, ডিবিতে সেই নামেই নেই (রানটাইম-ব্রেকিং) | **৭** | অবিলম্বে |
+| 🔴 কোড যে কলাম পড়ছে/লিখছে, ডিবিতে সেই নামেই নেই (রানটাইম-ব্রেকিং) | **৭** → **৪ বাকি** | ৩টি ঠিক হয়েছে |
 | 🟠 প্রোডাকশন টেবিল যার `CREATE TABLE` রিপোতেই নেই | **৪** | উচ্চ |
 | 🟡 টেস্ট-ফিক্সচার (`conftest.py`) বনাম মাইগ্রেশন কলাম-হেডার অমিল | **২১ টেবিল** | উচ্চ (টেস্ট ভ্রান্ত আশ্বাস দেয়) |
 | 🟣 টেবিল-নেমিং/মাইগ্রেশন-সিস্টেম অমিল | **৪** | মধ্যম–উচ্চ |
 | ⚪ একই ধারণার জন্য ভিন্ন ভিন্ন কলাম-নাম (কনভেনশন ড্রিফট) | ৪০+ | নীতিগত |
+
+---
+
+## ✅ ঠিক করা হয়েছে (২০২৬-১০-২৪)
+
+| # | সমস্যা | ফিক্স |
+|---|---|---|
+| **১.১** | `wbom_salary_records` — কোড `amount`/`status`/`salary_month` পড়তো | `modules/payroll_logic/__init__.py`: `net_salary`/`payment_status`/`month`+`year`; `payment_status` তুলনা এখন case-insensitive |
+| **১.২** | `nl_payments` — `t.payment_mobile` / `e.employee_mobile` | `modules/fazle_admin_commands/nl_payments.py`: `t.payout_phone` / `e.primary_phone`; সাথে `intent_employee_totals()`-এর ক্রস-সিস্টেম ID বাগ (`e.wbom_employee_id` ব্রিজ) |
+| **১.৪** | `fazle_knowledge_base` — `value`/`subcategory`/`language` কোথাও নেই | `db/migrations/002_align_tables.sql` (ক্যানোনিক্যাল CREATE TABLE) + `db/migrations/097_knowledge_base_missing_columns.sql` (বিদ্যমান ডিবি converge) + `db/new_tables.sql` |
+
+এই তিনটিই এখন `tests/unit/test_sql_column_conformance.py` দিয়ে সুরক্ষিত — যা
+DB ছাড়াই রিপোর সব মাইগ্রেশন রিপ্লে করে কোডের SQL যাচাই করে। উপরের ১.১/১.২/১.৪-এর
+টেস্টগুলো ফিক্সের আগে **ব্যর্থ** হতো (প্রমাণ: ১.১+১.২-এর ১০/১১, ১.৪-এর ৭/১৭)।
 
 ---
 
@@ -38,7 +52,7 @@
 
 এগুলো সরাসরি `asyncpg.exceptions.UndefinedColumnError` দেবে বা নীরবে ভুল ডেটা দেবে।
 
-### ১.১ `wbom_salary_records` — কোড + ডকস + টেস্ট, সব একদিকে; ডিবি অন্যদিকে 🔴🔴
+### ১.১ ✅ ঠিক হয়েছে — `wbom_salary_records`: কোড + ডকস + টেস্ট, সব একদিকে; ডিবি অন্যদিকে
 
 `modules/payroll_logic/__init__.py:131`
 
@@ -67,7 +81,7 @@ WHERE employee_id = $1 AND salary_month = $2
 `docs/PRODUCTION_CERTIFICATION_v1.0.md:86` নিজেই এই ড্রিফট স্বীকার করেছে:
 > "`wbom_salary_records.amount`/`.created_at`/`.record_id` vs production's `.total_advances`/`.net_salary`/`.program_allowance` naming, suggesting a column rename happened in production that the migration files never picked up."
 
-### ১.২ `fazle_cash_transactions.payment_mobile` + `fazle_employees.employee_mobile` 🔴
+### ১.২ ✅ ঠিক হয়েছে — `fazle_cash_transactions.payment_mobile` + `fazle_employees.employee_mobile`
 
 `modules/fazle_admin_commands/nl_payments.py:176` এবং `:307`
 
@@ -95,7 +109,7 @@ SELECT e.employee_id, e.full_name FROM fazle_employees_legacy e WHERE e.full_nam
 
 `fazle_employees_legacy`-তে নামের কলাম **`employee_name`**; `full_name` আছে `fazle_employees`-এ।
 
-### ১.৪ `fazle_knowledge_base` — `value`, `subcategory`, `language` তিনটিই অনির্ধারিত 🔴
+### ১.৪ ✅ ঠিক হয়েছে — `fazle_knowledge_base`: `value`, `subcategory`, `language`
 
 টেবিলের সংজ্ঞা (`db/new_tables.sql`, `003`, `029`, `021`):
 `id, category, key, trigger_keywords, reply_text, reply_short, tags, confidence, is_active, created_at, updated_at`
@@ -116,6 +130,27 @@ SELECT e.employee_id, e.full_name FROM fazle_employees_legacy e WHERE e.full_nam
 **গুরুতর প্রভাব:** `012`-এর `ai_read_kb_articles` ভিউ `k.subcategory` সিলেক্ট করে — পরিষ্কার
 (clean) ডেটাবেজে এই মাইগ্রেশন **FAIL** করবে। `003`-এর মন্তব্য (`-- DB had: key, value, tags`)
 প্রমাণ করে `value` লাইভ ডিবিতে আছে, কিন্তু রিপোর কোনো `CREATE TABLE`-এ নেই।
+
+**ফিক্স (additive, ২ জায়গায় — কারণ একটিই যথেষ্ট নয়):**
+
+| ফাইল | ভূমিকা |
+|---|---|
+| `db/migrations/002_align_tables.sql` | ক্যানোনিক্যাল `CREATE TABLE`-এ তিনটি কলাম যোগ। `002` চলে `012`/`021`-এর **আগে**, তাই fresh build সময়মতো কলাম পায়। |
+| `db/migrations/097_knowledge_base_missing_columns.sql` | `ADD COLUMN IF NOT EXISTS` — বিদ্যমান ডেটাবেজ converge করবে এবং স্কিমা অবশেষে রিপো থেকে পুনরুৎপাদনযোগ্য হবে। |
+| `db/new_tables.sql` | orphaned bootstrap স্ক্রিপ্ট—একই তিনটি কলাম, যাতে সব build-path একমত থাকে। |
+
+`097` একাই যথেষ্ট ছিল না: এটি `012`/`021`-এর **পরে** চলে, তাই শুধু `097` দিয়ে clean build
+এখনো `012`-এ ভাঙতো। `test_canonical_runner_reaches_the_end` এই ordering-টিই ধরে রাখে।
+
+**যাচাই:** `fresh_build_violations()` দিয়ে সম্পূর্ণ fresh build সিমুলেট করে দেখা গেছে ঠিক
+এই দুই জায়গায় ভাঙছিল —
+```
+012_ai_readonly_views.sql:                 fazle_knowledge_base.subcategory  [VIEW ai_read_kb_articles]
+021_sprint3a_employee_conversation_drafts: fazle_knowledge_base.value        [INSERT]
+```
+ফিক্সের পর উভয় order-ই (শুধু `db/migrations/` এবং সব ডিরেক্টরি একসাথে) শেষ পর্যন্ত পৌঁছায়।
+
+**কোড বদলাতে হয়নি** — কোড যা চাইছিল তাই-ই সঠিক ছিল; স্কিমাই পিছিয়ে ছিল।
 
 ### ১.৫ `fazle_payment_drafts.method` 🔴
 
@@ -257,10 +292,16 @@ ALTER TABLE IF EXISTS fpe_employees        RENAME TO fazle_employees;
 
 ## সুপারিশ (প্রাধান্য অনুযায়ী)
 
-1. **১.১–১.৭ নম্বর বাগগুলো ঠিক করুন** — এগুলো রানটাইম-ব্রেকিং; বিশেষ করে ১.২ (কোয়েরিতে ফোন
-   নাম্বার থাকলেই ক্র্যাশ) ও ১.৬ (প্রতি সিঙ্ক পাসে কল হয়)।
-2. **`fazle_knowledge_base`-এ `value`/`subcategory`/`language` যোগ করুন** অথবা কোড+মাইগ্রেশন `012`/`021` থেকে সরিয়ে দিন — বর্তমানে উভয় দিকই ভাঙা।
+1. ~~**১.১–১.৭ নম্বর বাগগুলো ঠিক করুন**~~ — **১.১, ১.২ ও ১.৪ সম্পন্ন।**
+   বাকি: **১.৩** (`fazle_employees_legacy.full_name` → `employee_name`),
+   **১.৫** (`fazle_payment_drafts.method` → `payment_method`),
+   **১.৬** (`fpe_sync_checkpoints.last_checked_at` → `last_sync_at`, প্রতি সিঙ্ক পাসে কল হয়),
+   **১.৭** (`fpe_gap_scan_runs.skipped_no_content` কলামটিই নেই)।
+   টেস্টের `KNOWN_REMAINING` allowlist-এ এই ৪টিই এখন আছে; প্রতিটি ঠিক হলে
+   লিস্ট থেকে সরাতে হবে—নাহলে `test_repo_wide_sql_columns_exist` FAIL করবে।
+2. ~~**`fazle_knowledge_base`-এ `value`/`subcategory`/`language` যোগ করুন**~~ — **সম্পন্ন** (মাইগ্রেশন `002` + `097` + `db/new_tables.sql`)।
 3. **`wbom_candidates` / `wbom_candidate_conversations` / `fazle_knowledge_governance` / `escort_evidence_event`**-এর `CREATE TABLE` যোগ করুন (`db/migrations/`)।
+   *এরপর:* `fresh_build_violations()`-এর মতোই একটি টেস্ট দিয়ে ধরুন কোন টেবিল এখনো অনির্ধারিত।
 4. **`conftest.py` পুনর্লিখন করুন** মাইগ্রেশন থেকে, হাতে-আন্দাজ না — `029` ইতিমধ্যেই pg_dump-ভিত্তিক, সেটিকেই সোর্স ধরুন।
 5. **০৯৪–০৯৬ রিনেম আগে চালান, তারপর অ্যাপ স্টার্ট** — অথবা `001_fpe_schema.sql`-কে আগের `fpe_*` নামে ফিরিয়ে দিন, যাতে স্টার্টআপে ফাঁকা টেবিল না তৈরি হয়।
 6. **একটি নেমিং-কনভেনশন ডকুমেন্ট** তৈরি করুন (`PHONE_NORMALIZER_CONVENTION.md`-এর মতো) — কবে `phone` আর কবে `mobile`, `created_at` নাকি `received_at`।

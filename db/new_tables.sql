@@ -4,10 +4,17 @@
 
 -- ── Knowledge Base ─────────────────────────────────────────────────────────────
 -- Stores auto-reply templates, FAQ answers, business rules
+-- `subcategory`, `value` and `language` are live production columns that this
+-- bootstrap never declared — see db/migrations/097_knowledge_base_missing_columns.sql.
+-- Added here so a bootstrapped database matches what migrations 012 and 021
+-- and the KB upload/seed scripts expect.
 CREATE TABLE IF NOT EXISTS fazle_knowledge_base (
     id              SERIAL PRIMARY KEY,
     category        TEXT        NOT NULL,          -- recruitment, escort, payment, faq, complaint
+    subcategory     TEXT,                          -- scope within a category
     key             TEXT        NOT NULL UNIQUE,   -- slug e.g. job_details, salary_info
+    value           TEXT,                          -- legacy; superseded by reply_text
+    language        TEXT,                          -- 'bn' | 'bn-en'
     trigger_keywords TEXT[]     DEFAULT '{}',      -- keywords that trigger this entry
     reply_text      TEXT        NOT NULL,          -- full reply template
     reply_short     TEXT,                          -- condensed version (comments/Facebook)
