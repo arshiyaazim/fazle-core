@@ -14,12 +14,20 @@ import importlib.util
 import os
 import sys
 import types
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
-REGISTRY_PATH = "/home/azim/core/modules/owner_contact_registry/__init__.py"
-CSV_PATH = "/home/azim/core/resources/ops/selected_contacts_normalized_unique.csv"
+# Derived from this checkout, NOT hardcoded. These were absolute paths under
+# "/home/azim/core" (one developer's machine). Anywhere else -- CI, another
+# laptop, a fresh clone -- that directory does not exist, so every test in
+# this file errored with
+#     FileNotFoundError: /home/azim/core/modules/owner_contact_registry/__init__.py
+# (15 tests, 0 passed, 14 errors, 1 failure when run alone).
+REPO_ROOT = Path(__file__).resolve().parents[2]
+REGISTRY_PATH = str(REPO_ROOT / "modules" / "owner_contact_registry" / "__init__.py")
+CSV_PATH = str(REPO_ROOT / "resources" / "ops" / "selected_contacts_normalized_unique.csv")
 
 
 @pytest.fixture
@@ -30,11 +38,16 @@ def registry(monkeypatch):
     the cached one from a previous test.
     """
     # Ensure root path is on sys.path so 'modules.phone_normalizer' can import
-    if "/home/azim/core" not in sys.path:
-        sys.path.insert(0, "/home/azim/core")
+    root = str(REPO_ROOT)
+    if root not in sys.path:
+        sys.path.insert(0, root)
 
-    # Drop any previously-imported copy
-    for mod_name in ("modules.owner_contact_registry", "modules", "modules.phone_normalizer"):
+    # Drop any previously-imported copy -- but remember what was there, so the
+    # teardown below can put it back.
+    _TOUCHED = ("modules.owner_contact_registry", "modules", "modules.phone_normalizer")
+    _saved = {name: sys.modules.get(name) for name in _TOUCHED}
+    _saved_path = list(sys.path)
+    for mod_name in _TOUCHED:
         sys.modules.pop(mod_name, None)
 
     # Ensure 'modules' is importable as a package without triggering the
@@ -42,14 +55,29 @@ def registry(monkeypatch):
     if "modules" not in sys.modules:
         import types as _t
         m = _t.ModuleType("modules")
-        m.__path__ = ["/home/azim/core/modules"]
+        m.__path__ = [os.path.join(root, "modules")]
         sys.modules["modules"] = m
 
     spec = importlib.util.spec_from_file_location("modules.owner_contact_registry", REGISTRY_PATH)
     mod = importlib.util.module_from_spec(spec)
     sys.modules["modules.owner_contact_registry"] = mod
     spec.loader.exec_module(mod)
-    return mod
+
+    try:
+        yield mod
+    finally:
+        # CRITICAL: this fixture evicted the real `modules` package and put a
+        # stub in its place. Without restoring it here, every LATER test in the
+        # same pytest session that does `from modules.X import ...` -- notably
+        # app.main -> modules.fazle_intent, pulled in by the `client` fixture --
+        # resolved against the stub and died with ModuleNotFoundError. That is
+        # why ordering this file before others produced ~19 spurious errors.
+        for name, value in _saved.items():
+            if value is None:
+                sys.modules.pop(name, None)
+            else:
+                sys.modules[name] = value
+        sys.path[:] = _saved_path
 
 
 # ---- A. Same phone written as 018.../88018.../+88018.../0088018...
