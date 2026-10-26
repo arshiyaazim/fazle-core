@@ -25,7 +25,9 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 # ── 1. /observability/summary ─────────────────────────────────────────────────
 
 @pytest.mark.asyncio
-async def test_observability_summary_returns_200_after_traffic(client, test_db_pool):
+async def test_observability_summary_returns_200_after_traffic(
+    client, test_db_pool, monkeypatch
+):
     """The endpoint must survive having actual traffic to summarise.
 
     The bug only appeared once at least one HTTP request had been observed,
@@ -34,8 +36,16 @@ async def test_observability_summary_returns_200_after_traffic(client, test_db_p
     FIRST, then asks for the summary.
     """
     import app.database as db
+    import app.main as m
+    from tests.conftest import TEST_API_KEY
 
     db._pool = test_db_pool
+
+    # Some suites swap app.main.settings for a stub object, and the value
+    # app.main captured at import time can differ from what the `client`
+    # fixture authenticates with. Pin the key so this test does not depend on
+    # whatever ran before it (it passed alone and 403'd in a full-suite run).
+    monkeypatch.setattr(m.settings, "internal_api_key", TEST_API_KEY, raising=False)
 
     for _ in range(3):
         r = await client.get("/api/state-version")
