@@ -78,50 +78,24 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname
 settings = get_settings()
 
 
-class _InMemoryObservability:
-    def __init__(self) -> None:
-        self._counters: dict[str, dict[tuple[tuple[str, str], ...], int]] = {}
-        self._histograms: dict[str, list[dict[str, Any]]] = {}
-
-    def inc(self, name: str, value: int = 1, labels: Optional[dict[str, str]] = None) -> None:
-        key = tuple(sorted((labels or {}).items()))
-        bucket = self._counters.setdefault(name, {})
-        bucket[key] = bucket.get(key, 0) + int(value)
-
-    def observe(self, name: str, value: float, labels: Optional[dict[str, str]] = None) -> None:
-        self._histograms.setdefault(name, []).append({
-            "labels": dict(labels or {}),
-            "value": float(value),
-        })
-
-    def render_prometheus(self) -> str:
-        lines: list[str] = []
-        for metric_name, buckets in self._counters.items():
-            for label_items, value in buckets.items():
-                labels = ",".join(f'{key}="{val}"' for key, val in label_items)
-                suffix = f"{{{labels}}}" if labels else ""
-                lines.append(f"{metric_name}{suffix} {value}")
-        for metric_name, samples in self._histograms.items():
-            for sample in samples:
-                labels = ",".join(f'{key}="{val}"' for key, val in sample["labels"].items())
-                suffix = f"{{{labels}}}" if labels else ""
-                lines.append(f"{metric_name}{suffix} {sample['value']}")
-        return "\n".join(lines) + ("\n" if lines else "")
-
-    def snapshot(self) -> dict[str, Any]:
-        return {
-            "counters": {
-                name: [
-                    {"labels": dict(label_items), "value": value}
-                    for label_items, value in buckets.items()
-                ]
-                for name, buckets in self._counters.items()
-            },
-            "histograms": self._histograms,
-        }
-
-
-obs = _InMemoryObservability()
+# 2026-10-26 fix: this module used to define its own `_InMemoryObservability`
+# class right here -- an INCOMPLETE DUPLICATE of modules/observability.
+#
+# The duplicate stored one histogram sample per call as {"labels", "value"}
+# and its snapshot() exposed only "counters" and "histograms". But
+# /observability/summary (and anything reading /metrics/json) was written
+# against modules/observability's richer schema: samples shaped
+# {"labels", "count", "sum_ms", "avg_ms", "buckets_ms"}, plus top-level
+# "uptime_s" and "gauges" keys.
+#
+# So /observability/summary raised KeyError on every call once any traffic
+# existed -- first KeyError: 'count', and after that was patched,
+# KeyError: 'uptime_s' -- and returned 500. A cold server looked healthy
+# only because the samples list is empty before the first request.
+#
+# Use the real, complete implementation instead of keeping a second partial
+# copy. Same public API: inc(), observe(), render_prometheus(), snapshot().
+from modules import observability as obs  # noqa: E402
 
 # ── Concurrency caps (B15.6) ───────────────────────────────────────────────────
 OCR_SEMAPHORE = asyncio.Semaphore(int(os.getenv("OCR_CONCURRENCY", "2")))
@@ -6025,6 +5999,11 @@ async def observability_summary():
         p = entry["labels"].get("path", "?")
         by_path[p] = by_path.get(p, 0) + int(entry["value"])
     # latency overall
+    # Sample shape comes from modules.observability: {"labels", "count",
+    # "sum_ms", "avg_ms", "buckets_ms"}. This was correct all along -- the
+    # bug was that `obs` was bound to an incomplete duplicate class defined
+    # in this file, which stored {"labels", "value"} instead. See the note
+    # where `obs` is imported.
     durs = snap["histograms"].get("fazle_http_request_duration_ms", [])
     total_count = sum(d["count"] for d in durs)
     total_sum = sum(d["sum_ms"] for d in durs)
