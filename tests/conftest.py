@@ -550,8 +550,14 @@ CREATE TABLE IF NOT EXISTS fazle_report_cache (
     expires_at    TIMESTAMPTZ
 );
 
+-- Column is `service`, not `service_name`: every reader/writer uses `service`
+-- (app/main.py::_probe_heartbeat, modules/scheduler, modules/fazle_bridge_poller,
+-- modules/social_auto_reply/daemon_worker) and so does the production table
+-- declared in db/migrations/029. This stub previously said `service_name`, which
+-- made every heartbeat probe and every heartbeat-dependent test fail with
+-- `column "service" does not exist` on a test database. Fixed 2026-10-27.
 CREATE TABLE IF NOT EXISTS fazle_service_heartbeats (
-    service_name      TEXT PRIMARY KEY,
+    service           TEXT PRIMARY KEY,
     last_seen         TIMESTAMPTZ DEFAULT NOW(),
     last_message_id   TEXT,
     queue_depth       INT DEFAULT 0
