@@ -200,3 +200,23 @@ generate_reply      → attempts: omniroute=skipped_not_configured,
 `modules/fazle_bridge_poller`, `modules/social_auto_reply/daemon_worker`)। ফলে
 টেস্ট ডেটাবেসে প্রতিটি heartbeat probe আর heartbeat-নির্ভর টেস্ট
 `column "service" does not exist`-এ ফেল করত। কলামের নাম `service` করা হয়েছে।
+
+---
+
+## ৭. একটা বাস্তব ফাঁদ যা এই সেশনে ধরা পড়ল
+
+প্রিভিউ অ্যাপ আর pytest একই ডেটাবেস (`fazle_test`) ব্যবহার করছিল। pytest-এর
+`pytest_configure` হুক প্রতিবার `DROP SCHEMA public CASCADE; CREATE SCHEMA
+public;` চালায় — ফলে টেস্ট চালানোর সাথে সাথে চলমান অ্যাপের সব ডেটা (heartbeats
+সহ) মুছে যায় এবং `/health` হঠাৎ `critical` দেখাতে শুরু করে।
+
+নিয়ম: **অ্যাপের ডেটাবেস আর টেস্টের ডেটাবেস কখনো এক নয়।**
+
+```env
+DATABASE_URL=postgresql://…/fazle_core      # অ্যাপ
+TEST_DATABASE_URL=postgresql://…/fazle_test # pytest
+```
+
+(README-র নিজের নিয়মও এটাই: “Never run production migrations or test commands
+against the production database.”) `tests/conftest.py` শুধু `fazle_test`,
+`test`, `fazle_test_db` নামে DROP করতে দেয় — নিরাপত্তা-গার্ড হিসেবে।
