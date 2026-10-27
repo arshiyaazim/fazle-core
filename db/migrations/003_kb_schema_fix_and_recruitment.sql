@@ -54,6 +54,20 @@ CREATE TABLE IF NOT EXISTS fazle_recruitment_sessions (
     updated_at      timestamptz NOT NULL DEFAULT now()
 );
 
+-- Fresh-build fix (2026-10-27): migration 002_align_tables.sql already creates
+-- this table (with collection_step/funnel_stage and no status/candidate_id), so
+-- the CREATE TABLE IF NOT EXISTS above is a no-op on a clean database and the
+-- two statements that follow it died with `column "status" does not exist`,
+-- aborting db/migrate.py on a brand-new database. Additive, guarded, and a
+-- no-op on every database where 003 has already been applied. The FK from the
+-- CREATE above is deliberately NOT added here -- wbom_candidates does not exist
+-- on a fresh build, and the column is used for provenance only.
+ALTER TABLE fazle_recruitment_sessions
+    ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'active';
+
+ALTER TABLE fazle_recruitment_sessions
+    ADD COLUMN IF NOT EXISTS candidate_id integer;
+
 CREATE UNIQUE INDEX IF NOT EXISTS idx_recruitment_sessions_phone_active
     ON fazle_recruitment_sessions (phone)
     WHERE status = 'active';
