@@ -400,6 +400,17 @@ The exact module list and risk ratings are in `docs/MODULE_MAP.md`.
 - Nginx terminating public TLS; Fazle Core bound to `127.0.0.1:8200`.
 - Git, pip, virtualenv.
 
+> **Which dependencies are actually mandatory?** Python + PostgreSQL + a
+> `.env` with `DATABASE_URL`/`INTERNAL_API_KEY`. Everything else — Ollama,
+> OmniRoute, the WhatsApp bridges, `hermes-runner`, `fazle-mcp`, Qdrant, the
+> media processor — is optional and only disables the feature that needs it.
+> A Bengali walkthrough of the tiers (core-only → local AI → WhatsApp bridges
+> → Hermes/MCP) is in [`docs/SETUP_BN.md`](docs/SETUP_BN.md).
+>
+> Verify a machine at any time with the read-only checker:
+> `bash scripts/check_stack.sh` (or `--core` for required dependencies only).
+> `cp .env.example .env` below works now — `.env.example` is in the repo.
+
 #### Steps
 
 ```bash
