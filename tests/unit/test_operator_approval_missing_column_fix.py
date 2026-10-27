@@ -1,6 +1,6 @@
 """
 Regression test — POST /api/fpe/operator/{pending_id}/approve
-2026-08-19 (HERMES_BUSINESS_EXECUTION_CAPABILITY_PROVENANCE_AUDIT_2026-08-19.md
+2026-08-19 (archive/historical-reports/HERMES_BUSINESS_EXECUTION_CAPABILITY_PROVENANCE_AUDIT_2026-08-19.md
 follow-up, payment-mutation acceptance test): live acceptance testing found
 operator_approve() read fpe_unmatched_messages without selecting
 promoted_txn_id, then immediately did row.get("promoted_txn_id") -- always

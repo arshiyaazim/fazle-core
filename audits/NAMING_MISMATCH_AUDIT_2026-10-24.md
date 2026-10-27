@@ -1,0 +1,365 @@
+# নেমিং/কলাম-হেডার অমিল অডিট — ২০২৬-১০-২৪
+
+**উদ্দেশ্য:** রিপোজিটোরির কোড, ডকস ও ডিবি-স্কিমা জুড়ে একই জিনিসের নাম একই আছে কিনা যাচাই করা।
+বিশেষভাবে: **কোনো কলাম-হেড যদি অপর একটি টেবিলের (বা মাইগ্রেশন/কোড/ডকসের) সাথে না মিলে**।
+
+**পদ্ধতি:** সম্পূর্ণ স্বয়ংক্রিয়, হাতে-বাছাই নয়।
+
+1. রিপোর **সব ১২০টি `.sql` ফাইল** পার্স করে (৪টি আলাদা মাইগ্রেশন ডিরেক্টরি) ক্রমান্বয়ে
+   `CREATE TABLE` / `ALTER TABLE ADD|DROP|RENAME COLUMN` / `ALTER TABLE RENAME TO` রিপ্লে করে
+   একটি ক্যানোনিক্যাল স্কিমা বানানো হয়েছে → **১৩৫ টেবিল, ১,৬২৫ কলাম**।
+2. **২৮০টি প্রোডাকশন `.py` ফাইল**-এর SQL স্ট্রিং লিটারেল AST দিয়ে বের করে, টেবিল-এলিয়াস
+   রিজল্ভ করে প্রতিটি কলাম-রেফারেন্স ওই স্কিমার সাথে মেলানো হয়েছে।
+3. `tests/conftest.py`-এর টেস্ট-ফিক্সচার স্কিমা ও **২৮৫টি মার্কডাউন ডক**-ও একইভাবে তুলনা করা হয়েছে।
+4. লাইভ ডিবির সত্যিকারের অবস্থা `tools/prefix_objects.json` (pg ডাম্প) ও `db/migrations/029_*`-এর
+   pg_dump-নির্ভর সংজ্ঞা দিয়ে ক্রস-চেক করা হয়েছে।
+
+> অডিট স্ক্রিপ্টগুলো রিপোর বাইরে (`/home/user/_naming_audit/`) রাখা হয়েছে, যাতে রিপো ডার্টি না হয়।
+
+---
+
+## সারাংশ
+
+| শ্রেণি | সংখ্যা | মারাত্মকতা |
+|---|---:|---|
+| 🔴 কোড যে কলাম পড়ছে/লিখছে, ডিবিতে সেই নামেই নেই (রানটাইম-ব্রেকিং) | **৭** → **০ বাকি** | সব ৭টিই ঠিক হয়েছে |
+| 🟠 প্রোডাকশন টেবিল যার `CREATE TABLE` রিপোতেই নেই | **৪** | উচ্চ |
+| 🟡 টেস্ট-ফিক্সচার (`conftest.py`) বনাম মাইগ্রেশন কলাম-হেডার অমিল | **২১ টেবিল** | উচ্চ (টেস্ট ভ্রান্ত আশ্বাস দেয়) |
+| 🟣 টেবিল-নেমিং/মাইগ্রেশন-সিস্টেম অমিল | **৪** | মধ্যম–উচ্চ |
+| ⚪ একই ধারণার জন্য ভিন্ন ভিন্ন কলাম-নাম (কনভেনশন ড্রিফট) | ৪০+ | নীতিগত |
+
+---
+
+## ✅ ঠিক করা হয়েছে (২০২৬-১০-২৪ – ২৫)
+
+| # | সমস্যা | ফিক্স |
+|---|---|---|
+| **১.১** | `wbom_salary_records` — কোড `amount`/`status`/`salary_month` পড়তো | `modules/payroll_logic/__init__.py`: `net_salary`/`payment_status`/`month`+`year`; `payment_status` তুলনা এখন case-insensitive |
+| **১.২** | `nl_payments` — `t.payment_mobile` / `e.employee_mobile` | `modules/fazle_admin_commands/nl_payments.py`: `t.payout_phone` / `e.primary_phone`; সাথে `intent_employee_totals()`-এর ক্রস-সিস্টেম ID বাগ (`e.wbom_employee_id` ব্রিজ) |
+| **১.৩** | `fazle_employees_legacy` — কোড `full_name` পড়তো (এটি আসলে `fazle_employees`-এর কলাম) | `modules/escort_lifecycle/__init__.py`: `employee_name` — SELECT-লিস্ট/WHERE ও result-dict key দুটোই |
+| **১.৪** | `fazle_knowledge_base` — `value`/`subcategory`/`language` কোথাও নেই | `db/migrations/002_align_tables.sql` (ক্যানোনিক্যাল CREATE TABLE) + `db/migrations/097_knowledge_base_missing_columns.sql` (বিদ্যমান ডিবি converge) + `db/new_tables.sql` |
+| **১.৫** | `fazle_payment_drafts` — INSERT-এ `method`, টেবিলে আছে `payment_method` | `modules/fazle_payment_ingest/__init__.py`: `payment_method` (পার্সারের `parsed["method"]` dict-key অক্ষত) |
+| **১.৬** | `fpe_sync_checkpoints` — `last_checked_at` (এটি `social_backlog_state`-এর কলাম) | `checkpoint.py` (`get_checkpoint`/`touch_checkpoint`) + `routes.py` (`/sync/status`): `last_sync_at` |
+| **১.৭** | `fpe_gap_scan_runs.skipped_no_content` — কলামটিই কোথাও ডিফাইন নেই | FPE `004` CREATE TABLE + নতুন FPE `015` (`ADD COLUMN IF NOT EXISTS`) |
+
+এই তিনটিই এখন `tests/unit/test_sql_column_conformance.py` দিয়ে সুরক্ষিত — যা
+DB ছাড়াই রিপোর সব মাইগ্রেশন রিপ্লে করে কোডের SQL যাচাই করে। উপরের ১.১/১.২/১.৪-এর
+টেস্টগুলো ফিক্সের আগে **ব্যর্থ** হতো (প্রমাণ: ১.১+১.২-এর ১০/১১, ১.৪-এর ৭/১৭)।
+
+---
+
+# 🔴 শ্রেণি ১ — কোডের কলাম-নাম ডিবির সাথে মেলে না (রানটাইম-ব্রেকিং)
+
+> প্রতিটি এন্ট্রি হাতে যাচাই করা হয়েছে। (`fazle_cash_transactions.reported_by_phone` একটি
+> স্ক্যানার ফলস-পজিটিভ ছিল — সবগুলো সাইট আসলে `fpe_income_transactions`-এর, যেখানে সেই
+> কলাম আছে; তাই তালিকা থেকে বাদ দেওয়া হয়েছে।)
+
+এগুলো সরাসরি `asyncpg.exceptions.UndefinedColumnError` দেবে বা নীরবে ভুল ডেটা দেবে।
+
+### ১.১ ✅ ঠিক হয়েছে — `wbom_salary_records`: কোড + ডকস + টেস্ট, সব একদিকে; ডিবি অন্যদিকে
+
+`modules/payroll_logic/__init__.py:131`
+
+```sql
+SELECT amount AS net_salary, status AS payment_status, payment_date
+FROM wbom_salary_records
+WHERE employee_id = $1 AND salary_month = $2
+```
+
+| উৎস | কলাম-নাম |
+|---|---|
+| **কোড** (`payroll_logic`) | `amount`, `status`, `salary_month` |
+| **টেস্ট ফিক্সচার** (`tests/conftest.py:413`) | `record_id`, `salary_month`, `amount`, `status` |
+| **ডক** (`docs/PRODUCTION_CERTIFICATION_v1.0.md:86`) | `amount` |
+| **ডিবি** (`029_*`, লাইভ pg_dump থেকে) | `salary_id`, `employee_id`, `month`, `year`, `basic_salary`, `total_programs`, `program_allowance`, `other_allowance`, `total_advances`, `total_deductions`, `net_salary`, `payment_date`, `payment_status`, `remarks` |
+
+**ফলাফল:** `amount`, `status`, `salary_month` — তিনটিই ডিবিতে **অস্তিত্বহীন**।
+কোডটি `amount`-কে `net_salary` ও `status`-কে `payment_status` নামে **এলিয়াস** করছে — অর্থাৎ
+লেখক জানতেন ডিবিতে সঠিক নাম `net_salary`/`payment_status`, কিন্তু ভুল টেবিল-স্কিমার বিপরীতে লিখেছেন।
+এছাড়া ডিবিতে মাস আলাদা নয় — `month` + `year` দুটি কলাম, কিন্তু কোড `salary_month`-এ `'YYYY-MM'` পাঠাচ্ছে।
+
+**নীরব কিনা:** হ্যাঁ, আংশিক। রিপোতে কেউ `wbom_salary_records`-এ INSERT/UPDATE করে না
+(যাচাই করা হয়েছে) → টেবিল সবসময় ফাঁকা → `salary_rec` সবসময় `None` →
+`under_review` সবসময় `True`। তাই বাগটি ক্র্যাশ না করে **চুপচাপ ভুল ফলাফল** দেয়।
+
+`docs/PRODUCTION_CERTIFICATION_v1.0.md:86` নিজেই এই ড্রিফট স্বীকার করেছে:
+> "`wbom_salary_records.amount`/`.created_at`/`.record_id` vs production's `.total_advances`/`.net_salary`/`.program_allowance` naming, suggesting a column rename happened in production that the migration files never picked up."
+
+### ১.২ ✅ ঠিক হয়েছে — `fazle_cash_transactions.payment_mobile` + `fazle_employees.employee_mobile`
+
+`modules/fazle_admin_commands/nl_payments.py:176` এবং `:307`
+
+```python
+where_phone = ("AND (t.payment_mobile = $3 OR t.payment_mobile = $4 "
+               "     OR e.employee_mobile = $3 OR e.employee_mobile = $4)")
+```
+
+- `t` = `fazle_cash_transactions` → `payment_mobile` **নেই** (আছে `payout_phone`)
+- `e` = `fazle_employees` → `employee_mobile` **নেই** (আছে `primary_phone`, `employee_id_phone`)
+
+**দুর্বলতা:** ঠিক এই স্টেটমেন্টের SELECT-লিস্টে লেখক `t.payout_phone AS payment_mobile` ও
+`e.primary_phone AS emp_mobile` এলিয়াস দিয়েছেন — কিন্তু WHERE-ক্লজে সেই **আউটপুট-এলিয়াসকেই**
+`t.`/`e.` প্রিফিক্স দিয়ে ব্যবহার করেছেন। PostgreSQL-এ WHERE-এ আউটপুট-এলিয়াস বৈধ নয়, এবং
+প্রিফিক্স থাকায় এটি টেবিল-কলাম হিসেবে রিজল্ভ হয় → `UndefinedColumnError`।
+**ট্রিগার:** কোয়েরি টেক্সটে ফোন নাম্বার থাকলেই (`if phone:` ব্রাঞ্চ)।
+
+### ১.৩ ✅ ঠিক হয়েছে — `fazle_employees_legacy.full_name`
+
+`modules/escort_lifecycle/__init__.py:510`
+
+```sql
+SELECT e.employee_id, e.full_name FROM fazle_employees_legacy e WHERE e.full_name ILIKE $1
+```
+
+`fazle_employees_legacy`-তে নামের কলাম **`employee_name`**; `full_name` আছে `fazle_employees`-এ।
+`029`-এর দুটি ইনডেক্সই (`idx_fazle_employees_legacy_name`, `..._name_trgm`) `employee_name`-এর ওপর।
+
+**ফিক্স:** `modules/escort_lifecycle/__init__.py` — SELECT/WHERE-এ `e.employee_name`, আর
+result-dict key `r['employee_name']`।
+
+**কেন ধরা পড়েনি:** `_fuzzy_employee_lookup()` একটি bare `except` দিয়ে মোড়া, তাই
+`UndefinedColumnError` চাপা পড়ে যেত — প্রতিটি OCR রিলিজ-স্লিপ নীরবে 'কোনো কর্মী পাওয়া যায়নি'
+রিটার্ন করতো, ক্র্যাশ করতো না।
+
+### ১.৪ ✅ ঠিক হয়েছে — `fazle_knowledge_base`: `value`, `subcategory`, `language`
+
+টেবিলের সংজ্ঞা (`db/new_tables.sql`, `003`, `029`, `021`):
+`id, category, key, trigger_keywords, reply_text, reply_short, tags, confidence, is_active, created_at, updated_at`
+
+কিন্তু ব্যবহার:
+
+| ফাইল | কলাম |
+|---|---|
+| `modules/kb_upload/routes.py:108` | INSERT → `subcategory`, `value`, `language` |
+| `modules/kb_upload/routes.py:181,195,209` | SELECT → `subcategory`, `value` |
+| `modules/business_read_service.py:223` | হোয়াইটলিস্ট → `subcategory` |
+| `modules/ai_readonly_tools/__init__.py:593,601,605` | `ai_read_kb_articles.subcategory` |
+| `scripts/sync_knowledge_base_to_runtime.py:144` | INSERT → `value`, `subcategory` |
+| `scripts/seed_recruitment_kb.sql:10` | INSERT → `value`, `language` |
+| `db/migrations/012_ai_readonly_views.sql:156` | `k.subcategory` (VIEW-এর ভেতর!) |
+| `db/migrations/021_sprint3a_...sql` (৯ বার) | INSERT → `value` |
+
+**গুরুতর প্রভাব:** `012`-এর `ai_read_kb_articles` ভিউ `k.subcategory` সিলেক্ট করে — পরিষ্কার
+(clean) ডেটাবেজে এই মাইগ্রেশন **FAIL** করবে। `003`-এর মন্তব্য (`-- DB had: key, value, tags`)
+প্রমাণ করে `value` লাইভ ডিবিতে আছে, কিন্তু রিপোর কোনো `CREATE TABLE`-এ নেই।
+
+**ফিক্স (additive, ২ জায়গায় — কারণ একটিই যথেষ্ট নয়):**
+
+| ফাইল | ভূমিকা |
+|---|---|
+| `db/migrations/002_align_tables.sql` | ক্যানোনিক্যাল `CREATE TABLE`-এ তিনটি কলাম যোগ। `002` চলে `012`/`021`-এর **আগে**, তাই fresh build সময়মতো কলাম পায়। |
+| `db/migrations/097_knowledge_base_missing_columns.sql` | `ADD COLUMN IF NOT EXISTS` — বিদ্যমান ডেটাবেজ converge করবে এবং স্কিমা অবশেষে রিপো থেকে পুনরুৎপাদনযোগ্য হবে। |
+| `db/new_tables.sql` | orphaned bootstrap স্ক্রিপ্ট—একই তিনটি কলাম, যাতে সব build-path একমত থাকে। |
+
+`097` একাই যথেষ্ট ছিল না: এটি `012`/`021`-এর **পরে** চলে, তাই শুধু `097` দিয়ে clean build
+এখনো `012`-এ ভাঙতো। `test_canonical_runner_reaches_the_end` এই ordering-টিই ধরে রাখে।
+
+**যাচাই:** `fresh_build_violations()` দিয়ে সম্পূর্ণ fresh build সিমুলেট করে দেখা গেছে ঠিক
+এই দুই জায়গায় ভাঙছিল —
+```
+012_ai_readonly_views.sql:                 fazle_knowledge_base.subcategory  [VIEW ai_read_kb_articles]
+021_sprint3a_employee_conversation_drafts: fazle_knowledge_base.value        [INSERT]
+```
+ফিক্সের পর উভয় order-ই (শুধু `db/migrations/` এবং সব ডিরেক্টরি একসাথে) শেষ পর্যন্ত পৌঁছায়।
+
+**কোড বদলাতে হয়নি** — কোড যা চাইছিল তাই-ই সঠিক ছিল; স্কিমাই পিছিয়ে ছিল।
+
+### ১.৫ ✅ ঠিক হয়েছে — `fazle_payment_drafts.method`
+
+`modules/fazle_payment_ingest/__init__.py:350` — INSERT-এ `method`; টেবিলে আছে **`payment_method`**
+(`002_align_tables.sql` ও `db/new_tables.sql` উভয়েই)।
+
+**প্রমাণ যে কোডটিই ভুল ছিল:** এই টেবিলে লেখা আরও দুই জায়গা ইতিমধ্যেই `payment_method`
+ব্যবহার করে — `modules/employee_conversation/__init__.py:669` (INSERT) এবং
+`modules/fazle_admin_commands/__init__.py:1463` (SELECT)। শুধু ingest-পাথটিই ভুল ছিল।
+
+**ফিক্স:** SQL কলামের নাম `payment_method`। `parsed["method"]` — পার্সারের dict-key —
+অক্ষত রাখা হয়েছে (এটি SQL নয়); টেস্ট `test_parser_dict_key_left_alone` সেটি ধরে রাখে।
+
+### ১.৬ ✅ ঠিক হয়েছে — `fpe_sync_checkpoints.last_checked_at`
+
+`modules/fazle_payroll_engine/checkpoint.py:22` (SELECT), `:36` (UPDATE SET),
+`modules/fazle_payroll_engine/routes.py:1703` (SELECT)।
+টেবিলে আছে **`last_sync_at`** (`001_fpe_schema.sql:161`)। `last_checked_at` আছে শুধু `social_backlog_state`-এ।
+
+**ফিক্স:** তিন জায়গাতেই `last_sync_at`। `get_checkpoint()`-এর SELECT-লিস্টে `last_sync_at`
+আগে থেকেই ছিল, তাই ভুল কলামটি শুধু বাদ দেওয়া হয়েছে (ডুপ্লিকেট রাখা হয়নি)।
+
+**কেন এটি বিশেষভাবে খারাপ ছিল:** `touch_checkpoint()`-এর ডকস্ট্রিং অনুযায়ী এটি
+**প্রতি সিঙ্ক পাসে** কল হয় — এমনকি ০টি নতুন মেসেজ থাকলেও। অর্থাৎ এটি একটি নীরব
+বার-বার-ব্যর্থতা ছিল, আর `/sync/status` এন্ডপয়েন্টটি সম্পূর্ণ ভাঙা ছিল।
+
+**কোথা থেকে এলো:** `last_checked_at` সঠিকভাবে ব্যবহৃত হয় `modules/social_auto_reply/`-তে
+(`social_backlog_state`-এর ওপর)। FPE কোডে এটি কপি-পেস্ট দূষণ।
+
+### ১.৭ ✅ ঠিক হয়েছে — `fpe_gap_scan_runs.skipped_no_content`
+
+`modules/fazle_payroll_engine/gap_scan.py:198` — INSERT-এ `skipped_no_content`;
+`004_fpe_zero_loss.sql:79-91`-এর সংজ্ঞায় এই কলাম নেই।
+
+**ফিক্স (additive):** FPE `004_fpe_zero_loss.sql`-এর CREATE TABLE-এ কলাম যোগ (fresh build-এর
+জন্য) + নতুন FPE `015_fpe_gap_scan_skipped_no_content.sql` (`ADD COLUMN IF NOT EXISTS`,
+বিদ্যমান ডিবির জন্য — কারণ `004`-এর `CREATE TABLE IF NOT EXISTS` বিদ্যমান টেবিলে no-op)।
+
+**কোড কেন বদলানো হয়নি:** এই INSERT-ই একমাত্র জায়গা যেখানে একটি সম্পন্ন স্ক্যান রেকর্ড হয়।
+কলামটি না থাকায় পুরো statement ব্যর্থ হতো — অর্থাৎ 'একটি ফিল্ড হারিয়েছে' নয়, বরং
+**কোনো রান-ই লগ হতো না**। আর `skipped_no_content` অলঙ্কারিক নয়: `real_gaps = missing - skipped`
+হিসাব করে অপারেটরদের অবাস্তব গ্যাপ-এলার্ম থেকে বাঁচায়। ফিল্ডটি কেটে দিলে ওই সিগন্যালই
+হারিয়ে যেত, তাই কলাম যোগ করাই সঠিক (§১.৪-এর সিদ্ধান্তের অনুরূপ)।
+
+---
+
+# 🟠 শ্রেণি ২ — প্রোডাকশন কোডে ব্যবহৃত টেবিল, যার `CREATE TABLE` রিপোতেই নেই
+
+| টেবিল | প্রোডাকশন কোডে রেফারেন্স | একমাত্র সংজ্ঞা |
+|---|---|---|
+| `wbom_candidates` | **৪৯** বার (`app/main.py`, `modules/conversation_state.py`, `modules/hermes_dispatch.py`, `modules/fazle_bridge_poller`) | শুধু `tests/conftest.py:170` |
+| `wbom_candidate_conversations` | `modules/recruitment_flow/__init__.py` (INSERT সহ) | শুধু `tests/conftest.py:196` |
+| `fazle_knowledge_governance` | `modules/conversation_layer/__init__.py:134` (`category, fact_key, fact_value, status, deprecated_at`) | কোথাও নেই |
+| `escort_evidence_event` | `modules/business_read_service.py:88` (১০টি কলাম) | কোথাও নেই |
+
+`tools/prefix_objects.json` (লাইভ ডাম্প) নিশ্চিত করে — এই টেবিলগুলো প্রোডাকশনে আছে।
+মানে: **রিপো থেকে ক্লিন ইনস্টল করলে এই কোডপথগুলো সব ক্র্যাশ করবে।**
+`029`-এর ২৭-টেবিল বুটস্ট্র্যাপ এই দুটিকে (`wbom_candidates*`) মিস করেছে।
+
+---
+
+# 🟡 শ্রেণি ৩ — `tests/conftest.py` বনাম মাইগ্রেশন (কলাম-হেডার অমিল)
+
+`db/MIGRATION_INVENTORY.md`-ই স্বীকার করে: *"conftest.py's guessed schema is already known to disagree with production"*। নিচে প্রমাণসহ তালিকা (২২ টেবিল)।
+
+সবচেয়ে বিপজ্জনকগুলো — যেখানে **টেস্ট পাস করে কিন্তু প্রোডাকশন ব্রেক করে**:
+
+| টেবিল | conftest (ভুয়া) | মাইগ্রেশন/প্রোডাকশন (সত্যি) |
+|---|---|---|
+| `wbom_salary_records` | `record_id`, `salary_month`, `amount`, `status` | `salary_id`, `month`+`year`, `net_salary`, `payment_status` (+৮টি) |
+| `llm_conversation_log` | `created_at` | `ts`, `user_id`, `usage_data`, `trainable` |
+| `fazle_report_cache` | `payload` | `payload_json`, `report_name`, `created_at` |
+| `fazle_service_heartbeats` | `service_name` | `service`, `meta_json` |
+| `fazle_roles` | `id` (PK) | PK নেই — `name`, `level`, `description` |
+| `fazle_error_log` | `id` নেই | `id` আছে |
+| `fazle_admin_roles` | `id` | `granted_at` |
+| `fazle_whatsapp_messages` | `created_at` | `received_at` (+২১টি কলাম অনুপস্থিত) |
+| `wbom_escort_programs` | `importer`, `cargo_type`, `created_at` | `mother_vessel`, `lighter_vessel`, `master_mobile`, `total_days`, `replaces_program_id` |
+
+বাকি অমিল: `fazle_contacts` (১১), `wbom_cases` (১৭), `fazle_outbound_queue` (৮),
+`wbom_attendance` (৫), `fazle_cash_transactions_archive` (৩), `fazle_runtime_settings` (৪),
+`wbom_employee_requests` (৫), `wbom_payroll_runs` (২), `wbom_payroll_approval_log` (১),
+`wbom_payroll_run_items` (১), `escort_roster_entries` (১), `assistant_feature_flags` (১)।
+
+---
+
+# 🟣 শ্রেণি ৪ — টেবিল-নেমিং ও মাইগ্রেশন-সিস্টেম অমিল
+
+### ৪.১ চারটি সমান্তরাল মাইগ্রেশন সিস্টেম
+
+| পাথ | ফাইল | রানার | স্ট্যাটাস |
+|---|---:|---|---|
+| `db/migrations/` | ৯৫ | `db/migrate.py` | ✅ ক্যানোনিক্যাল |
+| `modules/fazle_payroll_engine/migrations/` | ১৪ | **প্রতি স্টার্টআপে** `start_fpe()` | 🗄️ legacy |
+| `migrations/` (রুট) | ৬ | কোনোটিই নয় (ম্যানুয়াল `psql -f`) | 🗄️ legacy |
+| ইনলাইন Python DDL | ৪ মডিউল | প্রতি স্টার্টআপে | 🗄️ legacy |
+
+### ৪.২ `001_fpe_schema.sql`-এ একই ফাইলে দুই প্রিফিক্স
+
+ফাইলের হেডারে লেখা: *"All tables use `fpe_*` prefix"* — কিন্তু বাস্তবে:
+
+```
+fpe_wa_messages, fpe_message_processing_state, fpe_parser_results,
+fazle_employees,            ← fazle_
+fpe_employee_aliases,
+fazle_cash_transactions,    ← fazle_
+fazle_employee_ledger,      ← fazle_
+fpe_unmatched_messages, fpe_accounting_audit_logs, fpe_sync_checkpoints
+```
+
+### ৪.৩ মাইগ্রেশন ০৯০–০৯৬: `fpe_*` টেবিল রিপোতেই নেই, তবুও রিনেম করা হচ্ছে
+
+`094/095/096` চালায়:
+```sql
+ALTER TABLE IF EXISTS fpe_cash_transactions RENAME TO fazle_cash_transactions;
+ALTER TABLE IF EXISTS fpe_employee_ledger  RENAME TO fazle_employee_ledger;
+ALTER TABLE IF EXISTS fpe_employees        RENAME TO fazle_employees;
+```
+কিন্তু `001_fpe_schema.sql` **ইতিমধ্যেই** `fazle_*` নামেই টেবিল তিনটি তৈরি করে।
+আর `db/migrations/029` ইতিমধ্যেই `fazle_contacts`, `fazle_whatsapp_messages`,
+`fazle_employees_legacy`, `fazle_cash_transactions_archive` তৈরি করে।
+→ ফ্রেশ বিল্ডে `090`–`093` সম্পূর্ণ **নো-অপ**।
+
+### ৪.৪ স্টার্টআপ-অর্ডারিং হ্যাজার্ড (সবচেয়ে বিপজ্জনক) 🔴
+
+`modules/fazle_payroll_engine/__init__.py:29-30` — `start_fpe()` **প্রতি স্টার্টআপে**
+`modules/fazle_payroll_engine/migrations/*.sql` চালায়। অর্থাৎ:
+
+1. প্রি-ইউনিফিকেশন ডিবিতে `fazle_employees` নেই (আছে `fpe_employees`)।
+2. অ্যাপ স্টার্ট → `CREATE TABLE IF NOT EXISTS fazle_employees` → **ফাঁকা টেবিল তৈরি**।
+3. এরপর `db/migrate.py` চালু হলে `096`:
+   `ALTER TABLE IF EXISTS fpe_employees RENAME TO fazle_employees;`
+   → `IF EXISTS` শুধু **সোর্স** চেক করে, **টার্গেট** নয় → `42P07: relation "fazle_employees" already exists` → মাইগ্রেশন ব্যর্থ।
+
+একই ঝুঁকি `fazle_cash_transactions` (094) ও `fazle_employee_ledger` (095)-এর জন্য।
+
+---
+
+# ⚪ শ্রেণি ৫ — একই ধারণা, অনেক নাম (কনভেনশন ড্রিফট)
+
+### ৫.১ `fazle_cash_transactions` বনাম `fazle_cash_transactions_archive` — হেডার-টু-হেডার
+
+একই ধারণা (ক্যাশ লেনদেন), কিন্তু কলাম-হেডার একেবারে আলাদা:
+
+| ধারণা | `fazle_cash_transactions` (ক্যানোনিক্যাল) | `fazle_cash_transactions_archive` (legacy) |
+|---|---|---|
+| প্রাইমারি কি | `id` | `transaction_id` |
+| লেনদেন শনাক্তকারী | `txn_ref` | `reference_number` |
+| তারিখ | `txn_date` | `transaction_date` + `transaction_time` |
+| পেমেন্ট মাধ্যম | `payout_method` | `payment_method` |
+| পেমেন্ট ফোন | `payout_phone` | `payment_mobile` / `payment_number` |
+| ধরন | `txn_category` | `transaction_type` |
+| রিভার্সাল ফ্ল্যাগ | `is_reversal` | `is_reversed` |
+| রিভার্সাল রেফ | `reversed_txn_id` | `reversal_of` |
+| **`employee_id` অর্থ** | → `fazle_employees.id` | → `fazle_employees_legacy.employee_id` |
+
+**একই `employee_id` নাম, দুইটি সম্পূর্ণ ভিন্ন কি-স্পেস** — এটি পুরো কোডবেজের বড় ফাঁদ।
+মাইগ্রেশন `020`-এর মন্তব্যই বলে: *"`fazle_cash_transactions.employee_id` FKs to `fazle_employees(id)`, not this"*।
+
+### ৫.২ অন্যান্য
+
+- **ফোন**: ১,৬২৫ কলামের মধ্যে **৪২টি ভিন্ন নামে** ফোন নাম্বার (`phone`, `sender_number`, `employee_mobile`, `primary_phone`, `payout_phone`, `payout_mobile`, `master_mobile`, `escort_mobile`, `whatsapp_number`, `canonical_phone`, `phone_last10`, `resolved_phone`, …)
+- **নাম**: `employee_name` / `full_name` / `escort_name` / `display_name` / `employee_name_raw` / `sender_name`
+- **`created_at`**: `created_at` / `received_at` / `ts` / `started_at` / `recorded_at` / `enqueued_at` / `requested_at` / `submitted_at`
+
+---
+
+## সুপারিশ (প্রাধান্য অনুযায়ী)
+
+1. ~~**১.১–১.৭ নম্বর বাগগুলো ঠিক করুন**~~ — **সব ৭টিই সম্পন্ন (২০২৬-১০-২৫)।**
+   টেস্টের `KNOWN_REMAINING` allowlist **এখন খালি** — মানে রিপোর প্রতিটি SQL
+   কলাম-রেফারেন্স এমন একটি কলামে পড়ছে যা কোনো মাইগ্রেশন সত্যিই ডিফাইন করে।
+   `test_repo_wide_sql_columns_exist` এখন **শূন্য-সহনশীল**: নতুন কোনো অমিল
+   যোগ হলে সাথে সাথে FAIL করবে, আর কেউ allowlist-এ ঢুকিয়ে চাপা দিলে সেটিও
+   `stale` অ্যাসার্শনে ধরা পড়বে।
+   *মনে রাখার বিষয়:* এই ৭টির মধ্যে ৫টিই ছিল নীরব — bare `except` বা upstream
+   error-handling-এর আড়ালে। 'ক্র্যাশ করছে না' মানে 'কাজ করছে' নয়।
+2. ~~**`fazle_knowledge_base`-এ `value`/`subcategory`/`language` যোগ করুন**~~ — **সম্পন্ন** (মাইগ্রেশন `002` + `097` + `db/new_tables.sql`)।
+3. **`wbom_candidates` / `wbom_candidate_conversations` / `fazle_knowledge_governance` / `escort_evidence_event`**-এর `CREATE TABLE` যোগ করুন (`db/migrations/`)।
+   *এরপর:* `fresh_build_violations()`-এর মতোই একটি টেস্ট দিয়ে ধরুন কোন টেবিল এখনো অনির্ধারিত।
+4. **`conftest.py` পুনর্লিখন করুন** মাইগ্রেশন থেকে, হাতে-আন্দাজ না — `029` ইতিমধ্যেই pg_dump-ভিত্তিক, সেটিকেই সোর্স ধরুন।
+5. **০৯৪–০৯৬ রিনেম আগে চালান, তারপর অ্যাপ স্টার্ট** — অথবা `001_fpe_schema.sql`-কে আগের `fpe_*` নামে ফিরিয়ে দিন, যাতে স্টার্টআপে ফাঁকা টেবিল না তৈরি হয়।
+6. **একটি নেমিং-কনভেনশন ডকুমেন্ট** তৈরি করুন (`PHONE_NORMALIZER_CONVENTION.md`-এর মতো) — কবে `phone` আর কবে `mobile`, `created_at` নাকি `received_at`।
+
+---
+
+## পুনরুৎপাদনযোগ্যতা
+
+```bash
+# স্কিমা বিল্ড (all 4 migration dirs, 2-pass)
+python3 /home/user/_naming_audit/build_all.py
+# INSERT/UPDATE কলাম চেক
+python3 /home/user/_naming_audit/scan2.py
+# alias-qualified (t.col) চেক
+python3 /home/user/_naming_audit/scan5.py
+# conftest বনাম migration
+python3 /home/user/_naming_audit/diff_schema.py
+# ডকস
+python3 /home/user/_naming_audit/scan_docs.py
+```

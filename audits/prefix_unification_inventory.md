@@ -140,7 +140,7 @@ existing `fazle_*` table.
 **`modules/payment_ingest` → `modules/fazle_payment_ingest`** (directory, 38 import ref(s) in 18 file(s))
 
 - `app/main.py`
-- `audit-report-2026-06-01.md`
+- `archive/historical-reports/audit-report-2026-06-01.md`
 - `audits/C1B-BACKFILL-READINESS.md`
 - `docs/MODULE_MAP.md`
 - `docs/PROPOSAL_ADMIN_NOTIFICATION_GAPS_2026-08-01.md`
@@ -161,7 +161,7 @@ existing `fazle_*` table.
 **`modules/payment_workflow` → `modules/fazle_payment_workflow`** (directory, 50 import ref(s) in 20 file(s))
 
 - `app/main.py`
-- `audit-report-2026-06-01.md`
+- `archive/historical-reports/audit-report-2026-06-01.md`
 - `db/migrations/035_client_billing_wage_general.sql`
 - `docs/MODULE_MAP.md`
 - `knowledge_base/00_governance/management_decisions.md`
@@ -185,7 +185,7 @@ existing `fazle_*` table.
 
 - `.claude/CLAUDE.md`
 - `app/main.py`
-- `audit-report-2026-06-01.md`
+- `archive/historical-reports/audit-report-2026-06-01.md`
 - `db/MIGRATION_INVENTORY.md`
 - `db/migrations/053_conversation_memory_engine.sql`
 - `db/migrations/073_wbom_whatsapp_messages_actor_attribution.sql`
@@ -273,7 +273,7 @@ existing `fazle_*` table.
 **`modules/identity_brain` → `modules/fazle_identity_brain`** (directory, 180 import ref(s) in 44 file(s))
 
 - `app/main.py`
-- `audit-report-2026-06-01.md`
+- `archive/historical-reports/audit-report-2026-06-01.md`
 - `db/MIGRATION_INVENTORY.md`
 - `db/migrations/066_ai_read_employees_fpe_fallback.sql`
 - `docs/MODULE_MAP.md`
@@ -294,7 +294,7 @@ existing `fazle_*` table.
 - `modules/user_role/__init__.py`
 - `recover_critical_numbers.py`
 - `recover_from_backup.py`
-- `recruitment-audit-2026-06-15.md`
+- `archive/historical-reports/recruitment-audit-2026-06-15.md`
 - `shared/env.py`
 - `tests/conftest.py`
 - `tests/integration/test_webhooks.py`
@@ -319,8 +319,8 @@ existing `fazle_*` table.
 
 **`modules/admin_commands` → `modules/fazle_admin_commands`** (directory, 132 import ref(s) in 34 file(s))
 
-- `SPRINT-3A-OWNER-REPORT.md`
-- `audit-report-2026-06-01.md`
+- `archive/historical-reports/SPRINT-3A-OWNER-REPORT.md`
+- `archive/historical-reports/audit-report-2026-06-01.md`
 - `docs/DEVELOPER_GUIDE.md`
 - `docs/MODULE_MAP.md`
 - `docs/NEXT_IMPLEMENTATION_QUEUE_ARCHIVE_2026-07-16.md`
@@ -356,7 +356,7 @@ existing `fazle_*` table.
 
 **`modules/draft_approval` → `modules/fazle_draft_approval`** (directory, 66 import ref(s) in 11 file(s))
 
-- `HERMES_BUSINESS_EXECUTION_CAPABILITY_PROVENANCE_AUDIT_2026-08-19.md`
+- `archive/historical-reports/HERMES_BUSINESS_EXECUTION_CAPABILITY_PROVENANCE_AUDIT_2026-08-19.md`
 - `app/main.py`
 - `docs/MODULE_MAP.md`
 - `knowledge_base/04_business_rules/payment_business_rules.md`
@@ -378,10 +378,10 @@ existing `fazle_*` table.
 **`modules/intent` → `modules/fazle_intent`** (directory, 29 import ref(s) in 20 file(s))
 
 - `.github/workflows/ci.yml`
-- `HERMES_IDENTITY_GAP_FIX_PREDEPLOYMENT_ACCEPTANCE_2026-08-18.md`
-- `HERMES_MESSAGE_CONTEXT_REPLY_EXECUTION_GAP_AUDIT_2026-08-19.md`
+- `archive/historical-reports/HERMES_IDENTITY_GAP_FIX_PREDEPLOYMENT_ACCEPTANCE_2026-08-18.md`
+- `archive/historical-reports/HERMES_MESSAGE_CONTEXT_REPLY_EXECUTION_GAP_AUDIT_2026-08-19.md`
 - `app/main.py`
-- `audit-report-2026-06-01.md`
+- `archive/historical-reports/audit-report-2026-06-01.md`
 - `docs/MODULE_MAP.md`
 - `knowledge_base/00_governance/management_decisions.md`
 - `knowledge_base/06_developer_system/intent_classifier.md`
@@ -390,7 +390,7 @@ existing `fazle_*` table.
 - `modules/message_router/__init__.py`
 - `modules/recruitment_recovery_sweep/__init__.py`
 - `modules/voice_processor/__init__.py`
-- `recruitment-audit-2026-06-15.md`
+- `archive/historical-reports/recruitment-audit-2026-06-15.md`
 - `resources/generated_kb/knowledge_base__06_developer_system__intent_classifier.txt`
 - `tests/integration/test_webhooks.py`
 - `tests/unit/test_identity_intent_routes.py`
@@ -571,7 +571,7 @@ Tokens: `fpe_cash_transactions`, `fpe_employee_aliases`, `fpe_employee_ledger`, 
 
 Lines: 3, 9, 15, 18, 21, 24, 27, 28, 29, 30, 31, 32, 109, 111, 118, 119, 126, 127, 147, 186, 190, 191, 192, 193, 197, 201, 336, 339, 347, 350, 358, 363, 364, 378, 379, 380, 381, 382, 384, 385, 386, 389, 391, 392, 393, 394, 396, 397, 401, 402, 403, 413, 464, 474, 504, 513, 514, 519, 524, 534, 536, 545, 546, 554, 572, 600, 606, 607, 608, 616, 622, 623, 624, 750
 
-#### `payroll-escort-workflow-audit-2026-06-13.md` — 72 hit(s)
+#### `archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md` — 72 hit(s)
 
 Tokens: `fpe_`, `fpe_cash_transactions`, `fpe_employee_ledger`, `fpe_employees`, `fpe_message_processing_state`, `fpe_wa_messages`, `wbom_`, `wbom_attendance`, `wbom_cash_transactions`, `wbom_employees`, `wbom_escort_programs`, `wbom_fpe_sync`, `wbom_payroll_runs`, `wbom_salary_records`, `wbom_to_fpe`, `wbom_transaction`
 
@@ -583,7 +583,7 @@ Tokens: `fpe_cash_transactions`, `fpe_employee`, `fpe_employees`, `fpe_karim_dup
 
 Lines: 170, 194, 196, 198, 206, 208, 210, 218, 242, 257, 266, 284, 289, 293, 297, 299, 311, 313, 314, 334, 337, 346, 352, 356, 358, 360, 388, 390, 400, 402, 413, 415, 423, 425, 432, 434, 441, 753, 754, 755, 756, 757, 758, 759, 760, 761, 762, 763, 764, 765, 766, 767, 768, 769, 770, 771, 1275, 1291, 1307, 1374, 1375, 1378, 1394, 1395, 1397, 1401, 1411, 1413, 1416
 
-#### `SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md` — 67 hit(s)
+#### `archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md` — 67 hit(s)
 
 Tokens: `fpe_accounting`, `fpe_bridge`, `fpe_cash_transactions`, `fpe_cash_transactions_canonical`, `fpe_employee`, `fpe_employee_ledger`, `fpe_employees`, `fpe_income_transactions`, `fpe_indexes`, `fpe_parser`, `fpe_router`, `fpe_rules`, `fpe_soft_delete_columns`, `wbom_attendance`, `wbom_billing_records`, `wbom_candidates`, `wbom_cases`, `wbom_cash_transactions`, `wbom_clients`, `wbom_contacts`, `wbom_employee_requests`, `wbom_employees`, `wbom_escort_programs`, `wbom_fpe_sync`, `wbom_payroll_approval_log`, `wbom_payroll_run_items`, `wbom_payroll_runs`, `wbom_salary_records`, `wbom_staging_payments`, `wbom_whatsapp_messages`
 
@@ -595,7 +595,7 @@ Tokens: `wbom_attendance`, `wbom_cases`, `wbom_cash_transactions`, `wbom_contact
 
 Lines: 98, 121, 129, 142, 146, 150, 163, 167, 168, 192, 195, 241, 242, 243, 244, 245, 246, 247, 248, 249, 263, 280, 324, 325, 326, 344, 345, 346, 347, 348, 383, 384, 399, 422, 428, 451, 466, 477, 504, 506, 511, 528, 536, 542, 546, 565, 591, 612, 635, 636, 637, 658, 665, 671, 679, 684, 724, 728, 764, 766, 771, 774, 775, 777
 
-#### `AUDIT_REPORT.md` — 65 hit(s)
+#### `archive/historical-reports/AUDIT_REPORT.md` — 65 hit(s)
 
 Tokens: `fpe_cash_transactions`, `fpe_employees`, `fpe_gap_scan_runs`, `fpe_wa_messages`, `wbom_admin_instructions`, `wbom_blocked_numbers`, `wbom_candidates`, `wbom_cash_transactions`, `wbom_contacts`, `wbom_conversations`, `wbom_employees`, `wbom_escort_programs`, `wbom_media_downloads`, `wbom_msg_autofill`, `wbom_payroll_run_items`, `wbom_payroll_runs`, `wbom_relation_types`, `wbom_salary_records`, `wbom_whatsapp_messages`
 
@@ -787,13 +787,13 @@ Tokens: `fpe_cash_transactions`, `fpe_unmatched_messages`, `fpe_wa_message_id`, 
 
 Lines: 3, 8, 9, 10, 13, 22, 23, 25, 60, 62, 63, 69, 71, 72, 73, 90, 98, 102, 127, 133, 134, 141, 142, 151, 181, 191, 194, 195, 196, 204
 
-#### `HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md` — 35 hit(s)
+#### `archive/historical-reports/HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md` — 35 hit(s)
 
 Tokens: `fpe_cash_transactions`, `fpe_employees`, `wbom_attendance`, `wbom_contacts`, `wbom_employees`, `wbom_escort_programs`, `wbom_messages_class`, `wbom_relation_types`, `wbom_whatsapp_messages`
 
 Lines: 22, 23, 27, 45, 82, 83, 84, 85, 115, 116, 134, 135, 139, 143, 147, 166, 167, 168, 183, 185, 189, 214, 269
 
-#### `audit-report-2026-06-01.md` — 35 hit(s)
+#### `archive/historical-reports/audit-report-2026-06-01.md` — 35 hit(s)
 
 Tokens: `fpe_accounting_audit_logs`, `fpe_cash_transactions`, `fpe_employee_aliases`, `fpe_employee_ledger`, `fpe_employee_resolution_links`, `fpe_employee_review_queue`, `fpe_employees`, `fpe_gap_scan_runs`, `fpe_income_transactions`, `fpe_message_processing_state`, `fpe_normalization_audit_logs`, `fpe_parser_results`, `fpe_processing_diagnostics`, `fpe_review_audit_logs`, `fpe_sync_checkpoints`, `fpe_transaction_repairs`, `fpe_unmatched_messages`, `fpe_wa_messages`, `wbom_contacts`, `wbom_employees`, `wbom_inbound_messages`, `wbom_relation_types`, `wbom_whatsapp_messages`
 
@@ -829,7 +829,7 @@ Tokens: `fpe_accounting_audit_logs`, `fpe_cash_transactions`, `fpe_employee_alia
 
 Lines: 6, 48, 74, 87, 90, 91, 99, 126, 141, 165, 170, 234, 243, 247, 249, 264, 266, 275, 277, 313, 331, 337, 387, 407, 478, 517, 530, 534, 546, 560, 563, 565, 567, 570, 583
 
-#### `HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md` — 33 hit(s)
+#### `archive/historical-reports/HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md` — 33 hit(s)
 
 Tokens: `fpe_accounting_audit_logs`, `fpe_cash_transactions`, `fpe_employee_aliases`, `fpe_employee_ledger`, `fpe_employee_resolution_status`, `fpe_employees`, `fpe_rules`, `fpe_unmatched_messages`, `fpe_unmatched_notification`, `fpe_wa_message_id`, `wbom_attendance`, `wbom_employees`, `wbom_escort_programs`
 
@@ -931,7 +931,7 @@ Tokens: `fpe_cash_transactions`, `fpe_emp`, `fpe_employees`, `fpe_link`, `wbom_e
 
 Lines: 18, 61, 78, 116, 117, 120, 123, 124, 128, 131, 138, 265, 271, 272, 277, 278, 281, 284, 289, 297, 350, 379, 384, 395
 
-#### `SPRINT-3B-OWNER-REPORT.md` — 26 hit(s)
+#### `archive/historical-reports/SPRINT-3B-OWNER-REPORT.md` — 26 hit(s)
 
 Tokens: `fpe_`, `fpe_accounting_audit_logs`, `fpe_cash_transactions`, `fpe_employee_id`, `fpe_employee_ledger`, `fpe_employees`, `fpe_wa_message_id`, `wbom_employees`
 
@@ -1045,7 +1045,7 @@ Tokens: `fpe_accounting_audit_logs`, `fpe_cash_transactions`, `fpe_emp_phone_uni
 
 Lines: 28, 52, 66, 74, 75, 77, 81, 87, 90, 108, 111, 114, 127, 147, 148, 171, 201, 230, 231, 232, 238, 244, 259
 
-#### `RECRUITMENT_LIFECYCLE_CLOSURE_ASSESSMENT_2026-08-29.md` — 22 hit(s)
+#### `archive/historical-reports/RECRUITMENT_LIFECYCLE_CLOSURE_ASSESSMENT_2026-08-29.md` — 22 hit(s)
 
 Tokens: `fpe_transactions`, `wbom_attendance`, `wbom_candidate_conversations`, `wbom_candidate_events`, `wbom_candidates`, `wbom_cash_transactions`, `wbom_employees`, `wbom_escort_programs`, `wbom_group_identities`, `wbom_whatsapp_messages`
 
@@ -1081,7 +1081,7 @@ Tokens: `fpe_wa_messages`, `wbom_candidates`, `wbom_whatsapp_messages`
 
 Lines: 78, 82, 229, 273, 287, 343, 396, 406, 411, 432, 493, 557, 565, 595, 638, 648, 668, 683, 713, 730
 
-#### `payroll-escort-workflow-fix-plan-2026-07-04.md` — 20 hit(s)
+#### `archive/historical-reports/payroll-escort-workflow-fix-plan-2026-07-04.md` — 20 hit(s)
 
 Tokens: `fpe_cash_transactions`, `fpe_employee_ledger`, `fpe_employees`, `wbom_attendance`, `wbom_employee_id`, `wbom_employees`, `wbom_escort_programs`, `wbom_payroll_runs`
 
@@ -1447,7 +1447,7 @@ Tokens: `wbom_cash_transactions`, `wbom_cash_transactions_write`, `wbom_employee
 
 Lines: 61, 287, 293, 313, 318, 506, 507, 511, 512, 531, 539, 556, 561
 
-#### `HERMES_IDENTITY_GAP_FIX_PREDEPLOYMENT_ACCEPTANCE_2026-08-18.md` — 12 hit(s)
+#### `archive/historical-reports/HERMES_IDENTITY_GAP_FIX_PREDEPLOYMENT_ACCEPTANCE_2026-08-18.md` — 12 hit(s)
 
 Tokens: `fpe_employees`, `fpe_fallback`, `wbom_employee_id`, `wbom_employees`
 
@@ -2347,7 +2347,7 @@ Tokens: `fpe_api_key`, `fpe_cash_transactions`, `wbom_cash_transactions`
 
 Lines: 27, 29, 33
 
-#### `HERMES_BUSINESS_EXECUTION_CAPABILITY_PROVENANCE_AUDIT_2026-08-19.md` — 4 hit(s)
+#### `archive/historical-reports/HERMES_BUSINESS_EXECUTION_CAPABILITY_PROVENANCE_AUDIT_2026-08-19.md` — 4 hit(s)
 
 Tokens: `fpe_cash_transactions`, `wbom_unmatched_confirmations`, `wbom_whatsapp_messages`
 
@@ -2593,7 +2593,7 @@ Tokens: `wbom_messages_hash`, `wbom_whatsapp_messages`
 
 Lines: 9, 14, 62, 334
 
-#### `HERMES_MESSAGE_CONTEXT_REPLY_EXECUTION_GAP_AUDIT_2026-08-19.md` — 3 hit(s)
+#### `archive/historical-reports/HERMES_MESSAGE_CONTEXT_REPLY_EXECUTION_GAP_AUDIT_2026-08-19.md` — 3 hit(s)
 
 Tokens: `wbom_unmatched_confirmations`, `wbom_whatsapp_messages`
 
@@ -2605,7 +2605,7 @@ Tokens: `fpe_employees`, `wbom_`, `wbom_employees`
 
 Lines: 22, 29, 37
 
-#### `SPRINT-3A-OWNER-REPORT.md` — 3 hit(s)
+#### `archive/historical-reports/SPRINT-3A-OWNER-REPORT.md` — 3 hit(s)
 
 Tokens: `wbom_cash_transactions`, `wbom_payroll_runs`
 
@@ -2743,7 +2743,7 @@ Tokens: `wbom_contacts`, `wbom_employees`, `wbom_relation_types`
 
 Lines: 218, 238, 239
 
-#### `payroll-escort-workflow-audit-2026-07-04.md` — 3 hit(s)
+#### `archive/historical-reports/payroll-escort-workflow-audit-2026-07-04.md` — 3 hit(s)
 
 Tokens: `wbom_employees`, `wbom_escort_programs`, `wbom_fpe_sync`
 
@@ -2827,7 +2827,7 @@ Tokens: `wbom_conversations`, `wbom_whatsapp_messages`
 
 Lines: 70, 74
 
-#### `HERMES_SYSTEM_MESSAGE_ROOTCAUSE_AGENTIC_BEHAVIOR_AUDIT_2026-08-19.md` — 2 hit(s)
+#### `archive/historical-reports/HERMES_SYSTEM_MESSAGE_ROOTCAUSE_AGENTIC_BEHAVIOR_AUDIT_2026-08-19.md` — 2 hit(s)
 
 Tokens: `wbom_whatsapp_messages`
 
@@ -2839,7 +2839,7 @@ Tokens: `wbom_`, `wbom_whatsapp_messages`
 
 Lines: 4, 174
 
-#### `audit-report-2026-06-10.md` — 2 hit(s)
+#### `archive/historical-reports/audit-report-2026-06-10.md` — 2 hit(s)
 
 Tokens: `wbom_employees`, `wbom_escort_programs`
 
@@ -4862,66 +4862,66 @@ ARCHITECTURE.md:57:- The sync crosses Prisma schema boundaries: LocationWhere's 
 ARCHITECTURE.md:58:- Do not add NOT NULL columns to `wbom_employees` without updating the sync logic.
 ARCHITECTURE.md:68:| `wbom_employees` | fazle-core | LocationWhere writes on new SMS onboarding | Direct cross-schema SQL write | [employee.service.ts:36-115] |
 ARCHITECTURE.md:129:| PostgreSQL | `ai-postgres` at `172.20.x` | `public` schema, all tables | `locationwhere` schema (Prisma) + writes to `public.wbom_employees` | Separate schemas, same user — NOT fully isolated |
-AUDIT_REPORT.md:52:| `wbom_whatsapp_messages` | Central message store | **10,245** | message_id, sender_number, message_body, direction, platform, received_at, identity_role, identity_confidence, canonical_phone, message_hash |
-AUDIT_REPORT.md:64:| `wbom_contacts` | WhatsApp contact registry | **576** | contact_id, whatsapp_number, display_name, company_name, relation_type_id, platform, interaction_count |
-AUDIT_REPORT.md:66:| `wbom_relation_types` | Contact relation type definitions | ~15 | relation_type_id, relation_name |
-AUDIT_REPORT.md:74:| `wbom_employees` | Active employee registry | **171** | employee_id, employee_mobile, employee_name, designation, basic_salary, bkash_number, nid_number, status |
-AUDIT_REPORT.md:75:| `wbom_salary_records` | Historical salary records | 0 | — |
-AUDIT_REPORT.md:76:| `wbom_cash_transactions` | Cash payment records | several | — |
-AUDIT_REPORT.md:77:| `wbom_payroll_runs` | Payroll run tracking | ~0 | — |
-AUDIT_REPORT.md:78:| `wbom_payroll_run_items` | Payroll line items | ~0 | — |
-AUDIT_REPORT.md:79:| `fpe_employees` | FPE-side employee index | 1 | — |
-AUDIT_REPORT.md:80:| `fpe_cash_transactions` | FPE payment records | 9 | — |
-AUDIT_REPORT.md:81:| `fpe_wa_messages` | FPE WhatsApp message index | 121 | — |
-AUDIT_REPORT.md:82:| `fpe_gap_scan_runs` | Gap scan history | 11,596 | — |
-AUDIT_REPORT.md:88:| `wbom_escort_programs` | Escort assignments | **316** | program_id, mother_vessel, lighter_vessel, escort_employee_id, program_date, shift, status, start_date, end_date, day_count, food_bill, total_payment |
-AUDIT_REPORT.md:110:| `wbom_candidates` | Candidate registry | ~0 | — |
-AUDIT_REPORT.md:172:│     3. wbom_employees.employee_mobile (confidence=88)                           │
-AUDIT_REPORT.md:173:│     4. wbom_contacts + wbom_relation_types (confidence=80)                      │
-AUDIT_REPORT.md:180:│ STEP 4: SAVE TO wbom_whatsapp_messages                                            │
-AUDIT_REPORT.md:182:│   Table: wbom_whatsapp_messages                                                   │
-AUDIT_REPORT.md:187:│   Trigger: trg_wbom_msg_autofill auto-fills canonical_phone, phone_last10       │
-AUDIT_REPORT.md:334:3. `wbom_employees.employee_mobile` — 171 records (confidence=88)
-AUDIT_REPORT.md:335:4. `wbom_contacts` + `wbom_relation_types` — 576 contacts (confidence=80)
-AUDIT_REPORT.md:401:- **Current State:** `wbom_whatsapp_messages` table with 32 columns exists. Has: message_id, sender_number, message_body, direction, platform (=channel), identity_role (=role_detected), identity_confidence, canonical_phone, received_at.
-AUDIT_REPORT.md:416:- **Current State:** `platform` column in `wbom_whatsapp_messages` stores source (bridge1/bridge2/meta/messenger/fb_comment). Saved correctly.
-AUDIT_REPORT.md:424:- **Current State:** `fazle_conversations` table EXISTS but is linked to `fazle_users` (web portal users, UUID-based) — NOT to WhatsApp senders. No conversation_id in `wbom_whatsapp_messages`. No threading logic implemented for WhatsApp.
-AUDIT_REPORT.md:428:- **Files to Create:** New `wbom_conversations` table (`phone + bridge` as key), migration
-AUDIT_REPORT.md:432:- **Current State:** `message_type` column exists in `wbom_whatsapp_messages` (defaulted to 'text'). Bridge events carry `media_type`. In `_handle_bridge_event()` (main.py:1089): `media_type` extracted, but if no text AND media_type exists, text becomes `[media:media_type]`. The `media_flag` is passed to `ingest_social_event()`.
-AUDIT_REPORT.md:447:- **Current State:** 6-source system exists (settings → fazle_contact_roles → wbom_employees → wbom_contacts → text_hint → escort_content).
-AUDIT_REPORT.md:469:- **Current State:** **FULLY IMPLEMENTED** — 13 intent categories with keyword map, regex patterns, and LLM classification (Groq → GitHub → Ollama). Intent stored in `fazle_draft_replies` but NOT in `wbom_whatsapp_messages`.
-AUDIT_REPORT.md:472:- **Estimated Effort:** 0.5 days (add intent column to wbom_whatsapp_messages, populate on save)
-AUDIT_REPORT.md:531:| `wbom_whatsapp_messages` | Add: `conversation_id`, `receiver_number`, `sender_name`, `raw_text`, `extracted_text`, `intent_detected`, `reply_status` | **Low** (additive columns) | None |
-AUDIT_REPORT.md:532:| `wbom_employees` | Consider adding: `payroll_id`, `escort_mobile_alternate` | Low | None |
-AUDIT_REPORT.md:539:| `wbom_conversations` | WhatsApp conversation threading by phone+bridge | Critical | id, sender_phone, receiver_number, bridge, first_message_at, last_message_at, message_count, active |
-AUDIT_REPORT.md:540:| `wbom_admin_instructions` | Per-contact special rules from admin | High | id, phone, instruction_text, created_by, is_active, priority |
-AUDIT_REPORT.md:541:| `wbom_blocked_numbers` | Blocklist (currently via fazle_contact_roles.role='blocked') | Low | Already handled by fazle_contact_roles |
-AUDIT_REPORT.md:542:| `wbom_media_downloads` | Track downloaded media files from bridges | Medium | id, message_id, bridge, remote_url, local_path, media_type, processed_at, extracted_text |
-AUDIT_REPORT.md:561:| 3 | Payroll data | YES | `wbom_employees` (171 rows) | employee_mobile, employee_name, designation | **YES — implemented** |
-AUDIT_REPORT.md:562:| 4 | Escort roster mobile | YES | `wbom_escort_programs.escort_mobile` | escort_mobile, escort_name | NOT USED in identity_brain |
-AUDIT_REPORT.md:563:| 5 | Employees DB | YES | `wbom_employees` | employee_mobile | **YES — implemented (same as #3)** |
-AUDIT_REPORT.md:564:| 6 | Contact book | YES | `wbom_contacts` (576 rows) + `wbom_relation_types` | whatsapp_number, display_name, relation_name | **YES — implemented** |
-AUDIT_REPORT.md:565:| 7 | Chat history | YES | `wbom_whatsapp_messages` | sender_number, identity_role (from prior detection) | NOT USED (future: confirmed identity from history) |
-AUDIT_REPORT.md:566:| 8-11 | Escort buyers, vendors, candidates | PARTIAL | `wbom_contacts` + text patterns | relation_name, message keywords | **PARTIAL** |
-AUDIT_REPORT.md:571:- **Historical data:** Some contacts stored as `01XXXXXXXXX` (11 digits) in `wbom_contacts.whatsapp_number`
-AUDIT_REPORT.md:583:| employee | YES — wbom_employees 171 records | DB mobile lookup | **88%** |
-AUDIT_REPORT.md:588:| repeat_client | YES — wbom_contacts relation_type | relation lookup | **80%** |
-AUDIT_REPORT.md:655:| Identity Audit | High | Medium | wbom_whatsapp_messages + fazle_contact_roles |
-AUDIT_REPORT.md:656:| Special Instructions per Contact | High | Medium | wbom_admin_instructions (new table needed) |
-AUDIT_REPORT.md:659:| Conversation Thread View | Critical | High | wbom_conversations (new table needed) |
-AUDIT_REPORT.md:660:| Media Processing Status | Medium | Medium | wbom_media_downloads (new table needed) |
-AUDIT_REPORT.md:678:- **10,245 messages in wbom_whatsapp_messages** — no risk; schema changes are additive
-AUDIT_REPORT.md:703:- [x] **DONE** Add `conversation_key`, `receiver_number`, `extracted_text`, `intent_detected` columns to `wbom_whatsapp_messages` (migration 019, 10,245 rows backfilled)
-AUDIT_REPORT.md:707:- [ ] Create `wbom_conversations` table with phone+bridge threading (deferred to Phase 1b)
-AUDIT_REPORT.md:711:- [x] **DONE** Auto-trigger media processor for bridge inbound: audio → Whisper transcript, image → OCR text, document → full extracted text — all saved to `wbom_whatsapp_messages.extracted_text`
-AUDIT_REPORT.md:713:- [ ] Create `wbom_media_downloads` tracking table
-AUDIT_REPORT.md:719:- [ ] Implement `wbom_admin_instructions` table + lookup in knowledge source chain
-AUDIT_REPORT.md:791:### 2. Add Missing Columns to wbom_whatsapp_messages
-AUDIT_REPORT.md:793:**Problem:** `wbom_whatsapp_messages` was missing `conversation_key`, `receiver_number`, `intent_detected`, `extracted_text` — blocking conversation threading and media extraction audit trail.
-AUDIT_REPORT.md:820:**Problem:** Audio, image, and document media already had processing code in `bridge_poller`, but the transcribed/OCR'd text was NOT being stored in `wbom_whatsapp_messages.extracted_text`. The raw extraction was lost after routing.
-AUDIT_REPORT.md:833:**Problem:** Guards on active escort duty could text from their personal mobile (stored in `wbom_escort_programs.escort_mobile`) but would be classified as `unknown` because that number wasn't in `wbom_employees.employee_mobile`.
-AUDIT_REPORT.md:835:- Added `_lookup_escort_roster()` helper: queries `wbom_escort_programs WHERE escort_mobile = $1 AND status IN ('Assigned', 'Running', 'confirmed')`, with phone variant fallback
-AUDIT_REPORT.md:920:5 3 * * *   DELETE FROM fpe_gap_scan_runs (keep last 10,000)
+archive/historical-reports/AUDIT_REPORT.md:52:| `wbom_whatsapp_messages` | Central message store | **10,245** | message_id, sender_number, message_body, direction, platform, received_at, identity_role, identity_confidence, canonical_phone, message_hash |
+archive/historical-reports/AUDIT_REPORT.md:64:| `wbom_contacts` | WhatsApp contact registry | **576** | contact_id, whatsapp_number, display_name, company_name, relation_type_id, platform, interaction_count |
+archive/historical-reports/AUDIT_REPORT.md:66:| `wbom_relation_types` | Contact relation type definitions | ~15 | relation_type_id, relation_name |
+archive/historical-reports/AUDIT_REPORT.md:74:| `wbom_employees` | Active employee registry | **171** | employee_id, employee_mobile, employee_name, designation, basic_salary, bkash_number, nid_number, status |
+archive/historical-reports/AUDIT_REPORT.md:75:| `wbom_salary_records` | Historical salary records | 0 | — |
+archive/historical-reports/AUDIT_REPORT.md:76:| `wbom_cash_transactions` | Cash payment records | several | — |
+archive/historical-reports/AUDIT_REPORT.md:77:| `wbom_payroll_runs` | Payroll run tracking | ~0 | — |
+archive/historical-reports/AUDIT_REPORT.md:78:| `wbom_payroll_run_items` | Payroll line items | ~0 | — |
+archive/historical-reports/AUDIT_REPORT.md:79:| `fpe_employees` | FPE-side employee index | 1 | — |
+archive/historical-reports/AUDIT_REPORT.md:80:| `fpe_cash_transactions` | FPE payment records | 9 | — |
+archive/historical-reports/AUDIT_REPORT.md:81:| `fpe_wa_messages` | FPE WhatsApp message index | 121 | — |
+archive/historical-reports/AUDIT_REPORT.md:82:| `fpe_gap_scan_runs` | Gap scan history | 11,596 | — |
+archive/historical-reports/AUDIT_REPORT.md:88:| `wbom_escort_programs` | Escort assignments | **316** | program_id, mother_vessel, lighter_vessel, escort_employee_id, program_date, shift, status, start_date, end_date, day_count, food_bill, total_payment |
+archive/historical-reports/AUDIT_REPORT.md:110:| `wbom_candidates` | Candidate registry | ~0 | — |
+archive/historical-reports/AUDIT_REPORT.md:172:│     3. wbom_employees.employee_mobile (confidence=88)                           │
+archive/historical-reports/AUDIT_REPORT.md:173:│     4. wbom_contacts + wbom_relation_types (confidence=80)                      │
+archive/historical-reports/AUDIT_REPORT.md:180:│ STEP 4: SAVE TO wbom_whatsapp_messages                                            │
+archive/historical-reports/AUDIT_REPORT.md:182:│   Table: wbom_whatsapp_messages                                                   │
+archive/historical-reports/AUDIT_REPORT.md:187:│   Trigger: trg_wbom_msg_autofill auto-fills canonical_phone, phone_last10       │
+archive/historical-reports/AUDIT_REPORT.md:334:3. `wbom_employees.employee_mobile` — 171 records (confidence=88)
+archive/historical-reports/AUDIT_REPORT.md:335:4. `wbom_contacts` + `wbom_relation_types` — 576 contacts (confidence=80)
+archive/historical-reports/AUDIT_REPORT.md:401:- **Current State:** `wbom_whatsapp_messages` table with 32 columns exists. Has: message_id, sender_number, message_body, direction, platform (=channel), identity_role (=role_detected), identity_confidence, canonical_phone, received_at.
+archive/historical-reports/AUDIT_REPORT.md:416:- **Current State:** `platform` column in `wbom_whatsapp_messages` stores source (bridge1/bridge2/meta/messenger/fb_comment). Saved correctly.
+archive/historical-reports/AUDIT_REPORT.md:424:- **Current State:** `fazle_conversations` table EXISTS but is linked to `fazle_users` (web portal users, UUID-based) — NOT to WhatsApp senders. No conversation_id in `wbom_whatsapp_messages`. No threading logic implemented for WhatsApp.
+archive/historical-reports/AUDIT_REPORT.md:428:- **Files to Create:** New `wbom_conversations` table (`phone + bridge` as key), migration
+archive/historical-reports/AUDIT_REPORT.md:432:- **Current State:** `message_type` column exists in `wbom_whatsapp_messages` (defaulted to 'text'). Bridge events carry `media_type`. In `_handle_bridge_event()` (main.py:1089): `media_type` extracted, but if no text AND media_type exists, text becomes `[media:media_type]`. The `media_flag` is passed to `ingest_social_event()`.
+archive/historical-reports/AUDIT_REPORT.md:447:- **Current State:** 6-source system exists (settings → fazle_contact_roles → wbom_employees → wbom_contacts → text_hint → escort_content).
+archive/historical-reports/AUDIT_REPORT.md:469:- **Current State:** **FULLY IMPLEMENTED** — 13 intent categories with keyword map, regex patterns, and LLM classification (Groq → GitHub → Ollama). Intent stored in `fazle_draft_replies` but NOT in `wbom_whatsapp_messages`.
+archive/historical-reports/AUDIT_REPORT.md:472:- **Estimated Effort:** 0.5 days (add intent column to wbom_whatsapp_messages, populate on save)
+archive/historical-reports/AUDIT_REPORT.md:531:| `wbom_whatsapp_messages` | Add: `conversation_id`, `receiver_number`, `sender_name`, `raw_text`, `extracted_text`, `intent_detected`, `reply_status` | **Low** (additive columns) | None |
+archive/historical-reports/AUDIT_REPORT.md:532:| `wbom_employees` | Consider adding: `payroll_id`, `escort_mobile_alternate` | Low | None |
+archive/historical-reports/AUDIT_REPORT.md:539:| `wbom_conversations` | WhatsApp conversation threading by phone+bridge | Critical | id, sender_phone, receiver_number, bridge, first_message_at, last_message_at, message_count, active |
+archive/historical-reports/AUDIT_REPORT.md:540:| `wbom_admin_instructions` | Per-contact special rules from admin | High | id, phone, instruction_text, created_by, is_active, priority |
+archive/historical-reports/AUDIT_REPORT.md:541:| `wbom_blocked_numbers` | Blocklist (currently via fazle_contact_roles.role='blocked') | Low | Already handled by fazle_contact_roles |
+archive/historical-reports/AUDIT_REPORT.md:542:| `wbom_media_downloads` | Track downloaded media files from bridges | Medium | id, message_id, bridge, remote_url, local_path, media_type, processed_at, extracted_text |
+archive/historical-reports/AUDIT_REPORT.md:561:| 3 | Payroll data | YES | `wbom_employees` (171 rows) | employee_mobile, employee_name, designation | **YES — implemented** |
+archive/historical-reports/AUDIT_REPORT.md:562:| 4 | Escort roster mobile | YES | `wbom_escort_programs.escort_mobile` | escort_mobile, escort_name | NOT USED in identity_brain |
+archive/historical-reports/AUDIT_REPORT.md:563:| 5 | Employees DB | YES | `wbom_employees` | employee_mobile | **YES — implemented (same as #3)** |
+archive/historical-reports/AUDIT_REPORT.md:564:| 6 | Contact book | YES | `wbom_contacts` (576 rows) + `wbom_relation_types` | whatsapp_number, display_name, relation_name | **YES — implemented** |
+archive/historical-reports/AUDIT_REPORT.md:565:| 7 | Chat history | YES | `wbom_whatsapp_messages` | sender_number, identity_role (from prior detection) | NOT USED (future: confirmed identity from history) |
+archive/historical-reports/AUDIT_REPORT.md:566:| 8-11 | Escort buyers, vendors, candidates | PARTIAL | `wbom_contacts` + text patterns | relation_name, message keywords | **PARTIAL** |
+archive/historical-reports/AUDIT_REPORT.md:571:- **Historical data:** Some contacts stored as `01XXXXXXXXX` (11 digits) in `wbom_contacts.whatsapp_number`
+archive/historical-reports/AUDIT_REPORT.md:583:| employee | YES — wbom_employees 171 records | DB mobile lookup | **88%** |
+archive/historical-reports/AUDIT_REPORT.md:588:| repeat_client | YES — wbom_contacts relation_type | relation lookup | **80%** |
+archive/historical-reports/AUDIT_REPORT.md:655:| Identity Audit | High | Medium | wbom_whatsapp_messages + fazle_contact_roles |
+archive/historical-reports/AUDIT_REPORT.md:656:| Special Instructions per Contact | High | Medium | wbom_admin_instructions (new table needed) |
+archive/historical-reports/AUDIT_REPORT.md:659:| Conversation Thread View | Critical | High | wbom_conversations (new table needed) |
+archive/historical-reports/AUDIT_REPORT.md:660:| Media Processing Status | Medium | Medium | wbom_media_downloads (new table needed) |
+archive/historical-reports/AUDIT_REPORT.md:678:- **10,245 messages in wbom_whatsapp_messages** — no risk; schema changes are additive
+archive/historical-reports/AUDIT_REPORT.md:703:- [x] **DONE** Add `conversation_key`, `receiver_number`, `extracted_text`, `intent_detected` columns to `wbom_whatsapp_messages` (migration 019, 10,245 rows backfilled)
+archive/historical-reports/AUDIT_REPORT.md:707:- [ ] Create `wbom_conversations` table with phone+bridge threading (deferred to Phase 1b)
+archive/historical-reports/AUDIT_REPORT.md:711:- [x] **DONE** Auto-trigger media processor for bridge inbound: audio → Whisper transcript, image → OCR text, document → full extracted text — all saved to `wbom_whatsapp_messages.extracted_text`
+archive/historical-reports/AUDIT_REPORT.md:713:- [ ] Create `wbom_media_downloads` tracking table
+archive/historical-reports/AUDIT_REPORT.md:719:- [ ] Implement `wbom_admin_instructions` table + lookup in knowledge source chain
+archive/historical-reports/AUDIT_REPORT.md:791:### 2. Add Missing Columns to wbom_whatsapp_messages
+archive/historical-reports/AUDIT_REPORT.md:793:**Problem:** `wbom_whatsapp_messages` was missing `conversation_key`, `receiver_number`, `intent_detected`, `extracted_text` — blocking conversation threading and media extraction audit trail.
+archive/historical-reports/AUDIT_REPORT.md:820:**Problem:** Audio, image, and document media already had processing code in `bridge_poller`, but the transcribed/OCR'd text was NOT being stored in `wbom_whatsapp_messages.extracted_text`. The raw extraction was lost after routing.
+archive/historical-reports/AUDIT_REPORT.md:833:**Problem:** Guards on active escort duty could text from their personal mobile (stored in `wbom_escort_programs.escort_mobile`) but would be classified as `unknown` because that number wasn't in `wbom_employees.employee_mobile`.
+archive/historical-reports/AUDIT_REPORT.md:835:- Added `_lookup_escort_roster()` helper: queries `wbom_escort_programs WHERE escort_mobile = $1 AND status IN ('Assigned', 'Running', 'confirmed')`, with phone variant fallback
+archive/historical-reports/AUDIT_REPORT.md:920:5 3 * * *   DELETE FROM fpe_gap_scan_runs (keep last 10,000)
 AUDIT_SUMMARY.json:70:    "fix4_media_pipeline": "DONE — extracted_text now stored for audio (Whisper), image (OCR), document (PyMuPDF) in wbom_whatsapp_messages",
 AUDIT_SUMMARY.json:74:    "No conversation threading table (wbom_conversations) yet — conversation_key exists but no dedicated table",
 BUSINESS-CONSTITUTION.md:24:- Inserts into `fpe_cash_transactions`
@@ -4944,73 +4944,73 @@ CHAOS_TEST_PLAN.md:382:  -c "SELECT COUNT(*) FROM wbom_cash_transactions WHERE d
 CHAOS_TEST_PLAN.md:397:  -c "SELECT COUNT(*) FROM wbom_cash_transactions WHERE draft_id=$DRAFT_ID;" | tr -d ' ')
 CHAOS_TEST_PLAN.md:543:    (SELECT COUNT(*) FROM wbom_cash_transactions) AS txns,
 CHAOS_TEST_PLAN.md:574:    (SELECT COUNT(*) FROM wbom_cash_transactions) AS txns,
-HERMES_BUSINESS_EXECUTION_CAPABILITY_PROVENANCE_AUDIT_2026-08-19.md:133:| Escort admin-confirmation dedup | **A. Deterministic** | `wbom_unmatched_confirmations(source_bridge, source_message_id)`, partial unique index (`modules/escort/__init__.py:2536-2571`) |
-HERMES_BUSINESS_EXECUTION_CAPABILITY_PROVENANCE_AUDIT_2026-08-19.md:136:| Decision log itself → originating message | **C. Heuristic only** (this session's finding) | `hermes_decision_audit_log` correlates to `wbom_whatsapp_messages` only via `sender_phone` + `timestamp` proximity — `trace_id` is a fresh `uuid4()` per turn (`modules/hermes_kernel/data_classes.py:47`), not derived from or stored against `message_id` |
-HERMES_BUSINESS_EXECUTION_CAPABILITY_PROVENANCE_AUDIT_2026-08-19.md:162:        → create_canonical_transaction()  (:295) — writes fpe_cash_transactions-equivalent
-HERMES_BUSINESS_EXECUTION_CAPABILITY_PROVENANCE_AUDIT_2026-08-19.md:246:(`source_bridge`/`source_message_id` on `wbom_unmatched_confirmations`,
-HERMES_IDENTITY_GAP_FIX_PREDEPLOYMENT_ACCEPTANCE_2026-08-18.md:123:### `db/migrations/066_ai_read_employees_fpe_fallback.sql`
-HERMES_IDENTITY_GAP_FIX_PREDEPLOYMENT_ACCEPTANCE_2026-08-18.md:203:| First `SELECT ... FROM wbom_employees e` | Unchanged from the pre-066 view (migration 012) — byte-identical to the original, no `WHERE` clause, same as before | No behavior change to this branch. |
-HERMES_IDENTITY_GAP_FIX_PREDEPLOYMENT_ACCEPTANCE_2026-08-18.md:204:| `UNION ALL SELECT ... FROM fpe_employees fe LEFT JOIN wbom_employees w ...` | Adds rows for `fpe_employees` records with no matching `wbom_employees` row | **Read-only.** `SELECT`/`LEFT JOIN` only — no `INSERT`/`UPDATE`/`DELETE`, no `ALTER TABLE`, no trigger, no function call with side effects. |
-HERMES_IDENTITY_GAP_FIX_PREDEPLOYMENT_ACCEPTANCE_2026-08-18.md:206:| `AND NOT EXISTS (SELECT 1 FROM wbom_employees w2 WHERE w2.employee_id = fe.wbom_employee_id)` | Prevents double-counting an `fpe_employees` row already linked to a `wbom_employees` row (which the first `SELECT` already returns) | Correctness guard, not a privilege concern. |
-HERMES_IDENTITY_GAP_FIX_PREDEPLOYMENT_ACCEPTANCE_2026-08-18.md:222:FROM wbom_employees e
-HERMES_IDENTITY_GAP_FIX_PREDEPLOYMENT_ACCEPTANCE_2026-08-18.md:352:   db/migrations/066_ai_read_employees_fpe_fallback.sql`) — only after step 2's verification
-HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:22:| `identity_brain.detect_identity(phone, text)` | `modules/identity_brain/__init__.py:161` | **Live, canonical** — called from `message_router`, `bridge_poller`, `app/main.py`'s recruitment gate, `social_auto_reply` | `fazle_contact_roles`, `wbom_employees`, `fpe_employees`, `fpe_cash_transactions`, `wbom_attendance`, `wbom_escort_programs`, `wbom_contacts`, env `ESCORT_CLIENT_PHONES` | integer 0–100 |
-HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:23:| `user_role.detect_role(phone)` | `modules/user_role/__init__.py:79` | **Dead code — zero callers anywhere in the repo** (verified by repo-wide grep, see §8) | `wbom_employees`, `wbom_contacts` (joined to `wbom_relation_types`) | float 0.0–1.0 |
-HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:27:`fazle_contact_roles` seed row, ordered by `priority DESC` → `wbom_employees`/`fpe_employees` →
-HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:45:result of this pipeline into `wbom_whatsapp_messages.identity_role`,
-HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:82:| `get_contacts(limit)` | assistant-backend `fazleBridge.js` → `ai_read_contacts` view → `wbom_contacts` | No — unfiltered list, no phone param |
-HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:83:| `get_employees(status)` | → `ai_read_employees` view → `wbom_employees` only | No — unfiltered list, no phone param, **and misses `fpe_employees`-linked employees** (§9) |
-HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:84:| `get_recent_messages(limit)` | → `ai_read_recent_messages` view → `wbom_whatsapp_messages` + `wbom_contacts` join | No — exact-string join, no phone-variant matching (§9) |
-HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:85:| `audit_lookup_whatsapp_messages(phone, ...)` | `fazle_core_client` → `/api/whatsapp/messages/lookup` (`app/main.py:1160`) → `wbom_whatsapp_messages` | Partially — phone-parameterized and correctly normalized, but **selects the wrong columns** (§9) |
-HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:115:| Read the pipeline's own identity/intent decision for a message | `wbom_whatsapp_messages.identity_role/.intent_detected` | **Available but insufficient** | `audit_lookup_whatsapp_messages` | Partial — reaches the table, wrong columns | `app/main.py:1210-1212` selects `classification` (dead) not `identity_role`/`intent_detected` (live, populated) | Available but insufficient |
-HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:116:| Look up a specific phone in the contact/employee registry | `identity_brain._lookup_contact/_lookup_employee` | **Available indirectly, incomplete** | `get_contacts`, `get_employees` | Indirect via `ai_read_*` views | `ai_read_employees` = `wbom_employees` only, omits `fpe_employees` fallback `identity_brain` checks (`identity_brain/__init__.py:386-401`) | Available indirectly / insufficient |
-HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:134:  the raw table `wbom_whatsapp_messages` using the reader role returned
-HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:135:  `ERROR: permission denied for table wbom_whatsapp_messages` — confirming the "10 named views
-HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:139:- **Schema confirmed**: `\d wbom_whatsapp_messages` (run via the DB owner path, since the reader
-HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:143:  (`idx_wbom_messages_class`).
-HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:147:  Zero writes to `wbom_whatsapp_messages.classification` exist anywhere in `modules/`, `app/`, or
-HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:166:| Step 6: `repeat_client` ← "Repeat payment history" (`fpe_cash_transactions`) | The actual `_lookup_cash_identity()` cash-payment branch resolves to an **employee-designation role** (`_designation_to_role(...)`), never literally `"repeat_client"`. The real `role="repeat_client"` in code comes from two *different* paths: (a) `wbom_escort_programs.master_mobile` match without an `escort_mobile` match, or (b) an unverified escort-content keyword regex on an unknown sender's message text (confidence 40) | **Doc ≠ code** (this step describes a code path that doesn't exist) |
-HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:167:| Secondary C evidence table: `escort_roster_entries` | Actual query targets `wbom_escort_programs` (`identity_brain/__init__.py:515`) | **Doc ≠ code** (table name) |
-HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:168:| `05_workflows/whatsapp_reply_workflow.md:308` lists `classification` as a legitimate populated field of `wbom_whatsapp_messages`, alongside `identity_role`/`intent_detected` | `classification` is never written for this table (§6) — it is a dead/legacy column | **Doc ≠ runtime** |
-HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:183:   that `identity_brain` itself can resolve — `ai_read_employees` selects from `wbom_employees`
-HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:185:   joins `fpe_employees`, which is exactly the auto-create path flagged in the same-week
-HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:189:   string match** (`wbom_contacts.whatsapp_number = m.sender_number`) with no phone-variant
-HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:214:  predates the `fpe_employees` fallback branch in `identity_brain._lookup_employee()`; the view
-HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:269:3. Extend `ai_read_employees` (or add a second view) to include the `fpe_employees`-linked
-HERMES_MESSAGE_CONTEXT_REPLY_EXECUTION_GAP_AUDIT_2026-08-19.md:167:| `message_id` | `wbom_whatsapp_messages.message_id` (PK), returned by `/api/whatsapp/messages/lookup` | Yes, permanent |
-HERMES_MESSAGE_CONTEXT_REPLY_EXECUTION_GAP_AUDIT_2026-08-19.md:295:- **Where real provenance exists**: `wbom_unmatched_confirmations`
-HERMES_MESSAGE_CONTEXT_REPLY_EXECUTION_GAP_AUDIT_2026-08-19.md:370:  (`wbom_whatsapp_messages`, `hermes_decision_audit_log`,
-HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:87:                                    ::create_transaction()  →  fpe_cash_transactions
-HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:90:                                              _upsert_ledger()   fpe_accounting_audit_logs
-HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:91:                                              → fpe_employee_ledger
-HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:98:  → on validation/match failure → fpe_unmatched_messages (review queue) + admin WhatsApp push
-HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:116:| Employee lookup (payment context) | `modules/fazle_payroll_engine/employee.py::match_or_create_employee()` | `fpe_employees`, `fpe_employee_aliases`, `wbom_employees` (cross-system bridge) | 6-tier priority, verified §11 below |
-HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:117:| Identity resolution (conversation context) | `modules/identity_brain/__init__.py::detect_identity()` | `fazle_contacts`, `wbom_employees`, `fazle_contact_roles`, seed data | 7-tier trust-ordered (admin→family→accountant→vip_client→escort_buyer→repeat_client→vendor→employee→supervisor→candidate→unknown), confirmed in parent audit §5.5 |
-HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:118:| Duplicate employee detection | `employee.py` fuzzy match (rapidfuzz, threshold 96.0, ambiguity margin 5.0) + `enqueue_review()` in `normalization.py` | `fpe_employees.canonical_employee_id` soft-link | Verified this session — see §11 |
-HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:119:| Employee creation | `employee.py::_auto_create_employee()` (automatic, advisory-lock-guarded) and `::create_employee_manual()` (admin-UI-triggered) | `fpe_employees` | **No approval gate on the automatic path** — see §11/§17 finding |
-HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:120:| Employee merge | `canonical_employee_id` soft-link, resolved transparently by `_resolve_canonical()` | `fpe_employees` | Never deletes/mutates the duplicate row |
-HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:121:| Employee status (active/leave/resigned/released) | `identity_brain/__init__.py::_lookup_lifecycle()` | `wbom_employees.status`, `wbom_attendance` | Read-only heuristic: `status != 'active'` → `"former"`; else recent-attendance-gap → `"on_leave"`/`"active"`. **Fails open to `"active"` on DB error** — explicitly documented as "context, not a gate" |
-HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:150:| 1. Identity established how? | `payment_workflow` functions take an already-resolved `employee_id` (`wbom_employees.employee_id`) as a parameter — identity resolution happens *upstream*, in `message_router`/`identity_brain`, before these functions are called | `payment_workflow/__init__.py:46,253` signatures |
-HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:151:| 2. Status checked how? | **Not checked inside `payment_workflow.py` itself** — `create_escort_payment_draft()`/`create_advance_request_draft()` query `wbom_employees` by ID with no `status='active'` filter | Read in full this session — confirmed absence |
-HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:152:| 3. Duty context checked how? | For escort payment: yes, via `escort_program_id` → `wbom_escort_programs` lookup, duty-days computed from real timestamps or a date-delta fallback | `payment_workflow/__init__.py:73-98` |
-HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:159:| 10. Admin approval required? | **Yes, always** — no code path in `payment_workflow.py` writes `fpe_cash_transactions` without an admin command first | confirmed |
-HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:164:| 15. Auditable? | Yes — `fpe_accounting_audit_logs` (every transaction create/reverse) + `fazle_draft_audit_log` (every draft lifecycle event) | `accounting.py:98-107`, `draft_approval.py:157-181` |
-HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:181:| Unmatched-message handling | `modules/fazle_payroll_engine/ingestion.py::store_unmatched()` → `fpe_unmatched_messages` + `_notify_admin_unmatched()` (since 2026-08-01) |
-HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:185:| Audit logging | `fpe_accounting_audit_logs` |
-HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:204:| Duplicate rule | `accounting.py::_build_txn_ref()` | `cash_workflow.md` §"Duplicate Rule": *"WhatsApp message identity/timestamp is the duplicate boundary"* | Yes | Yes | **⚠️ Partial** — code keys on `source_message_id`/`fpe_wa_message_id` + amount + period + method + source; **not** wall-clock timestamp. Two genuinely distinct messages produce distinct refs regardless of timestamp; the KB's own wording ("identity/timestamp") is imprecise, not wrong in effect | KB doc's wording could be tightened to "message identity" only | Low (cosmetic doc precision, not a behavior gap) | D — minor doc drift |
-HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:205:| Auto-create-on-lookup-failure | `employee.py::_auto_create_employee()` | `cash_workflow.md`: *"Missing employee is auto-created using existing wbom_employees columns only"* | Yes | Yes | ✅ Match on mechanism | **KB doc does not mention there is no approval gate on this** — see §11 finding | **Medium** — a wrong/typo'd phone number in a real accountant message silently becomes a new permanent employee record, no review | C-adjacent: implemented, under-documented risk |
-HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:330:`create_escort_payment_draft()`/`create_advance_request_draft()` query `wbom_employees` with no
-HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:361:| Ledger lookup | `get_cash_report` (aggregate) — no direct `fpe_employee_ledger` read tool found | R | any | Partial | Yes | Per-employee ledger detail not directly exposed |
-HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:365:| Audit log inspection | `audit_search_logs`, `audit_lookup_whatsapp_messages` — general-purpose, not `fpe_accounting_audit_logs`-specific | R | any | Partial | Yes | No dedicated financial-audit-log tool |
-HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:387:`fpe_cash_transactions` at all.** The absence of the payment-approval/finalize tools is
-HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:407:| Payment parser (ID:/method/amount grammar) | Covered | `tests/unit/test_fpe_rules.py` and others (not individually re-read this session; parser code itself carries dated fix comments referencing specific incidents, a good sign of test-informed hardening) |
-HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:408:| Employee resolution status | Covered | `tests/unit/test_fpe_employee_resolution_status.py` |
-HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:409:| Unmatched-message notification | Covered | `tests/unit/test_fpe_unmatched_notification.py` |
-HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:434:| 9 | Malformed accountant instruction | — | — | Fails `validate_for_accounting()` | Routed to `fpe_unmatched_messages`, admin notified |
-HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:504:  Side effects: writes fpe_cash_transactions, updates fpe_employee_ledger, marks draft 'sent'/'completed'.
-HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:508:  Audit: fpe_accounting_audit_logs + fazle_draft_audit_log, automatic.
-HERMES_SYSTEM_MESSAGE_ROOTCAUSE_AGENTIC_BEHAVIOR_AUDIT_2026-08-19.md:21:`fazle_outbound_queue`, not `wbom_whatsapp_messages`, not
-HERMES_SYSTEM_MESSAGE_ROOTCAUSE_AGENTIC_BEHAVIOR_AUDIT_2026-08-19.md:207:| triggering inbound/event | ⚠️ a cron tick, not an inbound message — no `wbom_whatsapp_messages` row exists for it | ✅ `message_id 3A15902990C0C32B7A19` |
+archive/historical-reports/HERMES_BUSINESS_EXECUTION_CAPABILITY_PROVENANCE_AUDIT_2026-08-19.md:133:| Escort admin-confirmation dedup | **A. Deterministic** | `wbom_unmatched_confirmations(source_bridge, source_message_id)`, partial unique index (`modules/escort/__init__.py:2536-2571`) |
+archive/historical-reports/HERMES_BUSINESS_EXECUTION_CAPABILITY_PROVENANCE_AUDIT_2026-08-19.md:136:| Decision log itself → originating message | **C. Heuristic only** (this session's finding) | `hermes_decision_audit_log` correlates to `wbom_whatsapp_messages` only via `sender_phone` + `timestamp` proximity — `trace_id` is a fresh `uuid4()` per turn (`modules/hermes_kernel/data_classes.py:47`), not derived from or stored against `message_id` |
+archive/historical-reports/HERMES_BUSINESS_EXECUTION_CAPABILITY_PROVENANCE_AUDIT_2026-08-19.md:162:        → create_canonical_transaction()  (:295) — writes fpe_cash_transactions-equivalent
+archive/historical-reports/HERMES_BUSINESS_EXECUTION_CAPABILITY_PROVENANCE_AUDIT_2026-08-19.md:246:(`source_bridge`/`source_message_id` on `wbom_unmatched_confirmations`,
+archive/historical-reports/HERMES_IDENTITY_GAP_FIX_PREDEPLOYMENT_ACCEPTANCE_2026-08-18.md:123:### `db/migrations/066_ai_read_employees_fpe_fallback.sql`
+archive/historical-reports/HERMES_IDENTITY_GAP_FIX_PREDEPLOYMENT_ACCEPTANCE_2026-08-18.md:203:| First `SELECT ... FROM wbom_employees e` | Unchanged from the pre-066 view (migration 012) — byte-identical to the original, no `WHERE` clause, same as before | No behavior change to this branch. |
+archive/historical-reports/HERMES_IDENTITY_GAP_FIX_PREDEPLOYMENT_ACCEPTANCE_2026-08-18.md:204:| `UNION ALL SELECT ... FROM fpe_employees fe LEFT JOIN wbom_employees w ...` | Adds rows for `fpe_employees` records with no matching `wbom_employees` row | **Read-only.** `SELECT`/`LEFT JOIN` only — no `INSERT`/`UPDATE`/`DELETE`, no `ALTER TABLE`, no trigger, no function call with side effects. |
+archive/historical-reports/HERMES_IDENTITY_GAP_FIX_PREDEPLOYMENT_ACCEPTANCE_2026-08-18.md:206:| `AND NOT EXISTS (SELECT 1 FROM wbom_employees w2 WHERE w2.employee_id = fe.wbom_employee_id)` | Prevents double-counting an `fpe_employees` row already linked to a `wbom_employees` row (which the first `SELECT` already returns) | Correctness guard, not a privilege concern. |
+archive/historical-reports/HERMES_IDENTITY_GAP_FIX_PREDEPLOYMENT_ACCEPTANCE_2026-08-18.md:222:FROM wbom_employees e
+archive/historical-reports/HERMES_IDENTITY_GAP_FIX_PREDEPLOYMENT_ACCEPTANCE_2026-08-18.md:352:   db/migrations/066_ai_read_employees_fpe_fallback.sql`) — only after step 2's verification
+archive/historical-reports/HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:22:| `identity_brain.detect_identity(phone, text)` | `modules/identity_brain/__init__.py:161` | **Live, canonical** — called from `message_router`, `bridge_poller`, `app/main.py`'s recruitment gate, `social_auto_reply` | `fazle_contact_roles`, `wbom_employees`, `fpe_employees`, `fpe_cash_transactions`, `wbom_attendance`, `wbom_escort_programs`, `wbom_contacts`, env `ESCORT_CLIENT_PHONES` | integer 0–100 |
+archive/historical-reports/HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:23:| `user_role.detect_role(phone)` | `modules/user_role/__init__.py:79` | **Dead code — zero callers anywhere in the repo** (verified by repo-wide grep, see §8) | `wbom_employees`, `wbom_contacts` (joined to `wbom_relation_types`) | float 0.0–1.0 |
+archive/historical-reports/HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:27:`fazle_contact_roles` seed row, ordered by `priority DESC` → `wbom_employees`/`fpe_employees` →
+archive/historical-reports/HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:45:result of this pipeline into `wbom_whatsapp_messages.identity_role`,
+archive/historical-reports/HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:82:| `get_contacts(limit)` | assistant-backend `fazleBridge.js` → `ai_read_contacts` view → `wbom_contacts` | No — unfiltered list, no phone param |
+archive/historical-reports/HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:83:| `get_employees(status)` | → `ai_read_employees` view → `wbom_employees` only | No — unfiltered list, no phone param, **and misses `fpe_employees`-linked employees** (§9) |
+archive/historical-reports/HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:84:| `get_recent_messages(limit)` | → `ai_read_recent_messages` view → `wbom_whatsapp_messages` + `wbom_contacts` join | No — exact-string join, no phone-variant matching (§9) |
+archive/historical-reports/HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:85:| `audit_lookup_whatsapp_messages(phone, ...)` | `fazle_core_client` → `/api/whatsapp/messages/lookup` (`app/main.py:1160`) → `wbom_whatsapp_messages` | Partially — phone-parameterized and correctly normalized, but **selects the wrong columns** (§9) |
+archive/historical-reports/HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:115:| Read the pipeline's own identity/intent decision for a message | `wbom_whatsapp_messages.identity_role/.intent_detected` | **Available but insufficient** | `audit_lookup_whatsapp_messages` | Partial — reaches the table, wrong columns | `app/main.py:1210-1212` selects `classification` (dead) not `identity_role`/`intent_detected` (live, populated) | Available but insufficient |
+archive/historical-reports/HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:116:| Look up a specific phone in the contact/employee registry | `identity_brain._lookup_contact/_lookup_employee` | **Available indirectly, incomplete** | `get_contacts`, `get_employees` | Indirect via `ai_read_*` views | `ai_read_employees` = `wbom_employees` only, omits `fpe_employees` fallback `identity_brain` checks (`identity_brain/__init__.py:386-401`) | Available indirectly / insufficient |
+archive/historical-reports/HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:134:  the raw table `wbom_whatsapp_messages` using the reader role returned
+archive/historical-reports/HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:135:  `ERROR: permission denied for table wbom_whatsapp_messages` — confirming the "10 named views
+archive/historical-reports/HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:139:- **Schema confirmed**: `\d wbom_whatsapp_messages` (run via the DB owner path, since the reader
+archive/historical-reports/HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:143:  (`idx_wbom_messages_class`).
+archive/historical-reports/HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:147:  Zero writes to `wbom_whatsapp_messages.classification` exist anywhere in `modules/`, `app/`, or
+archive/historical-reports/HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:166:| Step 6: `repeat_client` ← "Repeat payment history" (`fpe_cash_transactions`) | The actual `_lookup_cash_identity()` cash-payment branch resolves to an **employee-designation role** (`_designation_to_role(...)`), never literally `"repeat_client"`. The real `role="repeat_client"` in code comes from two *different* paths: (a) `wbom_escort_programs.master_mobile` match without an `escort_mobile` match, or (b) an unverified escort-content keyword regex on an unknown sender's message text (confidence 40) | **Doc ≠ code** (this step describes a code path that doesn't exist) |
+archive/historical-reports/HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:167:| Secondary C evidence table: `escort_roster_entries` | Actual query targets `wbom_escort_programs` (`identity_brain/__init__.py:515`) | **Doc ≠ code** (table name) |
+archive/historical-reports/HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:168:| `05_workflows/whatsapp_reply_workflow.md:308` lists `classification` as a legitimate populated field of `wbom_whatsapp_messages`, alongside `identity_role`/`intent_detected` | `classification` is never written for this table (§6) — it is a dead/legacy column | **Doc ≠ runtime** |
+archive/historical-reports/HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:183:   that `identity_brain` itself can resolve — `ai_read_employees` selects from `wbom_employees`
+archive/historical-reports/HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:185:   joins `fpe_employees`, which is exactly the auto-create path flagged in the same-week
+archive/historical-reports/HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:189:   string match** (`wbom_contacts.whatsapp_number = m.sender_number`) with no phone-variant
+archive/historical-reports/HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:214:  predates the `fpe_employees` fallback branch in `identity_brain._lookup_employee()`; the view
+archive/historical-reports/HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:269:3. Extend `ai_read_employees` (or add a second view) to include the `fpe_employees`-linked
+archive/historical-reports/HERMES_MESSAGE_CONTEXT_REPLY_EXECUTION_GAP_AUDIT_2026-08-19.md:167:| `message_id` | `wbom_whatsapp_messages.message_id` (PK), returned by `/api/whatsapp/messages/lookup` | Yes, permanent |
+archive/historical-reports/HERMES_MESSAGE_CONTEXT_REPLY_EXECUTION_GAP_AUDIT_2026-08-19.md:295:- **Where real provenance exists**: `wbom_unmatched_confirmations`
+archive/historical-reports/HERMES_MESSAGE_CONTEXT_REPLY_EXECUTION_GAP_AUDIT_2026-08-19.md:370:  (`wbom_whatsapp_messages`, `hermes_decision_audit_log`,
+archive/historical-reports/HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:87:                                    ::create_transaction()  →  fpe_cash_transactions
+archive/historical-reports/HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:90:                                              _upsert_ledger()   fpe_accounting_audit_logs
+archive/historical-reports/HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:91:                                              → fpe_employee_ledger
+archive/historical-reports/HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:98:  → on validation/match failure → fpe_unmatched_messages (review queue) + admin WhatsApp push
+archive/historical-reports/HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:116:| Employee lookup (payment context) | `modules/fazle_payroll_engine/employee.py::match_or_create_employee()` | `fpe_employees`, `fpe_employee_aliases`, `wbom_employees` (cross-system bridge) | 6-tier priority, verified §11 below |
+archive/historical-reports/HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:117:| Identity resolution (conversation context) | `modules/identity_brain/__init__.py::detect_identity()` | `fazle_contacts`, `wbom_employees`, `fazle_contact_roles`, seed data | 7-tier trust-ordered (admin→family→accountant→vip_client→escort_buyer→repeat_client→vendor→employee→supervisor→candidate→unknown), confirmed in parent audit §5.5 |
+archive/historical-reports/HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:118:| Duplicate employee detection | `employee.py` fuzzy match (rapidfuzz, threshold 96.0, ambiguity margin 5.0) + `enqueue_review()` in `normalization.py` | `fpe_employees.canonical_employee_id` soft-link | Verified this session — see §11 |
+archive/historical-reports/HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:119:| Employee creation | `employee.py::_auto_create_employee()` (automatic, advisory-lock-guarded) and `::create_employee_manual()` (admin-UI-triggered) | `fpe_employees` | **No approval gate on the automatic path** — see §11/§17 finding |
+archive/historical-reports/HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:120:| Employee merge | `canonical_employee_id` soft-link, resolved transparently by `_resolve_canonical()` | `fpe_employees` | Never deletes/mutates the duplicate row |
+archive/historical-reports/HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:121:| Employee status (active/leave/resigned/released) | `identity_brain/__init__.py::_lookup_lifecycle()` | `wbom_employees.status`, `wbom_attendance` | Read-only heuristic: `status != 'active'` → `"former"`; else recent-attendance-gap → `"on_leave"`/`"active"`. **Fails open to `"active"` on DB error** — explicitly documented as "context, not a gate" |
+archive/historical-reports/HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:150:| 1. Identity established how? | `payment_workflow` functions take an already-resolved `employee_id` (`wbom_employees.employee_id`) as a parameter — identity resolution happens *upstream*, in `message_router`/`identity_brain`, before these functions are called | `payment_workflow/__init__.py:46,253` signatures |
+archive/historical-reports/HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:151:| 2. Status checked how? | **Not checked inside `payment_workflow.py` itself** — `create_escort_payment_draft()`/`create_advance_request_draft()` query `wbom_employees` by ID with no `status='active'` filter | Read in full this session — confirmed absence |
+archive/historical-reports/HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:152:| 3. Duty context checked how? | For escort payment: yes, via `escort_program_id` → `wbom_escort_programs` lookup, duty-days computed from real timestamps or a date-delta fallback | `payment_workflow/__init__.py:73-98` |
+archive/historical-reports/HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:159:| 10. Admin approval required? | **Yes, always** — no code path in `payment_workflow.py` writes `fpe_cash_transactions` without an admin command first | confirmed |
+archive/historical-reports/HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:164:| 15. Auditable? | Yes — `fpe_accounting_audit_logs` (every transaction create/reverse) + `fazle_draft_audit_log` (every draft lifecycle event) | `accounting.py:98-107`, `draft_approval.py:157-181` |
+archive/historical-reports/HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:181:| Unmatched-message handling | `modules/fazle_payroll_engine/ingestion.py::store_unmatched()` → `fpe_unmatched_messages` + `_notify_admin_unmatched()` (since 2026-08-01) |
+archive/historical-reports/HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:185:| Audit logging | `fpe_accounting_audit_logs` |
+archive/historical-reports/HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:204:| Duplicate rule | `accounting.py::_build_txn_ref()` | `cash_workflow.md` §"Duplicate Rule": *"WhatsApp message identity/timestamp is the duplicate boundary"* | Yes | Yes | **⚠️ Partial** — code keys on `source_message_id`/`fpe_wa_message_id` + amount + period + method + source; **not** wall-clock timestamp. Two genuinely distinct messages produce distinct refs regardless of timestamp; the KB's own wording ("identity/timestamp") is imprecise, not wrong in effect | KB doc's wording could be tightened to "message identity" only | Low (cosmetic doc precision, not a behavior gap) | D — minor doc drift |
+archive/historical-reports/HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:205:| Auto-create-on-lookup-failure | `employee.py::_auto_create_employee()` | `cash_workflow.md`: *"Missing employee is auto-created using existing wbom_employees columns only"* | Yes | Yes | ✅ Match on mechanism | **KB doc does not mention there is no approval gate on this** — see §11 finding | **Medium** — a wrong/typo'd phone number in a real accountant message silently becomes a new permanent employee record, no review | C-adjacent: implemented, under-documented risk |
+archive/historical-reports/HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:330:`create_escort_payment_draft()`/`create_advance_request_draft()` query `wbom_employees` with no
+archive/historical-reports/HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:361:| Ledger lookup | `get_cash_report` (aggregate) — no direct `fpe_employee_ledger` read tool found | R | any | Partial | Yes | Per-employee ledger detail not directly exposed |
+archive/historical-reports/HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:365:| Audit log inspection | `audit_search_logs`, `audit_lookup_whatsapp_messages` — general-purpose, not `fpe_accounting_audit_logs`-specific | R | any | Partial | Yes | No dedicated financial-audit-log tool |
+archive/historical-reports/HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:387:`fpe_cash_transactions` at all.** The absence of the payment-approval/finalize tools is
+archive/historical-reports/HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:407:| Payment parser (ID:/method/amount grammar) | Covered | `tests/unit/test_fpe_rules.py` and others (not individually re-read this session; parser code itself carries dated fix comments referencing specific incidents, a good sign of test-informed hardening) |
+archive/historical-reports/HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:408:| Employee resolution status | Covered | `tests/unit/test_fpe_employee_resolution_status.py` |
+archive/historical-reports/HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:409:| Unmatched-message notification | Covered | `tests/unit/test_fpe_unmatched_notification.py` |
+archive/historical-reports/HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:434:| 9 | Malformed accountant instruction | — | — | Fails `validate_for_accounting()` | Routed to `fpe_unmatched_messages`, admin notified |
+archive/historical-reports/HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:504:  Side effects: writes fpe_cash_transactions, updates fpe_employee_ledger, marks draft 'sent'/'completed'.
+archive/historical-reports/HERMES_PAYROLL_WORKFLOW_GAP_AUDIT_2026-08-18.md:508:  Audit: fpe_accounting_audit_logs + fazle_draft_audit_log, automatic.
+archive/historical-reports/HERMES_SYSTEM_MESSAGE_ROOTCAUSE_AGENTIC_BEHAVIOR_AUDIT_2026-08-19.md:21:`fazle_outbound_queue`, not `wbom_whatsapp_messages`, not
+archive/historical-reports/HERMES_SYSTEM_MESSAGE_ROOTCAUSE_AGENTIC_BEHAVIOR_AUDIT_2026-08-19.md:207:| triggering inbound/event | ⚠️ a cron tick, not an inbound message — no `wbom_whatsapp_messages` row exists for it | ✅ `message_id 3A15902990C0C32B7A19` |
 MASTER_PLAN_KNOWLEDGE_BASE_BRAIN.md:339:  - `06_developer_system/fpe_overview.md`
 PHONE_NORMALIZER_CONVENTION.md:22:    "SELECT ... FROM wbom_employees WHERE employee_mobile = ANY($1) ...",
 PHONE_NORMALIZER_CONVENTION.md:29:All phones written to `wbom_*` tables must be canonicalized via `phone_normalizer.normalize_phone()` first. Storage format: `8801XXXXXXXXX`.
@@ -5067,78 +5067,78 @@ RECOVERY.md:366:LEFT JOIN wbom_escort_programs ep ON ep.id = fpd.escort_program_
 RECOVERY.md:374:FROM wbom_cash_transactions wct
 RECOVERY.md:388:JOIN wbom_cash_transactions wct ON wct.draft_id = fpd.id
 RECOVERY.md:430:  SELECT '  employees: ' || COUNT(*) FROM wbom_employees;
-RECRUITMENT_LIFECYCLE_CLOSURE_ASSESSMENT_2026-08-29.md:34:| **INTEREST/READINESS MODEL** | **PARTIAL** | `wbom_candidates.post_intake_status` (mig 072, Owner-locked) = `awaiting_agreement, agreed, joining_ready, salary_objection, not_ready_now, declined, future_contact`. Covers spec's `agreed`, `join_ready`(=joining_ready), `considering`(=awaiting_agreement), `deferred`(=not_ready_now/future_contact), `not_interested`(=declined). **Gaps:** no explicit *pre-intake* `engaging`/`interested` (pre-scored people tracked only by `funnel_stage` + `score_bucket`); no `inactive`; no `joined`/`converted` terminal. 3-concept separation IS clean — `_finalize_candidate` writes `score_bucket`, `funnel_stage`, `post_intake_status` independently; status is never inferred from score. |
-RECRUITMENT_LIFECYCLE_CLOSURE_ASSESSMENT_2026-08-29.md:37:| **CONVERSATION HISTORY AWARENESS** | **READY** | `conversation_canonical.canonical_history` (bounded, read-only annotation of `wbom_whatsapp_messages`, identity via mig 062); `_build_post_intake_state_block`/`_build_recruitment_session_state_block` feed collected facts to the model; TTL bounded (recruitment 24h). Not a second DB. |
-RECRUITMENT_LIFECYCLE_CLOSURE_ASSESSMENT_2026-08-29.md:45:| **POST-INVITATION CONTINUITY** | **PARTIAL** | `get_active_session` `scored` branch keeps a scored non-terminal candidate routed into recruitment flow, so "আমি রওনা দিয়েছি" continues in context (not re-intake). **Gap:** no `invited`/`arrived`/`joined` event rows written anywhere; `wbom_candidate_conversations` *could* carry them (spec wants events, not columns) but nothing does today. |
-RECRUITMENT_LIFECYCLE_CLOSURE_ASSESSMENT_2026-08-29.md:46:| **CANDIDATE→EMPLOYEE LINKAGE** | **PARTIAL** | Continuity is **implicit via canonical phone** (`8801XXXXXXXXXX` = join key across `wbom_candidates.phone` / `wbom_employees.employee_mobile` / escort / attendance / payroll; `shared/identity_map.py` documents the map). **Gap:** no stored `candidate_id ↔ employee_id` link, no candidate-side "converted" marker — phone change post-join breaks the thread; reports can't show "applicant → employee #N" without a live phone match. |
-RECRUITMENT_LIFECYCLE_CLOSURE_ASSESSMENT_2026-08-29.md:47:| **EMPLOYEE LIFECYCLE CONTINUITY** | **READY** | `detect_identity` order: `wbom_employees` lookup (pri 88) beats `candidate` text-hint (pri 30) — a joined person routes as `employee` with `lifecycle` (active/inactive/released). `escort_lifecycle`, `wbom_attendance`, `fpe_transactions`, `fazle_payment_drafts` all key on `employee_id`; `test_escort_lifecycle` (release → 2 attendance rows + payment draft) passes. No destructive cleanup of former employees. |
-RECRUITMENT_LIFECYCLE_CLOSURE_ASSESSMENT_2026-08-29.md:49:| **PRIVACY/AUTHORITY** | **PASS** | `employee_privacy.py`, `authority_lanes.py`, RBAC on shortlist route, `wbom_group_identities` (mig 075) — group participants never gain Admin authority; `is_trusted_direct_admin_channel` needs the admin bridge2 number + control channel; phone-call facts only from authenticated directive. |
-RECRUITMENT_LIFECYCLE_CLOSURE_ASSESSMENT_2026-08-29.md:62:| interest / agreement | `wbom_candidates.post_intake_status` via `_classify_post_intake_turn` (evidence-only, fail-closed) | `candidate_id` (phone-seeded) | `test_recruitment_post_intake` (32 pass) |
-RECRUITMENT_LIFECYCLE_CLOSURE_ASSESSMENT_2026-08-29.md:65:| employee creation | `wbom_employees` row (phone = `employee_mobile`) | canonical phone | **gap: no stored candidate_id link** |
-RECRUITMENT_LIFECYCLE_CLOSURE_ASSESSMENT_2026-08-29.md:67:| duty / escort / attendance | `wbom_escort_programs`, `wbom_attendance` | `employee_id` | `test_escort_lifecycle` pass |
-RECRUITMENT_LIFECYCLE_CLOSURE_ASSESSMENT_2026-08-29.md:68:| cash / salary / payroll | `fpe_transactions`, `wbom_cash_transactions`, `fazle_payment_drafts` | `employee_id` + validated `payout_phone` | `test_stage_h5_financial_lifecycle_repair` pass |
-RECRUITMENT_LIFECYCLE_CLOSURE_ASSESSMENT_2026-08-29.md:70:| release / inactive | `escort_lifecycle.handle_release_event`, `wbom_employees.status` | `employee_id` | `test_escort_lifecycle` pass |
-RECRUITMENT_LIFECYCLE_CLOSURE_ASSESSMENT_2026-08-29.md:82:- **Change:** `ALTER TABLE wbom_candidates ADD COLUMN linked_employee_id INTEGER REFERENCES wbom_employees(employee_id)` + add `'joined'` to the `post_intake_status` CHECK set.
-RECRUITMENT_LIFECYCLE_CLOSURE_ASSESSMENT_2026-08-29.md:83:- **Write site:** one hook in the employee-creation path (`modules/fazle_payroll_engine/employee.py` / admin employee-create) — on new employee, `UPDATE wbom_candidates SET linked_employee_id=$1, post_intake_status='joined' WHERE phone = <canonical> AND linked_employee_id IS NULL`.
-RECRUITMENT_LIFECYCLE_CLOSURE_ASSESSMENT_2026-08-29.md:88:- **Change:** none to schema. Write event rows into the existing `wbom_candidate_conversations` (mig 062) with a `step` value of `invited` / `arrived_office` / `joined` at the three moments (batch-invite send, admin "arrived" note, employee creation).
-RECRUITMENT_LIFECYCLE_CLOSURE_ASSESSMENT_2026-08-29.md:89:- **Owner input needed:** confirm `wbom_candidate_conversations.step` is the right carrier (vs a small `wbom_candidate_events` table).
-SPRINT-3A-OWNER-REPORT.md:267:| Cash Ledger unchanged | `wbom_cash_transactions` count before/after | ✅ Verified (Test-8, Test-9) |
-SPRINT-3A-OWNER-REPORT.md:269:| Payroll unchanged | `wbom_payroll_runs` count before/after | ✅ Verified |
-SPRINT-3A-OWNER-REPORT.md:325:   - Record in `wbom_cash_transactions`
-SPRINT-3B-OWNER-REPORT.md:83:| [`core/tests/conftest.py`](core/tests/conftest.py) | Added fpe_* tables, Sprint-3B columns, seed fixtures |
-SPRINT-3B-OWNER-REPORT.md:95:| `transaction_id` | BIGINT | NULL | FK to fpe_cash_transactions.id |
-SPRINT-3B-OWNER-REPORT.md:193:  - `_resolve_fpe_employee_id()` — maps wbom employee → fpe_employees.id
-SPRINT-3B-OWNER-REPORT.md:246:    fpe_wa_message_id=wa_msg_id_int,      # deterministic: sha256("draft-<id>")
-SPRINT-3B-OWNER-REPORT.md:247:    employee_id=fpe_employee_id,            # resolved from fpe_employees
-SPRINT-3B-OWNER-REPORT.md:263:`_resolve_fpe_employee_id()` resolves `wbom_employees.employee_id` → `fpe_employees.id`:
-SPRINT-3B-OWNER-REPORT.md:264:1. Phone match on `fpe_employees.primary_phone`
-SPRINT-3B-OWNER-REPORT.md:265:2. Phone match on `fpe_employees.employee_id_phone`
-SPRINT-3B-OWNER-REPORT.md:266:3. Name match on `fpe_employees.name_normalized`
-SPRINT-3B-OWNER-REPORT.md:291:              ├── INSERT fpe_cash_transactions
-SPRINT-3B-OWNER-REPORT.md:292:              ├── INSERT fpe_accounting_audit_logs
-SPRINT-3B-OWNER-REPORT.md:294:                    └── INSERT/UPDATE fpe_employee_ledger
-SPRINT-3B-OWNER-REPORT.md:302:**Employee balance read:** [`get_employee_balance()`](core/modules/draft_approval/__init__.py:799) reads directly from `fpe_employee_ledger` — no manual calculation.
-SPRINT-3B-OWNER-REPORT.md:312:Sprint-3B passes a **deterministic** `fpe_wa_message_id`:
-SPRINT-3B-OWNER-REPORT.md:346:### `fpe_accounting_audit_logs` (Existing — PROTECTED)
-SPRINT-3B-OWNER-REPORT.md:350:INSERT INTO fpe_accounting_audit_logs
-SPRINT-3B-OWNER-REPORT.md:441:| Existing Ledger Calculation | `fpe_employee_ledger` | ✅ Updated only via _upsert_ledger() |
-SPRINT-3B-OWNER-REPORT.md:497:- [x] conftest.py updated with fpe_* tables + Sprint-3B columns
-SPRINT-3B-OWNER-REPORT.md:523:   - Verify `fpe_cash_transactions` has new row
-SPRINT-3B-OWNER-REPORT.md:524:   - Verify `fpe_employee_ledger` updated
-SPRINT-3B-OWNER-REPORT.md:530:- Monitor `fpe_cash_transactions` for duplicate txn_ref (should never happen)
-SPRINT-3B-OWNER-REPORT.md:541:- ✅ **Complete Audit** — 4 audit events per approval in `fazle_draft_audit_log` + existing `fpe_accounting_audit_logs`
+archive/historical-reports/RECRUITMENT_LIFECYCLE_CLOSURE_ASSESSMENT_2026-08-29.md:34:| **INTEREST/READINESS MODEL** | **PARTIAL** | `wbom_candidates.post_intake_status` (mig 072, Owner-locked) = `awaiting_agreement, agreed, joining_ready, salary_objection, not_ready_now, declined, future_contact`. Covers spec's `agreed`, `join_ready`(=joining_ready), `considering`(=awaiting_agreement), `deferred`(=not_ready_now/future_contact), `not_interested`(=declined). **Gaps:** no explicit *pre-intake* `engaging`/`interested` (pre-scored people tracked only by `funnel_stage` + `score_bucket`); no `inactive`; no `joined`/`converted` terminal. 3-concept separation IS clean — `_finalize_candidate` writes `score_bucket`, `funnel_stage`, `post_intake_status` independently; status is never inferred from score. |
+archive/historical-reports/RECRUITMENT_LIFECYCLE_CLOSURE_ASSESSMENT_2026-08-29.md:37:| **CONVERSATION HISTORY AWARENESS** | **READY** | `conversation_canonical.canonical_history` (bounded, read-only annotation of `wbom_whatsapp_messages`, identity via mig 062); `_build_post_intake_state_block`/`_build_recruitment_session_state_block` feed collected facts to the model; TTL bounded (recruitment 24h). Not a second DB. |
+archive/historical-reports/RECRUITMENT_LIFECYCLE_CLOSURE_ASSESSMENT_2026-08-29.md:45:| **POST-INVITATION CONTINUITY** | **PARTIAL** | `get_active_session` `scored` branch keeps a scored non-terminal candidate routed into recruitment flow, so "আমি রওনা দিয়েছি" continues in context (not re-intake). **Gap:** no `invited`/`arrived`/`joined` event rows written anywhere; `wbom_candidate_conversations` *could* carry them (spec wants events, not columns) but nothing does today. |
+archive/historical-reports/RECRUITMENT_LIFECYCLE_CLOSURE_ASSESSMENT_2026-08-29.md:46:| **CANDIDATE→EMPLOYEE LINKAGE** | **PARTIAL** | Continuity is **implicit via canonical phone** (`8801XXXXXXXXXX` = join key across `wbom_candidates.phone` / `wbom_employees.employee_mobile` / escort / attendance / payroll; `shared/identity_map.py` documents the map). **Gap:** no stored `candidate_id ↔ employee_id` link, no candidate-side "converted" marker — phone change post-join breaks the thread; reports can't show "applicant → employee #N" without a live phone match. |
+archive/historical-reports/RECRUITMENT_LIFECYCLE_CLOSURE_ASSESSMENT_2026-08-29.md:47:| **EMPLOYEE LIFECYCLE CONTINUITY** | **READY** | `detect_identity` order: `wbom_employees` lookup (pri 88) beats `candidate` text-hint (pri 30) — a joined person routes as `employee` with `lifecycle` (active/inactive/released). `escort_lifecycle`, `wbom_attendance`, `fpe_transactions`, `fazle_payment_drafts` all key on `employee_id`; `test_escort_lifecycle` (release → 2 attendance rows + payment draft) passes. No destructive cleanup of former employees. |
+archive/historical-reports/RECRUITMENT_LIFECYCLE_CLOSURE_ASSESSMENT_2026-08-29.md:49:| **PRIVACY/AUTHORITY** | **PASS** | `employee_privacy.py`, `authority_lanes.py`, RBAC on shortlist route, `wbom_group_identities` (mig 075) — group participants never gain Admin authority; `is_trusted_direct_admin_channel` needs the admin bridge2 number + control channel; phone-call facts only from authenticated directive. |
+archive/historical-reports/RECRUITMENT_LIFECYCLE_CLOSURE_ASSESSMENT_2026-08-29.md:62:| interest / agreement | `wbom_candidates.post_intake_status` via `_classify_post_intake_turn` (evidence-only, fail-closed) | `candidate_id` (phone-seeded) | `test_recruitment_post_intake` (32 pass) |
+archive/historical-reports/RECRUITMENT_LIFECYCLE_CLOSURE_ASSESSMENT_2026-08-29.md:65:| employee creation | `wbom_employees` row (phone = `employee_mobile`) | canonical phone | **gap: no stored candidate_id link** |
+archive/historical-reports/RECRUITMENT_LIFECYCLE_CLOSURE_ASSESSMENT_2026-08-29.md:67:| duty / escort / attendance | `wbom_escort_programs`, `wbom_attendance` | `employee_id` | `test_escort_lifecycle` pass |
+archive/historical-reports/RECRUITMENT_LIFECYCLE_CLOSURE_ASSESSMENT_2026-08-29.md:68:| cash / salary / payroll | `fpe_transactions`, `wbom_cash_transactions`, `fazle_payment_drafts` | `employee_id` + validated `payout_phone` | `test_stage_h5_financial_lifecycle_repair` pass |
+archive/historical-reports/RECRUITMENT_LIFECYCLE_CLOSURE_ASSESSMENT_2026-08-29.md:70:| release / inactive | `escort_lifecycle.handle_release_event`, `wbom_employees.status` | `employee_id` | `test_escort_lifecycle` pass |
+archive/historical-reports/RECRUITMENT_LIFECYCLE_CLOSURE_ASSESSMENT_2026-08-29.md:82:- **Change:** `ALTER TABLE wbom_candidates ADD COLUMN linked_employee_id INTEGER REFERENCES wbom_employees(employee_id)` + add `'joined'` to the `post_intake_status` CHECK set.
+archive/historical-reports/RECRUITMENT_LIFECYCLE_CLOSURE_ASSESSMENT_2026-08-29.md:83:- **Write site:** one hook in the employee-creation path (`modules/fazle_payroll_engine/employee.py` / admin employee-create) — on new employee, `UPDATE wbom_candidates SET linked_employee_id=$1, post_intake_status='joined' WHERE phone = <canonical> AND linked_employee_id IS NULL`.
+archive/historical-reports/RECRUITMENT_LIFECYCLE_CLOSURE_ASSESSMENT_2026-08-29.md:88:- **Change:** none to schema. Write event rows into the existing `wbom_candidate_conversations` (mig 062) with a `step` value of `invited` / `arrived_office` / `joined` at the three moments (batch-invite send, admin "arrived" note, employee creation).
+archive/historical-reports/RECRUITMENT_LIFECYCLE_CLOSURE_ASSESSMENT_2026-08-29.md:89:- **Owner input needed:** confirm `wbom_candidate_conversations.step` is the right carrier (vs a small `wbom_candidate_events` table).
+archive/historical-reports/SPRINT-3A-OWNER-REPORT.md:267:| Cash Ledger unchanged | `wbom_cash_transactions` count before/after | ✅ Verified (Test-8, Test-9) |
+archive/historical-reports/SPRINT-3A-OWNER-REPORT.md:269:| Payroll unchanged | `wbom_payroll_runs` count before/after | ✅ Verified |
+archive/historical-reports/SPRINT-3A-OWNER-REPORT.md:325:   - Record in `wbom_cash_transactions`
+archive/historical-reports/SPRINT-3B-OWNER-REPORT.md:83:| [`core/tests/conftest.py`](core/tests/conftest.py) | Added fpe_* tables, Sprint-3B columns, seed fixtures |
+archive/historical-reports/SPRINT-3B-OWNER-REPORT.md:95:| `transaction_id` | BIGINT | NULL | FK to fpe_cash_transactions.id |
+archive/historical-reports/SPRINT-3B-OWNER-REPORT.md:193:  - `_resolve_fpe_employee_id()` — maps wbom employee → fpe_employees.id
+archive/historical-reports/SPRINT-3B-OWNER-REPORT.md:246:    fpe_wa_message_id=wa_msg_id_int,      # deterministic: sha256("draft-<id>")
+archive/historical-reports/SPRINT-3B-OWNER-REPORT.md:247:    employee_id=fpe_employee_id,            # resolved from fpe_employees
+archive/historical-reports/SPRINT-3B-OWNER-REPORT.md:263:`_resolve_fpe_employee_id()` resolves `wbom_employees.employee_id` → `fpe_employees.id`:
+archive/historical-reports/SPRINT-3B-OWNER-REPORT.md:264:1. Phone match on `fpe_employees.primary_phone`
+archive/historical-reports/SPRINT-3B-OWNER-REPORT.md:265:2. Phone match on `fpe_employees.employee_id_phone`
+archive/historical-reports/SPRINT-3B-OWNER-REPORT.md:266:3. Name match on `fpe_employees.name_normalized`
+archive/historical-reports/SPRINT-3B-OWNER-REPORT.md:291:              ├── INSERT fpe_cash_transactions
+archive/historical-reports/SPRINT-3B-OWNER-REPORT.md:292:              ├── INSERT fpe_accounting_audit_logs
+archive/historical-reports/SPRINT-3B-OWNER-REPORT.md:294:                    └── INSERT/UPDATE fpe_employee_ledger
+archive/historical-reports/SPRINT-3B-OWNER-REPORT.md:302:**Employee balance read:** [`get_employee_balance()`](core/modules/draft_approval/__init__.py:799) reads directly from `fpe_employee_ledger` — no manual calculation.
+archive/historical-reports/SPRINT-3B-OWNER-REPORT.md:312:Sprint-3B passes a **deterministic** `fpe_wa_message_id`:
+archive/historical-reports/SPRINT-3B-OWNER-REPORT.md:346:### `fpe_accounting_audit_logs` (Existing — PROTECTED)
+archive/historical-reports/SPRINT-3B-OWNER-REPORT.md:350:INSERT INTO fpe_accounting_audit_logs
+archive/historical-reports/SPRINT-3B-OWNER-REPORT.md:441:| Existing Ledger Calculation | `fpe_employee_ledger` | ✅ Updated only via _upsert_ledger() |
+archive/historical-reports/SPRINT-3B-OWNER-REPORT.md:497:- [x] conftest.py updated with fpe_* tables + Sprint-3B columns
+archive/historical-reports/SPRINT-3B-OWNER-REPORT.md:523:   - Verify `fpe_cash_transactions` has new row
+archive/historical-reports/SPRINT-3B-OWNER-REPORT.md:524:   - Verify `fpe_employee_ledger` updated
+archive/historical-reports/SPRINT-3B-OWNER-REPORT.md:530:- Monitor `fpe_cash_transactions` for duplicate txn_ref (should never happen)
+archive/historical-reports/SPRINT-3B-OWNER-REPORT.md:541:- ✅ **Complete Audit** — 4 audit events per approval in `fazle_draft_audit_log` + existing `fpe_accounting_audit_logs`
 SYSTEM_ATLAS.md:65:**Phase 1.6/1.7 (Canonical Business Rules + Client Domain Canonicalization), same day:** produced `knowledge_base/00_governance/CANONICAL_BUSINESS_RULES.md` (naming/formula/status audit across 21+ business functions) and `docs/CANONICAL_CLIENT_DOMAIN.md` + `docs/CLIENT_DOMAIN_IMPLEMENTATION_PLAN.md` (the deepest single finding: `wbom_billing_records` already exists in production with a correct, ready schema — 0 rows, never wired to any code — and three uncoordinated client-classification mechanisms coexist with no single source of truth). Architecture and discovery only — no migrations applied, no code changed.
-SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:66:(a) The shared-pool bug is now fixed (§2/§4 above). (b) The SQL-splitter DO-block issue (§6 above) is newly documented but not fixed — low priority since it's cosmetically noisy, not functionally broken. (c) The underlying schema-drift issues (`fpe_employees.canonical_employee_id`, `fazle_draft_replies.sent_at`/`error_text` missing in the test DB) remain unresolved and pre-existing — confirmed via `git stash` isolation to predate both fix passes; tracked in Report 7 Tier 3 Task 8 (test-coverage triage), not yet started.
-SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:128:`modules/drafts/routes.py` defines `/api/drafts/stats`, `/api/drafts`, `/api/drafts/{id}/approve|edit|delete|block` (lines 55, 71, 127, 189, 220, 243). `app/main.py:48` imports it as `drafts_router`, but the repo's only 8 `app.include_router()` calls (`main.py:441-450`) are `fpe_router`, `escort_roster_router`, `kb_upload_router`, `admin_employees_router`, `admin_transactions_router`, `contact_roles_router`, `preflight_guard_router`, `wa_chat_router` — **`drafts_router` is never mounted**. Meanwhile `app/static/drafts.html` (served at `/drafts`) calls exactly these unmounted paths (`drafts.html:302,321,341,343,430,436,443,467`). `main.py` separately implements its own, differently-shaped `/admin/drafts` endpoint (`main.py:2446-2455`) which `dashboard.html` correctly calls instead. **On this evidence, the dedicated Drafts page's approve/edit/delete/block buttons 404 in the current tree.** Recommend a live `curl /api/drafts/stats` check to confirm before treating as settled fact, since the running server was not queried during this read-only audit.
-SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:148:  1. **Payroll trio** — `modules/payroll`, `modules/payroll_logic`, `modules/fazle_payroll_engine` all reason about pay; `payroll/__init__.py:104` reads `fpe_cash_transactions` with its own inline SQL rather than an FPE accessor.
-SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:186:Single Postgres database via `app/database.py` (84 lines) — thin `asyncpg` pool wrapper (`min_size=2, max_size=10, command_timeout=30`), no ORM, no repository layer. Every module writes raw SQL inline. `database_rules.md:20` documents **4 separate schema-creation mechanisms** (numbered `db/migrations/`, `fazle_payroll_engine/migrations/`, standalone `migrations/`, inline Python DDL) — confirmed independently (`social_auto_reply/__init__.py:16+`, `bridge_poller/__init__.py:80` both `CREATE TABLE IF NOT EXISTS` inline). Full detail in **Report 4**. Table ownership (e.g. `fpe_cash_transactions`/`fpe_employee_ledger` "immutable ledger") is enforced by convention only, not by DB grants or code-level access control.
-SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:196:Ollama (primary reply provider, 5 task-tiered models) → Groq (fallback) → GitHub Models (2nd fallback, 3 rotating tokens) → fixed holding reply. Meta Graph API (WhatsApp Cloud/Messenger/FB comments). Two self-hosted WhatsApp bridges polled via SQLite (not webhooks) at `/home/azim/whatsapp{1,2}/store/*.db`, wrapped by `app/bridge.py`'s own `CircuitBreaker`. Qdrant (RAG vector store, optional server mode). A separate media-processor service (OCR/transcription). LocationWhere (sister app) — per `ARCHITECTURE.md:31-44`, writes **directly into `wbom_employees`** via its own Prisma `$executeRawUnsafe` call, a documented but one-sided coupling gated only from LocationWhere's side.
-SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:220:| **fazle_payroll_engine** | Canonical cash-transaction ledger, 19 files/8,668 lines | `app.database/config/ollama/bridge`; `shared.queue/events/realtime/write_router(diag)/state_version` | `main.py` + 9 modules; `shared/phone.py` | **Critical** | `.employee`/`.normalizer`/`.models`/`.payment_event` re-imported piecemeal by 5+ callers, no facade | `test_fpe_accounting.py`, `test_fpe_employee.py`, `test_fpe_parser.py`, `test_fpe_rules.py`, etc. | `shared/phone.py` reaches into its `.normalizer` (layer inversion) |
-SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:221:| **payroll** | Monthly payroll run state machine (`wbom_payroll_runs`) | `app.database` only | `main.py`, `admin_commands`, `scheduler` | **Critical** | Own inline SQL reads `fpe_cash_transactions` directly (`payroll/__init__.py:104`) instead of an FPE accessor | `test_payroll.py` | Direct cross-domain table read |
-SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:228:| **admin_transactions** | CRUD + smart matching on `fpe_cash_transactions` | `app.database`; `fazle_payroll_engine.*` | `main.py` | **Critical** | 4th FPE-import site; own `X-Internal-Key` re-declaration; **direct UPDATE/soft-delete on `fpe_cash_transactions` outside `create_transaction()`** (edit line 698, soft-delete line 764) — Constitution boundary case, see Report 3 §1 | None found | None |
-SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:229:| **admin_employees** | CRUD on `wbom_employees`, never hard-delete | `app.database/config`; `fazle_payroll_engine.employee` | `main.py` | High | 5th FPE-import site; own auth re-declaration | None found | Soft-propagates deactivation to `fpe_employees` by phone — intentional |
-SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:237:| **escort** | Core `wbom_escort_programs` state machine, 1,929 lines | **High** | None beyond private-export issue | Multiple, see Report 2 full detail | Exports `_resolve_escort_employee_id` (private) to `escort_roster` |
-SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:282:- `payment_workflow.finalize_payment()`, `payment_ingest/fpe_bridge.py:132`, `wbom_fpe_sync.py:175`, `admin_commands/nl_advance_record.py:234` — all correctly build a `TransactionCreateRequest` and call `create_transaction()`. **KEEP** — compliant, single canonical path confirmed across all of them.
-SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:284:- **🟡 Constitution boundary case:** `modules/admin_transactions/__init__.py:698` (`UPDATE fpe_cash_transactions SET {...}`, transaction edit) and `:764` (soft-delete) are **direct writes to `fpe_cash_transactions` that bypass `create_transaction()`**. The ledger side is safe (`_adjust_ledger()` still calls `_upsert_ledger()` internally), and Article I §1.2 textually prohibits `INSERT` not `UPDATE`, so this isn't a clean textual violation — but it bypasses the "no bypass paths" spirit and Article II §2.1's requirement that any new path be Owner-approved and documented. **INVESTIGATE** — needs an explicit Owner ruling on whether post-creation admin edit/soft-delete counts as a "path to cash ledger" requiring Constitution documentation.
-SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:285:- No other module does raw `INSERT`/`UPDATE` on `fpe_cash_transactions`/`fpe_employee_ledger` outside the canonical function. **No other Constitution violation found.**
-SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:319:- `escort_roster/history_sync.py:875` writes to `wbom_escort_programs` — but confirmed a guarded, admin-triggered historical backfill with dedup, not a competing live write path. **KEEP**.
-SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:323:Zero table names found `CREATE`'d in more than one of the three migration directories. (**Note:** Report 4's independent, deeper audit — which also checked `ALTER TABLE` statements, not just `CREATE` — found several genuine cross-directory collisions at the ALTER level, e.g. `fpe_cash_transactions`, `escort_roster_entries`. The two findings are consistent, not contradictory: this pass was explicitly scoped to `CREATE TABLE` only.)
-SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:362:- **`/home/azim/core/migrations/`** — 6 files: `002_add_hr_officers.sql`, `003_add_fpe_indexes.sql`, `004_add_accounting_period_constraint.sql`, `005_add_admin_login_auth.sql`, `escort_history_schema.sql`, `escort_roster_schema.sql`. No `001`. **No automated execution path at all** — `DEPLOYMENT_SUMMARY.md:46`/`HR_OFFICER_SETUP.md:28,31` instruct manual `psql -f migrations/002_add_hr_officers.sql`.
-SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:377:- **`fpe_cash_transactions`** — created in `fazle_payroll_engine/migrations/001`, altered 19× by `.../010_fpe_cash_transactions_canonical.sql`, **also altered by `migrations/004_add_accounting_period_constraint.sql:6`** and **`db/migrations/023_c0d_001_fpe_soft_delete_columns.sql:20`** — one table touched by all three governed directories.
-SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:378:- **`fpe_income_transactions`** — same 3-way split (`fazle_payroll_engine/migrations/006,014`, `migrations/004:14`, `db/migrations/023_c0d_004:11,14`).
-SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:382:- **`wbom_escort_programs`** — altered by `db/migrations/003c,018` **and** `fazle_payroll_engine/migrations/009_stabilization.sql:25`.
-SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:404:- **A much larger gap: 24 production tables have zero schema source of truth except `tests/conftest.py`.** Full list: `wbom_employees, wbom_contacts, wbom_whatsapp_messages, wbom_escort_programs, wbom_attendance, wbom_cases, wbom_employee_requests, wbom_cash_transactions, wbom_payroll_runs, wbom_payroll_run_items, wbom_payroll_approval_log, wbom_salary_records, wbom_staging_payments, fazle_admins, fazle_admin_roles, fazle_admin_audit, fazle_roles, fazle_contact_roles, fazle_outbound_queue, fazle_service_heartbeats, fazle_db_backups, fazle_report_cache, fazle_error_log, llm_conversation_log`. **Two of these — `fazle_error_log` and `llm_conversation_log` — are confirmed live, actively-written production tables** (`app/error_log.py`, `app/ollama.py`, `app/main.py`, `app/github_models.py`, `app/groq_provider.py`) with genuinely zero schema definition anywhere outside the test file. **A clean environment built strictly from this repo's migrations would crash on first error-log write or first LLM-call log.**
-SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:445:`RECOVERY.md` §5 gives two concrete, actionable paths (git-tag checkout or tar-snapshot restore, each followed by `make smoke`). But `RECOVERY.md`/`BACKUP.md` are both dated "Last updated: 2026-05-07" — two months stale against the 2026-07-02 employee-unification migration; §7's validation checklist still queries `wbom_employees` exclusively, not `fpe_employees` (the codebase's own "single canonical table" as of that commit). `PRE_CHAOS_CHECKLIST.md` §G "Rollback Readiness" — all 5 checkboxes unchecked, sign-off blank. No evidence a pre-chaos git tag currently exists.
-SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:469:`ls /home/azim/backups/fazle/` shows **18 consecutive daily dumps from 2026-06-07 through 2026-07-08 (today)**, growing in size release over release — a real, unattended job, not stale artifacts. Scheduler wiring confirmed (`daily_db_backup` job → `modules.backup.job_daily_db_backup`). Staleness is self-checked and alerts a human. `RECOVERY.md` gives a specific, non-generic restore procedure. Caveat carried from §03: its verification queries reference `wbom_employees`, not necessarily the current canonical table. **Strongest area in the audit** apart from that doc-staleness caveat.
-SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:497:2. **Double-entry / bank-reconciled General Ledger.** Zero hits for `double.entry|debit|credit|chart of account|balance sheet|trial balance|general ledger|bank statement|bank reconciliation`. What exists (`fpe_cash_transactions` + `fpe_employee_ledger`) is a solid, immutable, audited **single-entry** cash-tracking ledger — genuinely production-grade for "who was paid what," but it cannot produce a P&L or balance sheet, and reconciliation (`fazle_payroll_engine/reconcile.py`) only checks **internal** consistency (parser-detected amount vs. ledger vs. review queue), never against a real bKash/Nagad/bank statement. (Already Phase 2b in the previously-approved roadmap.)
-SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:543:| **5. Documentation alignment** — fix `RECOVERY.md`/`BACKUP.md`'s `wbom_employees`→`fpe_employees` references; correct `ARCHITECTURE.md`'s monitoring-stack claim; reconcile `AUTO_REPLY_ENABLED` across all KB articles (if not already done in Tier 0); namespace the 3 parallel "Phase" vocabularies (KB Phase 1-6, release Phase 1-5/FG1-FG5, hardening hardening-report Phase 1-5) | None blocking | Low | Low-Medium | 1 sprint | None beyond doc review | N/A | No doc contradicts verified live state; "Phase N" always appears with a namespace prefix going forward |
-SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:583:`BUSINESS-CONSTITUTION.md` itself only entered git in commit `be1ed3c`, **2026-07-02**, titled *"feat: employee unification — fpe_employees as single canonical table"* — the freeze document arrived bundled inside a feature commit that restructured the employee schema. 16 commits landed between 2026-06-28 (the freeze date) and today, including `feat: employee unification`, `feat(escort-roster): production hardening`, `feat(admin): add user activate flow` — these read as new/changed behavior, not the 9 consolidation tasks §7.2 authorizes. **Mitigation:** require every commit touching `modules/`/`app/` to declare which §7.2 line item it serves; retroactively classify the 16 commits with an explicit Owner ruling on each. **Verification:** monthly `git log --since=2026-06-28 --name-only` review, zero un-mapped commits = policy holding.
-SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:611:`wbom_employees` is still referenced in 29 Python files, `fpe_employees` (the codebase's own "canonical" table since 2026-07-02) in 14 — both live simultaneously. `AUDIT_SUMMARY.json` (explicitly stale-flagged) reports 208 tables against the KB's current 84 — a likely-legitimate but unconfirmed consolidation delta. **Mitigation:** deferred to Report 4's migration strategy; additionally, update `RECOVERY.md`'s verification SQL to include `fpe_employees`. **Verification:** see Report 4.
-SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:619:See Report 3 in full. Circumstantial corroboration: the `wbom_employees`/`fpe_employees` coexistence and the 4-mechanism migration split are exactly the structural conditions duplicate logic tends to accumulate under.
-SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:658:| 3 migration directories + inline DDL, with real cross-directory `ALTER` collisions on `fpe_cash_transactions`, `fpe_income_transactions`, `escort_roster_entries`, `wbom_escort_programs`, `fazle_payment_drafts` | Multiple initiatives (FPE, general, social) grew their own schema paths independently | Schema drift risk; hard to answer "what does production actually look like" from source alone | **Critical** | High | Silent divergence between environments; a future migration could conflict with one already applied via a different mechanism |
-SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:693:| `RECOVERY.md`/`BACKUP.md` stale (reference `wbom_employees` only) | Not updated after the 2026-07-02 employee-unification migration | A real restore drill today would validate against a partially-outdated schema assumption | Medium | Low (doc update) | A real disaster-recovery event could be executed against subtly wrong verification queries |
-SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:779:Following the certification pass's finding that the largest remaining risk is "Business Knowledge Drift" (naming/formula/status inconsistency, not code defects), a dedicated audit produced **`knowledge_base/00_governance/CANONICAL_BUSINESS_RULES.md`** — now the second-highest-priority document in the repo, immediately below `BUSINESS-CONSTITUTION.md`. It surveys 21+ business functions and documents (not silently resolves) every naming/formula/status conflict found: the escort-duty pay-formula situation from Phase 1.5 in full detail, a second concrete finding that the "Client" entity has no single canonical table (blocks Phase 2b's billing work independent of the payroll question), a real casing/vocabulary drift on `wbom_escort_programs.status`, and confirmation that `wbom_candidates`/`wbom_clients`/`fazle_clients`/`wbom_billing_records` are each real, named instances of the larger undocumented-migration gap. Not duplicated here — read that document directly.
-SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:787:Following Phase 1.6's finding that Client was the least-resolved business function, a dedicated pass produced **`docs/CANONICAL_CLIENT_DOMAIN.md`** (discovery + architecture) and **`docs/CLIENT_DOMAIN_IMPLEMENTATION_PLAN.md`** (phased Phase 2A/2B/2C roadmap) — not duplicated here. Headline finding: the Client foundation is better than previously thought (`wbom_contacts` is already the de facto canonical table with a working sync pipeline; `wbom_billing_records` already exists in production with a complete, correct schema, just 0 rows and never wired up) but three uncoordinated client-classification mechanisms coexist with no single source of truth. Phase 2A (a small, low-risk reconciliation) is the recommended next implementation task, ahead of any Phase 2B billing code.
+archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:66:(a) The shared-pool bug is now fixed (§2/§4 above). (b) The SQL-splitter DO-block issue (§6 above) is newly documented but not fixed — low priority since it's cosmetically noisy, not functionally broken. (c) The underlying schema-drift issues (`fpe_employees.canonical_employee_id`, `fazle_draft_replies.sent_at`/`error_text` missing in the test DB) remain unresolved and pre-existing — confirmed via `git stash` isolation to predate both fix passes; tracked in Report 7 Tier 3 Task 8 (test-coverage triage), not yet started.
+archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:128:`modules/drafts/routes.py` defines `/api/drafts/stats`, `/api/drafts`, `/api/drafts/{id}/approve|edit|delete|block` (lines 55, 71, 127, 189, 220, 243). `app/main.py:48` imports it as `drafts_router`, but the repo's only 8 `app.include_router()` calls (`main.py:441-450`) are `fpe_router`, `escort_roster_router`, `kb_upload_router`, `admin_employees_router`, `admin_transactions_router`, `contact_roles_router`, `preflight_guard_router`, `wa_chat_router` — **`drafts_router` is never mounted**. Meanwhile `app/static/drafts.html` (served at `/drafts`) calls exactly these unmounted paths (`drafts.html:302,321,341,343,430,436,443,467`). `main.py` separately implements its own, differently-shaped `/admin/drafts` endpoint (`main.py:2446-2455`) which `dashboard.html` correctly calls instead. **On this evidence, the dedicated Drafts page's approve/edit/delete/block buttons 404 in the current tree.** Recommend a live `curl /api/drafts/stats` check to confirm before treating as settled fact, since the running server was not queried during this read-only audit.
+archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:148:  1. **Payroll trio** — `modules/payroll`, `modules/payroll_logic`, `modules/fazle_payroll_engine` all reason about pay; `payroll/__init__.py:104` reads `fpe_cash_transactions` with its own inline SQL rather than an FPE accessor.
+archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:186:Single Postgres database via `app/database.py` (84 lines) — thin `asyncpg` pool wrapper (`min_size=2, max_size=10, command_timeout=30`), no ORM, no repository layer. Every module writes raw SQL inline. `database_rules.md:20` documents **4 separate schema-creation mechanisms** (numbered `db/migrations/`, `fazle_payroll_engine/migrations/`, standalone `migrations/`, inline Python DDL) — confirmed independently (`social_auto_reply/__init__.py:16+`, `bridge_poller/__init__.py:80` both `CREATE TABLE IF NOT EXISTS` inline). Full detail in **Report 4**. Table ownership (e.g. `fpe_cash_transactions`/`fpe_employee_ledger` "immutable ledger") is enforced by convention only, not by DB grants or code-level access control.
+archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:196:Ollama (primary reply provider, 5 task-tiered models) → Groq (fallback) → GitHub Models (2nd fallback, 3 rotating tokens) → fixed holding reply. Meta Graph API (WhatsApp Cloud/Messenger/FB comments). Two self-hosted WhatsApp bridges polled via SQLite (not webhooks) at `/home/azim/whatsapp{1,2}/store/*.db`, wrapped by `app/bridge.py`'s own `CircuitBreaker`. Qdrant (RAG vector store, optional server mode). A separate media-processor service (OCR/transcription). LocationWhere (sister app) — per `ARCHITECTURE.md:31-44`, writes **directly into `wbom_employees`** via its own Prisma `$executeRawUnsafe` call, a documented but one-sided coupling gated only from LocationWhere's side.
+archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:220:| **fazle_payroll_engine** | Canonical cash-transaction ledger, 19 files/8,668 lines | `app.database/config/ollama/bridge`; `shared.queue/events/realtime/write_router(diag)/state_version` | `main.py` + 9 modules; `shared/phone.py` | **Critical** | `.employee`/`.normalizer`/`.models`/`.payment_event` re-imported piecemeal by 5+ callers, no facade | `test_fpe_accounting.py`, `test_fpe_employee.py`, `test_fpe_parser.py`, `test_fpe_rules.py`, etc. | `shared/phone.py` reaches into its `.normalizer` (layer inversion) |
+archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:221:| **payroll** | Monthly payroll run state machine (`wbom_payroll_runs`) | `app.database` only | `main.py`, `admin_commands`, `scheduler` | **Critical** | Own inline SQL reads `fpe_cash_transactions` directly (`payroll/__init__.py:104`) instead of an FPE accessor | `test_payroll.py` | Direct cross-domain table read |
+archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:228:| **admin_transactions** | CRUD + smart matching on `fpe_cash_transactions` | `app.database`; `fazle_payroll_engine.*` | `main.py` | **Critical** | 4th FPE-import site; own `X-Internal-Key` re-declaration; **direct UPDATE/soft-delete on `fpe_cash_transactions` outside `create_transaction()`** (edit line 698, soft-delete line 764) — Constitution boundary case, see Report 3 §1 | None found | None |
+archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:229:| **admin_employees** | CRUD on `wbom_employees`, never hard-delete | `app.database/config`; `fazle_payroll_engine.employee` | `main.py` | High | 5th FPE-import site; own auth re-declaration | None found | Soft-propagates deactivation to `fpe_employees` by phone — intentional |
+archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:237:| **escort** | Core `wbom_escort_programs` state machine, 1,929 lines | **High** | None beyond private-export issue | Multiple, see Report 2 full detail | Exports `_resolve_escort_employee_id` (private) to `escort_roster` |
+archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:282:- `payment_workflow.finalize_payment()`, `payment_ingest/fpe_bridge.py:132`, `wbom_fpe_sync.py:175`, `admin_commands/nl_advance_record.py:234` — all correctly build a `TransactionCreateRequest` and call `create_transaction()`. **KEEP** — compliant, single canonical path confirmed across all of them.
+archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:284:- **🟡 Constitution boundary case:** `modules/admin_transactions/__init__.py:698` (`UPDATE fpe_cash_transactions SET {...}`, transaction edit) and `:764` (soft-delete) are **direct writes to `fpe_cash_transactions` that bypass `create_transaction()`**. The ledger side is safe (`_adjust_ledger()` still calls `_upsert_ledger()` internally), and Article I §1.2 textually prohibits `INSERT` not `UPDATE`, so this isn't a clean textual violation — but it bypasses the "no bypass paths" spirit and Article II §2.1's requirement that any new path be Owner-approved and documented. **INVESTIGATE** — needs an explicit Owner ruling on whether post-creation admin edit/soft-delete counts as a "path to cash ledger" requiring Constitution documentation.
+archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:285:- No other module does raw `INSERT`/`UPDATE` on `fpe_cash_transactions`/`fpe_employee_ledger` outside the canonical function. **No other Constitution violation found.**
+archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:319:- `escort_roster/history_sync.py:875` writes to `wbom_escort_programs` — but confirmed a guarded, admin-triggered historical backfill with dedup, not a competing live write path. **KEEP**.
+archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:323:Zero table names found `CREATE`'d in more than one of the three migration directories. (**Note:** Report 4's independent, deeper audit — which also checked `ALTER TABLE` statements, not just `CREATE` — found several genuine cross-directory collisions at the ALTER level, e.g. `fpe_cash_transactions`, `escort_roster_entries`. The two findings are consistent, not contradictory: this pass was explicitly scoped to `CREATE TABLE` only.)
+archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:362:- **`/home/azim/core/migrations/`** — 6 files: `002_add_hr_officers.sql`, `003_add_fpe_indexes.sql`, `004_add_accounting_period_constraint.sql`, `005_add_admin_login_auth.sql`, `escort_history_schema.sql`, `escort_roster_schema.sql`. No `001`. **No automated execution path at all** — `DEPLOYMENT_SUMMARY.md:46`/`HR_OFFICER_SETUP.md:28,31` instruct manual `psql -f migrations/002_add_hr_officers.sql`.
+archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:377:- **`fpe_cash_transactions`** — created in `fazle_payroll_engine/migrations/001`, altered 19× by `.../010_fpe_cash_transactions_canonical.sql`, **also altered by `migrations/004_add_accounting_period_constraint.sql:6`** and **`db/migrations/023_c0d_001_fpe_soft_delete_columns.sql:20`** — one table touched by all three governed directories.
+archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:378:- **`fpe_income_transactions`** — same 3-way split (`fazle_payroll_engine/migrations/006,014`, `migrations/004:14`, `db/migrations/023_c0d_004:11,14`).
+archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:382:- **`wbom_escort_programs`** — altered by `db/migrations/003c,018` **and** `fazle_payroll_engine/migrations/009_stabilization.sql:25`.
+archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:404:- **A much larger gap: 24 production tables have zero schema source of truth except `tests/conftest.py`.** Full list: `wbom_employees, wbom_contacts, wbom_whatsapp_messages, wbom_escort_programs, wbom_attendance, wbom_cases, wbom_employee_requests, wbom_cash_transactions, wbom_payroll_runs, wbom_payroll_run_items, wbom_payroll_approval_log, wbom_salary_records, wbom_staging_payments, fazle_admins, fazle_admin_roles, fazle_admin_audit, fazle_roles, fazle_contact_roles, fazle_outbound_queue, fazle_service_heartbeats, fazle_db_backups, fazle_report_cache, fazle_error_log, llm_conversation_log`. **Two of these — `fazle_error_log` and `llm_conversation_log` — are confirmed live, actively-written production tables** (`app/error_log.py`, `app/ollama.py`, `app/main.py`, `app/github_models.py`, `app/groq_provider.py`) with genuinely zero schema definition anywhere outside the test file. **A clean environment built strictly from this repo's migrations would crash on first error-log write or first LLM-call log.**
+archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:445:`RECOVERY.md` §5 gives two concrete, actionable paths (git-tag checkout or tar-snapshot restore, each followed by `make smoke`). But `RECOVERY.md`/`BACKUP.md` are both dated "Last updated: 2026-05-07" — two months stale against the 2026-07-02 employee-unification migration; §7's validation checklist still queries `wbom_employees` exclusively, not `fpe_employees` (the codebase's own "single canonical table" as of that commit). `PRE_CHAOS_CHECKLIST.md` §G "Rollback Readiness" — all 5 checkboxes unchecked, sign-off blank. No evidence a pre-chaos git tag currently exists.
+archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:469:`ls /home/azim/backups/fazle/` shows **18 consecutive daily dumps from 2026-06-07 through 2026-07-08 (today)**, growing in size release over release — a real, unattended job, not stale artifacts. Scheduler wiring confirmed (`daily_db_backup` job → `modules.backup.job_daily_db_backup`). Staleness is self-checked and alerts a human. `RECOVERY.md` gives a specific, non-generic restore procedure. Caveat carried from §03: its verification queries reference `wbom_employees`, not necessarily the current canonical table. **Strongest area in the audit** apart from that doc-staleness caveat.
+archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:497:2. **Double-entry / bank-reconciled General Ledger.** Zero hits for `double.entry|debit|credit|chart of account|balance sheet|trial balance|general ledger|bank statement|bank reconciliation`. What exists (`fpe_cash_transactions` + `fpe_employee_ledger`) is a solid, immutable, audited **single-entry** cash-tracking ledger — genuinely production-grade for "who was paid what," but it cannot produce a P&L or balance sheet, and reconciliation (`fazle_payroll_engine/reconcile.py`) only checks **internal** consistency (parser-detected amount vs. ledger vs. review queue), never against a real bKash/Nagad/bank statement. (Already Phase 2b in the previously-approved roadmap.)
+archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:543:| **5. Documentation alignment** — fix `RECOVERY.md`/`BACKUP.md`'s `wbom_employees`→`fpe_employees` references; correct `ARCHITECTURE.md`'s monitoring-stack claim; reconcile `AUTO_REPLY_ENABLED` across all KB articles (if not already done in Tier 0); namespace the 3 parallel "Phase" vocabularies (KB Phase 1-6, release Phase 1-5/FG1-FG5, hardening hardening-report Phase 1-5) | None blocking | Low | Low-Medium | 1 sprint | None beyond doc review | N/A | No doc contradicts verified live state; "Phase N" always appears with a namespace prefix going forward |
+archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:583:`BUSINESS-CONSTITUTION.md` itself only entered git in commit `be1ed3c`, **2026-07-02**, titled *"feat: employee unification — fpe_employees as single canonical table"* — the freeze document arrived bundled inside a feature commit that restructured the employee schema. 16 commits landed between 2026-06-28 (the freeze date) and today, including `feat: employee unification`, `feat(escort-roster): production hardening`, `feat(admin): add user activate flow` — these read as new/changed behavior, not the 9 consolidation tasks §7.2 authorizes. **Mitigation:** require every commit touching `modules/`/`app/` to declare which §7.2 line item it serves; retroactively classify the 16 commits with an explicit Owner ruling on each. **Verification:** monthly `git log --since=2026-06-28 --name-only` review, zero un-mapped commits = policy holding.
+archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:611:`wbom_employees` is still referenced in 29 Python files, `fpe_employees` (the codebase's own "canonical" table since 2026-07-02) in 14 — both live simultaneously. `AUDIT_SUMMARY.json` (explicitly stale-flagged) reports 208 tables against the KB's current 84 — a likely-legitimate but unconfirmed consolidation delta. **Mitigation:** deferred to Report 4's migration strategy; additionally, update `RECOVERY.md`'s verification SQL to include `fpe_employees`. **Verification:** see Report 4.
+archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:619:See Report 3 in full. Circumstantial corroboration: the `wbom_employees`/`fpe_employees` coexistence and the 4-mechanism migration split are exactly the structural conditions duplicate logic tends to accumulate under.
+archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:658:| 3 migration directories + inline DDL, with real cross-directory `ALTER` collisions on `fpe_cash_transactions`, `fpe_income_transactions`, `escort_roster_entries`, `wbom_escort_programs`, `fazle_payment_drafts` | Multiple initiatives (FPE, general, social) grew their own schema paths independently | Schema drift risk; hard to answer "what does production actually look like" from source alone | **Critical** | High | Silent divergence between environments; a future migration could conflict with one already applied via a different mechanism |
+archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:693:| `RECOVERY.md`/`BACKUP.md` stale (reference `wbom_employees` only) | Not updated after the 2026-07-02 employee-unification migration | A real restore drill today would validate against a partially-outdated schema assumption | Medium | Low (doc update) | A real disaster-recovery event could be executed against subtly wrong verification queries |
+archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:779:Following the certification pass's finding that the largest remaining risk is "Business Knowledge Drift" (naming/formula/status inconsistency, not code defects), a dedicated audit produced **`knowledge_base/00_governance/CANONICAL_BUSINESS_RULES.md`** — now the second-highest-priority document in the repo, immediately below `BUSINESS-CONSTITUTION.md`. It surveys 21+ business functions and documents (not silently resolves) every naming/formula/status conflict found: the escort-duty pay-formula situation from Phase 1.5 in full detail, a second concrete finding that the "Client" entity has no single canonical table (blocks Phase 2b's billing work independent of the payroll question), a real casing/vocabulary drift on `wbom_escort_programs.status`, and confirmation that `wbom_candidates`/`wbom_clients`/`fazle_clients`/`wbom_billing_records` are each real, named instances of the larger undocumented-migration gap. Not duplicated here — read that document directly.
+archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md:787:Following Phase 1.6's finding that Client was the least-resolved business function, a dedicated pass produced **`docs/CANONICAL_CLIENT_DOMAIN.md`** (discovery + architecture) and **`docs/CLIENT_DOMAIN_IMPLEMENTATION_PLAN.md`** (phased Phase 2A/2B/2C roadmap) — not duplicated here. Headline finding: the Client foundation is better than previously thought (`wbom_contacts` is already the de facto canonical table with a working sync pipeline; `wbom_billing_records` already exists in production with a complete, correct schema, just 0 rows and never wired up) but three uncoordinated client-classification mechanisms coexist with no single source of truth. Phase 2A (a small, low-risk reconciliation) is the recommended next implementation task, ahead of any Phase 2B billing code.
 TESTING_STATUS.md:75:- [x] Payment finalization (draft pending -> sent, wbom_cash_transactions row)
 app/config.py:212:    # never posting real wbom_payroll_runs rows for office staff). Flip to
 app/config.py:450:    # (wbom_whatsapp_messages) that internal_coordinator-classified senders
@@ -5234,19 +5234,19 @@ archive/deprecated/employee_utils/__init__.py:51:                       wbom_emp
 archive/deprecated/employee_utils/__init__.py:77:                "SELECT employee_id FROM wbom_employees WHERE employee_mobile = $1",
 archive/deprecated/employee_utils/__init__.py:85:                "SELECT employee_id FROM wbom_employees WHERE employee_mobile = $1",
 archive/deprecated/employee_utils/__init__.py:93:            """SELECT employee_id FROM wbom_employees
-audit-report-2026-06-01.md:337:_save_message() → wbom_whatsapp_messages (PostgreSQL)
-audit-report-2026-06-01.md:493:├── wbom_contacts table lookup (by phone variants: 880xxx, 0xxx)
-audit-report-2026-06-01.md:494:├── wbom_employees table lookup
-audit-report-2026-06-01.md:524:- `wbom_contacts` — contact display name, phone, role
-audit-report-2026-06-01.md:525:- `wbom_employees` — employee records, mobile, designation
-audit-report-2026-06-01.md:543:│         ├── rapidfuzz employee matching (wbom_employees)
-audit-report-2026-06-01.md:553:│               └── fpe_cash_transactions insert
-audit-report-2026-06-01.md:571:- Tables: `fpe_employees`, `fpe_cash_transactions`, `fpe_employee_ledger`, `fpe_gap_scan_runs`, etc.
-audit-report-2026-06-01.md:627:| `employee` | wbom_employees lookup | Verification / payroll / lifecycle |
-audit-report-2026-06-01.md:801:`wbom_whatsapp_messages`, `wbom_contacts`, `wbom_employees`, `wbom_relation_types`, `wbom_inbound_messages`
-audit-report-2026-06-01.md:819:`fpe_employees`, `fpe_cash_transactions`, `fpe_income_transactions`, `fpe_employee_ledger`, `fpe_employee_aliases`, `fpe_employee_resolution_links`, `fpe_employee_review_queue`, `fpe_gap_scan_runs`, `fpe_message_processing_state`, `fpe_normalization_audit_logs`, `fpe_parser_results`, `fpe_processing_diagnostics`, `fpe_review_audit_logs`, `fpe_sync_checkpoints`, `fpe_transaction_repairs`, `fpe_unmatched_messages`, `fpe_wa_messages`, `fpe_accounting_audit_logs`, `fazle_payment_drafts`, `fazle_payment_correction_log`
-audit-report-2026-06-10.md:463:wbom_escort_programs.shift_type
-audit-report-2026-06-10.md:464:wbom_employees.contact_id
+archive/historical-reports/audit-report-2026-06-01.md:337:_save_message() → wbom_whatsapp_messages (PostgreSQL)
+archive/historical-reports/audit-report-2026-06-01.md:493:├── wbom_contacts table lookup (by phone variants: 880xxx, 0xxx)
+archive/historical-reports/audit-report-2026-06-01.md:494:├── wbom_employees table lookup
+archive/historical-reports/audit-report-2026-06-01.md:524:- `wbom_contacts` — contact display name, phone, role
+archive/historical-reports/audit-report-2026-06-01.md:525:- `wbom_employees` — employee records, mobile, designation
+archive/historical-reports/audit-report-2026-06-01.md:543:│         ├── rapidfuzz employee matching (wbom_employees)
+archive/historical-reports/audit-report-2026-06-01.md:553:│               └── fpe_cash_transactions insert
+archive/historical-reports/audit-report-2026-06-01.md:571:- Tables: `fpe_employees`, `fpe_cash_transactions`, `fpe_employee_ledger`, `fpe_gap_scan_runs`, etc.
+archive/historical-reports/audit-report-2026-06-01.md:627:| `employee` | wbom_employees lookup | Verification / payroll / lifecycle |
+archive/historical-reports/audit-report-2026-06-01.md:801:`wbom_whatsapp_messages`, `wbom_contacts`, `wbom_employees`, `wbom_relation_types`, `wbom_inbound_messages`
+archive/historical-reports/audit-report-2026-06-01.md:819:`fpe_employees`, `fpe_cash_transactions`, `fpe_income_transactions`, `fpe_employee_ledger`, `fpe_employee_aliases`, `fpe_employee_resolution_links`, `fpe_employee_review_queue`, `fpe_gap_scan_runs`, `fpe_message_processing_state`, `fpe_normalization_audit_logs`, `fpe_parser_results`, `fpe_processing_diagnostics`, `fpe_review_audit_logs`, `fpe_sync_checkpoints`, `fpe_transaction_repairs`, `fpe_unmatched_messages`, `fpe_wa_messages`, `fpe_accounting_audit_logs`, `fazle_payment_drafts`, `fazle_payment_correction_log`
+archive/historical-reports/audit-report-2026-06-10.md:463:wbom_escort_programs.shift_type
+archive/historical-reports/audit-report-2026-06-10.md:464:wbom_employees.contact_id
 audits/C1A-OWNER-DECISION-MATRIX.md:25:| **Subject** | Should Sprint-C1 unify `fpe_cash_transactions` and `wbom_cash_transactions` into a single table? |
 audits/C1A-OWNER-DECISION-MATRIX.md:26:| **Current Evidence** | Two parallel cash-transaction tables exist in production. [`fpe_cash_transactions`](core/modules/fazle_payroll_engine/accounting.py:53) is written by [`create_transaction()`](core/modules/fazle_payroll_engine/accounting.py:30) and updates [`fpe_employee_ledger`](core/modules/fazle_payroll_engine/accounting.py:190) + [`fpe_accounting_audit_logs`](core/modules/fazle_payroll_engine/accounting.py:77). [`wbom_cash_transactions`](core/modules/payment_workflow/__init__.py:335) is written by [`finalize_payment()`](core/modules/payment_workflow/__init__.py:306), [`ingest_admin_cash_entry()`](core/modules/payment_ingest/__init__.py:510), and [`intent_advance_record()`](core/modules/admin_commands/nl_advance_record.py:186) with **no ledger update and no audit log**. Dashboard reads from FPE; payroll [`compute_run()`](core/modules/payroll/__init__.py:104) reads advances from WBOM. [`wbom_fpe_sync.py`](core/modules/payment_ingest/wbom_fpe_sync.py:121) was intended to bridge but calls `create_transaction()` with the wrong signature and would crash if invoked. |
 audits/C1A-OWNER-DECISION-MATRIX.md:27:| **Possible Options** | **A.** Unify to `fpe_cash_transactions` only — migrate all WBOM write paths to call `create_transaction()`.<br>**B.** Keep both tables, fix `wbom_fpe_sync.py` to bridge every WBOM write to FPE.<br>**C.** Keep both tables, add ledger + audit logging directly to WBOM write paths.<br>**D.** Defer unification to Sprint-C2; in C1B only document the gap and add monitoring. |
@@ -7088,7 +7088,7 @@ docs/DEVELOPER_GUIDE.md:184:- `fpe_employee_aliases (employee_id, alias_type, al
 docs/DEVELOPER_GUIDE.md:185:- `fpe_cash_transactions.employee_id` → `fpe_employees.id` (never `wbom_employees.employee_id` directly)
 docs/DEVELOPER_GUIDE.md:186:- `wbom_escort_programs.escort_employee_id` / `escort_roster_entries.escort_employee_id` → `wbom_employees.employee_id` (HR-domain anchor, not FPE)
 docs/DEVELOPER_GUIDE.md:187:- `fazle_payment_drafts.employee_id` → resolved to an `fpe_employees.id` at transaction-creation time
-docs/DEVELOPER_GUIDE.md:189:**Known risk.** `wbom_employees` is referenced in 29 Python files, `fpe_employees` in 14 — both live simultaneously. This is an already-documented risk (see `SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md` Report 8, Risk #8), not a new finding.
+docs/DEVELOPER_GUIDE.md:189:**Known risk.** `wbom_employees` is referenced in 29 Python files, `fpe_employees` in 14 — both live simultaneously. This is an already-documented risk (see `archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md` Report 8, Risk #8), not a new finding.
 docs/DEVELOPER_GUIDE.md:197:**Program creation.** `save_escort_programs()` inserts one `wbom_escort_programs` row per valid lighter (`status='draft'`), deduping against existing non-cancelled rows. When the admin sends back a completed draft, `handle_admin_escort_completion()` authenticates it as an "authoritative bridge confirmation," matches it to the pending draft, resolves/auto-creates the escort employee, and flips `status='confirmed'` — the bridge confirmation is treated as authoritative and overwrites draft fields.
 docs/DEVELOPER_GUIDE.md:201:**Duty completion → payment draft.** `escort_lifecycle.close_program()` is idempotent (a no-op if already `Completed`). The top-level `handle_release_event()` requires admin confirmation, runs in one transaction, backfills `wbom_attendance` (idempotent, `entry_source='escort_release'`), then calls `payment_workflow.create_escort_payment_draft()` — computing `gross_amount = duty_days × 400tk/day` (flat shift-based rate, **fixed 2026-07-10** — was previously `basic_salary/30`, the wrong formula for escort duty) `− food_bill + conveyance − advances` (conveyance **added**, not subtracted), and upserting a `fazle_payment_drafts` row ready for a `PAID`/`APPROVED` command. Also (2026-07-11): on the first admin-approved attendance for a `confirmed`-status program, `escort_lifecycle.mark_program_running_on_attendance()` idempotently flips it to `running`.
 docs/DEVELOPER_GUIDE.md:205:2. **Formula decision made 2026-07-10, `compute_run` not yet rewritten.** The escort-duty formula question above is resolved (see the fixed formula above). A *separate* pay formula, `modules/payroll::compute_run`'s monthly rollup (full `basic_salary` + a flat escort-day allowance), is now scoped exclusively to Office Staff (`modules/payroll/eligibility.py::classify_office_staff`, escort employees explicitly excluded) via `compute_all_for_period_office_only` — but `compute_run`'s own internal calculation has **not yet** been rewritten to the new calendar-days/attendance-based formula (`docs/NEXT_IMPLEMENTATION_QUEUE.md`), so `job_daily_payroll` stays guarded behind `settings.office_payroll_authoritative_enabled` (default False) until that rewrite happens and the Owner signs off. Real production evidence, still true: all 703 `wbom_payroll_runs` sit in `status='draft'`; the `PAID <id> <amount> <method>` admin command remains the only path that actually moves money, with a free-typed amount and no cross-check.
@@ -7164,7 +7164,7 @@ docs/META_APP_SECRET_ACTIVATION_2026-09-02.md:147:3. Decide the spurious `fazle_
 docs/MODULE_MAP.md:6:**How to read each entry:** Purpose, Key files, Main APIs, DB tables used, Critical dependencies, Risk level (Critical = touches the cash ledger `fpe_cash_transactions`/`fpe_employee_ledger` or sends real outbound WhatsApp messages; High = on the identity/routing critical path; Medium/Low otherwise), and an explicit writes-money/sends-messages/read-only tag.
 docs/MODULE_MAP.md:14:- **DB tables used:** `fazle_contact_roles`, `fazle_draft_replies`, `fpe_employees`, `wbom_contacts`, `wbom_employees`, `wbom_relation_types`, `wbom_whatsapp_messages`.
 docs/MODULE_MAP.md:24:- **DB tables used:** `fazle_draft_replies`, `fazle_payment_drafts`, `fpe_cash_transactions`, `fpe_employees`, `wbom_employees`, `wbom_escort_programs`, `wbom_whatsapp_messages`.
-docs/MODULE_MAP.md:26:- **Risk level:** Critical — calls `bridge.send(...)` directly (`:582,827,937,1077`) to deliver real WhatsApp messages, and `PAID`/`APPROVED` write into `fpe_cash_transactions`. The RBAC guard around these commands was fixed 2026-07-09 to fail closed (previously fell through to execution on any `rbac.check_permission()` exception — see `SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md`).
+docs/MODULE_MAP.md:26:- **Risk level:** Critical — calls `bridge.send(...)` directly (`:582,827,937,1077`) to deliver real WhatsApp messages, and `PAID`/`APPROVED` write into `fpe_cash_transactions`. The RBAC guard around these commands was fixed 2026-07-09 to fail closed (previously fell through to execution on any `rbac.check_permission()` exception — see `archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md`).
 docs/MODULE_MAP.md:30:- **Purpose:** The canonical financial processing subsystem ("FPE"). Ingests WhatsApp payment messages, parses them, matches to employees, and writes verified, immutable transactions to `fpe_cash_transactions`/`fpe_employee_ledger`. Runs its own SQL migrations and 5 background workers at startup (`start_fpe()`/`stop_fpe()`).
 docs/MODULE_MAP.md:33:- **DB tables used:** `fpe_employees`, `fpe_cash_transactions`, `fpe_employee_ledger`, `fpe_wa_messages`, `fpe_unmatched_messages`, `fpe_accounting_audit_logs`, `fpe_income_transactions`, `fpe_employee_aliases`, `fpe_parser_results`, `fpe_message_processing_state`, `fpe_sync_checkpoints`, `fpe_gap_scan_runs`, `fpe_processing_diagnostics`, `fpe_review_audit_logs`, `fpe_normalization_audit_logs`, `fpe_employee_resolution_links`, `fpe_employee_review_queue`, plus reads/backfills against `wbom_employees`, `wbom_escort_programs`, `wbom_staging_payments`, `wbom_whatsapp_messages`, `escort_roster_entries`, `escort_roster_change_requests`, `fazle_payment_drafts`, `whatsmeow_lid_map`.
 docs/MODULE_MAP.md:39:- **Purpose:** Monthly payroll batch engine — aggregates escort-duty/attendance data into `wbom_payroll_runs` with a state machine (`draft → reviewed → approved → locked → paid`, or `cancelled`), idempotent per employee/period. Plus (2026-07-10/11, Office Payroll Hardening) `eligibility.py`'s centralized office-staff classification and `dry_run.py`'s read-only eligibility-preview/dry-run/reconciliation layer.
@@ -7182,7 +7182,7 @@ docs/MODULE_MAP.md:78:- **DB tables used:** `wbom_client_billing_profiles` (new,
 docs/MODULE_MAP.md:80:- **Risk level:** Medium — commercially sensitive rate/wage data, but no money movement (no write path to `fpe_cash_transactions` or any ledger exists here or anywhere downstream yet).
 docs/MODULE_MAP.md:85:- **Purpose:** Admin-facing CRUD API (Phase 19) for `fpe_cash_transactions` — add/edit/soft-delete transactions plus smart fuzzy employee matching. Never hard-deletes; uses `deleted_at`/`deleted_by`.
 docs/MODULE_MAP.md:88:- **DB tables used:** `fazle_admins`, `fpe_accounting_audit_logs`, `fpe_cash_transactions`, `fpe_employees`, `fpe_income_transactions`.
-docs/MODULE_MAP.md:90:- **Risk level:** Critical — direct CRUD on `fpe_cash_transactions`. **Note:** the edit (`PUT`, line 698) and soft-delete (`DELETE`, line 764) routes do a direct `UPDATE fpe_cash_transactions` outside `create_transaction()` — flagged as a Constitution boundary case (`SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md` Report 3 §1, marked INVESTIGATE, needs an Owner ruling on whether post-creation edit/delete counts as a "path to cash ledger" requiring `BUSINESS-CONSTITUTION.md` Article II documentation).
+docs/MODULE_MAP.md:90:- **Risk level:** Critical — direct CRUD on `fpe_cash_transactions`. **Note:** the edit (`PUT`, line 698) and soft-delete (`DELETE`, line 764) routes do a direct `UPDATE fpe_cash_transactions` outside `create_transaction()` — flagged as a Constitution boundary case (`archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md` Report 3 §1, marked INVESTIGATE, needs an Owner ruling on whether post-creation edit/delete counts as a "path to cash ledger" requiring `BUSINESS-CONSTITUTION.md` Article II documentation).
 docs/MODULE_MAP.md:94:- **Purpose:** Admin-facing CRUD API (Phase 18B) for `wbom_employees` — safe add/edit/deactivate. `employee_mobile` is immutable; deactivation propagates (non-fatally) to `fpe_employees`.
 docs/MODULE_MAP.md:97:- **DB tables used:** `fpe_cash_transactions`, `fpe_employees`, `wbom_attendance`, `wbom_employees`, `wbom_escort_programs`, `wbom_salary_records`.
 docs/MODULE_MAP.md:100:- **Writes money / sends messages / read-only:** Read/write employee master data; no money, no sends. **Note:** this is one of two employee-creation paths that still write `wbom_employees` as primary rather than `fpe_employees` — see `docs/DEVELOPER_GUIDE.md` §F.
@@ -8014,7 +8014,7 @@ knowledge_base/06_developer_system/database_rules.md:13:**Last Updated:** 2026-0
 knowledge_base/06_developer_system/database_rules.md:31:**Employee Identity (2026-07-02):** `fpe_employees` is now the single canonical
 knowledge_base/06_developer_system/database_rules.md:35:or link `fpe_employees` rows. Cross-reference with `wbom_employees` is
 knowledge_base/06_developer_system/database_rules.md:36:maintained via `wbom_employee_id` soft-link. Migration 011 backfilled all 178
-knowledge_base/06_developer_system/database_rules.md:68:`SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md` Report 4 found `ALTER TABLE` touches on the same 5 tables (`fpe_cash_transactions`, `fpe_income_transactions`, `escort_roster_entries`, `wbom_escort_programs`, `fazle_payment_drafts`) from more than one of the three governed directories, plus a fully duplicated schema definition for all 8 `social_auto_reply` tables (identical in both `db/migrations/013_social_auto_reply.sql` and the inline DDL in `modules/social_auto_reply/__init__.py`).
+knowledge_base/06_developer_system/database_rules.md:68:`archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md` Report 4 found `ALTER TABLE` touches on the same 5 tables (`fpe_cash_transactions`, `fpe_income_transactions`, `escort_roster_entries`, `wbom_escort_programs`, `fazle_payment_drafts`) from more than one of the three governed directories, plus a fully duplicated schema definition for all 8 `social_auto_reply` tables (identical in both `db/migrations/013_social_auto_reply.sql` and the inline DDL in `modules/social_auto_reply/__init__.py`).
 knowledge_base/06_developer_system/database_rules.md:79:- [ ] Port `fazle_payroll_engine/migrations/*.sql` into `db/migrations/` under new numbers, after diffing shared-table statements (`fpe_cash_transactions`, `fpe_income_transactions`, `fazle_payment_drafts`, `wbom_escort_programs`) against actual production columns
 knowledge_base/06_developer_system/database_rules.md:111:An escort program begins when an admin registers a vessel assignment (`wbom_escort_programs`). The escort employee is linked via FK to `wbom_employees`. As the program progresses, the roster module creates a calculated payment record (`escort_roster_entries`) that mirrors key program fields and computes pay using the management-approved formula.
 knowledge_base/06_developer_system/database_rules.md:129:| `wbom_escort_programs` | Physical Entity | Master record: vessel, escort employee FK, dates, shift, status, payment totals, food_bill | Created on assignment; updated through program lifecycle; status: Assigned→Active→Completed |
@@ -10622,91 +10622,91 @@ modules/wa_chat_frontend/__init__.py:608:            FROM wbom_whatsapp_messages
 modules/wa_chat_frontend/__init__.py:824:                    FROM wbom_whatsapp_messages
 modules/wa_chat_frontend/__init__.py:862:                    LEFT JOIN wbom_contacts c ON c.whatsapp_number = d.recipient
 modules/wa_chat_frontend/__init__.py:864:                        SELECT message_body FROM wbom_whatsapp_messages
-payroll-escort-workflow-audit-2026-06-13.md:13:- `wbom_*`: operational employee, escort, attendance, cash, and monthly payroll
-payroll-escort-workflow-audit-2026-06-13.md:14:- `fpe_*`: immutable WhatsApp-derived accounting, employee matching, and ledger
-payroll-escort-workflow-audit-2026-06-13.md:19:সবচেয়ে বড় সমস্যা হলো write-path consistency। কিছু workflow শুধু `wbom_*` update করে, কিছু শুধু `fpe_*` update করে, এবং roster sync অধিকাংশ operational write-এর পরে স্বয়ংক্রিয়ভাবে চলে না।
-payroll-escort-workflow-audit-2026-06-13.md:25:| `wbom_employees` | 171 rows, 170 active |
-payroll-escort-workflow-audit-2026-06-13.md:26:| `fpe_employees` | 351 rows, 350 active |
-payroll-escort-workflow-audit-2026-06-13.md:29:| `wbom_escort_programs` | 319 |
-payroll-escort-workflow-audit-2026-06-13.md:32:| `wbom_attendance` | 0 |
-payroll-escort-workflow-audit-2026-06-13.md:34:| `fpe_cash_transactions` | 2,282 total rows |
-payroll-escort-workflow-audit-2026-06-13.md:35:| `fpe_employee_ledger` | 336 rows |
-payroll-escort-workflow-audit-2026-06-13.md:70:                        +--> fpe_cash_transactions
-payroll-escort-workflow-audit-2026-06-13.md:71:                        +--> fpe_employee_ledger
-payroll-escort-workflow-audit-2026-06-13.md:74:  wbom_employees
-payroll-escort-workflow-audit-2026-06-13.md:75:  wbom_escort_programs
-payroll-escort-workflow-audit-2026-06-13.md:76:  wbom_cash_transactions
-payroll-escort-workflow-audit-2026-06-13.md:77:  wbom_attendance
-payroll-escort-workflow-audit-2026-06-13.md:78:  wbom_payroll_runs
-payroll-escort-workflow-audit-2026-06-13.md:81:  fpe_employees
-payroll-escort-workflow-audit-2026-06-13.md:82:  fpe_cash_transactions
-payroll-escort-workflow-audit-2026-06-13.md:83:  fpe_employee_ledger
-payroll-escort-workflow-audit-2026-06-13.md:86:  wbom_escort_programs --> manual/scheduled sync --> escort_roster_entries
-payroll-escort-workflow-audit-2026-06-13.md:100:2. Inserts a full operational employee into `wbom_employees`.
-payroll-escort-workflow-audit-2026-06-13.md:102:4. Creates or matches a corresponding `fpe_employees` record.
-payroll-escort-workflow-audit-2026-06-13.md:112:3. If phone evidence exists but no employee matches, FPE immediately creates `fpe_employees`.
-payroll-escort-workflow-audit-2026-06-13.md:115:This path does **not** create a `wbom_employees` operational profile. Therefore the employee may appear in payroll history but cannot reliably participate in escort assignment, release, attendance, or WBOM payroll.
-payroll-escort-workflow-audit-2026-06-13.md:133:1. `wbom_employees` has 171 rows while `fpe_employees` has 351 rows.
-payroll-escort-workflow-audit-2026-06-13.md:149:1. Phone identity maps the sender to `wbom_employees`.
-payroll-escort-workflow-audit-2026-06-13.md:152:   - `wbom_employees`
-payroll-escort-workflow-audit-2026-06-13.md:153:   - `wbom_cash_transactions`
-payroll-escort-workflow-audit-2026-06-13.md:154:   - `wbom_escort_programs`
-payroll-escort-workflow-audit-2026-06-13.md:155:   - `wbom_salary_records`
-payroll-escort-workflow-audit-2026-06-13.md:171:  -> persist payment number in wbom_employees
-payroll-escort-workflow-audit-2026-06-13.md:175:  -> write wbom_cash_transactions
-payroll-escort-workflow-audit-2026-06-13.md:185:5. Persisting a submitted bKash/Nagad number directly to `wbom_employees` has no admin approval step.
-payroll-escort-workflow-audit-2026-06-13.md:186:6. The approved advance writes to `wbom_cash_transactions`, not directly to FPE immutable accounting.
-payroll-escort-workflow-audit-2026-06-13.md:187:7. `wbom_fpe_sync` exists, but no automatic call was found after `finalize_payment()` or direct admin advance insertion.
-payroll-escort-workflow-audit-2026-06-13.md:202:  -> fpe_wa_messages
-payroll-escort-workflow-audit-2026-06-13.md:203:  -> fpe_message_processing_state
-payroll-escort-workflow-audit-2026-06-13.md:206:  -> fpe_cash_transactions
-payroll-escort-workflow-audit-2026-06-13.md:207:  -> fpe_employee_ledger
-payroll-escort-workflow-audit-2026-06-13.md:231:3. `wbom_fpe_sync` appears to use an outdated `create_transaction()` calling contract and is not automatically invoked from important WBOM write paths.
-payroll-escort-workflow-audit-2026-06-13.md:250:  -> save one wbom_escort_programs row per lighter, status=draft
-payroll-escort-workflow-audit-2026-06-13.md:347:3. Escort name/mobile are written to `wbom_escort_programs`.
-payroll-escort-workflow-audit-2026-06-13.md:348:4. `escort_employee_id` is resolved from the escort mobile against `wbom_employees`.
-payroll-escort-workflow-audit-2026-06-13.md:373:| 7 | Confirmed program does not set `escort_employee_id` | ✅ Fixed — `_resolve_escort_employee_id()` looks up `wbom_employees` by escort mobile after confirmation |
-payroll-escort-workflow-audit-2026-06-13.md:390:`wbom_escort_programs` is the operational source. `escort_roster_entries` is a secondary projection used by `/escort-roster`.
-payroll-escort-workflow-audit-2026-06-13.md:411:2. Direct roster edits update `escort_roster_entries`, not necessarily `wbom_escort_programs`.
-payroll-escort-workflow-audit-2026-06-13.md:445:1. `create_escort_payment_draft()` selects `shift_type`, but live `wbom_escort_programs` has no `shift_type` column. Release can close a program and then fail to create its payment draft.
-payroll-escort-workflow-audit-2026-06-13.md:446:2. Release-confirmation lookup joins `wbom_employees.contact_id`, but live `wbom_employees` has no `contact_id` column.
-payroll-escort-workflow-audit-2026-06-13.md:448:4. `wbom_attendance` currently has zero rows, indicating release backfill is not operating successfully or no linked releases completed.
-payroll-escort-workflow-audit-2026-06-13.md:482:5. `wbom_payroll_runs` contains 510 rows, suggesting runs exist, but operational employee and attendance linkage remains incomplete.
-payroll-escort-workflow-audit-2026-06-13.md:556:- Immutable money events: `fpe_cash_transactions`
-payroll-escort-workflow-audit-2026-06-13.md:557:- Derived monthly ledger: `fpe_employee_ledger`
-payroll-escort-workflow-audit-2026-06-13.md:767:- The previous `wbom_employees.contact_id` release-confirmation breakage is removed; current code identifies employees by normalized `employee_mobile`, with fallback to active program `escort_mobile`.
-payroll-escort-workflow-audit-2026-06-13.md:774:- Approved payment drafts still write only to `wbom_cash_transactions`; FPE sync exists as an adapter but is not called by `finalize_payment()`.
-payroll-escort-workflow-audit-2026-06-13.md:792:| Payment approval | Admin `PAID`/`ADVANCE` finalizes draft, writes WBOM cash transaction, sends accountant message. | Same final approval shape remains. `finalize_payment()` is transactional and idempotent by `payment-draft:<draft_id>`, but it does not call `sync_wbom_transaction()`. | WBOM idempotency improved, FPE canonical posting still missing. |
-payroll-escort-workflow-audit-2026-06-13.md:793:| WBOM -> FPE sync | Audit noted `wbom_fpe_sync` existed but was outdated/not automatically invoked. | `modules/payment_ingest/wbom_fpe_sync.py` now has a current adapter using `match_or_create_employee()` and `create_transaction()`, plus date-range backfill. It is still not wired into `finalize_payment()` or payroll paid transitions. | Adapter improved; automatic write-path integration still pending. |
-payroll-escort-workflow-audit-2026-06-13.md:810:3. Updates `wbom_escort_programs` to `Completed`.
-payroll-escort-workflow-audit-2026-06-13.md:811:4. Backfills `wbom_attendance`.
-payroll-escort-workflow-audit-2026-06-13.md:834:- `create_escort_payment_draft()` selected `shift_type`, but live `wbom_escort_programs` did not have that column.
-payroll-escort-workflow-audit-2026-06-13.md:835:- Release confirmation lookup joined `wbom_employees.contact_id`, but live `wbom_employees` did not have that column.
-payroll-escort-workflow-audit-2026-06-13.md:849:`close_program()` writes `food_bill` and `conveyance` into `wbom_escort_programs`; `create_escort_payment_draft()` writes `gross_amount`, `food_bill`, `conveyance`, `advance_deduction`, and `expected_amount` into `fazle_payment_drafts`; release roster upsert copies those values into `escort_roster_entries`.
-payroll-escort-workflow-audit-2026-06-13.md:857:The audit said `wbom_fpe_sync` existed, looked outdated, and was not automatically invoked from important WBOM write paths.
-payroll-escort-workflow-audit-2026-06-13.md:860:`sync_wbom_transaction()` now reads one `wbom_cash_transactions` row, resolves/creates an FPE employee, and calls FPE `create_transaction()` with a synthetic `wa_message_id` like `wbom:<transaction_id>`. `backfill_wbom_to_fpe()` can sync a recent range.
-payroll-escort-workflow-audit-2026-06-13.md:863:The adapter itself looks updated. The main gap remains: `finalize_payment()` inserts WBOM cash and updates the draft, but does not call `sync_wbom_transaction()`. Payroll `mark_paid()` also does not post to FPE.
-payroll-escort-workflow-audit-2026-06-13.md:894:| P0 | FPE canonical posting after payment approval | Call `sync_wbom_transaction()` or directly create FPE transaction inside `finalize_payment()` after WBOM insert, within a reliable idempotent flow. |
-payroll-escort-workflow-audit-2026-07-04.md:42:- `modules/payment_ingest/wbom_fpe_sync`
-payroll-escort-workflow-audit-2026-07-04.md:92:- No dependency on missing `wbom_employees.contact_id` for release confirmation lookup
-payroll-escort-workflow-audit-2026-07-04.md:138:- Drift between `wbom_escort_programs` and `escort_roster_entries`
-payroll-escort-workflow-fix-plan-2026-07-04.md:36:| Employee identity | `wbom_employees` + `fpe_employees` linkage | Keep both during transition; enforce strong link constraints |
-payroll-escort-workflow-fix-plan-2026-07-04.md:37:| Escort lifecycle | `wbom_escort_programs` | Operational source for assignment and release lifecycle |
-payroll-escort-workflow-fix-plan-2026-07-04.md:38:| Immutable money events | `fpe_cash_transactions` | Single canonical money event table |
-payroll-escort-workflow-fix-plan-2026-07-04.md:39:| Employee ledger | `fpe_employee_ledger` | Derived from immutable events |
-payroll-escort-workflow-fix-plan-2026-07-04.md:42:| Attendance | `wbom_attendance` | Operational attendance fact table |
-payroll-escort-workflow-fix-plan-2026-07-04.md:46:1. `fpe_employees.wbom_employee_id` must be present for operationally active employees.
-payroll-escort-workflow-fix-plan-2026-07-04.md:47:2. `fpe_cash_transactions.program_id` required for escort settlement-related events.
-payroll-escort-workflow-fix-plan-2026-07-04.md:49:4. `wbom_escort_programs.escort_employee_id` required for confirmed and completed records.
-payroll-escort-workflow-fix-plan-2026-07-04.md:55:3. FK-safe indexes for `program_id`, `employee_id`, `wbom_employee_id`, `transaction_id`.
-payroll-escort-workflow-fix-plan-2026-07-04.md:64:1. Write operational employee in `wbom_employees`.
-payroll-escort-workflow-fix-plan-2026-07-04.md:65:2. Resolve or create linked `fpe_employees` in same transaction boundary where possible.
-payroll-escort-workflow-fix-plan-2026-07-04.md:71:1. Parse and create draft `wbom_escort_programs`.
-payroll-escort-workflow-fix-plan-2026-07-04.md:90:2. Approval service must always create canonical `fpe_cash_transactions` event.
-payroll-escort-workflow-fix-plan-2026-07-04.md:96:1. Payroll run can remain in `wbom_payroll_runs` for process state.
-payroll-escort-workflow-fix-plan-2026-07-04.md:97:2. On paid transition, create canonical payroll payout transaction event in `fpe_cash_transactions`.
-payroll-escort-workflow-fix-plan-2026-07-04.md:167:1. Unified transaction list from `fpe_cash_transactions`.
-payroll-escort-workflow-fix-plan-2026-07-04.md:221:1. Backfill `fpe_employees.wbom_employee_id` where deterministic match exists.
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:13:- `wbom_*`: operational employee, escort, attendance, cash, and monthly payroll
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:14:- `fpe_*`: immutable WhatsApp-derived accounting, employee matching, and ledger
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:19:সবচেয়ে বড় সমস্যা হলো write-path consistency। কিছু workflow শুধু `wbom_*` update করে, কিছু শুধু `fpe_*` update করে, এবং roster sync অধিকাংশ operational write-এর পরে স্বয়ংক্রিয়ভাবে চলে না।
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:25:| `wbom_employees` | 171 rows, 170 active |
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:26:| `fpe_employees` | 351 rows, 350 active |
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:29:| `wbom_escort_programs` | 319 |
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:32:| `wbom_attendance` | 0 |
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:34:| `fpe_cash_transactions` | 2,282 total rows |
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:35:| `fpe_employee_ledger` | 336 rows |
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:70:                        +--> fpe_cash_transactions
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:71:                        +--> fpe_employee_ledger
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:74:  wbom_employees
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:75:  wbom_escort_programs
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:76:  wbom_cash_transactions
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:77:  wbom_attendance
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:78:  wbom_payroll_runs
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:81:  fpe_employees
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:82:  fpe_cash_transactions
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:83:  fpe_employee_ledger
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:86:  wbom_escort_programs --> manual/scheduled sync --> escort_roster_entries
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:100:2. Inserts a full operational employee into `wbom_employees`.
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:102:4. Creates or matches a corresponding `fpe_employees` record.
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:112:3. If phone evidence exists but no employee matches, FPE immediately creates `fpe_employees`.
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:115:This path does **not** create a `wbom_employees` operational profile. Therefore the employee may appear in payroll history but cannot reliably participate in escort assignment, release, attendance, or WBOM payroll.
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:133:1. `wbom_employees` has 171 rows while `fpe_employees` has 351 rows.
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:149:1. Phone identity maps the sender to `wbom_employees`.
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:152:   - `wbom_employees`
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:153:   - `wbom_cash_transactions`
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:154:   - `wbom_escort_programs`
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:155:   - `wbom_salary_records`
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:171:  -> persist payment number in wbom_employees
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:175:  -> write wbom_cash_transactions
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:185:5. Persisting a submitted bKash/Nagad number directly to `wbom_employees` has no admin approval step.
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:186:6. The approved advance writes to `wbom_cash_transactions`, not directly to FPE immutable accounting.
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:187:7. `wbom_fpe_sync` exists, but no automatic call was found after `finalize_payment()` or direct admin advance insertion.
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:202:  -> fpe_wa_messages
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:203:  -> fpe_message_processing_state
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:206:  -> fpe_cash_transactions
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:207:  -> fpe_employee_ledger
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:231:3. `wbom_fpe_sync` appears to use an outdated `create_transaction()` calling contract and is not automatically invoked from important WBOM write paths.
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:250:  -> save one wbom_escort_programs row per lighter, status=draft
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:347:3. Escort name/mobile are written to `wbom_escort_programs`.
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:348:4. `escort_employee_id` is resolved from the escort mobile against `wbom_employees`.
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:373:| 7 | Confirmed program does not set `escort_employee_id` | ✅ Fixed — `_resolve_escort_employee_id()` looks up `wbom_employees` by escort mobile after confirmation |
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:390:`wbom_escort_programs` is the operational source. `escort_roster_entries` is a secondary projection used by `/escort-roster`.
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:411:2. Direct roster edits update `escort_roster_entries`, not necessarily `wbom_escort_programs`.
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:445:1. `create_escort_payment_draft()` selects `shift_type`, but live `wbom_escort_programs` has no `shift_type` column. Release can close a program and then fail to create its payment draft.
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:446:2. Release-confirmation lookup joins `wbom_employees.contact_id`, but live `wbom_employees` has no `contact_id` column.
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:448:4. `wbom_attendance` currently has zero rows, indicating release backfill is not operating successfully or no linked releases completed.
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:482:5. `wbom_payroll_runs` contains 510 rows, suggesting runs exist, but operational employee and attendance linkage remains incomplete.
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:556:- Immutable money events: `fpe_cash_transactions`
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:557:- Derived monthly ledger: `fpe_employee_ledger`
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:767:- The previous `wbom_employees.contact_id` release-confirmation breakage is removed; current code identifies employees by normalized `employee_mobile`, with fallback to active program `escort_mobile`.
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:774:- Approved payment drafts still write only to `wbom_cash_transactions`; FPE sync exists as an adapter but is not called by `finalize_payment()`.
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:792:| Payment approval | Admin `PAID`/`ADVANCE` finalizes draft, writes WBOM cash transaction, sends accountant message. | Same final approval shape remains. `finalize_payment()` is transactional and idempotent by `payment-draft:<draft_id>`, but it does not call `sync_wbom_transaction()`. | WBOM idempotency improved, FPE canonical posting still missing. |
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:793:| WBOM -> FPE sync | Audit noted `wbom_fpe_sync` existed but was outdated/not automatically invoked. | `modules/payment_ingest/wbom_fpe_sync.py` now has a current adapter using `match_or_create_employee()` and `create_transaction()`, plus date-range backfill. It is still not wired into `finalize_payment()` or payroll paid transitions. | Adapter improved; automatic write-path integration still pending. |
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:810:3. Updates `wbom_escort_programs` to `Completed`.
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:811:4. Backfills `wbom_attendance`.
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:834:- `create_escort_payment_draft()` selected `shift_type`, but live `wbom_escort_programs` did not have that column.
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:835:- Release confirmation lookup joined `wbom_employees.contact_id`, but live `wbom_employees` did not have that column.
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:849:`close_program()` writes `food_bill` and `conveyance` into `wbom_escort_programs`; `create_escort_payment_draft()` writes `gross_amount`, `food_bill`, `conveyance`, `advance_deduction`, and `expected_amount` into `fazle_payment_drafts`; release roster upsert copies those values into `escort_roster_entries`.
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:857:The audit said `wbom_fpe_sync` existed, looked outdated, and was not automatically invoked from important WBOM write paths.
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:860:`sync_wbom_transaction()` now reads one `wbom_cash_transactions` row, resolves/creates an FPE employee, and calls FPE `create_transaction()` with a synthetic `wa_message_id` like `wbom:<transaction_id>`. `backfill_wbom_to_fpe()` can sync a recent range.
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:863:The adapter itself looks updated. The main gap remains: `finalize_payment()` inserts WBOM cash and updates the draft, but does not call `sync_wbom_transaction()`. Payroll `mark_paid()` also does not post to FPE.
+archive/historical-reports/payroll-escort-workflow-audit-2026-06-13.md:894:| P0 | FPE canonical posting after payment approval | Call `sync_wbom_transaction()` or directly create FPE transaction inside `finalize_payment()` after WBOM insert, within a reliable idempotent flow. |
+archive/historical-reports/payroll-escort-workflow-audit-2026-07-04.md:42:- `modules/payment_ingest/wbom_fpe_sync`
+archive/historical-reports/payroll-escort-workflow-audit-2026-07-04.md:92:- No dependency on missing `wbom_employees.contact_id` for release confirmation lookup
+archive/historical-reports/payroll-escort-workflow-audit-2026-07-04.md:138:- Drift between `wbom_escort_programs` and `escort_roster_entries`
+archive/historical-reports/payroll-escort-workflow-fix-plan-2026-07-04.md:36:| Employee identity | `wbom_employees` + `fpe_employees` linkage | Keep both during transition; enforce strong link constraints |
+archive/historical-reports/payroll-escort-workflow-fix-plan-2026-07-04.md:37:| Escort lifecycle | `wbom_escort_programs` | Operational source for assignment and release lifecycle |
+archive/historical-reports/payroll-escort-workflow-fix-plan-2026-07-04.md:38:| Immutable money events | `fpe_cash_transactions` | Single canonical money event table |
+archive/historical-reports/payroll-escort-workflow-fix-plan-2026-07-04.md:39:| Employee ledger | `fpe_employee_ledger` | Derived from immutable events |
+archive/historical-reports/payroll-escort-workflow-fix-plan-2026-07-04.md:42:| Attendance | `wbom_attendance` | Operational attendance fact table |
+archive/historical-reports/payroll-escort-workflow-fix-plan-2026-07-04.md:46:1. `fpe_employees.wbom_employee_id` must be present for operationally active employees.
+archive/historical-reports/payroll-escort-workflow-fix-plan-2026-07-04.md:47:2. `fpe_cash_transactions.program_id` required for escort settlement-related events.
+archive/historical-reports/payroll-escort-workflow-fix-plan-2026-07-04.md:49:4. `wbom_escort_programs.escort_employee_id` required for confirmed and completed records.
+archive/historical-reports/payroll-escort-workflow-fix-plan-2026-07-04.md:55:3. FK-safe indexes for `program_id`, `employee_id`, `wbom_employee_id`, `transaction_id`.
+archive/historical-reports/payroll-escort-workflow-fix-plan-2026-07-04.md:64:1. Write operational employee in `wbom_employees`.
+archive/historical-reports/payroll-escort-workflow-fix-plan-2026-07-04.md:65:2. Resolve or create linked `fpe_employees` in same transaction boundary where possible.
+archive/historical-reports/payroll-escort-workflow-fix-plan-2026-07-04.md:71:1. Parse and create draft `wbom_escort_programs`.
+archive/historical-reports/payroll-escort-workflow-fix-plan-2026-07-04.md:90:2. Approval service must always create canonical `fpe_cash_transactions` event.
+archive/historical-reports/payroll-escort-workflow-fix-plan-2026-07-04.md:96:1. Payroll run can remain in `wbom_payroll_runs` for process state.
+archive/historical-reports/payroll-escort-workflow-fix-plan-2026-07-04.md:97:2. On paid transition, create canonical payroll payout transaction event in `fpe_cash_transactions`.
+archive/historical-reports/payroll-escort-workflow-fix-plan-2026-07-04.md:167:1. Unified transaction list from `fpe_cash_transactions`.
+archive/historical-reports/payroll-escort-workflow-fix-plan-2026-07-04.md:221:1. Backfill `fpe_employees.wbom_employee_id` where deterministic match exists.
 proposal_hermes_whatsapp_persona_reply_20260803.md:241:  seed table), `repeat_client` (`fpe_cash_transactions` history), `employee`
 proposal_hermes_whatsapp_persona_reply_20260803.md:242:  (`wbom_employees` phone match, with 4 secondary evidence sources),
 recover_critical_numbers.py:168:        FROM wbom_whatsapp_messages

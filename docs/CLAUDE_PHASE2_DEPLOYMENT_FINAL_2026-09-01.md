@@ -110,7 +110,7 @@ Neither is in scope; documented for a separate cleanup (§ OWNER_ACTION #6).
 `docs/PRODUCTION_SYSTEM_STATUS_2026-08-31.md` + `docs/WEB_UI_WORKFLOW_AUDIT_2026-08-31.md`:
 read-only prior-session audits, `secret_scan` PASS, WEB_UI 0 phones, STATUS 5 distinct
 numbers all **internal infra** numbers already committed in `app/critical_numbers.py` /
-`docs/MODULE_MAP.md` / `AUDIT_REPORT.md` (no customer PII, no sanitization needed).
+`docs/MODULE_MAP.md` / `archive/historical-reports/AUDIT_REPORT.md` (no customer PII, no sanitization needed).
 → **committed as-is** (`2035641`), which removed the sole restart-gate Check-1 blocker
 without a manifest wildcard.
 

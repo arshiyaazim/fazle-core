@@ -336,7 +336,25 @@ async def list_backups(limit: int = 20) -> list[dict[str, Any]]:
 
 
 async def backup_status() -> dict[str, Any]:
-    out_dir = _backup_dir()
+    try:
+        out_dir = _backup_dir()
+    except OSError as e:
+        # 2026-10-26 fix: BACKUP_DIR defaults to "/home/azim/backups", a path
+        # that exists only on the original VPS. _backup_dir() calls
+        # mkdir(parents=True) unconditionally, so anywhere else this raised
+        # PermissionError -- and GET /backup/status had no handler for it and
+        # returned a bare 500. Report the condition instead of failing: a
+        # status endpoint that dies is worse than one that says it is broken.
+        log.error("[backup] backup directory unavailable: %s", e)
+        return {
+            "status": "error",
+            "error": f"backup directory unavailable: {e}",
+            "latest": None,
+            "files_on_disk": 0,
+            "total_bytes": 0,
+            "newest_age_h": None,
+            "dir": None,
+        }
     latest = await latest_backup()
     on_disk = sorted(out_dir.glob("fazle_pg_*.dump"))
     total_bytes = sum(p.stat().st_size for p in on_disk if p.exists())
@@ -379,6 +397,17 @@ async def job_daily_db_backup() -> dict[str, Any]:
 
 
 def render_status_text(s: dict[str, Any]) -> str:
+    # 2026-10-26: surface an unavailable backup directory as its own case.
+    # Previously it fell through to "no backup yet", which read like a
+    # scheduling problem and hid an environment/configuration fault.
+    err = s.get("error")
+    if err:
+        return (
+            "📦 ব্যাকআপ স্ট্যাটাস\n"
+            "────────────────\n"
+            "❌ ব্যাকআপ ডিরেক্টরি ব্যবহার করা যাচ্ছে না\n"
+            f"কারণ: {str(err)[:200]}"
+        )
     latest = s.get("latest")
     if not latest:
         return (

@@ -1,13 +1,31 @@
 # Migration Inventory — Fazle Core
 
 **Added:** 2026-07-08, System Consolidation Sprint (Task 4 — migration governance, first safe step)
-**Purpose:** a complete, factual list of every schema-creation source in this repository, as it exists today. This document changes nothing — no file listed here has been renamed, renumbered, or altered as part of adding this inventory. See `knowledge_base/06_developer_system/database_rules.md`'s "Migration Governance" section for the canonical-path policy this inventory supports, and `SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md` Report 4 for the full audit this was derived from.
+**Purpose:** a complete, factual list of every schema-creation source in this repository, as it exists today. This document changes nothing — no file listed here has been renamed, renumbered, or altered as part of adding this inventory. See `knowledge_base/06_developer_system/database_rules.md`'s "Migration Governance" section for the canonical-path policy this inventory supports, and `archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md` Report 4 for the full audit this was derived from.
 
 **Status of each source, going forward:**
 - ✅ **Canonical** — `db/migrations/` + `db/migrate.py`. All new schema changes land here.
 - 🗄️ **Legacy/historical** — not deleted, not extended with new files, pending a dedicated reconciliation pass.
 
 ---
+
+**Updated 2026-10-24** (`fazle_knowledge_base` missing columns): added
+`097_knowledge_base_missing_columns.sql`. `fazle_knowledge_base.value`,
+`.subcategory` and `.language` are live production columns that no migration in
+this repository ever declared — they appeared only in application code and in
+other migrations' statements. `value` is documented as pre-existing by migration
+003 itself ("DB had: key, value, tags", then `reply_text = value`);
+`subcategory` is selected by migration 012's `ai_read_kb_articles` view;
+`language` is inserted by `scripts/seed_recruitment_kb.sql`. A from-scratch
+build therefore failed twice: at `012` (`CREATE VIEW` on an undefined column)
+and at `021` (`INSERT` into an undefined column). Fixed additively in two
+places — migration `002`'s canonical `CREATE TABLE` now declares all three
+(it runs before 012 and 021, so a clean build gets them in time), and `097`
+`ADD COLUMN IF NOT EXISTS`-es them so already-deployed databases converge and
+so the schema is finally reproducible from this repository. Purely additive and
+idempotent; no row is read, rewritten or dropped. Found by
+`audits/NAMING_MISMATCH_AUDIT_2026-10-24.md` section 1.4 and covered by
+`tests/unit/test_sql_column_conformance.py`.
 
 **Updated 2026-10-21** (`fazle_` prefix unification): added `090`-`096` — seven
 idempotent RENAME migrations that move the last legacy-prefixed tables onto the
@@ -160,6 +178,7 @@ approval and the activation gate.
 094_unify_rename_fpe_cash_transactions.sql
 095_unify_rename_fpe_employee_ledger.sql
 096_unify_rename_fpe_employees.sql
+097_knowledge_base_missing_columns.sql
 ```
 
 **Note — no `009`**: never existed in this directory's history, or was removed before it. Intentionally left as a documented gap (see governance section) — do not backfill.
@@ -266,10 +285,10 @@ REPLACE VIEW` and its `schema_migrations` insert, commit only on full success).
 Row-count reconciled exactly: 247 `fazle_employees_legacy` baseline rows + 86
 FPE-only-active-unlinked rows = 333 resulting view rows, zero duplicate
 non-NULL `employee_id` groups. Full evidence trail:
-`HERMES_IDENTITY_GAP_FIX_PREDEPLOYMENT_ACCEPTANCE_2026-08-18.md`.
+`archive/historical-reports/HERMES_IDENTITY_GAP_FIX_PREDEPLOYMENT_ACCEPTANCE_2026-08-18.md`.
 
 **`067_hermes_decision_source_message_id.sql` (2026-08-19, Task 1 of
-HERMES_BUSINESS_EXECUTION_CAPABILITY_PROVENANCE_AUDIT_2026-08-19.md's
+archive/historical-reports/HERMES_BUSINESS_EXECUTION_CAPABILITY_PROVENANCE_AUDIT_2026-08-19.md's
 4-task plan, APPLIED to production 2026-08-19 via `db/migrate.py`):**
 adds a single nullable `source_message_id VARCHAR(100)` column to
 `hermes_decision_audit_log` (`ALTER TABLE ... ADD COLUMN IF NOT EXISTS`).
@@ -435,7 +454,7 @@ because it is additive-nullable. `canonical_message_key` is FORENSIC /
 OBSERVABILITY only: nothing reads it to gate a business action and it must
 never be wired into `process_bridge_inbound` or any idempotency check.
 
-**Next available number for new work: `097`.**
+**Next available number for new work: `098`.**
 
 **Known cross-directory `ALTER TABLE` touches into these tables from outside `db/migrations/`** (see Report 4 for full evidence): `fazle_cash_transactions`, `fpe_income_transactions`, `escort_roster_entries`, `wbom_escort_programs`, `fazle_payment_drafts` are each also touched by `fazle_payroll_engine/migrations/` and/or the legacy `migrations/` directory.
 
@@ -508,7 +527,7 @@ Treated as a deliberate idempotent-bootstrap pattern for now, not a restructurin
 
 ## 🗄️ Test-fixture-only schema (`tests/conftest.py`) — NOT a production schema source, listed here only as a known gap
 
-24 tables have **no `CREATE TABLE` anywhere in this repository** except a guessed re-creation inside `tests/conftest.py`, including two confirmed live production writers with genuinely zero real schema definition anywhere: **`fazle_error_log`**, **`llm_conversation_log`**. Full list of all 24 tables is in `SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md` Report 4 §7 and Report 9. `conftest.py`'s guessed schema is already known to disagree with production (per the Sprint-C0D audit). **This is the most urgent unresolved item** — a clean environment cannot currently be rebuilt from this repository alone. Tracked as a checklist item in `database_rules.md`'s Migration Governance section; not resolved by this inventory.
+24 tables have **no `CREATE TABLE` anywhere in this repository** except a guessed re-creation inside `tests/conftest.py`, including two confirmed live production writers with genuinely zero real schema definition anywhere: **`fazle_error_log`**, **`llm_conversation_log`**. Full list of all 24 tables is in `archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md` Report 4 §7 and Report 9. `conftest.py`'s guessed schema is already known to disagree with production (per the Sprint-C0D audit). **This is the most urgent unresolved item** — a clean environment cannot currently be rebuilt from this repository alone. Tracked as a checklist item in `database_rules.md`'s Migration Governance section; not resolved by this inventory.
 
 ---
 

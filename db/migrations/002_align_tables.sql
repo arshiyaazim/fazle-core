@@ -6,10 +6,24 @@
 --          + 14 KB seed entries (ON CONFLICT DO UPDATE — idempotent)
 
 -- ── Knowledge Base ──────────────────────────────────────────────────────────────
+-- `subcategory`, `value` and `language` were absent from every CREATE TABLE in
+-- the repository even though they are live production columns:
+--   * migration 003 documents `value` as pre-existing ("DB had: key, value,
+--     tags") and migrates its contents into `reply_text`;
+--   * migration 012's `ai_read_kb_articles` view selects `k.subcategory`;
+--   * migrations 021 and scripts/seed_recruitment_kb.sql INSERT `value` and
+--     `language` respectively.
+-- A from-scratch build therefore failed at 012 (undefined column) long before
+-- any application code ran. They are declared here, in the canonical CREATE
+-- TABLE, because this file runs before 012 and 021. Existing databases that
+-- predate this change converge through migration 097.
 CREATE TABLE IF NOT EXISTS fazle_knowledge_base (
     id               SERIAL PRIMARY KEY,
     category         TEXT        NOT NULL,
+    subcategory      TEXT,                    -- e.g. scope within a category
     key              TEXT        NOT NULL UNIQUE,
+    value            TEXT,                    -- legacy; superseded by reply_text
+    language         TEXT,                    -- 'bn' | 'bn-en'
     trigger_keywords TEXT[]      DEFAULT '{}',
     reply_text       TEXT        NOT NULL,
     reply_short      TEXT,

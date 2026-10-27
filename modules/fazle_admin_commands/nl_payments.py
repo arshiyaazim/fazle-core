@@ -173,8 +173,18 @@ async def intent_payments(text: str, admin_phone: str) -> str:
     if phone:
         sql_args.append(phone)
         sql_args.append(phone[2:] if phone.startswith("88") else phone)
-        where_phone = ("AND (t.payment_mobile = $3 OR t.payment_mobile = $4 "
-                       "     OR e.employee_mobile = $3 OR e.employee_mobile = $4)")
+        # Column names must match the tables actually aliased below
+        # (`fazle_cash_transactions t` / `fazle_employees e`). This used to
+        # reference `t.payment_mobile` and `e.employee_mobile`, neither of
+        # which exists: the real columns are `t.payout_phone` and
+        # `e.primary_phone` — the exact same two the SELECT list already
+        # aliases as `payment_mobile` / `emp_mobile`. Referring to a SELECT
+        # output alias from WHERE is not valid PostgreSQL, and because the
+        # aliases were prefixed with `t.` / `e.` Postgres resolved them as
+        # table columns, so this raised UndefinedColumnError whenever the
+        # admin's question contained a phone number.
+        where_phone = ("AND (t.payout_phone = $3 OR t.payout_phone = $4 "
+                       "     OR e.primary_phone = $3 OR e.primary_phone = $4)")
 
     # C1B: read from canonical fazle_cash_transactions
     rows = await fetch_all(
@@ -299,13 +309,28 @@ async def intent_employee_totals(text: str, admin_phone: str) -> str:
     if emp_row:
         eid = emp_row["employee_id"]
         sql_args = [eid]
-        where_clause = "AND t.employee_id = $1"
+        # `emp_row` came from fazle_employees_legacy, so `eid` is the WBOM /
+        # legacy employee_id. But t.employee_id FKs to fazle_employees(id) —
+        # a completely different key space (the same cross-system ID trap
+        # already fixed in payroll_logic.get_payroll_summary() and
+        # admin_employees.get_employee_detail(), 2026-07-18). Filtering on
+        # `t.employee_id = <legacy id>` matched an unrelated employee who
+        # happened to share the number, producing a confidently-wrong total.
+        # Route through fazle_employees.wbom_employee_id — the FPE<->WBOM
+        # link — using the `e` alias the query below already joins on.
+        where_clause = "AND e.wbom_employee_id = $1"
     elif phone:
         local = phone[2:] if phone.startswith("88") else phone
         sql_args = [phone, local]
+        # `e.employee_mobile` / `t.payment_mobile` do not exist on
+        # fazle_employees / fazle_cash_transactions — the real columns are
+        # `e.primary_phone` and `t.payout_phone`, the same two the SELECT list
+        # already aliases as `employee_mobile` / `payment_method`. Using the
+        # SELECT output aliases here raised UndefinedColumnError for every
+        # phone-based lookup.
         where_clause = (
-            "AND (e.employee_mobile = $1 OR e.employee_mobile = $2"
-            " OR t.payment_mobile = $1 OR t.payment_mobile = $2)"
+            "AND (e.primary_phone = $1 OR e.primary_phone = $2"
+            " OR t.payout_phone = $1 OR t.payout_phone = $2)"
         )
     else:
         identifier = name or "?"

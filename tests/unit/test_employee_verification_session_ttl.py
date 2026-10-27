@@ -1,7 +1,7 @@
 """
 Stale-session expiry — modules.employee_verification.get_verification_session()
 
-2026-08-19 (HERMES_SYSTEM_MESSAGE_ROOTCAUSE_AGENTIC_BEHAVIOR_AUDIT_2026-08-19.md,
+2026-08-19 (archive/historical-reports/HERMES_SYSTEM_MESSAGE_ROOTCAUSE_AGENTIC_BEHAVIOR_AUDIT_2026-08-19.md,
 Phase 2 of the same-day follow-up plan): this module had the identical
 no-TTL bug modules.employee_conversation.get_conversation_session() was
 fixed for earlier the same day (Priority 1) -- a session left open at

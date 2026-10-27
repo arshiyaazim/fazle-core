@@ -8,7 +8,7 @@ Expansion Level 2). Covers:
   - internal key (owner) bypasses the RBAC lookup entirely, same as every
     other require_command route
 
-2026-08-19 (HERMES_MESSAGE_CONTEXT_REPLY_EXECUTION_GAP_AUDIT_2026-08-19.md):
+2026-08-19 (archive/historical-reports/HERMES_MESSAGE_CONTEXT_REPLY_EXECUTION_GAP_AUDIT_2026-08-19.md):
 this route used to silently default `source_bridge` to "bridge2" when
 omitted -- the exact silent-default risk fazle-mcp/send_whatsapp_tools.py's
 own docstring already documented and rejected client-side (2026-08-15), but

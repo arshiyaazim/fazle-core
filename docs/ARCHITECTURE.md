@@ -72,7 +72,7 @@ longer an active local default or task-tier setting.
 ### Scheduler
 APScheduler (`Asia/Dhaka`) runs 8 jobs: outbound queue drain, KB refresh,
 backup rotate, RAG reindex, attendance import, error-log truncate, etc.
-See `modules/scheduler.py`.
+See `modules/scheduler/`.
 
 ## Data flow — inbound message
 

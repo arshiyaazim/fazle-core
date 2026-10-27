@@ -1700,7 +1700,7 @@ async def sync_status():
     rows = await fetch_all(
         """
         SELECT source, source_number, chat_jid, last_message_id, last_timestamp,
-               total_ingested, last_sync_at, last_checked_at
+               total_ingested, last_sync_at
         FROM fpe_sync_checkpoints
         ORDER BY last_sync_at DESC
         """

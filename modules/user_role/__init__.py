@@ -1,7 +1,7 @@
 """
 Fazle Core — User Role Detection (Phase 4A)
 
-DEPRECATED (2026-08-18, `HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md`):
+DEPRECATED (2026-08-18, `archive/historical-reports/HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md`):
 superseded by `modules.fazle_identity_brain.detect_identity()`, which is what
 message_router/bridge_poller/app.main actually call in production. A
 repo-wide grep confirmed `detect_role()` has zero callers anywhere in this

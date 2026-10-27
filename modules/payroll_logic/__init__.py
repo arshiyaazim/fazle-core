@@ -51,7 +51,6 @@ async def get_payroll_summary(employee_id: int) -> PayrollSummary:
     """
     today = date.today()
     month_start = today.replace(day=1)
-    month_key = month_start.strftime("%Y-%m")
 
     # Employee base info
     emp = await fetch_one(
@@ -125,12 +124,27 @@ async def get_payroll_summary(employee_id: int) -> PayrollSummary:
         employee_id,
     )
 
-    # Check salary_records for current month
+    # Check salary_records for current month.
+    #
+    # These column names must match production `wbom_salary_records` as captured
+    # by migration 029 (a pg_dump of the live database) — the authoritative
+    # definition for this table. Two things differ from what this query used to
+    # assume:
+    #   * the period is stored as TWO integer columns, `month` + `year`
+    #     (UNIQUE (employee_id, month, year)), NOT a single `salary_month`
+    #     'YYYY-MM' text column;
+    #   * the money/status columns are `net_salary` / `payment_status`,
+    #     not `amount` / `status`.
+    # The previous query selected `amount`, `status` and `salary_month`, none of
+    # which exist in production, so it raised UndefinedColumnError on every
+    # call. The error was swallowed upstream, so this lookup always returned
+    # nothing and every payroll summary silently degraded to
+    # "under_review / পর্যালোচনাধীন" instead of reporting the real salary state.
     salary_rec = await fetch_one(
-          """SELECT amount AS net_salary, status AS payment_status, payment_date
+        """SELECT salary_id, net_salary, payment_status, payment_date
            FROM wbom_salary_records
-              WHERE employee_id = $1 AND salary_month = $2""",
-          employee_id, month_key,
+          WHERE employee_id = $1 AND month = $2 AND year = $3""",
+        employee_id, month_start.month, month_start.year,
     )
 
     # Determine if under review
@@ -140,7 +154,10 @@ async def get_payroll_summary(employee_id: int) -> PayrollSummary:
 
     notes_parts = []
     if salary_rec:
-        status = salary_rec.get("payment_status", "")
+        # Production's column default is 'Pending' (capitalised) and nothing
+        # normalises it on write, so compare case-insensitively instead of
+        # assuming a lower-case convention the data does not follow.
+        status = (salary_rec.get("payment_status") or "").strip().lower()
         if status == "paid":
             notes_parts.append(f"এই মাসের বেতন পরিশোধিত হয়েছে {salary_rec['payment_date']}")
         elif status == "pending":

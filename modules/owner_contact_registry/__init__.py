@@ -39,13 +39,23 @@ import csv
 import logging
 import os
 import threading
+from pathlib import Path
 from typing import Optional
 
 log = logging.getLogger(__name__)
 
-# Single authoritative file (section 1 + 3). All paths under /home/azim/core
-# resolved at import time so the registry works regardless of cwd.
-_REPO_ROOT = "/home/azim/core"
+# Single authoritative file (section 1 + 3). Resolved from this file's own
+# location at import time so the registry works regardless of cwd.
+#
+# 2026-10-26 fix: this was the hardcoded literal "/home/azim/core". Off that
+# one developer's machine the CSV was never found, _load_registry() logged
+# "OWNER_CONTACT_REGISTRY_ERROR ... Falling back to NO CONTACT SUPPRESSION"
+# and returned an empty frozenset -- so is_owner_managed_contact() answered
+# False for EVERY number, including a phone on the first row of the CSV.
+# The gate failed OPEN: owners' personal contacts silently lost the
+# no-auto-reply protection this module exists to provide. Deriving the root
+# from __file__ keeps it correct in any checkout.
+_REPO_ROOT = str(Path(__file__).resolve().parents[2])
 _CSV_PATH = os.path.join(
     _REPO_ROOT, "resources", "ops", "selected_contacts_normalized_unique.csv"
 )
@@ -118,6 +128,14 @@ def _load_registry() -> frozenset[str]:
             "[owner_contact_registry] CSV had %d invalid phone(s) skipped; "
             "verify the CSV row format.", invalid_count,
         )
+
+    # 2026-10-26 fix: clear any previous error now that a load has succeeded.
+    # _load_error was only ever set on failure and never reset, so a single
+    # transient problem (a missing CSV at startup, an unreadable file) left
+    # registry_load_error() reporting it forever -- even after a later
+    # reload recovered. Monitoring on that value would raise a permanent
+    # false alarm.
+    _load_error = None
 
     log.info(
         "[owner_contact_registry] loaded %d unique normalized phones from %s",

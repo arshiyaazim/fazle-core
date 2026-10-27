@@ -346,10 +346,15 @@ async def _bridge_to_finalize(staging_id: int, employee_id: int, parsed: dict) -
         f"to {emp['employee_name']} ({emp['employee_mobile']})"
         + (f" TrxID {parsed['trxid']}" if parsed.get('trxid') else "")
     )
+    # The column is `payment_method`, not `method` — every other writer to
+    # this table (e.g. modules/employee_conversation/__init__.py) already uses
+    # `payment_method`, so this INSERT was the only one that failed. Note that
+    # `parsed["method"]` below is the *parser's* dict key, which is genuinely
+    # called `method`; only the SQL column name changes.
     draft_id = await fetch_val(
         """INSERT INTO fazle_payment_drafts
               (employee_id, employee_name, employee_mobile, draft_text,
-               expected_amount, method, status, draft_type, source)
+               expected_amount, payment_method, status, draft_type, source)
            VALUES ($1,$2,$3,$4,$5,$6,'pending','auto_payment','payment_ingest')
            RETURNING id""",
         employee_id, emp["employee_name"], emp["employee_mobile"],

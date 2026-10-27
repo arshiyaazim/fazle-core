@@ -27,6 +27,25 @@ from tests.conftest import (
 )
 
 
+def _reset_reply_cooldown() -> None:
+    """Clear bridge_poller's in-memory reply-cooldown state.
+
+    The poller applies REPLY_COOLDOWN (60s) per sender phone, and with Redis
+    unavailable under test it falls back to the module-level ``_last_reply``
+    dict. These tests drive several messages from the same admin within the
+    same second, so without this every admin command after the first would be
+    silently suppressed with "[bridge2] cooldown active for <phone>".
+
+    The cooldown is anti-spam for outbound auto-replies; it is not what these
+    workflow tests exercise, so it is reset rather than waited out.
+    """
+    try:
+        from modules.fazle_bridge_poller import _last_reply
+        _last_reply.clear()
+    except Exception:
+        pass
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Workflow 1: Full Escort Duty Lifecycle
 # ─────────────────────────────────────────────────────────────────────────────
@@ -58,6 +77,7 @@ class TestEscortFullWorkflow:
             "master mobile 01933333333 wheat 5000MT "
             "escort lagbe 06/05/2026 Day",
         )
+        _reset_reply_cooldown()
         r = await client.post("/webhook/mcp1", json=order_payload)
         assert r.status_code in (200, 202)
 
@@ -92,6 +112,7 @@ class TestEscortFullWorkflow:
                 admin["id"],
             )
 
+        _reset_reply_cooldown()
         r = await client.post("/webhook/mcp2", json=confirm_payload)
         assert r.status_code in (200, 202)
 
@@ -100,6 +121,7 @@ class TestEscortFullWorkflow:
             guard_mobile,
             "হাজির আছি MV GOLDEN STAR তে",
         )
+        _reset_reply_cooldown()
         r = await client.post("/webhook/mcp1", json=attendance_payload)
         assert r.status_code in (200, 202)
 
@@ -168,6 +190,7 @@ class TestEscortFullWorkflow:
             f"PAID {pay_id} 1500 bkash",
             source="bridge2",
         )
+        _reset_reply_cooldown()
         r = await client.post("/webhook/mcp2", json=paid_payload)
         assert r.status_code in (200, 202)
 
@@ -232,6 +255,7 @@ class TestAdvanceWorkflow:
         # /webhook/mcp1 HTTP path instead of calling the handler directly.
         for turn_text in ("অগ্রিম চাই", "২০০০", "বিকাশ 01712345678", "confirm"):
             turn_payload = make_bridge_payload(seed_employee["employee_mobile"], turn_text)
+            _reset_reply_cooldown()
             r = await client.post("/webhook/mcp1", json=turn_payload)
             assert r.status_code in (200, 202)
 
@@ -248,6 +272,7 @@ class TestAdvanceWorkflow:
             f"ADVANCE {draft_id} 2000 bkash",
             source="bridge2",
         )
+        _reset_reply_cooldown()
         r = await client.post("/webhook/mcp2", json=approve_payload)
         assert r.status_code in (200, 202)
 
@@ -427,6 +452,7 @@ class TestAttendanceWorkflow:
             seed_employee["employee_mobile"],
             "হাজির আছি",
         )
+        _reset_reply_cooldown()
         r = await client.post("/webhook/mcp1", json=payload)
         assert r.status_code in (200, 202)
 

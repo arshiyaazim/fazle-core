@@ -946,7 +946,7 @@ message_router.process_message()
 - **Chat ID vs sender/participant ID:** Group messages carry a group JID;
   the sender's phone is resolved separately. `modules/fazle_group_identity.py`
   mirrors group metadata but does not alter routing.
-- **Phone normalization:** `modules/phone_normalizer.py` normalizes to E.164;
+- **Phone normalization:** `modules/phone_normalizer/` normalizes to E.164;
   `identity_resolver.py` uses normalized `identity_phone` for all lookups.
 - **Employee/client/candidate/unknown identity lookup:**
   - `modules/fazle_identity_brain/` is the canonical role/trust engine.
@@ -1063,7 +1063,7 @@ the normalized WhatsApp mobile number is the primary identity key."
   authorization evidence at enqueue and revalidates on sweep.
 - **Ledger write:** `fazle_cash_transactions` is the canonical cash ledger.
   Only `modules/fazle_payroll_engine/accounting.py` should create rows there.
-  `modules/fazle_payment_ingest.py` and `modules/fazle_payment_workflow.py` write through
+  `modules/fazle_payment_ingest/` and `modules/fazle_payment_workflow/` write through
   FPE's canonical creator.
 
 ### Read-only vs explicit approval required

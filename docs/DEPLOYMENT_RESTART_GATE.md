@@ -8,7 +8,7 @@ scripts/restart_gate.sh --ack-flags    # re-baseline db/.env_flags_acknowledged 
 ```
 Supporting files created alongside it: `db/.restart_gate_manifest` (check 1), `db/.xfail_baseline` (check 3, seeded at 13), `db/.env_flags_acknowledged` (check 6), `scripts/secret_scan.sh` (check 2, also reused by the new `.git/hooks/pre-commit` local hook for the "before commit" version of the same scan + migration-path check). `db/MIGRATION_INVENTORY.md` was also brought current (15 files it was missing) so check 5 doesn't false-block on day one.
 
-**Why this exists:** `SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md` Report 8 Risk #2 ("working-tree deployment") found that `fazle-core.service` runs directly off the git working tree with no build/artifact step — any restart loads whatever is currently on disk, reviewed or not. This gate is the smallest mechanical fix for that risk without requiring a full build/artifact pipeline.
+**Why this exists:** `archive/historical-reports/SYSTEM_CONSOLIDATION_PLAN_2026-07-08.md` Report 8 Risk #2 ("working-tree deployment") found that `fazle-core.service` runs directly off the git working tree with no build/artifact step — any restart loads whatever is currently on disk, reviewed or not. This gate is the smallest mechanical fix for that risk without requiring a full build/artifact pipeline.
 
 **Design principle:** the current working tree is *routinely* dirty (in-flight release work sits uncommitted for days at a time in this repo's normal workflow) — a gate that demands 100% clean would be unworkable and would just get bypassed. So this gate distinguishes **known, reviewed, currently-dirty files** (an explicit allowlist) from **anything new/unexpected**, and blocks only the latter.
 

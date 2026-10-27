@@ -243,7 +243,7 @@ location /downloads/ {
 | `/var/www/locationwhere.iamazim.com/downloads/` | **ACTIVE** | APK files served by nginx | nginx `alias` directive |
 | `/home/azim/locationwhere-backend/` | **RESIDUAL** | `public/downloads/` dir created 2026-06-19 | Not in nginx — do not use for uploads |
 | `/home/azim/locationwhere-frontend/` | **RESIDUAL** | `index.html`, `assets/` (2 items, Jun 16) | Old build snapshot |
-| `AUDIT_REPORT.md:37` in fazle-core | **STALE REFERENCE** | Lists `/home/azim/locationwhere-backend/` as active | Needs audit note update |
+| `archive/historical-reports/AUDIT_REPORT.md:37` in fazle-core | **STALE REFERENCE** | Lists `/home/azim/locationwhere-backend/` as active | Needs audit note update |
 
 ---
 
@@ -264,9 +264,9 @@ location /downloads/ {
 
 | Reference | File | Notes |
 |-----------|------|-------|
-| `locationwhere-backend` path as active | `AUDIT_REPORT.md:37, 907` | June 2026 snapshot; old path was active then |
+| `locationwhere-backend` path as active | `archive/historical-reports/AUDIT_REPORT.md:37, 907` | June 2026 snapshot; old path was active then |
 | All `locationwhere-backend` / `locationwhere-frontend` refs | `audit-report-2026-06-07.md` | Historical audit, pre-migration |
-| Old path migration narrative | `audit-report-2026-06-10.md` | Documents the move; informational |
+| Old path migration narrative | `archive/historical-reports/audit-report-2026-06-10.md` | Documents the move; informational |
 | `vps-config-git/scripts/ecosystem.locationwhere.config.cjs` | vps-config-git backup | Config backup copy; not executed directly |
 
 ### C. Safe-to-archive candidates — requires owner approval before any action
@@ -307,4 +307,4 @@ location /downloads/ {
 2. Fix GitHub Models token or model name in `.env`, then restart fazle-core (10 min, SSH)
 3. Investigate LocationWhere PM2 74 restarts — check logs: `pm2 logs locationwhere-backend --lines 50`
 4. Propose config.py default alignment diff to owner (Section D) — low risk, but needs approval before applying
-5. Add audit note to `AUDIT_REPORT.md` marking old path references as stale (documentation only)
+5. Add audit note to `archive/historical-reports/AUDIT_REPORT.md` marking old path references as stale (documentation only)

@@ -7,6 +7,33 @@ cryptography==44.0.0
 python-multipart==0.0.12
 rapidfuzz==3.10.1
 python-dotenv==1.0.1
+# Required at startup: app/unified_routing.py imports yaml, and app/llm.py
+# imports unified_routing lazily on the LLM path. Without this the app fails
+# to import on a fresh install. Added 2026-10-25.
+PyYAML==6.0.3
+# Required at startup: app/main.py:48 imports modules.scheduler at module
+# level, and modules/scheduler/__init__.py imports apscheduler at module
+# level. Without it the app raises ModuleNotFoundError on import — confirmed
+# by reproducing a fresh venv. Added 2026-10-25.
+APScheduler==3.10.4
+# Required on every LLM call: app/github_models.py, groq_provider.py,
+# minimax_provider.py and omniroute_provider.py all import AsyncOpenAI at
+# module level, and app/llm.py reaches them on the live request path (lazily,
+# so the app still imports — but every completion fails without this).
+# Added 2026-10-25.
+openai>=1.40.0
+# Optional — NOT listed as a hard requirement. redis is only ever imported
+# lazily inside functions (modules/fazle_bridge_poller/__init__.py:730,744,
+# shared/state_version.py:43, modules/ai_console/live_adapters.py:596) and
+# every one of those sites degrades to an in-memory fallback when the import
+# or the connection fails. Install it to enable shared cooldown/state across
+# workers; the app runs without it.
+#   redis>=5.0.0
+# Optional — imagehash is imported lazily inside a function
+# (modules/fazle_image_hash/__init__.py:21). Install for image dedupe.
+#   imagehash>=4.3.1
+# Dev/scripts only — `requests` is imported by scripts/phase3_*.py alone, not
+# by app/ or modules/. Deliberately absent from the runtime requirements.
 PyMuPDF>=1.24.0
 python-docx>=1.1.0
 Pillow>=10.0.0

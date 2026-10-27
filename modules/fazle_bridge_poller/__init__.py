@@ -3115,7 +3115,20 @@ async def process_bridge_inbound(
             )
 
     # 1. Cooldown
-    _cooldown_blocked = not await _can_reply(phone)
+    #
+    # Admin messages are EXEMPT (Owner decision 2026-10-25).
+    # REPLY_COOLDOWN exists to stop flooding a human with unsolicited replies
+    # -- an outbound concern. But it was also gating inbound PROCESSING: this
+    # branch returns before process_message(), so a second admin command sent
+    # within REPLY_COOLDOWN was dropped entirely and never reached
+    # process_admin_command(). Reproduced: with RBAC satisfied, PAID sent
+    # while the cooldown was armed left draft=pending / txns=0, and the very
+    # same PAID after the cooldown cleared produced draft=approved / txns=1.
+    # An admin deliberately issuing commands is not an unwilling recipient,
+    # so suppressing their confirmation replies defeats the point -- and
+    # silently swallowing a PAID/ESCORTCONFIRM costs real money.
+    # Non-admin roles keep the gate exactly as before.
+    _cooldown_blocked = (id_role != "admin") and not await _can_reply(phone)
     if _cooldown_blocked and recruit_decision.get("active_session"):
         # 2026-08-25 (P0 production incident): an active recruitment intake
         # session is a direct, expected answer to a question THIS system

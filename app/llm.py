@@ -856,7 +856,7 @@ async def decision_call(
 
 
 
-# HERMES_SYSTEM_MESSAGE_ROOTCAUSE_AGENTIC_BEHAVIOR_AUDIT_2026-08-19.md
+# archive/historical-reports/HERMES_SYSTEM_MESSAGE_ROOTCAUSE_AGENTIC_BEHAVIOR_AUDIT_2026-08-19.md
 # Incident A: check_health() used to await 4 provider checks sequentially,
 # with no per-check timeout of its own. omniroute_provider.check_health()
 # does a real chat-completion round-trip with its own internal 10s

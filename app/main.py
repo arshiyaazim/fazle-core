@@ -78,50 +78,24 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname
 settings = get_settings()
 
 
-class _InMemoryObservability:
-    def __init__(self) -> None:
-        self._counters: dict[str, dict[tuple[tuple[str, str], ...], int]] = {}
-        self._histograms: dict[str, list[dict[str, Any]]] = {}
-
-    def inc(self, name: str, value: int = 1, labels: Optional[dict[str, str]] = None) -> None:
-        key = tuple(sorted((labels or {}).items()))
-        bucket = self._counters.setdefault(name, {})
-        bucket[key] = bucket.get(key, 0) + int(value)
-
-    def observe(self, name: str, value: float, labels: Optional[dict[str, str]] = None) -> None:
-        self._histograms.setdefault(name, []).append({
-            "labels": dict(labels or {}),
-            "value": float(value),
-        })
-
-    def render_prometheus(self) -> str:
-        lines: list[str] = []
-        for metric_name, buckets in self._counters.items():
-            for label_items, value in buckets.items():
-                labels = ",".join(f'{key}="{val}"' for key, val in label_items)
-                suffix = f"{{{labels}}}" if labels else ""
-                lines.append(f"{metric_name}{suffix} {value}")
-        for metric_name, samples in self._histograms.items():
-            for sample in samples:
-                labels = ",".join(f'{key}="{val}"' for key, val in sample["labels"].items())
-                suffix = f"{{{labels}}}" if labels else ""
-                lines.append(f"{metric_name}{suffix} {sample['value']}")
-        return "\n".join(lines) + ("\n" if lines else "")
-
-    def snapshot(self) -> dict[str, Any]:
-        return {
-            "counters": {
-                name: [
-                    {"labels": dict(label_items), "value": value}
-                    for label_items, value in buckets.items()
-                ]
-                for name, buckets in self._counters.items()
-            },
-            "histograms": self._histograms,
-        }
-
-
-obs = _InMemoryObservability()
+# 2026-10-26 fix: this module used to define its own `_InMemoryObservability`
+# class right here -- an INCOMPLETE DUPLICATE of modules/observability.
+#
+# The duplicate stored one histogram sample per call as {"labels", "value"}
+# and its snapshot() exposed only "counters" and "histograms". But
+# /observability/summary (and anything reading /metrics/json) was written
+# against modules/observability's richer schema: samples shaped
+# {"labels", "count", "sum_ms", "avg_ms", "buckets_ms"}, plus top-level
+# "uptime_s" and "gauges" keys.
+#
+# So /observability/summary raised KeyError on every call once any traffic
+# existed -- first KeyError: 'count', and after that was patched,
+# KeyError: 'uptime_s' -- and returned 500. A cold server looked healthy
+# only because the samples list is empty before the first request.
+#
+# Use the real, complete implementation instead of keeping a second partial
+# copy. Same public API: inc(), observe(), render_prometheus(), snapshot().
+from modules import observability as obs  # noqa: E402
 
 # ── Concurrency caps (B15.6) ───────────────────────────────────────────────────
 OCR_SEMAPHORE = asyncio.Semaphore(int(os.getenv("OCR_CONCURRENCY", "2")))
@@ -2048,7 +2022,7 @@ async def recruitment_interested_candidates(start: str, end: str = ""):
 
 # ── 2026-08-18 — Identity/Intent resolution, exposed for Hermes ──────────────
 # Closes the capability-exposure gap found in
-# HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md: Hermes
+# archive/historical-reports/HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md: Hermes
 # had no tool reaching the canonical resolvers (identity_brain.detect_identity,
 # modules.fazle_intent.classify) even though both are the same live, production
 # logic message_router already uses for every real WhatsApp turn. Thin,
@@ -2197,7 +2171,7 @@ async def api_classify_intent(text: str):
 
 # ── 2026-08-19 — hermes_kernel decision/event log, exposed for Hermes ────────
 # Closes a second capability-exposure gap found in the same-day follow-up
-# audit to HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:
+# audit to archive/historical-reports/HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md:
 # modules/hermes_kernel has been writing one hermes_decision_audit_log row
 # per real process_message() turn since HERMES_DECISION_AUDIT_ENABLED was
 # flipped true in .env (2026-08-17) -- chosen_action (reply/draft/
@@ -4817,7 +4791,7 @@ async def send_whatsapp_message(payload: dict, key: str = Depends(require_api_ke
 
     recipient = (payload or {}).get("recipient", "").strip()
     body = (payload or {}).get("body", "").strip()
-    # 2026-08-19 fix (HERMES_MESSAGE_CONTEXT_REPLY_EXECUTION_GAP_AUDIT_2026-08-19.md):
+    # 2026-08-19 fix (archive/historical-reports/HERMES_MESSAGE_CONTEXT_REPLY_EXECUTION_GAP_AUDIT_2026-08-19.md):
     # this used to default to "bridge2" here (`source_bridge or "bridge2"`) when
     # omitted -- the exact silent-default risk fazle-mcp/send_whatsapp_tools.py's
     # own docstring already documents and rejects client-side (2026-08-15), but
@@ -4831,7 +4805,7 @@ async def send_whatsapp_message(payload: dict, key: str = Depends(require_api_ke
     # if either changes.
     source_bridge = (payload or {}).get("source_bridge") or ""
     admin_instruction = (payload or {}).get("admin_instruction", "")
-    # 2026-08-19 (HERMES_SYSTEM_MESSAGE_ROOTCAUSE_AGENTIC_BEHAVIOR_AUDIT_2026-08-19.md,
+    # 2026-08-19 (archive/historical-reports/HERMES_SYSTEM_MESSAGE_ROOTCAUSE_AGENTIC_BEHAVIOR_AUDIT_2026-08-19.md,
     # Phase 0): optional idempotency key, forwarded as-is to outbound.enqueue()
     # -- that function already has native ON CONFLICT (idempotency_key) DO
     # NOTHING dedup (modules/outbound/__init__.py), this route just never
@@ -6025,6 +5999,11 @@ async def observability_summary():
         p = entry["labels"].get("path", "?")
         by_path[p] = by_path.get(p, 0) + int(entry["value"])
     # latency overall
+    # Sample shape comes from modules.observability: {"labels", "count",
+    # "sum_ms", "avg_ms", "buckets_ms"}. This was correct all along -- the
+    # bug was that `obs` was bound to an incomplete duplicate class defined
+    # in this file, which stored {"labels", "value"} instead. See the note
+    # where `obs` is imported.
     durs = snap["histograms"].get("fazle_http_request_duration_ms", [])
     total_count = sum(d["count"] for d in durs)
     total_sum = sum(d["sum_ms"] for d in durs)

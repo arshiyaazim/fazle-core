@@ -1,7 +1,7 @@
 """Unit tests -- GET /api/hermes/decisions/lookup, GET /api/hermes/kernel/events.
 
 2026-08-19 (same-day follow-up to
-HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md): new thin,
+archive/historical-reports/HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md): new thin,
 read-only routes exposing modules.hermes_kernel's hermes_decision_audit_log/
 hermes_event_log to Hermes via fazle-mcp. Both tables already exist
 (migration 060) and have been live-written since HERMES_DECISION_AUDIT_ENABLED/

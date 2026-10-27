@@ -1,6 +1,6 @@
 """Unit tests -- GET /api/identity/resolve, GET /api/intent/classify.
 
-2026-08-18 (HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md):
+2026-08-18 (archive/historical-reports/HERMES_IDENTITY_ROLE_INTENT_CONTENT_CAPABILITY_AUDIT_2026-08-18.md):
 new thin, read-only routes exposing the existing identity_brain.detect_identity()
 and modules.fazle_intent.classify() to Hermes via fazle-mcp. Follows the same
 httpx.AsyncClient + ASGITransport pattern as tests/unit/test_admin_directives_routes.py.
