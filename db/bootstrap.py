@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import hashlib
 import os
 import re
 import sys
@@ -31,6 +32,7 @@ except ImportError:
 
 FOUNDATION = ROOT / "db" / "schema" / "000_foundation.sql"
 RUNTIME_SUPPORT = ROOT / "db" / "schema" / "900_runtime_support.sql"
+BOOTSTRAP_COMPAT_DIR = ROOT / "db" / "schema" / "bootstrap_compat"
 MIGRATION_DIRS = (
     ("core", ROOT / "db" / "migrations"),
     ("fpe", ROOT / "modules" / "fazle_payroll_engine" / "migrations"),
@@ -74,7 +76,45 @@ def migration_steps() -> list[Step]:
     # Preserve the test-certified historical ordering. The source is the
     # deterministic tie-breaker for duplicate numeric filenames.
     migrations.sort(key=lambda item: (item.path.name, item.source))
-    return [Step("schema", FOUNDATION), *migrations, Step("schema", RUNTIME_SUPPORT)]
+
+    # Migration 029 is a production-captured bootstrap catalog for 27 tables
+    # that predate the numbered migration chain. Its numeric filename reflects
+    # when the schema record was added, not when those tables must exist. A
+    # fresh database needs it before migrations such as 018 alter those tables.
+    catalog = next(
+        step
+        for step in migrations
+        if step.source == "core"
+        and step.path.name == "029_bootstrap_core_tables_schema_record.sql"
+    )
+    migrations.remove(catalog)
+
+    # Some historical migrations assume the production-era shape that existed
+    # before earlier CREATE TABLE files were made fresh-build-friendly. Strict,
+    # explicit compatibility steps recreate only that transient precondition;
+    # they never hide or tolerate a migration error.
+    compat_before = {
+        ("core", "003c_schema_align.sql"): Step(
+            "bootstrap_compat", BOOTSTRAP_COMPAT_DIR / "003c_schema_align_pre.sql"
+        ),
+        ("core", "012_ai_readonly_views.sql"): Step(
+            "bootstrap_compat", BOOTSTRAP_COMPAT_DIR / "012_ai_readonly_views_pre.sql"
+        ),
+        # These tables predate the canonical migration directory; migration
+        # 024 only adds their foreign keys and therefore needs their recorded
+        # legacy DDL first.
+        ("core", "024_escort_history_fk.sql"): Step(
+            "legacy_prerequisite", ROOT / "migrations" / "escort_history_schema.sql"
+        ),
+    }
+    ordered: list[Step] = [catalog, Step("schema", FOUNDATION)]
+    for step in migrations:
+        prerequisite = compat_before.get((step.source, step.path.name))
+        if prerequisite:
+            ordered.append(prerequisite)
+        ordered.append(step)
+    ordered.append(Step("schema", RUNTIME_SUPPORT))
+    return ordered
 
 
 def _strip_transaction_wrappers(sql: str) -> str:
@@ -99,6 +139,15 @@ async def _connect(url: str):
     return await asyncpg.connect(url, command_timeout=120)
 
 
+def _checksum(step: Step) -> str:
+    raw = step.path.read_text(encoding="utf-8")
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def _expected_manifest() -> dict[str, str]:
+    return {step.key: _checksum(step) for step in migration_steps()}
+
+
 async def check(url: str) -> int:
     conn = await _connect(url)
     try:
@@ -106,13 +155,53 @@ async def check(url: str) -> int:
             "SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname='public'"
         )
         found = {str(row["tablename"]) for row in rows}
-        missing = sorted(REQUIRED_TABLES - found)
-        versions = 0
+        missing_tables = sorted(REQUIRED_TABLES - found)
+
+        applied: dict[str, str] = {}
         if "fazle_schema_versions" in found:
-            versions = int(await conn.fetchval("SELECT COUNT(*) FROM fazle_schema_versions"))
-        print(f"database={_database_name(url)} tables={len(found)} versions={versions}")
-        if missing:
-            print("missing required tables: " + ", ".join(missing), file=sys.stderr)
+            version_rows = await conn.fetch(
+                "SELECT migration_key, checksum FROM fazle_schema_versions"
+            )
+            applied = {
+                str(row["migration_key"]): str(row["checksum"])
+                for row in version_rows
+            }
+        expected = _expected_manifest()
+        missing_versions = sorted(expected.keys() - applied.keys())
+        unexpected_versions = sorted(applied.keys() - expected.keys())
+        changed_versions = sorted(
+            key
+            for key in expected.keys() & applied.keys()
+            if expected[key] != applied[key]
+        )
+
+        print(
+            f"database={_database_name(url)} tables={len(found)} "
+            f"versions={len(applied)}"
+        )
+        if missing_tables:
+            print(
+                "missing required tables: " + ", ".join(missing_tables),
+                file=sys.stderr,
+            )
+        if missing_versions:
+            print(
+                "missing schema versions: " + ", ".join(missing_versions),
+                file=sys.stderr,
+            )
+        if unexpected_versions:
+            print(
+                "unexpected schema versions: " + ", ".join(unexpected_versions),
+                file=sys.stderr,
+            )
+        if changed_versions:
+            print(
+                "schema checksum mismatch: " + ", ".join(changed_versions),
+                file=sys.stderr,
+            )
+        if any(
+            (missing_tables, missing_versions, unexpected_versions, changed_versions)
+        ):
             return 1
         print("schema check: OK")
         return 0
@@ -129,11 +218,24 @@ async def apply(url: str, allow_nonempty: bool = False) -> int:
                 "WHERE schemaname='public' AND tablename <> 'fazle_schema_versions'"
             )
         )
-        if existing_count and not allow_nonempty:
+        version_table_exists = bool(
+            await conn.fetchval("SELECT to_regclass('public.fazle_schema_versions') IS NOT NULL")
+        )
+        managed_versions = (
+            int(await conn.fetchval("SELECT COUNT(*) FROM fazle_schema_versions"))
+            if version_table_exists
+            else 0
+        )
+        if existing_count and not allow_nonempty and not managed_versions:
             raise RuntimeError(
-                f"refusing bootstrap: public schema already has {existing_count} table(s); "
-                "use db/migrate.py for an existing database or pass --allow-nonempty "
-                "only after reviewing the plan"
+                f"refusing bootstrap: public schema already has {existing_count} table(s) "
+                "without Fazle bootstrap version history; use db/migrate.py for an "
+                "existing database or pass --allow-nonempty only after reviewing the plan"
+            )
+        if existing_count and managed_versions:
+            print(
+                f"  resume  managed bootstrap database "
+                f"(tables={existing_count}, versions={managed_versions})"
             )
         await conn.execute(
             """
@@ -144,11 +246,9 @@ async def apply(url: str, allow_nonempty: bool = False) -> int:
             )
             """
         )
-        import hashlib
-
         for step in migration_steps():
             raw = step.path.read_text(encoding="utf-8")
-            checksum = hashlib.sha256(raw.encode("utf-8")).hexdigest()
+            checksum = _checksum(step)
             previous = await conn.fetchrow(
                 "SELECT checksum FROM fazle_schema_versions WHERE migration_key=$1",
                 step.key,

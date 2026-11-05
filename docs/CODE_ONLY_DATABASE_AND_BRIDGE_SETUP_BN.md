@@ -48,9 +48,13 @@ scheduler, bridge poller এবং outbound worker ইচ্ছাকৃতভ�
 
 Schema source-of-truth:
 
+- `db/migrations/029_bootstrap_core_tables_schema_record.sql` — production-captured
+  catalog, যা fresh build-এ generic foundation-এর আগে চলে;
 - `db/schema/000_foundation.sql` — pre-migration production/test-certified base;
 - `db/migrations/*.sql` — canonical Core migrations;
 - `modules/fazle_payroll_engine/migrations/*.sql` — historical FPE migrations;
+- `db/schema/bootstrap_compat/*.sql` এবং recorded legacy prerequisite — historical
+  migrations-এর আগে প্রয়োজনীয়, checksummed fresh-build compatibility steps;
 - `db/schema/900_runtime_support.sql` — আগে startup-এ তৈরি হওয়া support objects;
 - `db/bootstrap.py` — নতুন empty DB-তে deterministic order, checksum ও validation।
 
@@ -86,12 +90,16 @@ DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/fazle_core
 
 ### নিরাপত্তা
 
-- `bootstrap.py` শুধু **new/empty database**-এর জন্য। Existing DB-তে defaultভাবে
-  refuse করবে।
-- Existing deployment upgrade-এ `db/migrate.py` ও deployment runbook ব্যবহার
-  করুন।
+- প্রথম apply-এ `bootstrap.py` Fazle version history ছাড়া non-empty database
+  defaultভাবে refuse করবে। Bootstrap-managed database resume বা second apply করা
+  যায়: প্রতিটি recorded checksum verify হবে এবং unchanged step skip হবে।
+- `--allow-nonempty` শুধু reviewed adoption escape hatch; normal second run-এ এটি
+  প্রয়োজন নেই। Existing production deployment upgrade-এ `db/migrate.py` ও
+  deployment runbook ব্যবহার করুন।
 - Applied file checksum বদলালে bootstrap fail করবে; পুরোনো migration edit করে
-  history rewrite করা যাবে না।
+  history rewrite করা যাবে না। PostgreSQL 16.2 strict proof-এ 115/115 steps,
+  explicit check এবং second apply pass করেছে; evidence:
+  [`BOOTSTRAP_PROOF_2026-11-06.md`](BOOTSTRAP_PROOF_2026-11-06.md)।
 - `086_k32_recruitment_reconciliation.sql` schema নয়; এটি fixed legacy
   production row-ID যাচাই করা pending data-reconciliation। তাই new empty DB
   bootstrap plan থেকে ইচ্ছাকৃতভাবে বাদ।

@@ -92,6 +92,15 @@ CREATE TABLE IF NOT EXISTS fazle_contacts (
     relation        VARCHAR(100) DEFAULT 'unknown',
     platform        VARCHAR(20) DEFAULT 'whatsapp',
     notes           TEXT,
+    personality_hint VARCHAR(200) DEFAULT '',
+    interaction_count INTEGER DEFAULT 0,
+    interest_level VARCHAR(20) DEFAULT 'unknown',
+    last_seen      TIMESTAMPTZ DEFAULT NOW(),
+    keep_reason    TEXT,
+    triage_at      TIMESTAMPTZ DEFAULT NOW(),
+    keep_tier      TEXT,
+    marked_for_delete_at TIMESTAMPTZ,
+    is_protected   BOOLEAN DEFAULT FALSE,
     created_at      TIMESTAMPTZ DEFAULT NOW(),
     updated_at      TIMESTAMPTZ DEFAULT NOW()
 );
@@ -402,7 +411,8 @@ CREATE TABLE IF NOT EXISTS fazle_service_heartbeats (
     service           TEXT PRIMARY KEY,
     last_seen         TIMESTAMPTZ DEFAULT NOW(),
     last_message_id   TEXT,
-    queue_depth       INT DEFAULT 0
+    queue_depth       INT DEFAULT 0,
+    meta_json         JSONB NOT NULL DEFAULT '{}'::jsonb
 );
 
 CREATE TABLE IF NOT EXISTS fazle_db_backups (
