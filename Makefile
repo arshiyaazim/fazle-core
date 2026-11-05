@@ -27,10 +27,22 @@ ENV_VARS = \
   BRIDGE2_URL=http://mock-bridge2 \
   OLLAMA_BASE_URL=http://mock-ollama
 
-# ─── Install ──────────────────────────────────────────────────────────────────
+# ─── Install / local preflight ────────────────────────────────────────────────
 .PHONY: install
 install:
 	$(PIP) install -r requirements.txt -r tests/requirements-test.txt
+
+.PHONY: code-only-smoke
+code-only-smoke:
+	DATABASE_MODE=disabled DATABASE_URL= $(PYTHON) scripts/smoke_code_only.py
+
+.PHONY: schema-plan
+schema-plan:
+	$(PYTHON) db/bootstrap.py --plan
+
+.PHONY: bridge-check
+bridge-check:
+	$(PYTHON) scripts/check_bridge_db.py --configured
 
 .PHONY: install-playwright
 install-playwright:

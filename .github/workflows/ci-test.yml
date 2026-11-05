@@ -299,6 +299,8 @@ jobs:
           curl -fs http://127.0.0.1:8200/health
         env:
           ENVIRONMENT: test
+          DATABASE_MODE: postgres
+          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/fazle_test"
           TEST_DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/fazle_test"
           INTERNAL_API_KEY: test-internal-key
           ADMIN_NUMBERS: "8801700000001"

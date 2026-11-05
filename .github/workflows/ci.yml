@@ -30,7 +30,7 @@ jobs:
           pip install pyflakes pytest pytest-asyncio respx httpx
 
       - name: Syntax check (compileall)
-        run: python -m compileall -q app modules scripts
+        run: python -m compileall -q app modules shared scripts db
 
       - name: Pyflakes (unused imports / undefined names)
         run: |
@@ -45,6 +45,9 @@ jobs:
 
       - name: Batch 22 observability test (offline)
         run: python scripts/test_batch22_observability.py
+
+      - name: Code-only application smoke (no DB)
+        run: DATABASE_MODE=disabled DATABASE_URL= python scripts/smoke_code_only.py
 
       - name: Unit tests (offline, no DB)
         run: |

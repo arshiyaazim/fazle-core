@@ -37,7 +37,11 @@ from typing import Optional
 from app.config import get_settings
 from app.database import execute, fetch_one, fetch_all, fetch_val
 from shared.draft_reply import create_draft_reply
-from shared.sqlite_compat import has_column
+from shared.bridge_store import (
+    message_projection,
+    quote_identifier,
+    resolve_message_schema,
+)
 from shared.media_text import has_meaningful_text, is_media_placeholder
 from shared.system_message import is_automated_system_message
 from app.bridge import get_bridge1, get_bridge2, get_bridge3
@@ -441,25 +445,56 @@ def _fetch_new_messages(
         con = sqlite3.connect(f"file:{messages_db}?mode=ro", uri=True, check_same_thread=False, timeout=5.0)
         con.row_factory = sqlite3.Row
 
-        # `processed_text` is a legacy in-house OCR/STT column that is NOT part
-        # of the stock bridge schema. A store created by the current bridge
-        # binary (e.g. bridge1 after a re-pair) lacks it, while older
-        # bridge2/bridge3 stores still have it. Detect it per-DB and degrade to
-        # NULL rather than throwing `no such column` on every poll. Read-only.
-        _has_processed_text = has_column(con, "messages", "processed_text")
-        _pt_select = "processed_text" if _has_processed_text else "NULL AS processed_text"
-        _pt_where = "OR processed_text IS NOT NULL" if _has_processed_text else ""
+        # Resolve stock whatsmeow names plus the documented MCP-bridge alias
+        # set. All names come from SQLite metadata and are quoted; the store is
+        # still opened read-only. Downstream rows retain canonical field names.
+        _message_table, _message_columns = resolve_message_schema(con)
+        _table_sql = quote_identifier(_message_table)
+        _projection_sql = message_projection(_message_columns)
 
-        # `from_history_sync` (bridge binary 2026-09-02+): 1 for rows written by
-        # whatsmeow's history-sync backfill on a fresh device link, 0 for live
-        # deliveries. Historical/imported messages are preserved in messages.db
-        # for search but MUST NOT enter live business routing — see
-        # docs/BRIDGE3_FIRST_REPAIR_INCIDENT_2026-09-02.md (a re-pair replayed
-        # ~2,444 old messages and one was auto-answered). Schema-tolerant: a
-        # store from an older bridge binary lacks the column, in which case the
-        # filter is omitted (byte-identical to prior behaviour).
-        _has_hist_flag = has_column(con, "messages", "from_history_sync")
-        _hist_where = "AND COALESCE(from_history_sync, 0) = 0" if _has_hist_flag else ""
+        def _column(key: str) -> str:
+            return quote_identifier(_message_columns[key])
+
+        _chat_col = _column("chat_jid")
+        _timestamp_col = _column("timestamp")
+        _from_me_col = _column("is_from_me")
+        _content_col = _column("content")
+        _media_col = (
+            quote_identifier(_message_columns["media_type"])
+            if "media_type" in _message_columns else None
+        )
+        _filename_col = (
+            quote_identifier(_message_columns["filename"])
+            if "filename" in _message_columns else None
+        )
+        _url_col = (
+            quote_identifier(_message_columns["url"])
+            if "url" in _message_columns else None
+        )
+        _processed_col = (
+            quote_identifier(_message_columns["processed_text"])
+            if "processed_text" in _message_columns else None
+        )
+        _history_col = (
+            quote_identifier(_message_columns["from_history_sync"])
+            if "from_history_sync" in _message_columns else None
+        )
+        _has_hist_flag = _history_col is not None
+        _hist_where = (
+            f"AND COALESCE({_history_col}, 0) = 0" if _history_col else ""
+        )
+        _media_where = (
+            f"AND ({_media_col} IS NULL OR {_media_col} NOT IN "
+            "('reaction', 'receipt', 'revoke', 'deleted', 'protocol'))"
+            if _media_col else ""
+        )
+        _body_terms = [f"{_content_col} IS NOT NULL"]
+        if _processed_col:
+            _body_terms.append(f"{_processed_col} IS NOT NULL")
+        if _media_col and (_filename_col or _url_col):
+            refs = [f"{c} IS NOT NULL" for c in (_filename_col, _url_col) if c]
+            _body_terms.append(f"({_media_col} IS NOT NULL AND ({' OR '.join(refs)}))")
+        _body_where = " OR ".join(_body_terms)
 
         # Normalize cursor boundary to UTC so bridge-local timezone offsets
         # cannot cause false "older/newer" comparisons in SQLite filtering.
@@ -474,27 +509,21 @@ def _fetch_new_messages(
                 key = f"approved_jid_{i}"
                 _query_params[key] = jid
                 _placeholders.append(f":{key}")
-            _group_exception_sql = f"chat_jid IN ({', '.join(_placeholders)})"
+            _group_exception_sql = f"{_chat_col} IN ({', '.join(_placeholders)})"
 
         rows = con.execute(
             f"""
-            SELECT id, chat_jid, sender, content, timestamp, media_type, {_pt_select},
-                   filename, url
-            FROM messages
-            WHERE is_from_me = 0
-              AND datetime(timestamp) > datetime(:since)
+            SELECT {_projection_sql}
+            FROM {_table_sql}
+            WHERE {_from_me_col} = 0
+              AND datetime({_timestamp_col}) > datetime(:since)
               {_hist_where}
-              AND chat_jid NOT LIKE '%@newsletter'
-              AND chat_jid != 'status@broadcast'
-              AND (chat_jid NOT LIKE '%@g.us' OR {_group_exception_sql})
-              AND (media_type IS NULL
-                   OR media_type NOT IN ('reaction', 'receipt', 'revoke', 'deleted', 'protocol'))
-              AND (
-                content IS NOT NULL
-                {_pt_where}
-                OR ((media_type IS NOT NULL) AND (filename IS NOT NULL OR url IS NOT NULL))
-              )
-            ORDER BY datetime(timestamp) ASC
+              AND {_chat_col} NOT LIKE '%@newsletter'
+              AND {_chat_col} != 'status@broadcast'
+              AND ({_chat_col} NOT LIKE '%@g.us' OR {_group_exception_sql})
+              {_media_where}
+              AND ({_body_where})
+            ORDER BY datetime({_timestamp_col}) ASC
             LIMIT 50
             """,
             _query_params,
@@ -507,19 +536,19 @@ def _fetch_new_messages(
         # query above).
         try:
             _hist_count_sql = (
-                "SUM(CASE WHEN COALESCE(from_history_sync, 0) = 1 THEN 1 ELSE 0 END) AS history_sync"
+                f"SUM(CASE WHEN COALESCE({_history_col}, 0) = 1 THEN 1 ELSE 0 END) AS history_sync"
                 if _has_hist_flag else "0 AS history_sync"
             )
             skipped_row = con.execute(
                 f"""
                 SELECT
-                  SUM(CASE WHEN chat_jid LIKE '%@g.us' AND NOT ({_group_exception_sql}) THEN 1 ELSE 0 END) AS groups,
-                  SUM(CASE WHEN chat_jid LIKE '%@newsletter' THEN 1 ELSE 0 END) AS newsletters,
-                  SUM(CASE WHEN chat_jid = 'status@broadcast' THEN 1 ELSE 0 END) AS status,
+                  SUM(CASE WHEN {_chat_col} LIKE '%@g.us' AND NOT ({_group_exception_sql}) THEN 1 ELSE 0 END) AS groups,
+                  SUM(CASE WHEN {_chat_col} LIKE '%@newsletter' THEN 1 ELSE 0 END) AS newsletters,
+                  SUM(CASE WHEN {_chat_col} = 'status@broadcast' THEN 1 ELSE 0 END) AS status,
                   {_hist_count_sql}
-                FROM messages
-                WHERE is_from_me = 0
-                  AND datetime(timestamp) > datetime(:since)
+                FROM {_table_sql}
+                WHERE {_from_me_col} = 0
+                  AND datetime({_timestamp_col}) > datetime(:since)
                 """,
                 _query_params,
             ).fetchone()

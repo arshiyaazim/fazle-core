@@ -1,7 +1,13 @@
-"""
-Fazle Core — Database
-Reuses existing ai-postgres container.
-All operations on the existing `postgres` database (wbom_* tables).
+"""Fazle Core persistence boundary.
+
+PostgreSQL remains the authoritative production backend.  A deliberately
+non-persistent ``disabled`` mode lets the code, static UI, docs, health and
+integration preflight tools run before a database is provisioned.  Disabled
+mode never acknowledges a business write as successful: database-dependent
+calls raise :class:`DatabaseUnavailable` with a stable error contract.
+
+All application SQL continues to pass through this module, which is the seam
+for adding another backend adapter later without changing route imports.
 """
 import logging
 import re
@@ -13,6 +19,42 @@ from app.config import get_settings
 
 log = logging.getLogger("fazle.db")
 _pool: Optional[asyncpg.Pool] = None
+
+
+class DatabaseUnavailable(RuntimeError):
+    """Raised when a persistence operation is requested in code-only mode."""
+
+    code = "database_disabled"
+
+
+def database_mode() -> str:
+    """Effective backend name (``postgres`` or ``disabled``)."""
+    return get_settings().resolved_database_mode
+
+
+def database_enabled() -> bool:
+    return database_mode() == "postgres"
+
+
+def database_status() -> dict[str, Any]:
+    """Side-effect-free runtime status suitable for health/capability APIs."""
+    mode = database_mode()
+    return {
+        "mode": mode,
+        "enabled": mode == "postgres",
+        "connected": _pool is not None,
+        "persistent": mode == "postgres",
+    }
+
+
+def _require_database() -> None:
+    if not database_enabled():
+        raise DatabaseUnavailable(
+            "Database-backed capability is unavailable because Fazle Core is "
+            "running with DATABASE_MODE=disabled. Configure DATABASE_URL and "
+            "set DATABASE_MODE=postgres (or auto) to enable persistence."
+        )
+
 
 # ── Shadow-mode write guard (Phase B Stage 4, Section 2) ────────────────────
 # Hard runtime assertion, not just an architectural convention: while
@@ -71,9 +113,24 @@ async def shadow_mode_scope():
         _shadow_mode_active.reset(token)
 
 
-async def init_db():
+async def init_db() -> bool:
+    """Initialize the configured backend.
+
+    Returns ``True`` when PostgreSQL is ready and ``False`` in explicit or
+    auto-selected code-only mode. Connection failures in PostgreSQL mode still
+    raise, preserving the production fail-fast contract.
+    """
     global _pool
     settings = get_settings()
+    if not settings.database_enabled:
+        _pool = None
+        log.warning(
+            "Database disabled; starting in code-only mode (no business data "
+            "will be read or written)"
+        )
+        return False
+    if not settings.database_url.strip():
+        raise ValueError("DATABASE_URL is required when DATABASE_MODE=postgres")
     _pool = await asyncpg.create_pool(
         settings.database_url,
         min_size=2,
@@ -81,15 +138,18 @@ async def init_db():
         command_timeout=30,
     )
     log.info("Database pool ready")
+    return True
 
 
 async def close_db():
     global _pool
     if _pool:
         await _pool.close()
+    _pool = None
 
 
 def get_pool() -> asyncpg.Pool:
+    _require_database()
     if _pool is None:
         raise RuntimeError("DB pool not initialized")
     return _pool
@@ -97,6 +157,7 @@ def get_pool() -> asyncpg.Pool:
 
 @asynccontextmanager
 async def db_conn():
+    _require_database()
     if _pool is not None:
         async with _pool.acquire() as conn:
             yield conn

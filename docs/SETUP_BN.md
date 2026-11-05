@@ -15,19 +15,23 @@
 চালানোর জন্য লাগে না।** এগুলো আলাদা রিপো/সার্ভিস, আর এগুলো `fazle-core`-কে
 ব্যবহার করে (উল্টোটা নয়)।
 
-`fazle-core` নিজে চালাতে আসলে যা লাগে তা হলো **তিনটে জিনিস**:
+Code-only app shell চালাতে শুধু Python 3.10/3.11 ও `requirements.txt` লাগে।
+`DATABASE_URL` না থাকলে default `DATABASE_MODE=auto` নিজে থেকে `disabled`
+(code-only) mode নেয়। Static UI, OpenAPI, health ও integration preflight চলবে;
+business read/write ও background worker বন্ধ থাকবে।
 
-1. Python 3.10/3.11 + `requirements.txt`-এর প্যাকেজ
-2. **PostgreSQL 15+** (এটা ছাড়া অ্যাপ স্টার্টই হয় না)
-3. একটা `.env` ফাইল যাতে অন্তত `DATABASE_URL` আর `INTERNAL_API_KEY` আছে
+সম্পূর্ণ business operation-এর জন্য আরও লাগে:
 
-বাকি সবই *ফিচার-ভিত্তিক ঐচ্ছিক*: কোনোটা না থাকলে শুধু সেই একটা ফিচার বন্ধ থাকে,
-অ্যাপ পড়ে যায় না।
+1. **PostgreSQL 15+**;
+2. `.env`-এ `DATABASE_MODE=postgres`, `DATABASE_URL` ও `INTERNAL_API_KEY`।
+
+নতুন empty DB setup এবং bridge DB preflight-এর বিস্তারিত:
+`docs/CODE_ONLY_DATABASE_AND_BRIDGE_SETUP_BN.md`।
 
 | কম্পোনেন্ট | বাধ্যতামূলক? | কী কাজ করে | না থাকলে |
 |---|---|---|---|
 | Python + `requirements.txt` | ✅ হ্যাঁ | অ্যাপ রানটাইম | অ্যাপ চলবে না |
-| PostgreSQL 15+ | ✅ হ্যাঁ | সব ডেটা (RBAC, ড্রাফট, পে-রোল, KB) | `lifespan()`-এ `init_db()` ফেল → **অ্যাপ স্টার্ট হয় না** |
+| PostgreSQL 15+ | পূর্ণ mode-এ ✅; code-only-তে ⚪ | সব business data (RBAC, ড্রাফট, পে-রোল, KB) | app `code_only` mode-এ চলে; persistent feature বন্ধ |
 | `INTERNAL_API_KEY` | ✅ হ্যাঁ (কার্যত) | সব admin/mutation API-র `X-Internal-Key` | ড্যাশবোর্ড/API সব ৪০৩ |
 | Redis | ⚪ না | শেয়ার্ড cooldown/state, কিউ হেল্পার | in-memory fallback |
 | **Ollama + `hermes3:3b`** | ⚪ না | লোকাল AI রিপ্লাই (চেইনের ৩য় ধাপ) | টেক্সট fallback রিপ্লাই, বা OmniRoute/Groq |
@@ -80,7 +84,20 @@ WhatsApp Web  ──►  Bridge 1/2/3 (আলাদা সার্ভিস, wh
 
 ## ২. ধাপে ধাপে সেটআপ — কোন লেভেল পর্যন্ত যাবেন
 
-### L1 — শুধু অ্যাপ চালু (সবচেয়ে কম): ড্যাশবোর্ড + API + ডেটাবেস
+### L0 — Code-only app shell (ডাটাবেস ছাড়া)
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+DATABASE_MODE=disabled .venv/bin/python -m uvicorn app.main:app \
+  --host 127.0.0.1 --port 8200
+```
+
+এতে UI/OpenAPI/health/preflight চলে, কিন্তু business read/write, poller,
+scheduler ও outbound বন্ধ থাকে। বিস্তারিত:
+`docs/CODE_ONLY_DATABASE_AND_BRIDGE_SETUP_BN.md`।
+
+### L1 — সম্পূর্ণ Core: ড্যাশবোর্ড + API + ডেটাবেস
 
 **যা লাগবে:** Python, PostgreSQL, `.env`।
 
@@ -104,9 +121,10 @@ chmod 600 .env
 #   INTERNAL_API_KEY=<লম্বা র‍্যান্ডম স্ট্রিং>
 python3 -c "import secrets; print(secrets.token_urlsafe(32))"
 
-# 4) স্কিমা তৈরি
-.venv/bin/python db/migrate.py --dry-run   # কী কী চলবে দেখুন
-.venv/bin/python db/migrate.py
+# 4) NEW empty DB-তে সম্পূর্ণ স্কিমা তৈরি
+.venv/bin/python db/bootstrap.py --plan
+.venv/bin/python db/bootstrap.py --apply
+# Existing deployment upgrade-এ শুধু deployment runbook অনুযায়ী db/migrate.py
 
 # 5) রান
 .venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8200
@@ -253,8 +271,9 @@ venv/bin/python server.py                              # stdio MCP সার্�
 
 ## ৪. `app/config.py` — কোন ভেরিয়েবল কোথায়
 
-`DATABASE_URL` ছাড়া **প্রতিটা সেটিংসের ডিফল্ট আছে**, তাই `.env` ছোট রাখলেও
-অ্যাপ চলে। দরকার হলে সব কী `app/config.py`-এর `Settings` ক্লাসে দেখুন
+সব setting-এর safe default আছে। `DATABASE_URL` খালি হলে app code-only mode-এ
+চলে; full mode-এর জন্য এটি দিতে হবে। দরকার হলে সব কী `app/config.py`-এর
+`Settings` ক্লাসে দেখুন
 (প্রায় ২০০টি)। `.env.example`-এ অপারেটরদের সবচেয়ে দরকারি গুলো কমেন্টসহ আছে।
 
 ---
@@ -285,9 +304,9 @@ redis-cli ping                                                   # Redis (ঐচ
 
 | লক্ষণ | কারণ | সমাধান |
 |---|---|---|
-| স্টার্টআপেই `asyncpg`/connection error | Postgres নেই বা `DATABASE_URL` ভুল | DB চালু করুন, DSN ঠিক করুন, `pg_isready` |
+| `DATABASE_MODE=postgres`-এ startup `asyncpg` error | Postgres নেই বা `DATABASE_URL` ভুল | DB চালু করুন, DSN ঠিক করুন, `pg_isready`; অথবা development-এ `DATABASE_MODE=disabled` |
 | `ModuleNotFoundError: yaml / apscheduler` | নতুন venv-এ deps অসম্পূর্ণ | `pip install -r requirements.txt` |
-| টেবিল নেই / `relation does not exist` | মাইগ্রেশন চালানো হয়নি | `.venv/bin/python db/migrate.py` |
+| টেবিল নেই / `relation does not exist` | schema apply হয়নি | New DB: `db/bootstrap.py --apply`; existing DB: deployment runbook অনুযায়ী `db/migrate.py` |
 | ড্যাশবোর্ড ৪০৩ | API key মেলেনি | `INTERNAL_API_KEY` আর localStorage-এর key এক করুন |
 | রিপ্লাই সব সময় fallback টেক্সট | কোনো AI প্রোভাইডার নেই | Ollama চালু + `ollama pull hermes3:3b` |
 | `[send-control] startup enable skipped` | `OUTBOUND_ENABLED` true নয় | ইচ্ছাকৃত safe mode — পাঠাতে চাইলে সচেতনভাবে true করুন |

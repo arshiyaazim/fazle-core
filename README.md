@@ -1,5 +1,12 @@
 # Fazle Core
 
+> ## Session continuation protocol
+>
+> **প্রতিটি coding session শুরুর আগে [`WORK_SESSION_HANDOFF.md`](WORK_SESSION_HANDOFF.md)
+> পড়ুন।** কাজের বর্তমান অবস্থা, validation, known gaps ও next-session queue ওই
+> ফাইলের source of truth। Session শেষে ফাইলটি বাস্তব কাজের ফল অনুযায়ী update
+> করে current session branch-এ commit/push করতে হবে।
+
 **Repository:** <https://github.com/arshiyaazim/fazle-core>
 **Branch:** `feat/bridge1-2-conversation-continuity-20260902`
 **Commit:** `104df66c18504a7e946b8f6208d5045d5d3d9e66`
@@ -14,6 +21,19 @@ not a general chatbot platform.
 This repository contains the application and its integrations. It does **not**
 bundle or install production databases, WhatsApp bridge binaries, AI gateways,
 model weights, or other separately operated services.
+
+### New checkout: database-optional code mode
+
+A fresh checkout can now start without PostgreSQL. With no `DATABASE_URL`
+(`DATABASE_MODE=auto`) or with `DATABASE_MODE=disabled`, Core serves the static
+UI, OpenAPI, health/capability endpoints and bridge preflight tools, while all
+persistent workers and business reads/writes stay explicitly disabled. It does
+not fake successful writes. Full business operation still requires PostgreSQL.
+
+- Runtime contract: `GET /api/runtime/capabilities`
+- New-database schema: `python db/bootstrap.py --plan|--apply|--check`
+- MCP/whatsmeow store check: `python scripts/check_bridge_db.py --configured`
+- Bengali setup guide: [`docs/CODE_ONLY_DATABASE_AND_BRIDGE_SETUP_BN.md`](docs/CODE_ONLY_DATABASE_AND_BRIDGE_SETUP_BN.md)
 
 ---
 
@@ -400,10 +420,11 @@ The exact module list and risk ratings are in `docs/MODULE_MAP.md`.
 - Nginx terminating public TLS; Fazle Core bound to `127.0.0.1:8200`.
 - Git, pip, virtualenv.
 
-> **Which dependencies are actually mandatory?** Python + PostgreSQL + a
-> `.env` with `DATABASE_URL`/`INTERNAL_API_KEY`. Everything else — Ollama,
-> OmniRoute, the WhatsApp bridges, `hermes-runner`, `fazle-mcp`, Qdrant, the
-> media processor — is optional and only disables the feature that needs it.
+> **Which dependencies are actually mandatory?** Python is enough for
+> code-only mode. Full business operation requires PostgreSQL plus a `.env`
+> with `DATABASE_URL`/`INTERNAL_API_KEY`. Everything else — Ollama, OmniRoute,
+> the WhatsApp bridges, `hermes-runner`, `fazle-mcp`, Qdrant, the media
+> processor — is optional and only disables the feature that needs it.
 > A Bengali walkthrough of the tiers (core-only → local AI → WhatsApp bridges
 > → Hermes/MCP) is in [`docs/SETUP_BN.md`](docs/SETUP_BN.md).
 >
@@ -477,8 +498,9 @@ cp .env.example .env
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 python -m pip install -r tests/requirements-test.txt
-python db/migrate.py --dry-run
-python db/migrate.py
+# For a NEW empty PostgreSQL database (skip both lines in code-only mode):
+python db/bootstrap.py --plan
+python db/bootstrap.py --apply
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8200 --reload
 ```
 
@@ -781,7 +803,7 @@ token lengths, or credential fingerprints are recorded in this README.**
 
 | Variable | Purpose | Required? | Used by | Where to configure privately | Rotation/revocation |
 |---|---|---|---|---|---|
-| `DATABASE_URL` | PostgreSQL connection string | Yes | Core app | `.env` or secure overlay | Change password in Postgres; update `.env`; restart. |
+| `DATABASE_URL` | PostgreSQL connection string | Full mode only; no for code-only | Core app | `.env` or secure overlay | Change password in Postgres; update `.env`; restart. |
 | `REDIS_URL` | Redis connection string | Yes | Core app | `.env` or secure overlay | Update `.env`; restart. |
 | `INTERNAL_API_KEY` | Privileged single API key (legacy; kept alongside per-admin keys) | Yes | Core app | `.env` or secure overlay | Generate new random key; update `.env`; restart. Issue per-admin keys via `/admin/users/{phone}/apikey`. |
 | `OMNIROUTE_API_KEY` | OmniRoute gateway authentication | Yes (for OmniRoute path) | `app/omniroute_provider.py` | `.env` or secure overlay | Rotate in OmniRoute admin; update `.env`; restart. |

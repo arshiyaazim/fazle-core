@@ -13,7 +13,14 @@ import re
 
 class Settings(BaseSettings):
     # Database
-    database_url: str
+    #
+    # ``auto`` keeps existing deployments backward-compatible: PostgreSQL is
+    # used whenever DATABASE_URL is present; otherwise the HTTP application
+    # starts in an intentionally read-only ``code_only`` mode.  This makes a
+    # fresh checkout importable/runnable without inventing a throwaway DB or
+    # silently pretending that writes were persisted.
+    database_mode: str = "auto"  # auto | postgres | disabled
+    database_url: str = ""
 
     # Redis
     redis_url: str = "redis://localhost:6379/9"
@@ -189,6 +196,32 @@ class Settings(BaseSettings):
     # hybrid vector retrieval remains enabled, and the scheduled rag_rebuild
     # job keeps its existing build_index() behavior.
     rag_startup_qdrant_sync_enabled: bool = False
+
+    @field_validator("database_mode", mode="before")
+    @classmethod
+    def _parse_database_mode(cls, value):
+        mode = str(value or "auto").strip().lower().replace("-", "_")
+        aliases = {
+            "none": "disabled",
+            "off": "disabled",
+            "code_only": "disabled",
+            "postgresql": "postgres",
+        }
+        mode = aliases.get(mode, mode)
+        if mode not in {"auto", "postgres", "disabled"}:
+            raise ValueError("DATABASE_MODE must be auto, postgres, or disabled")
+        return mode
+
+    @property
+    def resolved_database_mode(self) -> str:
+        """Return the effective persistence mode without opening a connection."""
+        if self.database_mode == "auto":
+            return "postgres" if self.database_url.strip() else "disabled"
+        return self.database_mode
+
+    @property
+    def database_enabled(self) -> bool:
+        return self.resolved_database_mode == "postgres"
 
     @field_validator("debug", mode="before")
     @classmethod

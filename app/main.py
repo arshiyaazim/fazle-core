@@ -33,7 +33,17 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.security import APIKeyHeader
 
 from app.config import get_settings
-from app.database import init_db, close_db, fetch_one, fetch_all, fetch_val, execute
+from app.database import (
+    DatabaseUnavailable,
+    close_db,
+    database_enabled,
+    database_status,
+    execute,
+    fetch_all,
+    fetch_one,
+    fetch_val,
+    init_db,
+)
 from app.bridge import get_bridge1, get_bridge2, get_bridge3
 from app.logging_setup import setup_logging
 from app import llm as ai
@@ -268,194 +278,242 @@ def require_command(command: str):
 # ── Lifespan ───────────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await init_db()
-    # Phase 1 Step 6 — load DB-backed feature flags on startup.
-    try:
-        loaded_flags = await load_feature_flags_from_db()
-        log.info("[preflight_guard] feature flags loaded: %d", len(loaded_flags))
-    except Exception as e:
-        log.warning(f"[preflight_guard] feature flag load failed (non-fatal): {e}")
-    # Batch 19 — bootstrap admin users from ADMIN_NUMBERS env
-    try:
-        from modules import rbac
-        n = await rbac.ensure_bootstrap_admins()
-        log.info(f"[rbac] bootstrap complete (created={n})")
-    except Exception as e:
-        log.warning(f"[rbac] bootstrap failed: {e}")
-    # WhatsApp Chat UI — ensure runtime settings + groups tables exist
-    try:
-        await ensure_wa_chat_tables()
-        log.info("[wa_chat] tables ready")
-    except Exception as e:
-        log.warning(f"[wa_chat] table init failed (non-fatal): {e}")
-    await start_pollers()
-    outbound_queue.start_background_worker()
-    fazle_scheduler.start_scheduler()
-    # Ollama daemon client — persistent keep-alive client + async model warmup.
-    try:
-        from app import ollama_daemon
-        await ollama_daemon.start()
-        asyncio.create_task(ollama_daemon.warm_model())
-        log.info("[ollama_daemon] started and warmup scheduled")
-    except Exception as e:
-        log.warning(f"[ollama_daemon] startup failed (non-fatal): {e}")
-    # Validate Groq API key at startup
-    try:
-        if not settings.groq_api_key or not str(settings.groq_api_key).strip():
-            log.error("[groq] Groq API key not configured - Groq services will not work")
-        else:
-            log.info("[groq] Groq API key validated")
-    except Exception as e:
-        log.warning(f"[groq] API key validation failed: {e}")
-    # Batch 21 — build RAG index in background (non-fatal)
-    try:
-        from modules import rag
-        asyncio.create_task(
-            rag.build_index(sync_qdrant=settings.rag_startup_qdrant_sync_enabled)
-        )
-        log.info(
-            "[rag] index build scheduled (startup_qdrant_sync=%s)",
-            settings.rag_startup_qdrant_sync_enabled,
-        )
-    except Exception as e:
-        log.warning(f"[rag] startup build failed to schedule: {e}")
-    # FPE — Fazle Payroll Engine (start after DB is ready)
-    try:
-        await start_fpe()
-    except Exception as e:
-        log.warning(f"[fpe] startup failed (non-fatal): {e}")
-    # Social auto-reply backend: schema + worker. Worker stays paused unless enabled by env/API.
-    try:
-        await start_social_auto_reply()
-    except Exception as e:
-        log.warning(f"[social] startup failed (non-fatal): {e}")
-    # Phase 12 — Unified Request Coordination Layer
-    try:
-        from shared.realtime import start_event_bridge
-        start_event_bridge()
-        log.info("[realtime] coordination layer started")
-    except Exception as e:
-        log.warning(f"[realtime] coordination layer startup failed (non-fatal): {e}")
-    # Phase 13A — Distributed Runtime Gateway
-    _gw_node_id = None
-    try:
-        from shared.runtime_gateway import start_gateway as _start_gw
-        import importlib.metadata as _imeta
+    persistent_runtime = await init_db()
+    stale_draft_expiry_task = None
+    if persistent_runtime:
+        # Phase 1 Step 6 — load DB-backed feature flags on startup.
         try:
-            _ver = _imeta.version("fazle-system-agent")
-        except Exception:
-            _ver = os.getenv("APP_VERSION", "1.1.0")
-        _gw_node_id = await _start_gw(
-            "fazle-core",
-            role="orchestrator",
-            version=_ver,
-            metadata={"host": os.getenv("HOSTNAME", ""), "port": 8200},
-        )
-        log.info("[gateway] registered node=%s", _gw_node_id)
-    except Exception as e:
-        log.warning(f"[gateway] startup failed (non-fatal): {e}")
-    # Phase 13B — Global Queue Arbitration recovery loop
-    try:
-        from shared.queue_arbiter import start_arbiter_recovery as _start_arbiter
-        await _start_arbiter()
-        log.info("[arbiter] recovery loop started")
-    except Exception as e:
-        log.warning(f"[arbiter] startup failed (non-fatal): {e}")
-    # Phase 13C — Unified Frontend Synchronization monitoring
-    try:
-        from shared.frontend_sync import start_sync_monitoring as _start_sync
-        await _start_sync()
-        log.info("[sync] frontend sync monitor started")
-    except Exception as e:
-        log.warning(f"[sync] startup failed (non-fatal): {e}")
-    # Phase 13D — Multi-Bridge Orchestration layer
-    try:
-        from shared.bridge_orchestrator import start_orchestrator as _start_orch
-        await _start_orch()
-        log.info("[orchestrator] bridge orchestration layer started")
-    except Exception as e:
-        log.warning(f"[orchestrator] startup failed (non-fatal): {e}")
-    # Phase 13E — Self-Healing Runtime
-    try:
-        from shared.self_heal import start_self_healer as _start_sh
-        await _start_sh()
-        log.info("[self_heal] runtime self-healer started")
-    except Exception as e:
-        log.warning(f"[self_heal] startup failed (non-fatal): {e}")
-    # Escort draft cleanup — purge empty junk rows created by failed extractions
-    try:
-        from modules.escort_roster.db import (
-            cleanup_empty_drafts,
-            cleanup_junk_drafts,
-            cleanup_exact_confirmed_duplicates,
-        )
-        _cleanup_result = await cleanup_empty_drafts(min_age_hours=0, actor="startup")
-        if _cleanup_result["deleted"]:
-            log.info(f"[escort_cleanup] startup purged {_cleanup_result['deleted']} empty draft programs")
-        _junk_result = await cleanup_junk_drafts(actor="startup")
-        if _junk_result["deleted"]:
-            log.info(f"[escort_cleanup] startup purged {_junk_result['deleted']} junk draft programs")
-        _dup_result = await cleanup_exact_confirmed_duplicates(days=90, actor="startup")
-        if _dup_result.get("deleted"):
-            log.info(
-                "[escort_cleanup] startup removed %d exact confirmed duplicates",
-                len(_dup_result.get("deleted", [])),
+            loaded_flags = await load_feature_flags_from_db()
+            log.info("[preflight_guard] feature flags loaded: %d", len(loaded_flags))
+        except Exception as e:
+            log.warning(f"[preflight_guard] feature flag load failed (non-fatal): {e}")
+        # Batch 19 — bootstrap admin users from ADMIN_NUMBERS env
+        try:
+            from modules import rbac
+            n = await rbac.ensure_bootstrap_admins()
+            log.info(f"[rbac] bootstrap complete (created={n})")
+        except Exception as e:
+            log.warning(f"[rbac] bootstrap failed: {e}")
+        # WhatsApp Chat UI — ensure runtime settings + groups tables exist
+        try:
+            await ensure_wa_chat_tables()
+            log.info("[wa_chat] tables ready")
+        except Exception as e:
+            log.warning(f"[wa_chat] table init failed (non-fatal): {e}")
+        await start_pollers()
+        outbound_queue.start_background_worker()
+        fazle_scheduler.start_scheduler()
+        # Ollama daemon client — persistent keep-alive client + async model warmup.
+        try:
+            from app import ollama_daemon
+            await ollama_daemon.start()
+            asyncio.create_task(ollama_daemon.warm_model())
+            log.info("[ollama_daemon] started and warmup scheduled")
+        except Exception as e:
+            log.warning(f"[ollama_daemon] startup failed (non-fatal): {e}")
+        # Validate Groq API key at startup
+        try:
+            if not settings.groq_api_key or not str(settings.groq_api_key).strip():
+                log.error("[groq] Groq API key not configured - Groq services will not work")
+            else:
+                log.info("[groq] Groq API key validated")
+        except Exception as e:
+            log.warning(f"[groq] API key validation failed: {e}")
+        # Batch 21 — build RAG index in background (non-fatal)
+        try:
+            from modules import rag
+            asyncio.create_task(
+                rag.build_index(sync_qdrant=settings.rag_startup_qdrant_sync_enabled)
             )
-    except Exception as e:
-        log.warning(f"[escort_cleanup] startup cleanup failed (non-fatal): {e}")
-    stale_draft_expiry_task = _start_stale_draft_expiry_worker()
-    log.info("Fazle Core started")
+            log.info(
+                "[rag] index build scheduled (startup_qdrant_sync=%s)",
+                settings.rag_startup_qdrant_sync_enabled,
+            )
+        except Exception as e:
+            log.warning(f"[rag] startup build failed to schedule: {e}")
+        # FPE — Fazle Payroll Engine (start after DB is ready)
+        try:
+            await start_fpe()
+        except Exception as e:
+            log.warning(f"[fpe] startup failed (non-fatal): {e}")
+        # Social auto-reply backend: schema + worker. Worker stays paused unless enabled by env/API.
+        try:
+            await start_social_auto_reply()
+        except Exception as e:
+            log.warning(f"[social] startup failed (non-fatal): {e}")
+        # Phase 12 — Unified Request Coordination Layer
+        try:
+            from shared.realtime import start_event_bridge
+            start_event_bridge()
+            log.info("[realtime] coordination layer started")
+        except Exception as e:
+            log.warning(f"[realtime] coordination layer startup failed (non-fatal): {e}")
+        # Phase 13A — Distributed Runtime Gateway
+        _gw_node_id = None
+        try:
+            from shared.runtime_gateway import start_gateway as _start_gw
+            import importlib.metadata as _imeta
+            try:
+                _ver = _imeta.version("fazle-system-agent")
+            except Exception:
+                _ver = os.getenv("APP_VERSION", "1.1.0")
+            _gw_node_id = await _start_gw(
+                "fazle-core",
+                role="orchestrator",
+                version=_ver,
+                metadata={"host": os.getenv("HOSTNAME", ""), "port": 8200},
+            )
+            log.info("[gateway] registered node=%s", _gw_node_id)
+        except Exception as e:
+            log.warning(f"[gateway] startup failed (non-fatal): {e}")
+        # Phase 13B — Global Queue Arbitration recovery loop
+        try:
+            from shared.queue_arbiter import start_arbiter_recovery as _start_arbiter
+            await _start_arbiter()
+            log.info("[arbiter] recovery loop started")
+        except Exception as e:
+            log.warning(f"[arbiter] startup failed (non-fatal): {e}")
+        # Phase 13C — Unified Frontend Synchronization monitoring
+        try:
+            from shared.frontend_sync import start_sync_monitoring as _start_sync
+            await _start_sync()
+            log.info("[sync] frontend sync monitor started")
+        except Exception as e:
+            log.warning(f"[sync] startup failed (non-fatal): {e}")
+        # Phase 13D — Multi-Bridge Orchestration layer
+        try:
+            from shared.bridge_orchestrator import start_orchestrator as _start_orch
+            await _start_orch()
+            log.info("[orchestrator] bridge orchestration layer started")
+        except Exception as e:
+            log.warning(f"[orchestrator] startup failed (non-fatal): {e}")
+        # Phase 13E — Self-Healing Runtime
+        try:
+            from shared.self_heal import start_self_healer as _start_sh
+            await _start_sh()
+            log.info("[self_heal] runtime self-healer started")
+        except Exception as e:
+            log.warning(f"[self_heal] startup failed (non-fatal): {e}")
+        # Escort draft cleanup — purge empty junk rows created by failed extractions
+        try:
+            from modules.escort_roster.db import (
+                cleanup_empty_drafts,
+                cleanup_junk_drafts,
+                cleanup_exact_confirmed_duplicates,
+            )
+            _cleanup_result = await cleanup_empty_drafts(min_age_hours=0, actor="startup")
+            if _cleanup_result["deleted"]:
+                log.info(f"[escort_cleanup] startup purged {_cleanup_result['deleted']} empty draft programs")
+            _junk_result = await cleanup_junk_drafts(actor="startup")
+            if _junk_result["deleted"]:
+                log.info(f"[escort_cleanup] startup purged {_junk_result['deleted']} junk draft programs")
+            _dup_result = await cleanup_exact_confirmed_duplicates(days=90, actor="startup")
+            if _dup_result.get("deleted"):
+                log.info(
+                    "[escort_cleanup] startup removed %d exact confirmed duplicates",
+                    len(_dup_result.get("deleted", [])),
+                )
+        except Exception as e:
+            log.warning(f"[escort_cleanup] startup cleanup failed (non-fatal): {e}")
+        stale_draft_expiry_task = _start_stale_draft_expiry_worker()
+    else:
+        log.warning(
+            "Fazle Core started in code-only mode; DB workers, schedulers, "
+            "pollers and outbound delivery are intentionally stopped"
+        )
+    log.info("Fazle Core started (mode=%s)", database_status()["mode"])
     yield
-    await _stop_background_task(stale_draft_expiry_task, "escort_roster")
-    fazle_scheduler.stop_scheduler()
-    await outbound_queue.stop_background_worker()
-    # Phase 13E — stop self-healing layer
-    try:
-        from shared.self_heal import stop_self_healer as _stop_sh
-        await _stop_sh()
-    except Exception as e:
-        log.warning(f"[self_heal] shutdown error: {e}")
-    # Phase 13D — stop bridge orchestration layer
-    try:
-        from shared.bridge_orchestrator import stop_orchestrator as _stop_orch
-        await _stop_orch()
-    except Exception as e:
-        log.warning(f"[orchestrator] shutdown error: {e}")
-    # Phase 13C — stop frontend sync monitor
-    try:
-        from shared.frontend_sync import stop_sync_monitoring as _stop_sync
-        await _stop_sync()
-    except Exception as e:
-        log.warning(f"[sync] shutdown error: {e}")
-    # Phase 13B — stop arbiter recovery loop
-    try:
-        from shared.queue_arbiter import stop_arbiter_recovery as _stop_arbiter
-        await _stop_arbiter()
-    except Exception as e:
-        log.warning(f"[arbiter] shutdown error: {e}")
-    # Phase 13A — deregister gateway node on clean shutdown
-    try:
-        from shared.runtime_gateway import stop_gateway as _stop_gw
-        await _stop_gw()
-    except Exception as e:
-        log.warning(f"[gateway] shutdown error: {e}")
-    try:
-        await stop_fpe()
-    except Exception as e:
-        log.warning(f"[fpe] shutdown error: {e}")
-    try:
-        await stop_social_auto_reply()
-    except Exception as e:
-        log.warning(f"[social] shutdown error: {e}")
-    try:
-        from app import ollama_daemon
-        await ollama_daemon.stop()
-    except Exception as e:
-        log.warning(f"[ollama_daemon] shutdown error: {e}")
+    if persistent_runtime:
+        await _stop_background_task(stale_draft_expiry_task, "escort_roster")
+        fazle_scheduler.stop_scheduler()
+        await outbound_queue.stop_background_worker()
+        # Phase 13E — stop self-healing layer
+        try:
+            from shared.self_heal import stop_self_healer as _stop_sh
+            await _stop_sh()
+        except Exception as e:
+            log.warning(f"[self_heal] shutdown error: {e}")
+        # Phase 13D — stop bridge orchestration layer
+        try:
+            from shared.bridge_orchestrator import stop_orchestrator as _stop_orch
+            await _stop_orch()
+        except Exception as e:
+            log.warning(f"[orchestrator] shutdown error: {e}")
+        # Phase 13C — stop frontend sync monitor
+        try:
+            from shared.frontend_sync import stop_sync_monitoring as _stop_sync
+            await _stop_sync()
+        except Exception as e:
+            log.warning(f"[sync] shutdown error: {e}")
+        # Phase 13B — stop arbiter recovery loop
+        try:
+            from shared.queue_arbiter import stop_arbiter_recovery as _stop_arbiter
+            await _stop_arbiter()
+        except Exception as e:
+            log.warning(f"[arbiter] shutdown error: {e}")
+        # Phase 13A — deregister gateway node on clean shutdown
+        try:
+            from shared.runtime_gateway import stop_gateway as _stop_gw
+            await _stop_gw()
+        except Exception as e:
+            log.warning(f"[gateway] shutdown error: {e}")
+        try:
+            await stop_fpe()
+        except Exception as e:
+            log.warning(f"[fpe] shutdown error: {e}")
+        try:
+            await stop_social_auto_reply()
+        except Exception as e:
+            log.warning(f"[social] shutdown error: {e}")
+        try:
+            from app import ollama_daemon
+            await ollama_daemon.stop()
+        except Exception as e:
+            log.warning(f"[ollama_daemon] shutdown error: {e}")
     await close_db()
 
-
 app = FastAPI(title="Fazle Core", lifespan=lifespan)
+
+
+@app.exception_handler(DatabaseUnavailable)
+async def _database_unavailable_handler(_request: Request, exc: DatabaseUnavailable):
+    """Stable response for DB-backed routes while running code-only."""
+    return JSONResponse(
+        status_code=503,
+        content={
+            "status": "unavailable",
+            "code": exc.code,
+            "detail": str(exc),
+            "runtime": database_status(),
+        },
+    )
+
+
+@app.get("/api/runtime/capabilities")
+async def runtime_capabilities():
+    """Describe what this checkout can safely do in its current mode."""
+    persistent = database_enabled()
+    return {
+        "runtime_mode": "full" if persistent else "code_only",
+        "database": database_status(),
+        "capabilities": {
+            "http_app": True,
+            "static_ui": True,
+            "openapi": True,
+            "bridge_preflight": True,
+            "business_reads": persistent,
+            "business_writes": persistent,
+            "bridge_polling": persistent,
+            "outbound_delivery": persistent and os.getenv(
+                "OUTBOUND_ENABLED", "false"
+            ).strip().lower() in {"1", "true", "yes", "on"},
+            "scheduler": persistent,
+        },
+        "next_step": None if persistent else (
+            "Provision PostgreSQL, run python db/bootstrap.py --database-url ... , "
+            "then set DATABASE_URL and DATABASE_MODE=postgres."
+        ),
+    }
 
 
 app.mount("/static", StaticFiles(directory=os.path.join(os.path.dirname(__file__), "static")), name="static")
@@ -799,6 +857,26 @@ def _probe_cpu() -> dict:
 
 
 async def _build_health(deep: bool = False) -> dict:
+    if not database_enabled():
+        # Missing infrastructure is intentional in code-only mode, not a
+        # failed production dependency. Keep /health useful for containers and
+        # preview environments while making the reduced capability explicit.
+        return {
+            "status": "limited",
+            "runtime_mode": "code_only",
+            "probes": {
+                "db": {"status": "disabled", **database_status()},
+                "persistent_workers": {
+                    "status": "disabled",
+                    "reason": "database is disabled",
+                },
+                "disk": _probe_disk(),
+                "mem": _probe_mem(),
+                "cpu": _probe_cpu(),
+            },
+            "ts": int(time.time()),
+        }
+
     # 2026-08-05 (health coverage completion): bridge3 added alongside
     # bridge1/bridge2, same probes -- bridge3 is configured (BRIDGE_CONFIGS,
     # .env), actively polled (modules.fazle_bridge_poller writes a
