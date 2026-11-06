@@ -63,6 +63,8 @@ BRIDGE_POLL_MAX_S   = 30.0  # poll interval during sustained idle
 BRIDGE_POLL_BACKOFF = 1.5   # multiply sleep by this each consecutive idle iteration
 
 # Per-bridge SQLite paths — resolved from settings so .env overrides work.
+# Kept as fallback. Primary source is now whatsapp_bridges registry (098) via
+# modules.whatsapp_mcp.registry → _get_dynamic_bridge_configs() below.
 BRIDGE_CONFIGS = [
     {
         "name": "bridge1",
@@ -83,6 +85,153 @@ BRIDGE_CONFIGS = [
         "get_bridge": get_bridge3,
     },
 ]
+
+def _get_dynamic_bridge_configs() -> list[dict]:
+    """Build poller config list from Universal Bridge Registry (098).
+
+    Priority: whatsapp_bridges DB (when migrated) → BRIDGE_REGISTRY_JSON →
+    legacy BRIDGE_CONFIGS fallback. Each entry has: name, bridge_id, label,
+    base_url, messages_db, whatsapp_db, get_bridge (lazy).
+    """
+    # 1) Try registry (DB + JSON + legacy env aggregated)
+    try:
+        from modules.whatsapp_mcp.registry import get_registry_sync
+        reg = get_registry_sync()
+        # Force load from env if DB not yet migrated; sync loader already did fallback
+        if reg._bridges:
+            out = []
+            for cfg in reg._bridges:
+                # Only poll if enabled and has a local DB path (or base_url for send gate)
+                # inbound needs messages_db_path; if empty (webhook-only bridge) skip poll
+                if not cfg.enabled:
+                    continue
+                # Build lazy get_bridge closure
+                def _make_getter(base_url: str, label: str):
+                    def _getter():
+                        from app.bridge import BridgeClient
+                        return BridgeClient(base_url, label)
+                    return _getter
+                # Resolve get_bridge: try pool, else legacy singleton, else new client
+                if cfg.bridge_id in ("bridge1","bridge2","bridge3"):
+                    legacy_map = {"bridge1": get_bridge1, "bridge2": get_bridge2, "bridge3": get_bridge3}
+                    getter = legacy_map.get(cfg.bridge_id) or _make_getter(cfg.base_url, cfg.label or cfg.bridge_id)
+                else:
+                    getter = _make_getter(cfg.base_url, cfg.label or cfg.bridge_id)
+                out.append({
+                    "name": cfg.bridge_id,
+                    "bridge_id": cfg.bridge_id,
+                    "label": cfg.label,
+                    "base_url": cfg.base_url,
+                    "messages_db": cfg.messages_db_path,
+                    "whatsapp_db": cfg.whatsapp_db_path,
+                    "get_bridge": getter,
+                })
+            if out:
+                return out
+    except Exception as e:
+        log.debug("[bridge_poller] dynamic registry unavailable, fallback to BRIDGE_CONFIGS: %s", e)
+    # 2) Fallback to hardcoded 3
+    return BRIDGE_CONFIGS
+
+def _detect_call_status(msg: dict) -> str | None:
+    """Detect call/missed call from bridge row."""
+    mt = (msg.get("media_type") or msg.get("type") or "").lower()
+    if mt in ("call","missed_call","call_log"):
+        return mt
+    c = (msg.get("content") or msg.get("text") or "").lower()
+    if "missed call" in c or "missed_call" in c:
+        return "missed_call"
+    if c.strip().startswith("call") and len(c.strip()) < 32:
+        return "call"
+    return None
+
+async def _enrich_core_with_identifiers(core_id: int | None, source: str, msg: dict, phone: str) -> None:
+    """Phase 1 (098): populate new identifier columns on fazle_whatsapp_messages.
+
+    Schema-tolerant: checks which columns exist before UPDATE. Never raises.
+    Covers: wa_message_id, wa_jid, wa_lid, wa_pn, group_jid, media_type,
+    media_path, call_status, bridge_id_ref, raw_json. Also enriches via
+    modules.whatsapp_mcp.identifier for canonical JID/LID/PN.
+    """
+    if not core_id:
+        return
+    try:
+        from app.database import execute as _exec, fetch_one as _f1  # local to avoid cycle
+        # Check which columns exist (cached per call)
+        cols = set()
+        try:
+            rows = await _f1("SELECT column_name FROM information_schema.columns WHERE table_name='fazle_whatsapp_messages'")
+            # fallback: query via fetch_all
+            from app.database import fetch_all as _fa
+            col_rows = await _fa("SELECT column_name FROM information_schema.columns WHERE table_name='fazle_whatsapp_messages'")
+            cols = {r["column_name"] for r in col_rows}
+        except Exception:
+            # If information_schema not reachable, just try expected cols
+            cols = {"wa_message_id","wa_jid","wa_lid","wa_pn","group_jid","media_type","media_path","call_status","bridge_id_ref","raw_json"}
+        # Build identifiers via whatsapp_mcp.identifier
+        try:
+            from modules.whatsapp_mcp.identifier import parse_identifier
+            ident = parse_identifier(msg, bridge_id=source)
+            wa_jid = ident.wa_jid or msg.get("chat_jid") or ""
+            wa_lid = ident.wa_lid or str(msg.get("sender") or "")
+            wa_pn = ident.wa_pn or phone
+            group_jid = ident.group_jid or (msg.get("chat_jid") if str(msg.get("chat_jid") or "").endswith("@g.us") else None)
+            media_type = ident.media_type or (msg.get("media_type") or "text")
+            is_group = ident.is_group
+        except Exception:
+            wa_jid = msg.get("chat_jid") or ""
+            wa_lid = str(msg.get("sender") or "")
+            wa_pn = phone
+            group_jid = msg.get("chat_jid") if str(msg.get("chat_jid") or "").endswith("@g.us") else None
+            media_type = (msg.get("media_type") or "text")
+            is_group = bool(group_jid)
+        call_status = _detect_call_status(msg)
+        wa_message_id = str(msg.get("id") or msg.get("message_id") or "")
+        media_path_val = msg.get("filename") or msg.get("url") or msg.get("media_path")
+        raw_json_val = None
+        try:
+            import json as _js
+            # Store compact raw for forensics
+            raw_json_val = _js.dumps({k: str(v)[:2000] for k,v in msg.items() if k not in ("processed_text",)}, ensure_ascii=False)
+        except Exception:
+            raw_json_val = None
+        # Build dynamic UPDATE only for existing cols
+        mapping = {
+            "wa_message_id": wa_message_id,
+            "wa_jid": wa_jid,
+            "wa_lid": wa_lid,
+            "wa_pn": wa_pn,
+            "group_jid": group_jid,
+            "media_type": media_type,
+            "media_path": media_path_val,
+            "call_status": call_status,
+            "bridge_id_ref": source,
+            "raw_json": raw_json_val,
+        }
+        set_parts = []
+        args = []
+        # Filter to existing cols and non-empty
+        import json as _json
+        idx = 2
+        for col, val in mapping.items():
+            if col not in cols:
+                continue
+            if val is None:
+                continue
+            if col == "raw_json":
+                set_parts.append(f"{col} = ${idx}::jsonb")
+                args.append(raw_json_val)
+            else:
+                set_parts.append(f"{col} = ${idx}")
+                args.append(val if not is_group or col != "group_jid" or group_jid else None)
+            idx += 1
+        if not set_parts:
+            return
+        sql = f"UPDATE fazle_whatsapp_messages SET {', '.join(set_parts)} WHERE message_id = $1"
+        await _exec(sql, core_id, *args)
+        log.debug("[enrich] core_id=%s bridge=%s jid=%s media=%s group=%s call=%s", core_id, source, wa_jid, media_type, group_jid, call_status)
+    except Exception as e:
+        log.debug("[enrich] identifier enrich failed core_id=%s: %s", core_id, e)
 
 # ── Schema ─────────────────────────────────────────────────────────────────────
 
@@ -2094,19 +2243,25 @@ async def _poll_bridge(config: dict):
 # ── Public API ─────────────────────────────────────────────────────────────────
 
 async def start_pollers():
-    """Initialize DB tables and launch background poll tasks for both bridges."""
+    """Initialize DB tables and launch background poll tasks for N bridges (universal)."""
     await init_tables()
-    # Part B: ensure send-control is active on startup (survives bridge restarts)
-    try:
-        ok1 = await get_bridge1().ensure_enabled()
-        ok2 = await get_bridge2().ensure_enabled()
-        ok3 = await get_bridge3().ensure_enabled()
-        log.info(f"[send-control] startup enable: bridge1={ok1} bridge2={ok2} bridge3={ok3}")
-    except Exception as _sce:
-        log.warning(f"[send-control] startup enable failed: {_sce}")
-    for config in BRIDGE_CONFIGS:
+    configs = _get_dynamic_bridge_configs()
+    # ensure send-control on each bridge that has base_url
+    for cfg in configs:
+        try:
+            getter = cfg.get("get_bridge")
+            if getter:
+                ok = await getter().ensure_enabled()
+                log.info(f"[send-control] startup enable {cfg['name']}={ok}")
+        except Exception as _sce:
+            log.warning(f"[send-control] startup enable failed for {cfg.get('name')}: {_sce}")
+    for config in configs:
+        # Skip poll if no local DB path (webhook-only bridge)
+        if not config.get("messages_db"):
+            log.info(f"[bridge_poller] skip poll for {config['name']}: no messages_db (webhook-only)")
+            continue
         asyncio.create_task(_poll_bridge(config))
-    log.info("Bridge pollers running for bridge1 + bridge2 + bridge3")
+    log.info(f"Bridge pollers running for {len(configs)} bridge(s): {[c['name'] for c in configs]}")
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -2581,6 +2736,8 @@ async def _save_raw_core_copy(source: str, msg: dict, phone: str, text: str) -> 
         # Phase-2 identity enrichment — best-effort, flag-gated, additive.
         # Runs as a follow-up UPDATE so it can never break the raw INSERT above.
         await _phase2_enrich_raw_copy(core_id, source, msg, phone, raw_text, _chat_jid, media_type, source_ts)
+        # Universal Bridge (098) identifier enrichment — additive, never breaks INSERT
+        await _enrich_core_with_identifiers(core_id, source, msg, phone)
         try:
             await execute(
                 """
