@@ -387,6 +387,8 @@ The exact module list and risk ratings are in `docs/MODULE_MAP.md`.
 
 ## 4. Installation guide
 
+> **New — Universal installer (any PC/VPS):** For a one-command setup that works on any Ubuntu/Debian/WSL/macOS machine (no `/home/azim` hardcoding), use [`scripts/install/universal_install.sh`](scripts/install/universal_install.sh) and [`docker-compose.yml`](docker-compose.yml). Full steps, bridge configuration (`BRIDGE_REGISTRY_JSON`), history sync, and identity customization are documented in [`docs/INSTALL.md`](docs/INSTALL.md) — this section keeps the legacy VPS path for existing production hosts.
+
 ### A. VPS installation
 
 #### Prerequisites
@@ -522,22 +524,50 @@ development unless a test explicitly requires outbound behavior.
 **Production database or production `.env` must never be used for test
 commands. Always use an isolated test database.**
 
+### C. Universal installation (any PC/VPS — new, recommended)
+
+For any fresh machine (local PC, new VPS, WSL) without the `/home/azim` layout, use the universal installer that auto-detects OS, creates `venv`, prompts for `.env`, and optionally starts Postgres/Redis via Docker:
+
+```bash
+git clone https://github.com/arshiyaazim/fazle-core.git
+cd fazle-core
+git checkout arena/2e22ee83-fazle-core   # this branch (merge to main after review)
+bash scripts/install/universal_install.sh
+# → prompts: DATABASE_URL, INTERNAL_API_KEY (auto-generated if empty),
+#   ADMIN_NUMBERS, BRIDGE_REGISTRY_JSON, APP_PORT
+# → optional: docker-compose up -d postgres redis
+
+# Run
+venv/bin/python run.py
+# or: docker-compose up -d   # app + postgres + redis on :8200
+
+# After first boot — configure bridges & identity in browser:
+#   http://localhost:8200/static/wa-bridges.html      — add N bridges, test, history sync
+#   http://localhost:8200/static/setup-identity.html  — org name, admin numbers, contacts CSV
+```
+
+No manual `sed` of `fazle-core.service` is needed — the installer patches `WorkingDirectory`/`EnvironmentFile` to your clone path. See [`docs/INSTALL.md`](docs/INSTALL.md) for history sync, identity import, MCP send, and troubleshooting; the 5-phase migration plan is in [`docs/UNIVERSAL_BRIDGE_MCP_ROADMAP.md`](docs/UNIVERSAL_BRIDGE_MCP_ROADMAP.md).
+
 ---
 
 ## 5. External dependency installation and connection
 
-### WhatsApp MCP / WhatsApp bridge
+### WhatsApp MCP / WhatsApp bridge (Universal N-bridge, MCP-enabled)
 
 | Item | Detail |
 |---|---|
-| Purpose | Maintains WhatsApp Web sessions; writes messages into local SQLite stores. Core polls these stores via `modules/fazle_bridge_poller`. |
+| Purpose | Maintains WhatsApp Web sessions; writes messages into local SQLite stores. Core polls these stores via `modules/fazle_bridge_poller` (now N-bridge via `modules/whatsapp_mcp/registry.py`). Every inbound/outbound message is stored with full identifiers (`wa_jid`, `wa_lid`, `wa_pn`, `group_jid` `@g.us`, `wa_message_id`, `media_type`, `call_status`, `bridge_id_ref`) for filtering via MCP. |
 | Install | Separate repository/binaries. Not vendored here. Install and run independently. |
-| Expected ports | Bridge1 default `http://127.0.0.1:8082`, Bridge2 default `http://127.0.0.1:8081`, Bridge3 default `http://127.0.0.1:8083` (configured in `.env` as `BRIDGE1_URL`..`BRIDGE3_URL`). |
-| Env vars | `BRIDGE1_URL`, `BRIDGE1_NUMBER`, `BRIDGE1_DB_PATH`, `BRIDGE1_WHATSAPP_DB_PATH` (and equivalents for bridge2/bridge3). |
-| Auth | Bridge-level authentication is configured on the bridge service itself, not in Core. Core uses `BRIDGE_WEBHOOK_SECRET` for webhook signature verification when `WEBHOOK_SIGNATURE_ENFORCEMENT=true`. |
-| Health check | `curl -fsS http://127.0.0.1:8081/health` (adjust per bridge). |
-| Failure behavior | Core logs bridge unavailability; inbound messages queue in SQLite and are polled on recovery. Outbound falls back to other bridges only if configured. |
-| Restart needed? | No — Core polls at 5s intervals. Bridge restarts are transparent once the bridge is back up. |
+| Expected ports | Legacy defaults: Bridge1 `http://127.0.0.1:8082`, Bridge2 `http://127.0.0.1:8081`, Bridge3 `http://127.0.0.1:8083`. Any number of bridges can be added via `BRIDGE_REGISTRY_JSON` (see below). |
+| Env vars (legacy, still works) | `BRIDGE1_URL`, `BRIDGE1_NUMBER`, `BRIDGE1_DB_PATH`, `BRIDGE1_WHATSAPP_DB_PATH` (and equivalents for bridge2/bridge3) — auto-seeded to `whatsapp_bridges` on first boot. |
+| Env vars (new, recommended) | `BRIDGE_REGISTRY_JSON` — JSON array of bridges. Example: `[{"bridge_id":"wa-hr","base_url":"http://localhost:8082","messages_db_path":"/home/me/whatsapp1/store/messages.db","whatsapp_db_path":"/home/me/whatsapp1/store/whatsapp.db","phone_number":"8801710000001","label":"HR"}]`. Set in wizard by `scripts/install/universal_install.sh`. |
+| Management | UI: `http://localhost:8200/static/wa-bridges.html` (add/edit/test/delete N bridges) · API: `GET/POST/PATCH/DELETE /api/bridges`, `POST /api/bridges/{id}/test` · MCP: `whatsapp.list_bridges`, `whatsapp.send_message` (auto-JID `880…@s.whatsapp.net`/`@g.us`), `whatsapp.get_messages`, `whatsapp.get_contact`, `whatsapp.get_call_log`, `whatsapp.get_groups`, `whatsapp.get_bridge_status` via `POST /mcp/call`. |
+| Auth | Bridge-level authentication is configured on the bridge service itself, not in Core. Core uses `BRIDGE_WEBHOOK_SECRET` for webhook signature verification when `WEBHOOK_SIGNATURE_ENFORCEMENT=true`. MCP/Admin APIs use `X-Internal-Key: $INTERNAL_API_KEY`. |
+| Health check | Per-bridge: `POST /api/bridges/{id}/test` (HTTP + SQLite file check) or `curl -fsS http://127.0.0.1:8081/health`. Aggregate: `POST /mcp/call {"name":"whatsapp.get_bridge_status"}`. |
+| Failure behavior | Core logs bridge unavailability; inbound messages queue in SQLite and are polled on recovery. Outbound fails over in priority order via `modules/whatsapp_mcp/bridge_pool.py`. |
+| Restart needed? | No — Core polls at 5s intervals (adaptive 1s–30s). Bridge restarts are transparent once the bridge is back up. |
+| History sync (first install) | Poller handles real-time messages automatically. For **existing history** before install: `POST /api/bridges/{id}/sync/history` (body: `{"limit":5000}` optional) — chunked bulk copy of SQLite `messages` → `fazle_whatsapp_messages` with dedup. Progress: `GET /api/bridges/{id}/sync/status`. Also via UI (wa-bridges.html → History Sync) or MCP `whatsapp.sync_history`. See [`docs/INSTALL.md`](docs/INSTALL.md) §History Sync. |
+| Identity customization | A new organisation's own numbers/contacts differ from the default Al-Rifa'i setup. Configure via `http://localhost:8200/static/setup-identity.html` or `PUT /api/org/profile` (`org_name`, `company_name`, `admin_numbers`, `bridge_owner_map`, `domain_rules`) and `POST /api/org/contacts/import` (CSV `phone,name,role`). `modules/fazle_identity_brain` checks `org_profiles` (migration 099) first, then falls back to `.env ADMIN_NUMBERS`. See [`docs/INSTALL.md`](docs/INSTALL.md) §Identity Customization. |
 
 ### Hermes runner
 
