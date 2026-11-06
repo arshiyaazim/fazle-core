@@ -138,8 +138,14 @@ class Settings(BaseSettings):
     bridge3_number: str = ""
     bridge3_label: str = "REC2"
 
+    # Universal Bridge Registry — new (Phase 1, 098): JSON array of bridges.
+    # Example: BRIDGE_REGISTRY_JSON='[{"bridge_id":"bridge1","base_url":"http://localhost:8082","messages_db_path":"/path/messages.db","phone_number":"88017…"}]'
+    # When set, legacy bridge1/2/3 vars are used only to seed whatsapp_bridges table on first boot.
+    bridge_registry_json: str = ""
+
     # Bridge SQLite store paths — override in .env if the store directory moves.
     # Defaults match the current production layout on this VPS.
+    # Kept for backward compat (auto-migrated to whatsapp_bridges on first boot).
     bridge1_db_path: str = "/home/azim/whatsapp1/store/messages.db"
     bridge1_whatsapp_db_path: str = "/home/azim/whatsapp1/store/whatsapp.db"
     bridge2_db_path: str = "/home/azim/whatsapp2/store/messages.db"

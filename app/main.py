@@ -288,6 +288,14 @@ async def lifespan(app: FastAPI):
         log.info("[wa_chat] tables ready")
     except Exception as e:
         log.warning(f"[wa_chat] table init failed (non-fatal): {e}")
+    # Universal Bridge Registry — seed from legacy env if DB empty (Phase 1, 098)
+    try:
+        from modules.whatsapp_mcp.registry import get_registry
+        _reg = await get_registry()
+        await _reg.seed_from_legacy_if_empty()
+        log.info("[whatsapp_mcp] registry ready (from=%s, count=%d)", _reg.loaded_from, len(_reg._bridges))
+    except Exception as _e:
+        log.warning("[whatsapp_mcp] registry seed failed (non-fatal): %s", _e)
     await start_pollers()
     outbound_queue.start_background_worker()
     fazle_scheduler.start_scheduler()
@@ -482,6 +490,14 @@ app.include_router(system_secret_store_router)
 app.include_router(recruitment_authority_admin_router)
 app.include_router(identity_role_admin_router)
 app.include_router(business_read_service_router)
+# Phase 1 Universal Bridge MCP — additive, backward compatible
+try:
+    from modules.whatsapp_mcp.router import router as whatsapp_mcp_router, mcp_router
+    app.include_router(whatsapp_mcp_router)
+    app.include_router(mcp_router)
+except Exception as _e:
+    import logging as _log
+    _log.getLogger("fazle.main").warning("[whatsapp_mcp] router not mounted: %s", _e)
 from modules.wa_chat_frontend import router as wa_chat_router, ensure_wa_chat_tables
 app.include_router(wa_chat_router)
 
