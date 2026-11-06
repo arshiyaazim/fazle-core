@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WhatsApp Bridges — Fazle Core</title>
+<style>
+  :root { --bg:#0f172a; --card:#1e293b; --accent:#38bdf8; --ok:#22c55e; --warn:#f59e0b; --err:#ef4444; --muted:#94a3b8; }
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:#e2e8f0;font-family:system-ui,Segoe UI,sans-serif}
+  .wrap{max-width:1100px;margin:24px auto;padding:0 16px}
+  h1{font-size:20px;margin:0} .sub{color:var(--muted);font-size:13px;margin:6px 0 14px}
+  .card{background:var(--card);border-radius:10px;padding:14px;margin:10px 0;border:1px solid #334155}
+  label{font-size:13px;color:var(--muted);display:block;margin:8px 0 4px}
+  input,textarea,select{width:100%;padding:9px;border-radius:8px;border:1px solid #334155;background:#0f172a;color:#e2e8f0}
+  textarea{min-height:90px;font-family:monospace;font-size:12px}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  button{background:var(--accent);color:#0f172a;border:0;padding:9px 12px;border-radius:8px;cursor:pointer;font-weight:600;margin:4px 0}
+  button.secondary{background:#334155;color:#e2e8f0}
+  button.danger{background:var(--err);color:#fff}
+  .ok{color:var(--ok)} .err{color:var(--err)} .muted{color:var(--muted);font-size:12px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:8px;border-bottom:1px solid #334155;text-align:left}
+  th{color:var(--muted);font-size:11px;text-transform:uppercase}
+  .badge{padding:2px 8px;border-radius:99px;font-size:11px;display:inline-block}
+  .badge.on{background:var(--ok);color:#0f172a} .badge.off{background:#475569}
+  .badge.both{background:var(--accent);color:#0f172a}
+  pre{background:#0f172a;padding:10px;border-radius:8px;overflow:auto;font-size:12px;max-height:220px}
+  .flex{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .stat{display:flex;gap:12px;flex-wrap:wrap}
+  .stat div{background:#0f172a;padding:10px 14px;border-radius:8px;min-width:120px;text-align:center}
+  .stat b{font-size:18px;display:block}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🌉 WhatsApp Bridges — MCP</h1>
+  <p class="sub">এক বা একাধিক WhatsApp ব্রিজ ম্যানেজ করুন — N-bridge, প্রতিটা মেসেজে JID/LID/PN/phone/group/media/call ট্রেস, history sync, auto-send।</p>
+
+  <div class="card">
+    <label>X-Internal-Key</label>
+    <input id="apiKey" type="password" placeholder="INTERNAL_API_KEY" oninput="saveKey()">
+    <div class="flex"><button class="secondary" onclick="loadBridges()">🔄 Refresh</button><span id="conn" class="muted"></span></div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin:0 0 8px">📊 Overview</h3>
+    <div class="stat" id="overview"></div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin:0 0 8px">📋 Bridges</h3>
+    <div style="overflow:auto">
+      <table id="tbl"><thead><tr><th>bridge_id</th><th>label</th><th>base_url</th><th>phone</th><th>DB</th><th>dir</th><th>en</th><th>pri</th><th>actions</th></tr></thead><tbody id="tbody"><tr><td colspan="9" class="muted">Load করুন</td></tr></tbody></table>
+    </div>
+    <pre id="rawBridges" style="display:none"></pre>
+  </div>
+
+  <div class="card">
+    <h3 style="margin:0 0 8px">➕ Add / Edit Bridge</h3>
+    <p class="muted">যে কোনো PC/VPS এ নতুন ব্রিজ: bridge_id (slug), base_url, messages.db path, phone।</p>
+    <div class="row">
+      <div><label>bridge_id * (slug, e.g. wa-hr-01)</label><input id="f_id" placeholder="wa-hr-01"></div>
+      <div><label>label</label><input id="f_label" placeholder="HR"></div>
+    </div>
+    <div class="row">
+      <div><label>base_url * (http://localhost:8082)</label><input id="f_url" placeholder="http://localhost:8082"></div>
+      <div><label>phone_number (8801…)</label><input id="f_phone" placeholder="8801710000001"></div>
+    </div>
+    <div class="row">
+      <div><label>messages_db_path (local SQLite)</label><input id="f_messages" placeholder="/home/user/whatsapp1/store/messages.db"></div>
+      <div><label>whatsapp_db_path (LID map)</label><input id="f_whatsapp" placeholder="/home/user/whatsapp1/store/whatsapp.db"></div>
+    </div>
+    <div class="row3">
+      <div><label>direction</label><select id="f_dir"><option value="both">both</option><option value="inbound">inbound</option><option value="outbound">outbound</option></select></div>
+      <div><label>priority (low=preferred)</label><input id="f_pri" type="number" value="100"></div>
+      <div><label>enabled</label><select id="f_en"><option value="true">true</option><option value="false">false</option></select></div>
+    </div>
+    <div class="flex"><button onclick="saveBridge()">💾 Save Bridge</button> <button class="secondary" onclick="clearForm()">Clear</button> <span id="saveStatus" class="muted"></span></div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin:0 0 8px">🧪 Test & Sync</h3>
+    <div class="row">
+      <div><label>bridge_id for test/sync</label><input id="t_id" placeholder="wa-hr-01"></div>
+      <div><label>history limit (empty = all)</label><input id="t_limit" placeholder="1000"></div>
+    </div>
+    <div class="flex">
+      <button class="secondary" onclick="testBridge()">Test Bridge</button>
+      <button onclick="syncHistory()">📥 History Sync</button>
+      <button class="secondary" onclick="syncStatus()">Sync Status</button>
+      <button class="secondary" onclick="callMCP()">MCP get_messages</button>
+    </div>
+    <pre id="testOut"></pre>
+  </div>
+
+  <div class="card">
+    <h3 style="margin:0 0 8px">💬 Auto-Send Demo (Python/MCP)</h3>
+    <div class="row">
+      <div><label>to (880/01 phone or JID @s.whatsapp.net / @g.us)</label><input id="s_to" placeholder="01710000001"></div>
+      <div><label>bridge_id (auto if empty)</label><input id="s_bridge" placeholder="wa-hr-01"></div>
+    </div>
+    <label>message</label><textarea id="s_msg" placeholder="হ্যালো, Fazle Core থেকে টেস্ট"></textarea>
+    <div class="flex"><button onclick="sendMsg()">📤 Send via MCP</button> <span id="sendStatus" class="muted"></span></div>
+    <pre id="sendOut"></pre>
+    <p class="muted">MCP endpoint: <code>POST /mcp/call {"name":"whatsapp.send_message","arguments":{"to":"...","message":"..."}}</code></p>
+  </div>
+
+  <p class="muted" style="text-align:center;margin-top:16px">Docs: <a href="/static/setup-identity.html" style="color:var(--accent)">Setup Identity</a> • <a href="/static/dashboard.html" style="color:var(--accent)">Dashboard</a> • <code>examples/whatsapp_mcp_send.py</code></p>
+</div>
+
+<script>
+const LS='fazle_api_key';
+function saveKey(){ localStorage.setItem(LS, document.getElementById('apiKey').value); }
+function getKey(){ return localStorage.getItem(LS)||''; }
+function h(){ return {'X-Internal-Key': getKey(), 'Content-Type':'application/json'}; }
+document.getElementById('apiKey').value = getKey();
+
+async function loadBridges(){
+  const k=getKey(); if(!k){ document.getElementById('conn').textContent='Key দিন'; return; }
+  const r=await fetch('/api/bridges?include_disabled=true', {headers:{'X-Internal-Key':k}});
+  const j=await r.json();
+  document.getElementById('conn').textContent = r.ok? `✓ ${j.count} bridges (from ${j.loaded_from})` : 'ERR '+r.status;
+  document.getElementById('rawBridges').style.display='block'; document.getElementById('rawBridges').textContent=JSON.stringify(j,null,2);
+  const tb=document.getElementById('tbody'); tb.innerHTML='';
+  (j.bridges||[]).forEach(b=>{
+    const tr=document.createElement('tr');
+    const dbBadge = b.messages_db_path? '✅':'—';
+    tr.innerHTML = `<td><b>${b.bridge_id}</b></td><td>${b.label||''}</td><td style="font-size:11px">${b.base_url||''}</td><td>${b.phone_number||''}</td><td>${dbBadge}</td><td><span class="badge ${b.direction==='both'?'both':''}">${b.direction}</span></td><td>${b.enabled?'<span class="badge on">on</span>':'<span class="badge off">off</span>'}</td><td>${b.priority}</td><td><button class="secondary" style="padding:4px 8px;font-size:12px" onclick="editBridge('${b.bridge_id}')">Edit</button> <button class="danger" style="padding:4px 8px;font-size:12px" onclick="delBridge('${b.bridge_id}')">Del</button></td>`;
+    tb.appendChild(tr);
+  });
+  // overview
+  const total=(j.bridges||[]).length, on=(j.bridges||[]).filter(b=>b.enabled).length, wh=(j.bridges||[]).filter(b=>!b.messages_db_path).length;
+  document.getElementById('overview').innerHTML = `<div><b>${total}</b><span class="muted">total</span></div><div><b>${on}</b><span class="muted">enabled</span></div><div><b>${wh}</b><span class="muted">webhook-only</span></div><div><b>${j.loaded_from}</b><span class="muted">source</span></div>`;
+  // fill test input
+  if(j.bridges && j.bridges[0]) document.getElementById('t_id').value = j.bridges[0].bridge_id;
+}
+function editBridge(id){
+  fetch('/api/bridges/'+id, {headers:{'X-Internal-Key':getKey()}}).then(r=>r.json()).then(b=>{
+    document.getElementById('f_id').value=b.bridge_id;
+    document.getElementById('f_label').value=b.label||'';
+    document.getElementById('f_url').value=b.base_url||'';
+    document.getElementById('f_phone').value=b.phone_number||'';
+    document.getElementById('f_messages').value=b.messages_db_path||'';
+    document.getElementById('f_whatsapp').value=b.whatsapp_db_path||'';
+    document.getElementById('f_dir').value=b.direction||'both';
+    document.getElementById('f_pri').value=b.priority||100;
+    document.getElementById('f_en').value=String(b.enabled);
+    window.scrollTo({top: document.getElementById('f_id').offsetTop-20, behavior:'smooth'});
+  });
+}
+async function saveBridge(){
+  const payload={
+    bridge_id: document.getElementById('f_id').value.trim(),
+    label: document.getElementById('f_label').value.trim(),
+    base_url: document.getElementById('f_url').value.trim(),
+    phone_number: document.getElementById('f_phone').value.trim(),
+    messages_db_path: document.getElementById('f_messages').value.trim(),
+    whatsapp_db_path: document.getElementById('f_whatsapp').value.trim(),
+    direction: document.getElementById('f_dir').value,
+    priority: parseInt(document.getElementById('f_pri').value||'100'),
+    enabled: document.getElementById('f_en').value==='true',
+  };
+  if(!payload.bridge_id || !payload.base_url){ alert('bridge_id + base_url required'); return; }
+  const r=await fetch('/api/bridges', {method:'POST', headers:h(), body:JSON.stringify(payload)});
+  const j=await r.json();
+  document.getElementById('saveStatus').textContent = r.ok? '✓ Saved '+j.bridge.bridge_id : '✗ '+JSON.stringify(j);
+  if(r.ok) loadBridges();
+}
+function clearForm(){ ['f_id','f_label','f_url','f_phone','f_messages','f_whatsapp'].forEach(id=>document.getElementById(id).value=''); }
+async function delBridge(id){
+  if(!confirm('Delete '+id+' ?')) return;
+  const r=await fetch('/api/bridges/'+id, {method:'DELETE', headers:h()});
+  const j=await r.json();
+  alert(JSON.stringify(j)); loadBridges();
+}
+async function testBridge(){
+  const id=document.getElementById('t_id').value.trim(); if(!id) return alert('bridge_id দিন');
+  const r=await fetch(`/api/bridges/${id}/test`, {method:'POST', headers:h()});
+  document.getElementById('testOut').textContent = JSON.stringify(await r.json(), null,2);
+}
+async function syncHistory(){
+  const id=document.getElementById('t_id').value.trim(); if(!id) return alert('bridge_id দিন');
+  const limit=document.getElementById('t_limit').value.trim();
+  const body={}; if(limit) body.limit=parseInt(limit);
+  const r=await fetch(`/api/bridges/${id}/sync/history`, {method:'POST', headers:h(), body:JSON.stringify(body)});
+  document.getElementById('testOut').textContent = JSON.stringify(await r.json(), null,2);
+}
+async function syncStatus(){
+  const id=document.getElementById('t_id').value.trim(); if(!id) return alert('bridge_id দিন');
+  const r=await fetch(`/api/bridges/${id}/sync/status`, {headers:h()});
+  document.getElementById('testOut').textContent = JSON.stringify(await r.json(), null,2);
+}
+async function callMCP(){
+  const id=document.getElementById('t_id').value.trim();
+  const r=await fetch('/mcp/call', {method:'POST', headers:h(), body:JSON.stringify({name:'whatsapp.get_messages',arguments:{bridge_id:id, limit:5}})});
+  document.getElementById('testOut').textContent = JSON.stringify(await r.json(), null,2);
+}
+async function sendMsg(){
+  const to=document.getElementById('s_to').value.trim(), msg=document.getElementById('s_msg').value, bridge=document.getElementById('s_bridge').value.trim();
+  if(!to) return alert('to দিন');
+  const r=await fetch('/mcp/call', {method:'POST', headers:h(), body:JSON.stringify({name:'whatsapp.send_message',arguments:{to, message:msg, bridge_id:bridge}})});
+  const j=await r.json();
+  document.getElementById('sendStatus').textContent = j.result?.success? '✓ Sent' : '✗ '+(j.result?.error||'');
+  document.getElementById('sendOut').textContent = JSON.stringify(j,null,2);
+}
+loadBridges();
+</script>
+</body>
+</html>

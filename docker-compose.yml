@@ -1,0 +1,86 @@
+version: "3.9"
+# Fazle Core — Universal Compose (any PC/VPS)
+# Usage:
+#   cp .env.example .env   # edit DATABASE_URL, INTERNAL_API_KEY, BRIDGE_REGISTRY_JSON, ADMIN_NUMBERS
+#   docker-compose up -d
+#   docker-compose exec app python db/migrate.py   # or: make migrate
+#   open http://localhost:8200/
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: fazle-postgres
+    environment:
+      POSTGRES_USER: fazle
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fazle_local_password}
+      POSTGRES_DB: fazle_core
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - fazle-pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fazle -d fazle_core"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: fazle-redis
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - fazle-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  qdrant:
+    image: qdrant/qdrant:v1.17.0
+    container_name: fazle-qdrant
+    ports:
+      - "127.0.0.1:6333:6333"
+    volumes:
+      - fazle-qdrant-data:/qdrant/storage
+    restart: unless-stopped
+    profiles: ["with-qdrant"]
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fazle-core
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://fazle:${POSTGRES_PASSWORD:-fazle_local_password}@postgres:5432/fazle_core
+      REDIS_URL: redis://redis:6379/9
+      # Override any .env value via compose env_file too
+    env_file:
+      - .env
+    ports:
+      - "8200:8200"
+    volumes:
+      - ./logs:/app/logs
+      # Mount bridge DBs if host paths exist (read-only SQLite polling)
+      # Host /home/user/whatsapp1 → container /bridges/whatsapp1
+      # Set BRIDGE1_DB_PATH=/bridges/whatsapp1/store/messages.db in .env when using Docker
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:8200/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  fazle-pg-data:
+  fazle-redis-data:
+  fazle-qdrant-data:
