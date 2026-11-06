@@ -148,6 +148,45 @@ async def sync_history(bridge_id: str, req: Request, _key: str = Depends(_requir
     except Exception: limit = None
     return await trigger_history_sync(bridge_id, with_media=with_media, limit=limit)
 
+# ── /api/org/* (Identity Customization) ───────────────────────────────────
+
+org_router = APIRouter(prefix="/api/org", tags=["whatsapp-mcp-org"])
+
+@org_router.get("/profile")
+async def get_org_profile_api(_key: str = Depends(_require_key())):
+    from .org_profile import get_org_profile
+    return await get_org_profile()
+
+@org_router.put("/profile")
+@org_router.post("/profile")
+async def upsert_org_profile_api(req: Request, _key: str = Depends(_require_key())):
+    body = await req.json()
+    from .org_profile import upsert_org_profile
+    saved = await upsert_org_profile(body)
+    return {"success": True, "profile": saved}
+
+@org_router.post("/contacts/import")
+async def import_contacts_api(req: Request, _key: str = Depends(_require_key())):
+    ctype = req.headers.get("content-type", "")
+    if "text/csv" in ctype or "text/plain" in ctype:
+        raw = (await req.body()).decode("utf-8", errors="ignore")
+    else:
+        # JSON {"csv": "..."} or form
+        try:
+            body = await req.json()
+            raw = body.get("csv") or body.get("csv_text") or body.get("data") or ""
+        except Exception:
+            raw = (await req.body()).decode("utf-8", errors="ignore")
+    from .org_profile import import_contacts_csv
+    result = await import_contacts_csv(raw)
+    return {"success": True, **result}
+
+@org_router.get("/effective-admins")
+async def effective_admins_api(_key: str = Depends(_require_key())):
+    from .org_profile import get_effective_admin_numbers
+    nums = await get_effective_admin_numbers()
+    return {"admin_numbers": nums, "count": len(nums)}
+
 # ── /mcp/* (tool surface) ───────────────────────────────────────────────────
 
 @mcp_router.get("/tools")

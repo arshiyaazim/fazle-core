@@ -492,9 +492,10 @@ app.include_router(identity_role_admin_router)
 app.include_router(business_read_service_router)
 # Phase 1 Universal Bridge MCP — additive, backward compatible
 try:
-    from modules.whatsapp_mcp.router import router as whatsapp_mcp_router, mcp_router
+    from modules.whatsapp_mcp.router import router as whatsapp_mcp_router, mcp_router, org_router
     app.include_router(whatsapp_mcp_router)
     app.include_router(mcp_router)
+    app.include_router(org_router)
 except Exception as _e:
     import logging as _log
     _log.getLogger("fazle.main").warning("[whatsapp_mcp] router not mounted: %s", _e)

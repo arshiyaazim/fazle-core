@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Setup Identity — Fazle Core</title>
+<style>
+  :root { --bg:#0f172a; --card:#1e293b; --accent:#38bdf8; --ok:#22c55e; --muted:#94a3b8; }
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:#e2e8f0;font-family:system-ui,Segoe UI,sans-serif}
+  .wrap{max-width:900px;margin:32px auto;padding:0 16px}
+  h1{font-size:22px;margin:0 0 8px} .sub{color:var(--muted);font-size:13px;margin-bottom:16px}
+  .card{background:var(--card);border-radius:12px;padding:16px;margin:12px 0;border:1px solid #334155}
+  label{display:block;font-size:13px;color:var(--muted);margin:8px 0 4px}
+  input,textarea,select{width:100%;padding:10px;border-radius:8px;border:1px solid #334155;background:#0f172a;color:#e2e8f0}
+  textarea{min-height:120px;font-family:monospace;font-size:13px}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  button{background:var(--accent);color:#0f172a;border:0;padding:10px 14px;border-radius:8px;cursor:pointer;font-weight:600}
+  button.secondary{background:#334155;color:#e2e8f0}
+  .ok{color:var(--ok)} .err{color:#f87171} .muted{color:var(--muted);font-size:12px}
+  .pill{display:inline-block;background:#334155;padding:2px 8px;border-radius:99px;font-size:12px;margin:2px}
+  pre{background:#0f172a;padding:10px;border-radius:8px;overflow:auto;font-size:12px;max-height:200px}
+  .step{border-left:3px solid var(--accent);padding-left:12px;margin:16px 0}
+  .step h3{margin:0 0 6px;font-size:15px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🆔 Identity Setup — Fazle Core</h1>
+  <p class="sub">প্রথম ইনস্টলে আপনার নিজের মোবাইল নাম্বার, কোম্পানি নাম, এবং কন্টাক্ট লিস্ট সেট করুন। বর্তমান অ্যাপে Al-Rifa'i হার্ডকোড আছে — এখানে সেট করে আপনার প্রতিষ্ঠানের জন্য কাস্টমাইজ করুন।</p>
+
+  <div class="card">
+    <label>Internal API Key (X-Internal-Key)</label>
+    <input id="apiKey" type="password" placeholder="INTERNAL_API_KEY পেস্ট করুন" oninput="saveKey()">
+    <p class="muted">Key একবার দিলে localStorage এ থাকবে।</p>
+    <div id="connStatus" class="muted"></div>
+  </div>
+
+  <div id="wizard">
+    <div class="step">
+      <h3>Step 1 — Organisation</h3>
+      <div class="row">
+        <div><label>Org Name</label><input id="orgName" placeholder="My Organisation"></div>
+        <div><label>Company Name (AI replies এ দেখাবে)</label><input id="companyName" placeholder="My Company"></div>
+      </div>
+      <div class="row">
+        <div><label>Admin Numbers (comma, 880…)</label><input id="adminNumbers" placeholder="8801710000001,8801810000002"></div>
+        <div><label>Accountant Phone</label><input id="accountantPhone" placeholder="8801710000003"></div>
+      </div>
+      <label>Bridge Owner Map (optional JSON: {bridge_id: phone})</label>
+      <textarea id="bridgeMap" placeholder='{"bridge1":"8801710000001","wa-hr":"8801710000002"}'></textarea>
+      <label>Domain Rules (which parsers active)</label>
+      <div id="domainChecks" style="display:flex;gap:12px;flex-wrap:wrap;margin:8px 0">
+        <label style="display:flex;gap:4px;align-items:center"><input type="checkbox" id="dr_recruitment" checked> recruitment</label>
+        <label style="display:flex;gap:4px;align-items:center"><input type="checkbox" id="dr_escort" checked> escort</label>
+        <label style="display:flex;gap:4px;align-items:center"><input type="checkbox" id="dr_payment" checked> payment</label>
+        <label style="display:flex;gap:4px;align-items:center"><input type="checkbox" id="dr_attendance" checked> attendance</label>
+        <label style="display:flex;gap:4px;align-items:center"><input type="checkbox" id="dr_rag" checked> rag</label>
+      </div>
+      <button onclick="saveProfile()">💾 Save Organisation</button>
+      <span id="profStatus" class="muted"></span>
+      <pre id="profPreview" style="display:none"></pre>
+    </div>
+
+    <div class="step">
+      <h3>Step 2 — Contacts Import (CSV)</h3>
+      <p class="muted">CSV header: <code>phone,name,role</code> — role: admin / accountant / client_escort_buyer / employee / candidate / etc. <br> আপনার পুরনো কন্টাক্ট লিস্ট আপলোড করলে identity_brain আপনার নাম্বারগুলো চিনবে।</p>
+      <textarea id="csvText" placeholder="phone,name,role
+8801710000001,রহিম,admin
+8801710000002,করিম,employee
+8801710000003,Escort Client X,client_escort_buyer"></textarea>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button onclick="importCSV()">📥 Import CSV</button>
+        <button class="secondary" onclick="loadSample()">Sample CSV</button>
+        <input type="file" id="csvFile" accept=".csv" style="display:none" onchange="filePicked(event)">
+        <button class="secondary" onclick="document.getElementById('csvFile').click()">📁 Choose File</button>
+      </div>
+      <div id="csvStatus" class="muted"></div>
+      <pre id="csvResult" style="display:none"></pre>
+    </div>
+
+    <div class="step">
+      <h3>Step 3 — Verify</h3>
+      <button onclick="checkEffective()">🔍 Effective Admins Check</button>
+      <button class="secondary" onclick="listBridges()">🌉 List Bridges</button>
+      <pre id="verifyOut"></pre>
+    </div>
+  </div>
+</div>
+
+<script src="/static/shared-auth-fetch.js"></script>
+<script>
+const LS_KEY = 'fazle_api_key';
+function saveKey(){ localStorage.setItem(LS_KEY, document.getElementById('apiKey').value); connCheck(); }
+function getKey(){ return localStorage.getItem(LS_KEY) || ''; }
+function authHeaders(){ return {'X-Internal-Key': getKey(), 'Content-Type':'application/json'}; }
+
+async function connCheck(){
+  const key = getKey();
+  if(!key){ document.getElementById('connStatus').textContent='Key দিন'; return; }
+  try{
+    const r = await fetch('/api/org/profile', {headers: {'X-Internal-Key': key}});
+    if(r.ok){ const j=await r.json(); document.getElementById('connStatus').innerHTML='<span class="ok">✓ Connected</span> — org: '+(j.org_name||''); fillForm(j); }
+    else document.getElementById('connStatus').textContent='API error: '+r.status;
+  }catch(e){ document.getElementById('connStatus').textContent='Fetch failed: '+e; }
+}
+function fillForm(p){
+  if(!p) return;
+  document.getElementById('orgName').value = p.org_name||'';
+  document.getElementById('companyName').value = p.company_name||'';
+  document.getElementById('adminNumbers').value = p.admin_numbers||'';
+  document.getElementById('accountantPhone').value = p.accountant_phone||'';
+  document.getElementById('bridgeMap').value = p.bridge_owner_map? JSON.stringify(p.bridge_owner_map,null,2):'';
+  if(p.domain_rules){ ['recruitment','escort','payment','attendance','rag'].forEach(k=>{ const el=document.getElementById('dr_'+k); if(el) el.checked=!!p.domain_rules[k]; }); }
+}
+async function saveProfile(){
+  const payload = {
+    org_name: document.getElementById('orgName').value,
+    company_name: document.getElementById('companyName').value,
+    admin_numbers: document.getElementById('adminNumbers').value,
+    accountant_phone: document.getElementById('accountantPhone').value,
+    bridge_owner_map: (()=>{ try{return JSON.parse(document.getElementById('bridgeMap').value||'{}')}catch{return {}}})(),
+    domain_rules: {
+      recruitment: document.getElementById('dr_recruitment').checked,
+      escort: document.getElementById('dr_escort').checked,
+      payment: document.getElementById('dr_payment').checked,
+      attendance: document.getElementById('dr_attendance').checked,
+      rag: document.getElementById('dr_rag').checked,
+    }
+  };
+  const r = await fetch('/api/org/profile', {method:'POST', headers: authHeaders(), body: JSON.stringify(payload)});
+  const j = await r.json();
+  document.getElementById('profStatus').textContent = r.ok? '✓ Saved' : '✗ '+JSON.stringify(j);
+  document.getElementById('profPreview').style.display='block'; document.getElementById('profPreview').textContent = JSON.stringify(j,null,2);
+}
+async function importCSV(){
+  const csv = document.getElementById('csvText').value;
+  if(!csv.trim()){ alert('CSV খালি'); return; }
+  const r = await fetch('/api/org/contacts/import', {method:'POST', headers: authHeaders(), body: JSON.stringify({csv})});
+  const j = await r.json();
+  document.getElementById('csvStatus').textContent = j.imported? `✓ Imported ${j.imported} contacts` : 'Done';
+  document.getElementById('csvResult').style.display='block'; document.getElementById('csvResult').textContent = JSON.stringify(j,null,2);
+}
+function loadSample(){
+  document.getElementById('csvText').value = 'phone,name,role\n8801710000001,Admin Demo,admin\n8801710000002,Employee Karim,employee\n8801710000003,Escort Client X,client_escort_buyer\n8801710000004,Candidate Rahim,candidate';
+}
+async function filePicked(e){
+  const f=e.target.files[0]; if(!f) return;
+  document.getElementById('csvText').value = await f.text();
+}
+async function checkEffective(){
+  const r = await fetch('/api/org/effective-admins', {headers: authHeaders()});
+  const j=await r.json();
+  document.getElementById('verifyOut').textContent = 'Effective admins:\n'+JSON.stringify(j,null,2);
+}
+async function listBridges(){
+  const r = await fetch('/api/bridges', {headers: authHeaders()});
+  const j=await r.json();
+  document.getElementById('verifyOut').textContent = 'Bridges:\n'+JSON.stringify(j,null,2);
+}
+document.getElementById('apiKey').value = getKey();
+connCheck();
+</script>
+</body>
+</html>

@@ -274,12 +274,12 @@ async def detect_identity(phone: str, text: str = "") -> dict:
         if not norm:
             return _unknown(phone)
 
-        # ── Step 1: admin check from settings ─────────────────────────────────
-        admin_result = _check_admin_settings(norm)
+        # ── Step 1: admin check — org_profiles (099) overrides .env for new installs ──
+        admin_result = await _check_admin_effective(norm)
         if admin_result:
             emp = await _lookup_employee(norm)
             return _build(
-                _phone=norm, role="admin", confidence=100, source="settings",
+                _phone=norm, role="admin", confidence=100, source="org_profile" if _org_admin_cache.get("numbers") else "settings",
                 priority=200, emp=emp,
             )
 
@@ -518,6 +518,43 @@ def _check_admin_settings(phone: str) -> bool:
         return phone in admin_phones
     except (AttributeError, LookupError, TypeError, ValueError):
         return False
+
+
+# ── Universal override: org_profiles (099) — cached 30s ───────────────────────
+_org_admin_cache: dict = {"numbers": None, "at": 0.0}
+
+async def _check_admin_effective(phone: str) -> bool:
+    """Check admin via org_profiles first (per-install customization), fallback to _check_admin_settings.
+
+    org_profiles.admin_numbers (099) wins when non-empty — lets a new organisation
+    use its own numbers without touching .env. Cached 30s to avoid DB on every message.
+    """
+    import time as _t
+    # Try cache
+    try:
+        if _org_admin_cache["numbers"] is not None and (_t.time() - _org_admin_cache["at"] < 30):
+            return phone in _org_admin_cache["numbers"]
+    except Exception:
+        pass
+    # Try org_profiles (non-fatal)
+    try:
+        from modules.whatsapp_mcp.org_profile import get_effective_admin_numbers
+        nums = await get_effective_admin_numbers()
+        # Normalize to canonical 880 form for comparison
+        canon_set = set()
+        for n in nums:
+            try:
+                canon_set.add(_normalize_phone(n) or n.strip())
+            except Exception:
+                canon_set.add(n.strip())
+        _org_admin_cache["numbers"] = canon_set
+        _org_admin_cache["at"] = _t.time()
+        if canon_set:
+            return phone in canon_set
+    except Exception:
+        pass
+    # Fallback to legacy .env
+    return _check_admin_settings(phone)
 
 
 def _check_accountant_settings(phone: str) -> bool:
